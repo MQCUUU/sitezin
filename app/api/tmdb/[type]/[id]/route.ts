@@ -1,0 +1,2 @@
+import {NextResponse} from 'next/server'; import {detailsTMDB} from '@/lib/tmdb';
+export async function GET(_:Request,{params}:{params:Promise<{type:string;id:string}>}){const {type,id}=await params;if(type!=='movie'&&type!=='tv')return NextResponse.json({error:'Tipo inválido'},{status:400}); try{return NextResponse.json(await detailsTMDB(type,id as unknown as number))}catch(e){return NextResponse.json({error:e instanceof Error?e.message:'Erro'},{status:500})}}
