@@ -1122,6 +1122,15 @@ export function PickForMe() {
       ]
     );
 
+  const [
+    genreMatch,
+    setGenreMatch,
+  ] =
+    useState<
+      "all" |
+      "any"
+    >("all");
+
   function reset() {
     setType(
       "any"
@@ -1133,6 +1142,10 @@ export function PickForMe() {
 
     setGenres(
       []
+    );
+
+    setGenreMatch(
+      "all"
     );
 
     setProviders(
@@ -1218,6 +1231,9 @@ export function PickForMe() {
               .join(
                 ","
               ),
+
+          genre_match:
+            genreMatch,
 
           genre_tv:
             selectedGenres
@@ -2132,6 +2148,42 @@ export function PickForMe() {
                         )
                       }
                     />
+
+                    {genres.length > 1 && (
+                      <div
+                        className="pick-genre-match"
+                        role="group"
+                        aria-label="Como combinar os gêneros"
+                      >
+                        <button
+                          type="button"
+                          className={`chip${
+                            genreMatch === "all" ? " active" : ""
+                          }`}
+                          aria-pressed={genreMatch === "all"}
+                          onClick={() => setGenreMatch("all")}
+                        >
+                          Todos os gêneros
+                        </button>
+
+                        <button
+                          type="button"
+                          className={`chip${
+                            genreMatch === "any" ? " active" : ""
+                          }`}
+                          aria-pressed={genreMatch === "any"}
+                          onClick={() => setGenreMatch("any")}
+                        >
+                          Qualquer um
+                        </button>
+
+                        <p className="pick-genre-match-hint">
+                          {genreMatch === "all"
+                            ? "O título precisa ter todos os gêneros escolhidos."
+                            : "Basta o título ter um dos gêneros escolhidos."}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <div className="pick-field">

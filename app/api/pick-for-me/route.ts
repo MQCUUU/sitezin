@@ -473,6 +473,19 @@ export async function GET(
         )
     );
 
+/*
+   * Como combinar os gêneros selecionados:
+   *   "all" -> vírgula -> o título precisa ter TODOS
+   *   "any" -> barra   -> basta ter UM deles
+   *
+   * Ambos são sintaxe nativa do Discover do TMDB.
+   * Default "all" para não mudar o comportamento de quem já usa.
+   */
+  const genreMatch =
+    url.searchParams.get("genre_match") === "any" ? "any" : "all";
+
+  const genreSeparator = genreMatch === "any" ? "|" : ",";
+
   const providers =
     (
       url.searchParams.get(
@@ -984,7 +997,7 @@ export async function GET(
                */
               params.with_genres =
                 effectiveGenre.join(
-                  ","
+                  genreSeparator
                 );
             }
 
