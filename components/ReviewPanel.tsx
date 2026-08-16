@@ -58,55 +58,132 @@ export function ReviewPanel({
   const [showAddCategory, setShowAddCategory] = useState(false);
 
   useEffect(() => {
-    loadCategories();
-    loadScores();
-  }, [libraryId]);
+  const controller =
+    new AbortController();
 
-  async function loadCategories() {
+  async function loadReviewData() {
     try {
-      const response = await fetch("/api/reviews/categories");
+      /*
+       * Categorias e notas são independentes e podem ser
+       * carregadas em paralelo.
+       */
+      const [
+        categoriesResponse,
+        scoresResponse
+      ] =
+        await Promise.all([
+          fetch(
+            "/api/reviews/categories",
+            {
+              cache: "no-store",
+              signal:
+                controller.signal
+            }
+          ),
 
-      if (!response.ok) return;
+          fetch(
+            `/api/reviews/scores?library_item_id=${encodeURIComponent(
+              libraryId
+            )}`,
+            {
+              cache: "no-store",
+              signal:
+                controller.signal
+            }
+          )
+        ]);
 
-      const data = await response.json();
+      if (
+        categoriesResponse.ok
+      ) {
+        const categoryData =
+          await categoriesResponse
+            .json();
 
-      if (Array.isArray(data)) {
-        setCategories(data);
+        if (
+          Array.isArray(
+            categoryData
+          )
+        ) {
+          setCategories(
+            categoryData
+          );
+        }
+      }
+
+      if (
+        scoresResponse.ok
+      ) {
+        const scoreData =
+          await scoresResponse
+            .json();
+
+        if (
+          Array.isArray(
+            scoreData
+          )
+        ) {
+          const mapped:
+            Record<
+              string,
+              number | ""
+            > = {};
+
+          scoreData.forEach(
+            (
+              item: Score
+            ) => {
+              mapped[
+                item.category_id
+              ] =
+                item.score ===
+                null
+                  ? ""
+                  : item.score;
+            }
+          );
+
+          setScores(
+            mapped
+          );
+
+          if (
+            scoreData.length >
+            0
+          ) {
+            setMode(
+              "detailed"
+            );
+          }
+        }
       }
     } catch (error) {
-      console.error(error);
-    }
-  }
+      /*
+       * AbortError é esperado quando o componente fecha ou
+       * muda rapidamente para outro título.
+       */
+      if (
+        error instanceof
+          DOMException &&
+        error.name ===
+          "AbortError"
+      ) {
+        return;
+      }
 
-  async function loadScores() {
-    try {
-      const response = await fetch(
-        `/api/reviews/scores?library_item_id=${libraryId}`
+      console.error(
+        "Erro ao carregar avaliações:",
+        error
       );
-
-      if (!response.ok) return;
-
-      const data = await response.json();
-
-      if (!Array.isArray(data)) return;
-
-      const mapped: Record<string, number | ""> = {};
-
-      data.forEach((item: Score) => {
-        mapped[item.category_id] =
-          item.score === null ? "" : item.score;
-      });
-
-      setScores(mapped);
-
-      if (data.length > 0) {
-        setMode("detailed");
-      }
-    } catch (error) {
-      console.error(error);
     }
   }
 
+  void loadReviewData();
+
+  return () => {
+    controller.abort();
+  };
+}, [libraryId]);
   async function saveRating(value: string) {
     if (value === "") {
       setRating("");

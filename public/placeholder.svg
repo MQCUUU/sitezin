@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 750" width="500" height="750" role="img" aria-label="Pôster indisponível">
+  <rect width="500" height="750" fill="#151923"/>
+  <rect x="0.5" y="0.5" width="499" height="749" fill="none" stroke="#252b36"/>
+  <g fill="none" stroke="#3a4152" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="175" y="310" width="150" height="115" rx="12"/>
+    <path d="M175 390l40-38 34 32 46-44 30 28"/>
+  </g>
+  <circle cx="215" cy="345" r="12" fill="#3a4152"/>
+  <text x="250" y="475" font-family="ui-sans-serif, system-ui, sans-serif" font-size="26" font-weight="700" fill="#5a6274" text-anchor="middle">Sem pôster</text>
+</svg>
