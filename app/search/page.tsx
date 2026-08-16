@@ -903,19 +903,31 @@ function SearchPageContent() {
             "",
         });
 
-        const searchResponse = await fetch(
-  `/api/search?q=${encodeURIComponent(
-    query,
-  )}`,
-  {
-    signal: controller.signal,
-  },
-);
+        const [
+          searchResponse,
+          advancedResponse,
+        ] = await Promise.all([
+          fetch(
+            `/api/search?q=${encodeURIComponent(query)}`,
+            {
+              signal: controller.signal,
+            }
+          ),
+          fetch(
+            `/api/search/advanced?q=${encodeURIComponent(query)}`,
+            {
+              signal: controller.signal,
+            }
+          ),
+        ]);
 
-        const searchData =
-          await safeJson(
-            searchResponse
-          );
+        const [
+          searchData,
+          advancedData,
+        ] = await Promise.all([
+          safeJson(searchResponse),
+          safeJson(advancedResponse),
+        ]);
 
         const rawResults =
           Array.isArray(
@@ -948,6 +960,42 @@ function SearchPageContent() {
         setResults(
           normalResults
         );
+
+        /*
+         * O resolvedor local precisa decidir antes do fallback
+         * de pessoa do TMDB. Sem isso, um profissional obscuro
+         * com o mesmo nome do personagem encerra a busca cedo.
+         */
+        if (
+          !cancelled &&
+          advancedResponse.ok &&
+          advancedData?.handled &&
+          Array.isArray(advancedData.results) &&
+          advancedData.results.length > 0
+        ) {
+          const advancedResults =
+            advancedData.results.filter(
+              (item: any) =>
+                item.media_type === "movie" ||
+                item.media_type === "tv"
+            );
+
+          if (advancedResults.length > 0) {
+            setResults(advancedResults);
+            setAdvancedMeta({
+              used: true,
+              mode: advancedData.mode || "",
+              title: advancedData.title || "Busca avançada",
+              subtitle:
+                advancedData.subtitle ||
+                "Resultados encontrados pelo índice local.",
+              person: advancedData.person || null,
+              collection: advancedData.collection || null,
+            });
+            setAdvancedLoading(false);
+            return;
+          }
+        }
 
         /*
          * PESSOAS: 100% TMDB.
@@ -1033,21 +1081,6 @@ function SearchPageContent() {
           setAdvancedLoading(
             true
           );
-
-          const advancedResponse =
-            await fetch(
-              `/api/search/advanced?q=${encodeURIComponent(
-                query
-              )}`,
-              {
-                signal: controller.signal,
-              }
-            );
-
-          const advancedData =
-            await safeJson(
-              advancedResponse
-            );
 
           if (
             !cancelled &&

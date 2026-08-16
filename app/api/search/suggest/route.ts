@@ -705,13 +705,28 @@ export async function GET(
       }
     );
 
+  const hasExactCharacter =
+    characterRows.some(
+      (item: any) =>
+        normalize(item.character_name || "") ===
+        normalize(q)
+    );
+
+  const resolvedSuggestions =
+    hasExactCharacter
+      ? suggestions.filter(
+          (item) =>
+            item.kind !== "person"
+        )
+      : suggestions;
+
   return NextResponse.json(
     {
       query:
         q,
 
       suggestions:
-        suggestions.slice(
+        resolvedSuggestions.slice(
           0,
           10
         ),

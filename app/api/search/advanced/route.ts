@@ -4,8 +4,9 @@ import {
 } from "next/server";
 
 import {
-  createClient,
-} from "@/lib/supabase/server";
+  createClient as createSupabaseClient,
+  SupabaseClient,
+} from "@supabase/supabase-js";
 
 const TMDB_BASE =
   "https://api.themoviedb.org/3";
@@ -21,35 +22,78 @@ type TMDBParams =
   >;
 
 type CharacterRow = {
-  media_type:
-    MediaType;
-  tmdb_id:
+  media_type: MediaType;
+  tmdb_id: number;
+  media_title: string;
+  person_id: number;
+  popularity: number;
+  character_id:
     number;
-  media_title:
-    string;
   character_name:
     string;
-  person_id:
+  normalized_name:
+    string;
+  name_similarity:
     number;
-  popularity:
+  match_kind:
+    string;
+  media_count:
+    number;
+  max_media_popularity:
+    number;
+  avg_media_popularity:
+    number;
+  sum_media_popularity:
+    number;
+  entity_score:
     number;
 };
 
 type PersonRow = {
+  media_type: MediaType;
+  tmdb_id: number;
+  media_title: string;
+  role: number;
+  popularity: number;
   person_id:
     number;
   person_name:
     string;
-  media_type:
-    MediaType;
-  tmdb_id:
-    number;
-  media_title:
+  normalized_name:
     string;
-  role:
+  name_similarity:
     number;
-  popularity:
+  match_kind:
+    string;
+  media_count:
     number;
+  important_credit_count:
+    number;
+  max_media_popularity:
+    number;
+  avg_media_popularity:
+    number;
+  sum_media_popularity:
+    number;
+  entity_score:
+    number;
+};
+
+type CharacterMediaRow = {
+  media_type: MediaType;
+  tmdb_id: number;
+  media_title: string;
+  character_name: string;
+  person_name: string | null;
+  popularity: number;
+};
+
+type PersonMediaRow = {
+  media_type: MediaType;
+  tmdb_id: number;
+  media_title: string;
+  role: number;
+  popularity: number;
 };
 
 type MediaResult = {
@@ -370,25 +414,12 @@ function surnameMatch(
     return false;
   }
 
-  return (
-    name.includes(
-      q[
-        0
-      ]
-    ) ||
-    name.some(
-      (
-        token
-      ) =>
-        similarity(
-          token,
-          q[
-            0
-          ]
-        ) >=
-        0.86
-    )
-  );
+  return similarity(
+    name[
+      name.length - 1
+    ],
+    q[0]
+  ) >= 0.86;
 }
 
 function personNameScore(
@@ -441,7 +472,21 @@ function personNameScore(
     )
   ) {
     score +=
-      120;
+      160;
+  } else if (
+    q.length === 1 &&
+    tokens(
+      name
+    ).some(
+      (token) =>
+        similarity(
+          token,
+          q[0]
+        ) >= 0.9
+    )
+  ) {
+    score +=
+      90;
   }
 
   return score;
@@ -663,7 +708,7 @@ async function enrichMedia(
   items:
     MediaResult[],
   limit =
-    50
+    20
 ) {
   const unique =
     new Map<
@@ -718,10 +763,13 @@ async function enrichMedia(
     }
   }
 
-  const selected =
+  const allItems =
     Array.from(
       unique.values()
-    ).slice(
+    );
+
+  const selected =
+    allItems.slice(
       0,
       limit
     );
@@ -786,16 +834,17 @@ async function enrichMedia(
       )
     );
 
-  return enriched;
+  return [
+    ...enriched,
+    ...allItems.slice(
+      selected.length
+    ),
+  ];
 }
 
 async function localCharacterSearch(
   supabase:
-    Awaited<
-      ReturnType<
-        typeof createClient
-      >
-    >,
+    SupabaseClient,
   query:
     string
 ) {
@@ -817,7 +866,7 @@ async function localCharacterSearch(
   if (
     error
   ) {
-    console.warn(
+    console.error(
       "search_v4_characters:",
       error.message
     );
@@ -837,11 +886,7 @@ async function localCharacterSearch(
 
 async function localPersonSearch(
   supabase:
-    Awaited<
-      ReturnType<
-        typeof createClient
-      >
-    >,
+    SupabaseClient,
   query:
     string
 ) {
@@ -863,7 +908,7 @@ async function localPersonSearch(
   if (
     error
   ) {
-    console.warn(
+    console.error(
       "search_v4_people:",
       error.message
     );
@@ -879,6 +924,87 @@ async function localPersonSearch(
       : []
   ) as
     PersonRow[];
+}
+
+async function loadCharacterMedia(
+  supabase: SupabaseClient,
+  characterId: number
+) {
+  const { data, error } =
+    await supabase.rpc(
+      "search_v4_character_media",
+      {
+        target_character_id:
+          characterId,
+      }
+    );
+
+  if (error) {
+    console.error(
+      "search_v4_character_media:",
+      error.message
+    );
+    return [];
+  }
+
+  return (Array.isArray(data) ? data : []) as CharacterMediaRow[];
+}
+
+async function loadPersonMedia(
+  supabase: SupabaseClient,
+  personId: number
+) {
+  const { data, error } =
+    await supabase.rpc(
+      "search_v4_person_media",
+      {
+        target_person_id:
+          personId,
+      }
+    );
+
+  if (error) {
+    console.error(
+      "search_v4_person_media:",
+      error.message
+    );
+    return [];
+  }
+
+  return (Array.isArray(data) ? data : []) as PersonMediaRow[];
+}
+
+function characterMediaResults(
+  rows: CharacterMediaRow[]
+): MediaResult[] {
+  return rows.map((row) => ({
+    id: Number(row.tmdb_id),
+    media_type: row.media_type,
+    title: row.media_type === "movie" ? row.media_title : undefined,
+    name: row.media_type === "tv" ? row.media_title : undefined,
+    popularity: Number(row.popularity || 0),
+    character: row.character_name,
+    character_actor: row.person_name,
+    reason: row.person_name
+      ? `Personagem: ${row.character_name} · ${row.person_name}`
+      : `Personagem: ${row.character_name}`,
+  }));
+}
+
+function personMediaResults(
+  personName: string,
+  rows: PersonMediaRow[]
+): MediaResult[] {
+  return rows.map((row) => ({
+    id: Number(row.tmdb_id),
+    media_type: row.media_type,
+    title: row.media_type === "movie" ? row.media_title : undefined,
+    name: row.media_type === "tv" ? row.media_title : undefined,
+    popularity: Number(row.popularity || 0),
+    person_name: personName,
+    role: Number(row.role),
+    reason: `${personRoleLabel(Number(row.role))}: ${personName}`,
+  }));
 }
 
 function buildCharacterResults(
@@ -1754,8 +1880,45 @@ export async function GET(
     }
   }
 
+  const supabaseUrl =
+    process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+  const serviceRoleKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (
+    !supabaseUrl ||
+    !serviceRoleKey
+  ) {
+    console.error(
+      "Busca local indisponível: credenciais do índice ausentes."
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          "Índice de busca indisponível.",
+      },
+      {
+        status:
+          500,
+      }
+    );
+  }
+
   const supabase =
-    await createClient();
+    createSupabaseClient(
+      supabaseUrl,
+      serviceRoleKey,
+      {
+        auth: {
+          persistSession:
+            false,
+          autoRefreshToken:
+            false,
+        },
+      }
+    );
 
   /*
    * ========================================================
@@ -2166,64 +2329,208 @@ export async function GET(
         )
     );
 
+  /*
+   * ========================================================
+   * 5. RESOLUÇÃO GLOBAL DE ENTIDADE
+   * ========================================================
+   * Compara título, personagem e pessoa antes de carregar os
+   * créditos da entidade vencedora.
+   */
+
+  const bestTitle =
+    titleCandidates[0] ||
+    null;
+
+  const bestCharacter =
+    [...characterRows].sort(
+      (a, b) =>
+        Number(b.entity_score || 0) -
+        Number(a.entity_score || 0)
+    )[0] ||
+    null;
+
+  const bestPerson =
+    [...personRows].sort(
+      (a, b) =>
+        Number(b.entity_score || 0) -
+        Number(a.entity_score || 0)
+    )[0] ||
+    null;
+
+  const titleEntityScore =
+    bestTitle
+      ? exactNameMatch(
+          q,
+          titleOf(bestTitle)
+        )
+        ? 1200 +
+          Math.min(
+            100,
+            Math.log10(
+              Number(bestTitle.popularity || 0) + 1
+            ) * 25
+          )
+        : normalize(titleOf(bestTitle)).startsWith(q)
+          ? 650 + Math.min(80, Number(bestTitle._score || 0) / 4)
+          : similarity(q, titleOf(bestTitle)) >= 0.82
+            ? 470 + Math.min(60, Number(bestTitle._score || 0) / 5)
+            : 0
+      : 0;
+
+  const characterEntityScore =
+    bestCharacter
+      ? Number(bestCharacter.entity_score || 0) +
+        (
+          bestCharacter.match_kind === "exact" &&
+          tokens(characterTerm).length > 1
+            ? 100
+            : 0
+        ) +
+        (hasExplicitCharacterIntent(q) ? 350 : 0)
+      : 0;
+
+  const characterExactRelevant =
+    bestCharacter?.match_kind === "exact" &&
+    Number(bestCharacter.media_count || 0) >= 1 &&
+    Number(bestCharacter.max_media_popularity || 0) >= 5;
+
+  const personClearlyRelevant =
+    Boolean(bestPerson) &&
+    (
+      Number(bestPerson.media_count || 0) >= 8 ||
+      Number(bestPerson.important_credit_count || 0) >= 6
+    );
+
+  const obscurePersonPenalty =
+    characterExactRelevant &&
+    !personClearlyRelevant
+      ? 250
+      : 0;
+
+  const personEntityScore =
+    bestPerson
+      ? Number(bestPerson.entity_score || 0) +
+        (
+          bestPerson.match_kind === "surname" &&
+          tokens(personTerm).length === 1
+            ? 120
+            : 0
+        ) +
+        (hasExplicitPersonIntent(q) ? 350 : 0) -
+        obscurePersonPenalty
+      : 0;
+
+  const entityCandidates = [
+    {
+      type: "title" as const,
+      score: titleEntityScore,
+    },
+    {
+      type: "character" as const,
+      score: characterEntityScore,
+    },
+    {
+      type: "person" as const,
+      score: personEntityScore,
+    },
+  ].sort((a, b) => b.score - a.score);
+
+  const resolvedEntity =
+    entityCandidates[0];
+
   if (
-    exactTitle &&
-    !hasExplicitPersonIntent(
-      q
-    ) &&
-    !hasExplicitCharacterIntent(
-      q
-    )
+    resolvedEntity.type === "title" &&
+    resolvedEntity.score >= 600
   ) {
     const results =
       titleCandidates
-        .slice(
-          0,
-          40
-        )
-        .map(
-          (
-            item:
-              any
-          ) => {
-            const {
-              _score,
-              ...clean
-            } =
-              item;
-
-            return {
-              ...clean,
-
-              reason:
-                exactNameMatch(
-                  q,
-                  titleOf(
-                    clean
-                  )
-                )
-                  ? "Título exato"
-                  : "Título relacionado",
-            };
-          }
-        );
+        .slice(0, 40)
+        .map((item: any) => {
+          const { _score, ...clean } = item;
+          return {
+            ...clean,
+            reason: exactNameMatch(q, titleOf(clean))
+              ? "Título exato"
+              : "Título relacionado",
+          };
+        });
 
     return NextResponse.json({
-      handled:
-        true,
+      handled: true,
+      mode: "title",
+      title: `Resultados para ${original}`,
+      subtitle: exactTitle
+        ? "Correspondência direta de título."
+        : `${results.length} títulos encontrados.`,
+      resolved_from: original,
+      resolver: entityCandidates,
+      results,
+    });
+  }
 
-      mode:
-        "title",
+  if (
+    resolvedEntity.type === "character" &&
+    bestCharacter &&
+    resolvedEntity.score >= 620
+  ) {
+    const mediaRows =
+      await loadCharacterMedia(
+        supabase,
+        Number(bestCharacter.character_id)
+      );
 
-      title:
-        `Resultados para ${original}`,
+    const results =
+      await enrichMedia(
+        tmdb,
+        characterMediaResults(mediaRows),
+        20
+      );
 
-      subtitle:
-        "Correspondência direta de título.",
+    return NextResponse.json({
+      handled: true,
+      mode: "character",
+      title: `Títulos com ${bestCharacter.character_name}`,
+      subtitle: `${results.length} ${results.length === 1 ? "título" : "títulos"} encontrados pelo índice de personagens.`,
+      resolved_from: original,
+      character: {
+        id: Number(bestCharacter.character_id),
+        name: bestCharacter.character_name,
+        matched: characterTerm,
+      },
+      resolver: entityCandidates,
+      results,
+    });
+  }
 
-      resolved_from:
-        original,
+  if (
+    resolvedEntity.type === "person" &&
+    bestPerson &&
+    resolvedEntity.score >= 620
+  ) {
+    const mediaRows =
+      await loadPersonMedia(
+        supabase,
+        Number(bestPerson.person_id)
+      );
 
+    const results =
+      await enrichMedia(
+        tmdb,
+        personMediaResults(bestPerson.person_name, mediaRows),
+        20
+      );
+
+    return NextResponse.json({
+      handled: true,
+      mode: "person",
+      title: `Trabalhos de ${bestPerson.person_name}`,
+      subtitle: `${results.length} títulos encontrados pelo índice local.`,
+      resolved_from: original,
+      person: {
+        id: Number(bestPerson.person_id),
+        name: bestPerson.person_name,
+      },
+      resolver: entityCandidates,
       results,
     });
   }
@@ -2237,7 +2544,7 @@ export async function GET(
   const character =
     buildCharacterResults(
       characterTerm,
-      characterRows
+      []
     );
 
   const characterExplicit =
@@ -2273,7 +2580,7 @@ export async function GET(
   const person =
     buildPersonResults(
       personTerm,
-      personRows
+      []
     );
 
   const personExplicit =
@@ -2315,7 +2622,15 @@ export async function GET(
     characterSafe &&
     (
       characterExplicit ||
-      characterExact ||
+      (
+        characterExact &&
+        (
+          tokens(
+            characterTerm
+          ).length > 1 ||
+          !personSafe
+        )
+      ) ||
       !personSafe ||
       (
         !personExact &&
@@ -2332,7 +2647,7 @@ export async function GET(
       await enrichMedia(
         tmdb,
         character.results,
-        50
+        20
       );
 
     return NextResponse.json({
@@ -2376,7 +2691,7 @@ export async function GET(
       await enrichMedia(
         tmdb,
         person.results,
-        60
+        20
       );
 
     return NextResponse.json({
