@@ -64,26 +64,23 @@ begin
     requested_username := left(requested_username, 17) || '_' || substr(replace(new.id::text, '-', ''), 1, 6);
   end if;
 
-  insert into public.profiles (
-    id, display_name, username, avatar_url, visibility, is_public
-  ) values (
-    new.id,
-    coalesce(new.raw_user_meta_data ->> 'display_name', requested_username),
-    requested_username,
-    new.raw_user_meta_data ->> 'avatar_url',
-    'private',
-    false
-  )
-  on conflict (id) do update set
-    display_name = excluded.display_name,
-    username = coalesce(public.profiles.username, excluded.username),
-    avatar_url = coalesce(public.profiles.avatar_url, excluded.avatar_url);
+  begin
+    insert into public.profiles (id, display_name, username, avatar_url, visibility, is_public)
+    values (new.id, coalesce(new.raw_user_meta_data ->> 'display_name', requested_username), requested_username, new.raw_user_meta_data ->> 'avatar_url', 'private', false)
+    on conflict (id) do nothing;
+  exception when unique_violation then
+    requested_username := 'user_' || substr(replace(new.id::text, '-', ''), 1, 18);
+    insert into public.profiles (id, display_name, username, avatar_url, visibility, is_public)
+    values (new.id, coalesce(new.raw_user_meta_data ->> 'display_name', requested_username), requested_username, new.raw_user_meta_data ->> 'avatar_url', 'private', false)
+    on conflict (id) do nothing;
+  end;
 
   return new;
 end;
 $$;
 
 drop trigger if exists on_auth_user_created_profile on auth.users;
+drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created_profile
   after insert on auth.users
   for each row execute function public.handle_new_user_profile();
