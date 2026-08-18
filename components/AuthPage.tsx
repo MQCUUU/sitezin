@@ -34,6 +34,7 @@ import {
 import {
   useToast,
 } from "@/components/ToastProvider";
+import { authRedirectOrigin, passwordValidationError, PASSWORD_HINT } from "@/lib/auth-client";
 
 type Mode =
   | "login"
@@ -109,6 +110,10 @@ function friendlyAuthError(
     )
   ) {
     return "Sua senha ainda é muito curta.";
+  }
+
+  if (clean.includes("database error saving new user")) {
+    return "Não foi possível criar o perfil. Atualize a página e tente novamente.";
   }
 
   if (
@@ -291,16 +296,8 @@ export function AuthPage({
       return;
     }
 
-    if (
-      password.length <
-      8
-    ) {
-      setError(
-        "Use uma senha com pelo menos 8 caracteres."
-      );
-
-      return;
-    }
+    const passwordError = passwordValidationError(password);
+    if (passwordError) { setError(passwordError); return; }
 
     if (
       isSignup &&
@@ -331,8 +328,7 @@ export function AuthPage({
           throw new Error(usernameData.error || "Este @ de usuário já está em uso.");
         }
 
-        const origin =
-          window.location.origin;
+        const origin = authRedirectOrigin();
 
         const {
           data,
@@ -757,6 +753,7 @@ export function AuthPage({
                           : "Senha forte"}
                   </small>
                 </div>
+                <small className="muted">{PASSWORD_HINT}</small>
 
                 <label>
                   <span>

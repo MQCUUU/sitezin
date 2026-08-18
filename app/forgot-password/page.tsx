@@ -17,6 +17,7 @@ import {
 import {
   createClient,
 } from "@/lib/supabase/client";
+import { authRedirectOrigin } from "@/lib/auth-client";
 
 export default function ForgotPasswordPage() {
   const [
@@ -70,8 +71,7 @@ export default function ForgotPasswordPage() {
         true
       );
 
-      const origin =
-        window.location.origin;
+      const origin = authRedirectOrigin();
 
       const {
         error,

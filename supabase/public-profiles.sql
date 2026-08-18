@@ -55,8 +55,13 @@ as $$
 declare
   requested_username text := lower(trim(new.raw_user_meta_data ->> 'username'));
 begin
+  -- Nunca bloqueia a criação da conta por metadado ausente ou corrida de username.
   if requested_username is null or requested_username !~ '^[a-z0-9_]{3,24}$' then
-    raise exception 'username_invalid';
+    requested_username := 'user_' || substr(replace(new.id::text, '-', ''), 1, 12);
+  end if;
+
+  if exists (select 1 from public.profiles p where lower(p.username) = requested_username and p.id <> new.id) then
+    requested_username := left(requested_username, 17) || '_' || substr(replace(new.id::text, '-', ''), 1, 6);
   end if;
 
   insert into public.profiles (
@@ -71,7 +76,8 @@ begin
   )
   on conflict (id) do update set
     display_name = excluded.display_name,
-    username = excluded.username;
+    username = coalesce(public.profiles.username, excluded.username),
+    avatar_url = coalesce(public.profiles.avatar_url, excluded.avatar_url);
 
   return new;
 end;

@@ -121,6 +121,24 @@ alter table public.profiles drop constraint if exists profiles_likes_visibility_
 alter table public.profiles add constraint profiles_likes_visibility_check check (likes_visibility in ('profile', 'followers', 'private'));
 create unique index if not exists profiles_username_unique on public.profiles (lower(username)) where username is not null;
 
+create or replace function public.handle_new_user_profile()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare requested_username text := lower(trim(new.raw_user_meta_data ->> 'username'));
+begin
+  if requested_username is null or requested_username !~ '^[a-z0-9_]{3,24}$' then
+    requested_username := 'user_' || substr(replace(new.id::text, '-', ''), 1, 12);
+  end if;
+  if exists (select 1 from public.profiles p where lower(p.username) = requested_username and p.id <> new.id) then
+    requested_username := left(requested_username, 17) || '_' || substr(replace(new.id::text, '-', ''), 1, 6);
+  end if;
+  insert into public.profiles(id,display_name,username,avatar_url,visibility,is_public)
+  values(new.id,coalesce(new.raw_user_meta_data ->> 'display_name',requested_username),requested_username,new.raw_user_meta_data ->> 'avatar_url','private',false)
+  on conflict(id) do update set display_name=excluded.display_name,username=coalesce(public.profiles.username,excluded.username),avatar_url=coalesce(public.profiles.avatar_url,excluded.avatar_url);
+  return new;
+end; $$;
+drop trigger if exists on_auth_user_created_profile on auth.users;
+create trigger on_auth_user_created_profile after insert on auth.users for each row execute function public.handle_new_user_profile();
+
 create table if not exists public.profile_favorites (
   user_id uuid not null references auth.users(id) on delete cascade,
   media_id integer not null references public.media(id) on delete cascade,

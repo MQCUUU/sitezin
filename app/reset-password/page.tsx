@@ -20,6 +20,7 @@ import {
 import {
   createClient,
 } from "@/lib/supabase/client";
+import { passwordValidationError, PASSWORD_HINT } from "@/lib/auth-client";
 
 export default function ResetPasswordPage() {
   const router =
@@ -61,16 +62,8 @@ export default function ResetPasswordPage() {
   ) {
     event.preventDefault();
 
-    if (
-      password.length <
-      8
-    ) {
-      setError(
-        "Use pelo menos 8 caracteres."
-      );
-
-      return;
-    }
+    const passwordError = passwordValidationError(password);
+    if (passwordError) { setError(passwordError); return; }
 
     if (
       password !==
@@ -194,6 +187,8 @@ export default function ResetPasswordPage() {
               </button>
             </div>
           </label>
+
+          <small className="muted">{PASSWORD_HINT}</small>
 
           <label>
             <span>
