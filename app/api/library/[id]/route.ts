@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { respostaDeErro } from "@/lib/api-error";
 import { createClient } from "@/lib/supabase/server";
+import { completeSeriesProgress, resetSeriesProgress, restoreSeriesProgress } from "@/lib/complete-series-progress";
 
 export async function PATCH(
   req: Request,
@@ -47,7 +48,8 @@ export async function PATCH(
         rewatch_count,
         current_season,
         completed_seasons,
-        stopped_season
+        stopped_season,
+        media:media_id(tmdb_id,media_type,seasons_count)
       `)
       .eq("id", id)
       .eq("user_id", user.id)
@@ -248,6 +250,36 @@ if (!currentItem) {
       updated_at:
         new Date().toISOString(),
     };
+
+    const mediaRelation = currentItem.media as any;
+    const media = Array.isArray(mediaRelation) ? mediaRelation[0] : mediaRelation;
+    if (isStartingRewatch && media?.media_type === "tv") {
+      await resetSeriesProgress({
+        supabase: s,
+        userId: user.id,
+        mediaId: currentItem.media_id,
+      });
+      updateData.completed_seasons = 0;
+      updateData.current_season = 1;
+      updateData.stopped_season = null;
+    }
+    if (newStatus === "rewatched" && media?.media_type === "tv") {
+      const totalSeasons = Number(media.seasons_count || 0);
+      if (oldStatus === "rewatching") {
+        await restoreSeriesProgress({ supabase: s, userId: user.id, mediaId: currentItem.media_id });
+      } else {
+        await completeSeriesProgress({
+          supabase: s,
+          userId: user.id,
+          mediaId: currentItem.media_id,
+          tmdbId: Number(media.tmdb_id),
+          seasonsCount: totalSeasons,
+        });
+      }
+      updateData.completed_seasons = totalSeasons;
+      updateData.current_season = totalSeasons || 1;
+      updateData.stopped_season = null;
+    }
 
     /*
      * Só atualizamos temporada se

@@ -2,18 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import {
   House,
   Library,
   ChartNoAxesCombined,
-  Heart,
+  Eye,
   Trophy,
   BookOpenText,
   Sparkles,
   CalendarDays,
   Compass,
   Bot,
+  MoreHorizontal,
+  X,
 } from "lucide-react";
 
 /*
@@ -40,7 +43,7 @@ const items = [
   ["/ranking", "Meu Ranking", Trophy],
   ["/stats", "Estatísticas", ChartNoAxesCombined],
   ["/retrospective", "Retrospectiva", Sparkles],
-  ["/favorites", "Favoritos", Heart],
+  ["/favorites", "Curtidos", Eye],
 ] as const;
 
 /*
@@ -61,6 +64,8 @@ const authRoutes = [
 
 export function Nav() {
   const pathname = usePathname();
+  const [moreOpen, setMoreOpen] = useState(false);
+  useEffect(() => setMoreOpen(false), [pathname]);
 
   /*
    * ==========================================
@@ -164,12 +169,11 @@ export function Nav() {
         className="mobile-nav"
         aria-label="Navegação mobile"
       >
-        {[
+        {[ 
           items[0],  // Início
           items[1],  // Descobrir
           items[4],  // Biblioteca
-          items[5],  // Diário
-          items[10], // Favoritos
+          items[10], // Curtidos
         ].map(
           ([href, label, Icon]) => (
             <Link
@@ -197,7 +201,16 @@ export function Nav() {
             </Link>
           )
         )}
+        <button className={moreOpen ? "active" : ""} onClick={() => setMoreOpen((open) => !open)} aria-expanded={moreOpen} aria-label="Abrir mais páginas">
+          <MoreHorizontal size={18} strokeWidth={2} /><span>Mais</span>
+        </button>
       </nav>
+      {moreOpen && <div className="mobile-more-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setMoreOpen(false)}>
+        <section className="mobile-more-sheet" aria-label="Mais páginas">
+          <header><strong>Todas as páginas</strong><button onClick={() => setMoreOpen(false)} aria-label="Fechar"><X size={20} /></button></header>
+          <div>{[items[2], items[3], items[5], items[6], items[7], items[8], items[9]].map(([href, label, Icon]) => <Link key={href} href={href} className={isActive(href) ? "active" : ""}><Icon size={20} /><span>{label}</span></Link>)}</div>
+        </section>
+      </div>}
     </>
   );
 }

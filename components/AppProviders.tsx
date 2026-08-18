@@ -11,6 +11,11 @@ import {
 import {
   SessionSync,
 } from "@/components/SessionSync";
+import { UsernameGate } from "@/components/UsernameGate";
+import { ConfirmProvider } from "@/components/ConfirmProvider";
+import { PopoverCollisionGuard } from "@/components/PopoverCollisionGuard";
+import { FollowRequestNotifier } from "@/components/FollowRequestNotifier";
+import { SeriesSeasonSync } from "@/components/SeriesSeasonSync";
 
 export function AppProviders({
   children,
@@ -20,9 +25,14 @@ export function AppProviders({
 }) {
   return (
     <ToastProvider>
-      <SessionSync />
-
-      {children}
+      <ConfirmProvider>
+        <SessionSync />
+        <PopoverCollisionGuard />
+        <FollowRequestNotifier />
+        <SeriesSeasonSync />
+        <UsernameGate />
+        {children}
+      </ConfirmProvider>
     </ToastProvider>
   );
 }

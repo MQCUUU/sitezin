@@ -13,7 +13,7 @@ import {
   LogIn,
   LogOut,
   Settings,
-  ShieldCheck,
+  List,
   User,
   UserPlus,
 } from "lucide-react";
@@ -422,7 +422,7 @@ export function AccountMenu(): React.ReactElement {
           <div className="account-dropdown-divider" />
 
           <Link
-            href="/profile"
+            href={user.user_metadata?.username ? `/u/${user.user_metadata.username}` : "/profile"}
             onClick={() =>
               setOpen(
                 false
@@ -452,18 +452,18 @@ export function AccountMenu(): React.ReactElement {
           </Link>
 
           <Link
-            href="/settings#your-data"
+            href={user.user_metadata?.username ? `/u/${user.user_metadata.username}?tab=lists` : "/profile"}
             onClick={() =>
               setOpen(
                 false
               )
             }
           >
-            <ShieldCheck
+            <List
               size={16}
             />
 
-            Seus dados
+            Listas
           </Link>
 
           <div className="account-dropdown-divider" />

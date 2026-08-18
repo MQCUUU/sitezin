@@ -229,7 +229,9 @@ export default function Stats() {
 
   const watched = data.filter(
     (item) =>
-      item.status === "watched"
+      item.status === "watched" ||
+      item.status === "rewatching" ||
+      item.status === "rewatched"
   ).length;
 
   const watching = data.filter(
@@ -436,7 +438,7 @@ export default function Stats() {
           <Heart size={18} />
 
           <span className="muted">
-            Favoritos
+            Curtidos
           </span>
 
           <b>{favorites}</b>

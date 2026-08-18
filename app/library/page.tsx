@@ -1021,7 +1021,7 @@ export default function Library() {
               }
             />
 
-            Favoritos
+            Curtidos
           </button>
 
           <button
@@ -1183,7 +1183,7 @@ export default function Library() {
             />
 
             <span>
-              Favoritos
+              Curtidos
             </span>
 
             <b>
@@ -1525,11 +1525,11 @@ export default function Library() {
 
               <div>
                 <strong>
-                  Apenas favoritos
+                  Apenas curtidos
                 </strong>
 
                 <span>
-                  Mostrar somente títulos marcados como favoritos
+                  Mostrar somente títulos curtidos
                 </span>
               </div>
 

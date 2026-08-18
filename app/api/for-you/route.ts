@@ -1042,7 +1042,7 @@ export async function GET(
 
       subtitle:
         seed.favorite
-          ? "Um dos seus favoritos inspirou esta seleção."
+          ? "Um dos seus curtidos inspirou esta seleção."
           : Number(
               seed.personal_rating ||
                 0

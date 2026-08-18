@@ -22,7 +22,6 @@ import {
   Heart,
   Loader2,
   Plus,
-  Sparkles,
   Star,
   Trash2,
   Tv,
@@ -38,6 +37,7 @@ import {
 } from "@/lib/tmdb";
 
 import Link from "next/link";
+import { useToast } from "@/components/ToastProvider";
 
 const STATUS_OPTIONS = [
   ["want", "Quero assistir"],
@@ -88,22 +88,6 @@ type LibraryState = {
   personal_rating:
     number | null;
 };
-
-type AiMeta = {
-  used: boolean;
-  mode:
-    | "gemini"
-    | "cache"
-    | "fallback"
-    | "";
-  answer: string;
-  cacheHit: boolean;
-  cacheScope:
-    | "global"
-    | "personalized"
-    | "";
-};
-
 
 type AdvancedMeta = {
   used:
@@ -245,98 +229,6 @@ function findStrongPersonMatch(
   return null;
 }
 
-function shouldUseSmartSearch(
-  query: string,
-  directResults:
-    SearchItem[]
-) {
-  const normalized =
-    normalizeText(
-      query
-    );
-
-  const words =
-    normalized
-      .split(" ")
-      .filter(Boolean);
-
-  const strongTitleMatch =
-    directResults
-      .slice(0, 8)
-      .some(
-        (
-          item
-        ) =>
-          normalizeText(
-            getTitle(item)
-          ).includes(
-            normalized
-          )
-      );
-
-  if (
-    strongTitleMatch
-  ) {
-    return false;
-  }
-
-  if (
-    directResults.length >
-      0 &&
-    words.length <=
-      3
-  ) {
-    return false;
-  }
-
-  if (
-    directResults.length ===
-    0
-  ) {
-    return true;
-  }
-
-  const patterns = [
-    "filme",
-    "filmes",
-    "serie",
-    "series",
-    "quero",
-    "procuro",
-    "parecido",
-    "parecida",
-    "triste",
-    "engracado",
-    "terror",
-    "suspense",
-    "romance",
-    "acao",
-    "ficcao",
-    "viagem no tempo",
-    "episodios",
-    "duracao",
-    "horas",
-    "minutos",
-    "netflix",
-    "prime",
-    "disney",
-    "max",
-  ];
-
-  return (
-    words.length >=
-      4 &&
-    patterns.some(
-      (
-        pattern
-      ) =>
-        normalized.includes(
-          pattern
-        )
-    )
-  );
-}
-
 async function safeJson(
   response:
     Response
@@ -375,6 +267,13 @@ const SEARCH_CACHE_TTL =
 type StoredSearchResponse = {
   expiresAt: number;
   data: any;
+};
+
+type UserSearchResult = {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
 };
 
 /*
@@ -453,6 +352,7 @@ export default function SearchPage() {
 }
 
 function SearchPageContent() {
+  const toast = useToast();
   const searchParams =
     useSearchParams();
 
@@ -470,13 +370,7 @@ function SearchPageContent() {
       SearchItem[]
     >([]);
 
-  const [
-    directResults,
-    setDirectResults,
-  ] =
-    useState<
-      SearchItem[]
-    >([]);
+  const [userResults, setUserResults] = useState<UserSearchResult[]>([]);
 
   const [
     library,
@@ -491,12 +385,6 @@ function SearchPageContent() {
     setLoading,
   ] =
     useState(true);
-
-  const [
-    aiLoading,
-    setAiLoading,
-  ] =
-    useState(false);
 
   const [
     personLoading,
@@ -528,24 +416,6 @@ function SearchPageContent() {
     useState<
       SearchItem[]
     >([]);
-
-  const [
-    aiMeta,
-    setAiMeta,
-  ] =
-    useState<AiMeta>({
-      used:
-        false,
-      mode:
-        "",
-      answer:
-        "",
-      cacheHit:
-        false,
-      cacheScope:
-        "",
-    });
-
 
   const [
     advancedMeta,
@@ -926,7 +796,7 @@ function SearchPageContent() {
 
     if (!query) {
       setResults([]);
-      setDirectResults([]);
+      setUserResults([]);
       setLoading(false);
       return;
     }
@@ -934,7 +804,6 @@ function SearchPageContent() {
     async function load() {
       try {
         setLoading(true);
-        setAiLoading(false);
         setPersonLoading(false);
         setPerson(null);
         setPersonCredits([]);
@@ -953,32 +822,30 @@ function SearchPageContent() {
           false
         );
 
-        setAiMeta({
-          used:
-            false,
-          mode:
-            "",
-          answer:
-            "",
-          cacheHit:
-            false,
-          cacheScope:
-            "",
-        });
-
-        const [
-          searchData,
-          advancedData,
-        ] = await Promise.all([
+        const usersOnly = query.startsWith("@");
+        const catalogQuery = query.replace(/^@+/, "").trim();
+        const [searchData, advancedData, usersData] = await Promise.all([
+          usersOnly
+            ? Promise.resolve({ results: [] })
+            : cachedSearchJson(
+                `/api/search?q=${encodeURIComponent(catalogQuery)}`,
+                controller.signal,
+              ),
+          usersOnly
+            ? Promise.resolve({ handled: false, results: [] })
+            : cachedSearchJson(
+                `/api/search/advanced?q=${encodeURIComponent(catalogQuery)}`,
+                controller.signal,
+              ),
           cachedSearchJson(
-            `/api/search?q=${encodeURIComponent(query)}`,
-            controller.signal,
-          ),
-          cachedSearchJson(
-            `/api/search/advanced?q=${encodeURIComponent(query)}`,
+            `/api/search/users?q=${encodeURIComponent(query)}`,
             controller.signal,
           ),
         ]);
+
+        setUserResults(
+          Array.isArray(usersData?.users) ? usersData.users : [],
+        );
 
         const rawResults =
           Array.isArray(
@@ -1003,10 +870,6 @@ function SearchPageContent() {
         ) {
           return;
         }
-
-        setDirectResults(
-          normalResults
-        );
 
         setResults(
           normalResults
@@ -1207,100 +1070,7 @@ function SearchPageContent() {
           }
         }
 
-        /*
-         * ======================================
-         * IA SOMENTE DEPOIS DE:
-         * busca normal + pessoa + avançada.
-         * ======================================
-         */
-
-        if (
-          !shouldUseSmartSearch(
-            query,
-            normalResults
-          ) ||
-          cancelled
-        ) {
-          return;
-        }
-
-        setAiLoading(
-          true
-        );
-
-        const aiResponse =
-          await fetch(
-            "/api/assistant",
-            {
-              method:
-                "POST",
-              signal: controller.signal,
-                headers: {
-                "Content-Type":
-                  "application/json",
-              },
-              body:
-                JSON.stringify({
-                  message:
-                    query,
-                }),
-            }
-          );
-
-        const aiData =
-          await safeJson(
-            aiResponse
-          );
-
-        if (
-          cancelled ||
-          !aiResponse.ok ||
-          aiData?.error
-        ) {
-          return;
-        }
-
-        const intelligent =
-          Array.isArray(
-            aiData.results
-          )
-            ? aiData.results.filter(
-                (
-                  item: any
-                ) =>
-                  item.media_type ===
-                    "movie" ||
-                  item.media_type ===
-                    "tv"
-              )
-            : [];
-
-        if (
-          intelligent.length >
-          0
-        ) {
-          setResults(
-            intelligent
-          );
-
-          setAiMeta({
-            used:
-              true,
-            mode:
-              aiData.mode ||
-              "",
-            answer:
-              aiData.answer ||
-              "",
-            cacheHit:
-              Boolean(
-                aiData.cache_hit
-              ),
-            cacheScope:
-              aiData.cache_scope ||
-              "",
-          });
-        }
+        // A busca comum termina aqui. IA fica exclusiva da pagina Assistente IA.
       } catch (
         error
       ) {
@@ -1319,7 +1089,6 @@ function SearchPageContent() {
           !cancelled
         ) {
           setLoading(false);
-          setAiLoading(false);
           setPersonLoading(false);
           setAdvancedLoading(false);
         }
@@ -1542,7 +1311,7 @@ function SearchPageContent() {
         error
       );
 
-      alert(
+      toast.error(
         error instanceof Error
           ? error.message
           : "Erro ao adicionar."
@@ -1704,7 +1473,7 @@ function SearchPageContent() {
       ) {
         throw new Error(
           data?.error ||
-            "Não foi possível atualizar o favorito."
+            "Não foi possível atualizar a curtida."
         );
       }
 
@@ -1930,13 +1699,7 @@ function SearchPageContent() {
       </div>
 
       <div className="section search-page-shell">
-        <div className="eyebrow">
-          {aiMeta.used
-            ? "Busca inteligente"
-            : person
-              ? "Pessoa"
-              : "Pesquisa"}
-        </div>
+        <div className="eyebrow">{person ? "Pessoa" : "Pesquisa"}</div>
 
         <h1>
           Resultados para “{
@@ -2115,42 +1878,6 @@ function SearchPageContent() {
           </div>
         )}
 
-        {aiMeta.used && (
-          <div className="smart-search-answer panel">
-            <div className="smart-search-answer-icon">
-              <Sparkles
-                size={18}
-              />
-            </div>
-
-            <div className="smart-search-answer-copy">
-              <div className="smart-search-answer-head">
-                <strong>
-                  Resultados com IA
-                </strong>
-
-                {aiMeta.cacheHit && (
-                  <span className="smart-search-cache-badge">
-                    Cache{" "}
-                    {aiMeta.cacheScope ===
-                    "personalized"
-                      ? "pessoal"
-                      : "global"}
-                  </span>
-                )}
-              </div>
-
-              {aiMeta.answer && (
-                <p>
-                  {
-                    aiMeta.answer
-                  }
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
         {loading ||
         personLoading ||
         advancedLoading ? (
@@ -2161,20 +1888,48 @@ function SearchPageContent() {
             />
             Carregando resultados...
           </div>
-        ) : aiLoading ? (
-          <div className="empty smart-search-loading">
-            <Sparkles
-              size={22}
-            />
-            Entendendo sua pesquisa...
-          </div>
-        ) : results.length ===
-          0 ? (
+        ) : results.length === 0 && userResults.length === 0 ? (
           <div className="empty">
-            Nenhum filme ou série encontrado.
+            Nenhum título ou usuário encontrado.
           </div>
         ) : (
           <>
+            {userResults.length > 0 && (
+              <section className="search-users-section" aria-labelledby="search-users-title">
+                <div className="section-title-row">
+                  <h2 id="search-users-title">Usuários</h2>
+                  <span className="muted">{userResults.length} encontrados</span>
+                </div>
+                <div className="search-users-grid">
+                  {userResults.map((user) => (
+                    <Link
+                      className="search-user-card panel"
+                      href={`/u/${user.username}`}
+                      key={user.id}
+                    >
+                      <div className="search-user-avatar">
+                        {user.avatar_url ? (
+                          <img
+                            loading="lazy"
+                            decoding="async"
+                            src={user.avatar_url}
+                            alt={user.display_name || user.username}
+                          />
+                        ) : (
+                          <UserRound size={24} />
+                        )}
+                      </div>
+                      <div className="search-user-copy">
+                        <strong>{user.display_name || user.username}</strong>
+                        <span>@{user.username}</span>
+                      </div>
+                      <span className="search-user-open">Ver perfil</span>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+
             {movies.length >
               0 && (
               <SearchSection
@@ -2634,8 +2389,8 @@ function SearchSection({
                         }
                         title={
                           existing.favorite
-                            ? "Remover dos favoritos"
-                            : "Adicionar aos favoritos"
+                            ? "Remover dos curtidos"
+                            : "Curtir título"
                         }
                         disabled={
                           busy

@@ -445,6 +445,8 @@ export default function Home() {
       CalendarEvent[]
     >([]);
 
+  const [nextProgressEpisode, setNextProgressEpisode] = useState<any>(null);
+
   const [
     calendarLoading,
     setCalendarLoading,
@@ -604,11 +606,32 @@ export default function Home() {
     let cancelled =
       false;
 
+    const homeCacheKey = `mycatalog:home:v2:${user.email}`;
+    let hasLibraryCache = false;
+    let hasCalendarCache = false;
+    let hasActivityCache = false;
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(homeCacheKey) || "null");
+      if (cached && Date.now() - cached.savedAt < 5 * 60 * 1000) {
+        hasLibraryCache = Array.isArray(cached.library);
+        hasCalendarCache = Array.isArray(cached.calendar);
+        hasActivityCache = Array.isArray(cached.activity);
+        if (hasLibraryCache) setData(cached.library);
+        if (hasCalendarCache) setCalendar(cached.calendar);
+        if (hasActivityCache) setActivity(cached.activity);
+        if (hasLibraryCache) setLoading(false);
+        if (hasCalendarCache) setCalendarLoading(false);
+        if (hasActivityCache) setActivityLoading(false);
+      }
+    } catch { /* cache é apenas uma otimização */ }
+
+    function saveHomeCache(partial: Record<string, unknown>) {
+      try { const current = JSON.parse(sessionStorage.getItem(homeCacheKey) || "{}"); sessionStorage.setItem(homeCacheKey, JSON.stringify({ ...current, ...partial, savedAt: Date.now() })); } catch { /* storage pode estar indisponível */ }
+    }
+
     async function loadLibrary() {
       try {
-        setLoading(
-          true
-        );
+        if (!hasLibraryCache) setLoading(true);
 
         const response =
           await fetch(
@@ -667,6 +690,7 @@ export default function Home() {
           setData(
             library
           );
+          saveHomeCache({ library });
         }
       } catch (
         error
@@ -688,9 +712,7 @@ export default function Home() {
 
     async function loadCalendar() {
       try {
-        setCalendarLoading(
-          true
-        );
+        if (!hasCalendarCache) setCalendarLoading(true);
 
         const response =
           await fetch(
@@ -783,6 +805,7 @@ export default function Home() {
           setCalendar(
             upcoming
           );
+          saveHomeCache({ calendar: upcoming });
         }
       } catch (
         error
@@ -804,9 +827,7 @@ export default function Home() {
 
     async function loadActivity() {
       try {
-        setActivityLoading(
-          true
-        );
+        if (!hasActivityCache) setActivityLoading(true);
 
         const response =
           await fetch(
@@ -851,8 +872,9 @@ export default function Home() {
                   0,
                   6
                 )
-              : []
+                : []
           );
+          saveHomeCache({ activity: Array.isArray(result) ? result.slice(0, 6) : [] });
         }
       } catch (
         error
@@ -919,10 +941,6 @@ export default function Home() {
               itemTimestamp(
                 a
               )
-          )
-          .slice(
-            0,
-            6
           ),
       [
         data,
@@ -953,10 +971,6 @@ export default function Home() {
               itemTimestamp(
                 a
               )
-          )
-          .slice(
-            0,
-            6
           ),
       [
         data,
@@ -984,10 +998,6 @@ export default function Home() {
                 a.added_at ||
                 0
               ).getTime()
-          )
-          .slice(
-            0,
-            6
           ),
       [
         data,
@@ -1022,10 +1032,6 @@ export default function Home() {
                 a.personal_rating ||
                 0
               )
-          )
-          .slice(
-            0,
-            6
           ),
       [
         data,
@@ -1039,6 +1045,8 @@ export default function Home() {
       ) =>
         item.status ===
           "watched" ||
+        item.status ===
+          "rewatching" ||
         item.status ===
           "rewatched"
     ).length;
@@ -1134,6 +1142,29 @@ export default function Home() {
     ] ||
     null;
 
+  useEffect(() => {
+    let cancelled = false;
+    async function loadNextEpisode() {
+      if (!primaryWatching || primaryWatching.media_type !== "tv" || !(primaryWatching as any).library_id) {
+        setNextProgressEpisode(null);
+        return;
+      }
+      const season = Number((primaryWatching as any).current_season || 1);
+      const [seasonResponse, progressResponse] = await Promise.all([
+        fetch(`/api/tv/${primaryWatching.tmdb_id}/season/${season}`),
+        fetch(`/api/episodes?library_id=${(primaryWatching as any).library_id}&season=${season}`, { cache: "no-store" }),
+      ]);
+      const [seasonData, progressData] = await Promise.all([seasonResponse.json(), progressResponse.json()]);
+      const watched = new Set((Array.isArray(progressData) ? progressData : []).filter((item: any) => item.watched).map((item: any) => Number(item.episode_number)));
+      const next = (Array.isArray(seasonData?.episodes) ? seasonData.episodes : []).find((item: any) =>
+        !watched.has(Number(item.episode_number)) && (!item.air_date || new Date(`${item.air_date}T23:59:59`) <= new Date())
+      );
+      if (!cancelled) setNextProgressEpisode(next ? { ...next, season_number: season } : null);
+    }
+    loadNextEpisode().catch(() => { if (!cancelled) setNextProgressEpisode(null); });
+    return () => { cancelled = true; };
+  }, [primaryWatching?.tmdb_id, (primaryWatching as any)?.library_id, (primaryWatching as any)?.current_season]);
+
   const primaryWant =
     want[
       0
@@ -1206,7 +1237,9 @@ export default function Home() {
               primaryWatching.title,
 
             description:
-              primaryWatching.media_type ===
+              nextProgressEpisode
+                ? `Próximo: T${nextProgressEpisode.season_number} · E${nextProgressEpisode.episode_number} · ${nextProgressEpisode.name}`
+                : primaryWatching.media_type ===
                 "tv" &&
               (primaryWatching as any)
                 .current_season
@@ -1214,7 +1247,9 @@ export default function Home() {
                 : "Esse é o título mais recente que você deixou em andamento.",
 
             href:
-              `/title/${primaryWatching.media_type}/${primaryWatching.tmdb_id}`,
+              nextProgressEpisode
+                ? `/title/tv/${primaryWatching.tmdb_id}/season/${nextProgressEpisode.season_number}/episode/${nextProgressEpisode.episode_number}`
+                : `/title/${primaryWatching.media_type}/${primaryWatching.tmdb_id}`,
 
             action:
               "Continuar",
@@ -1263,7 +1298,7 @@ export default function Home() {
           title:
             data.length >
             0
-              ? "Que tal encontrar seu próximo favorito?"
+              ? "Que tal encontrar seu próximo título?"
               : "Comece seu catálogo",
 
           description:
@@ -1284,7 +1319,8 @@ export default function Home() {
         nextEvent,
         nextEventDays,
         primaryWatching,
-        primaryWant,
+      primaryWant,
+      nextProgressEpisode,
         wantCount,
       ]
     );
@@ -1618,7 +1654,7 @@ export default function Home() {
               size={18}
             />
           }
-          label="Favoritos"
+          label="Curtidos"
           value={
             favorites
           }
@@ -1815,7 +1851,7 @@ export default function Home() {
               </h2>
 
               <p>
-                Recomendações aprendidas a partir das suas notas, favoritos e histórico.
+                Recomendações aprendidas a partir das suas notas, curtidos e histórico.
               </p>
             </div>
 
@@ -2276,6 +2312,7 @@ function LibrarySection({
         items={
           items
         }
+        carousel
       />
     </section>
   );

@@ -9,6 +9,8 @@ import {
   Trash2,
   Sparkles,
 } from "lucide-react";
+import { useConfirm } from "@/components/ConfirmProvider";
+import { useToast } from "@/components/ToastProvider";
 
 type Category = {
   id: string;
@@ -38,6 +40,8 @@ export function ReviewPanel({
   onRatingChange,
   onReviewChange,
 }: ReviewPanelProps) {
+  const confirmAction = useConfirm();
+  const toast = useToast();
   const [mode, setMode] = useState<"simple" | "detailed">("simple");
 
   const [rating, setRating] = useState(
@@ -306,10 +310,7 @@ export function ReviewPanel({
       const data = await response.json();
 
       if (!response.ok) {
-        alert(
-          data.error ||
-            "Não foi possível criar a categoria."
-        );
+        toast.error(data.error || "Não foi possível criar a categoria.");
         return;
       }
 
@@ -322,9 +323,11 @@ export function ReviewPanel({
   }
 
   async function removeCategory(id: string) {
-    const confirmed = window.confirm(
-      "Remover esta categoria?"
-    );
+    const confirmed = await confirmAction({
+      title: "Remover categoria?",
+      description: "A categoria e suas notas associadas serão removidas.",
+      confirmLabel: "Remover categoria",
+    });
 
     if (!confirmed) return;
 

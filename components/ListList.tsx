@@ -4,6 +4,7 @@
 
 import { List } from '@/types';
 import { useState } from 'react';
+import { useConfirm } from '@/components/ConfirmProvider';
 
 interface ListListProps {
   lists: List[];
@@ -13,9 +14,10 @@ interface ListListProps {
 
 export default function ListList({ lists, onEdit, onDelete }: ListListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const confirmAction = useConfirm();
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta lista?')) return;
+    if (!(await confirmAction({ title: 'Excluir lista?', description: 'Esta lista será removida permanentemente.', confirmLabel: 'Excluir lista' }))) return;
     setDeletingId(id);
     try {
       await onDelete(id);

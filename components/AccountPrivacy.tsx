@@ -6,6 +6,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import Link from "next/link";
 
 import {
   AlertTriangle,
@@ -1238,75 +1239,13 @@ export function AccountPrivacy() {
         </div>
 
         <div className="account-privacy-options">
-          <button
-            type="button"
-            className={
-              account.visibility ===
-              "private"
-                ? "active"
-                : ""
-            }
-            onClick={() =>
-              changeVisibility(
-                "private"
-              )
-            }
-          >
-            <LockKeyhole
-              size={18}
-            />
-
+          <Link href="/profile" className="active">
+            <UserRound size={18} />
             <div>
-              <strong>
-                Privado
-              </strong>
-
-              <span>
-                Opção recomendada. Seu catálogo permanece apenas na sua conta.
-              </span>
+              <strong>Configurar no seu perfil</strong>
+              <span>O perfil não é separado da conta. Escolha lá entre Público ou Somente amigos e edite sua vitrine.</span>
             </div>
-
-            <i>
-              {account.visibility ===
-                "private" &&
-                "✓"}
-            </i>
-          </button>
-
-          <button
-            type="button"
-            className={
-              account.visibility ===
-              "public"
-                ? "active"
-                : ""
-            }
-            onClick={() =>
-              changeVisibility(
-                "public"
-              )
-            }
-          >
-            <UserRound
-              size={18}
-            />
-
-            <div>
-              <strong>
-                Público
-              </strong>
-
-              <span>
-                Prepara sua conta para futuros perfis públicos e recursos sociais.
-              </span>
-            </div>
-
-            <i>
-              {account.visibility ===
-                "public" &&
-                "✓"}
-            </i>
-          </button>
+          </Link>
         </div>
       </section>
 

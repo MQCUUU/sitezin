@@ -4,6 +4,7 @@
 
 import { Tag } from '@/types';
 import { useState } from 'react';
+import { useConfirm } from '@/components/ConfirmProvider';
 
 interface TagListProps {
   tags: Tag[];
@@ -13,9 +14,10 @@ interface TagListProps {
 
 export default function TagList({ tags, onEdit, onDelete }: TagListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const confirmAction = useConfirm();
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta tag?')) return;
+    if (!(await confirmAction({ title: 'Excluir tag?', description: 'A tag será removida permanentemente.', confirmLabel: 'Excluir tag' }))) return;
     setDeletingId(id);
     try {
       await onDelete(id);

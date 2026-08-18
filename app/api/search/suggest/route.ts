@@ -322,7 +322,7 @@ export async function GET(
   req:
     NextRequest
 ) {
-  const q =
+  const rawQuery =
     new URL(
       req.url
     )
@@ -332,6 +332,11 @@ export async function GET(
       )
       ?.trim() ||
     "";
+
+  const usersOnly = rawQuery.startsWith("@");
+  const q = usersOnly
+    ? rawQuery.replace(/^@+/, "").trim()
+    : rawQuery;
 
   if (
     q.length <
@@ -410,11 +415,64 @@ export async function GET(
       })
     : null;
 
+  /*
+   * @username e uma intencao explicita de procurar perfis. Nesse caso nao
+   * fazemos nenhuma requisicao ao TMDB nem ao indice de personagens.
+   */
+  if (usersOnly) {
+    if (!supabase) {
+      return NextResponse.json({ query: rawQuery, suggestions: [] });
+    }
+
+    const safeQuery = q.replace(/[,%()]/g, "");
+    const { data } = await supabase
+      .from("profiles")
+      .select("id,username,display_name,avatar_url")
+      .not("username", "is", null)
+      .or(
+        `username.ilike.%${safeQuery}%,display_name.ilike.%${safeQuery}%`,
+      )
+      .limit(10);
+
+    const normalizedQuery = normalize(q);
+    const suggestions = [...(data || [])]
+      .sort((a: any, b: any) => {
+        const score = (profile: any) =>
+          normalize(profile.username || "") === normalizedQuery
+            ? 3
+            : normalize(profile.display_name || "") === normalizedQuery
+              ? 2
+              : normalize(profile.username || "").startsWith(normalizedQuery)
+                ? 1
+                : 0;
+        return score(b) - score(a);
+      })
+      .map((profile: any) => ({
+        kind: "user",
+        id: profile.id,
+        name: profile.display_name || profile.username,
+        username: profile.username,
+        avatar_url: profile.avatar_url,
+        href: `/u/${profile.username}`,
+      }));
+
+    return NextResponse.json(
+      { query: rawQuery, suggestions },
+      {
+        headers: {
+          "Cache-Control":
+            "public, max-age=30, s-maxage=120, stale-while-revalidate=600",
+        },
+      },
+    );
+  }
+
   const [
     multi,
     collectionSearch,
     personGroups,
     characterSearch,
+    userSearch,
   ] =
     await Promise.all([
       tmdb(
@@ -469,11 +527,23 @@ export async function GET(
             result_limit: 5,
           })
         : Promise.resolve({ data: [], error: null }),
+      supabase
+        ? supabase.from("profiles").select("id,username,display_name,avatar_url").or(`username.ilike.%${q.replace(/[,%()]/g, "")}%,display_name.ilike.%${q.replace(/[,%()]/g, "")}%`).limit(4)
+        : Promise.resolve({ data: [], error: null }),
     ]);
 
   const suggestions:
     any[] =
     [];
+
+  const normalizedUserQuery = normalize(q);
+  const sortedUsers = [...(userSearch.data || [])].sort((a: any, b: any) => {
+    const score = (profile: any) => normalize(profile.username || "") === normalizedUserQuery ? 3 : normalize(profile.display_name || "") === normalizedUserQuery ? 2 : normalize(profile.username || "").startsWith(normalizedUserQuery) ? 1 : 0;
+    return score(b) - score(a);
+  });
+  for (const profile of sortedUsers) {
+    suggestions.push({ kind: "user", id: profile.id, name: profile.display_name || profile.username, username: profile.username, avatar_url: profile.avatar_url, href: `/u/${profile.username}` });
+  }
 
   /*
    * 1. Títulos diretos.

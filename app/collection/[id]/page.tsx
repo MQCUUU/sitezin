@@ -236,6 +236,8 @@ export default function CollectionPage() {
       "rating"
     >("release");
 
+  const [contentTab, setContentTab] = useState<"overview" | "titles">("overview");
+
   const [
     openMenu,
     setOpenMenu,
@@ -735,6 +737,7 @@ export default function CollectionPage() {
               item &&
               [
                 "watched",
+                "rewatching",
                 "rewatched",
               ].includes(
                 item.status ||
@@ -806,6 +809,7 @@ export default function CollectionPage() {
                   item &&
                   [
                     "watched",
+                    "rewatching",
                     "rewatched",
                   ].includes(
                     item.status ||
@@ -834,6 +838,7 @@ export default function CollectionPage() {
                   !item ||
                   ![
                     "watched",
+                    "rewatching",
                     "rewatched",
                   ].includes(
                     item.status ||
@@ -1161,7 +1166,7 @@ export default function CollectionPage() {
       ) {
         throw new Error(
           data?.error ||
-            "Não foi possível atualizar o favorito."
+            "Não foi possível atualizar a curtida."
         );
       }
 
@@ -1456,6 +1461,10 @@ export default function CollectionPage() {
         <SmartBackButton />
       </div>
 
+      <nav className="title-content-tabs collection-content-tabs" aria-label="Seções da coleção">{([['overview','Visão geral e progresso'],['titles','Filmes da coleção']] as const).map(([value,label])=><button key={value} className={contentTab===value?"active":""} onClick={()=>setContentTab(value)}>{label}</button>)}</nav>
+
+      {contentTab === "overview" && <>
+
       {/* =====================================
           HERO
           ===================================== */}
@@ -1687,6 +1696,10 @@ export default function CollectionPage() {
         </div>
       </section>
 
+      </>}
+
+      {contentTab === "titles" && <>
+
       {/* =====================================
           CONTROLES
           ===================================== */}
@@ -1883,6 +1896,8 @@ export default function CollectionPage() {
           </div>
         )}
       </section>
+
+      </>}
 
       {/* PREVIEW */}
 
@@ -2194,8 +2209,8 @@ function CollectionCard({
               }
               title={
                 libraryItem.favorite
-                  ? "Remover dos favoritos"
-                  : "Favoritar"
+                  ? "Remover dos curtidos"
+                  : "Curtir"
               }
               disabled={
                 busy

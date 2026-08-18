@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { NextRequest } from "next/server";
 import { respostaDeErro } from "@/lib/api-error";
 import { createClient } from "@/lib/supabase/server";
+import { completeSeriesProgress, resetSeriesProgress, restoreSeriesProgress } from "@/lib/complete-series-progress";
 
 interface ErrorResponse {
   error: string;
@@ -1644,6 +1645,36 @@ export async function POST(
     if (mediaType === "movie") {
       currentSeason = null;
       completedSeasons = 0;
+      stoppedSeason = null;
+    }
+
+    if (mediaType === "tv" && isStartingRewatch) {
+      await resetSeriesProgress({
+        supabase: s,
+        userId: user.id,
+        mediaId: existingMedia.id,
+      });
+      completedSeasons = 0;
+      currentSeason = 1;
+      stoppedSeason = null;
+    }
+
+    /* Reassistido em série sempre representa a obra completa. */
+    if (mediaType === "tv" && newStatus === "rewatched") {
+      const totalSeasons = Number(existingMedia.seasons_count || 0);
+      if (existingLibraryItem?.status === "rewatching") {
+        await restoreSeriesProgress({ supabase: s, userId: user.id, mediaId: existingMedia.id });
+      } else {
+        await completeSeriesProgress({
+          supabase: s,
+          userId: user.id,
+          mediaId: existingMedia.id,
+          tmdbId: Number(existingMedia.tmdb_id),
+          seasonsCount: totalSeasons,
+        });
+      }
+      completedSeasons = totalSeasons;
+      currentSeason = totalSeasons || 1;
       stoppedSeason = null;
     }
 

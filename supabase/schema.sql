@@ -80,8 +80,71 @@ create index if not exists idx_media_title on public.media (title);
 create table if not exists public.profiles (
   id           uuid primary key references auth.users(id),
   display_name text,
+  username     text unique,
+  bio          text,
+  avatar_url   text,
+  is_public    boolean not null default false,
+  visibility   text not null default 'private'
+                 check (visibility in ('public', 'private')),
+  follow_policy text not null default 'profile'
+                 check (follow_policy in ('profile', 'approval', 'nobody')),
+  followers_visibility text not null default 'profile'
+                 check (followers_visibility in ('profile', 'followers', 'private')),
+  following_visibility text not null default 'profile'
+                 check (following_visibility in ('profile', 'followers', 'private')),
+  activity_visibility text not null default 'profile'
+                 check (activity_visibility in ('profile', 'followers', 'private')),
+  diary_visibility text not null default 'profile'
+                 check (diary_visibility in ('profile', 'followers', 'private')),
+  lists_visibility text not null default 'profile'
+                 check (lists_visibility in ('profile', 'followers', 'private')),
+  likes_visibility text not null default 'profile'
+                 check (likes_visibility in ('profile', 'followers', 'private')),
   created_at   timestamptz not null default now()
 );
+
+alter table public.profiles add column if not exists username text;
+alter table public.profiles add column if not exists bio text;
+alter table public.profiles add column if not exists avatar_url text;
+alter table public.profiles add column if not exists is_public boolean not null default false;
+alter table public.profiles add column if not exists activity_visibility text not null default 'profile';
+alter table public.profiles add column if not exists diary_visibility text not null default 'profile';
+alter table public.profiles add column if not exists lists_visibility text not null default 'profile';
+alter table public.profiles add column if not exists likes_visibility text not null default 'profile';
+alter table public.profiles drop constraint if exists profiles_activity_visibility_check;
+alter table public.profiles add constraint profiles_activity_visibility_check check (activity_visibility in ('profile', 'followers', 'private'));
+alter table public.profiles drop constraint if exists profiles_diary_visibility_check;
+alter table public.profiles add constraint profiles_diary_visibility_check check (diary_visibility in ('profile', 'followers', 'private'));
+alter table public.profiles drop constraint if exists profiles_lists_visibility_check;
+alter table public.profiles add constraint profiles_lists_visibility_check check (lists_visibility in ('profile', 'followers', 'private'));
+alter table public.profiles drop constraint if exists profiles_likes_visibility_check;
+alter table public.profiles add constraint profiles_likes_visibility_check check (likes_visibility in ('profile', 'followers', 'private'));
+create unique index if not exists profiles_username_unique on public.profiles (lower(username)) where username is not null;
+
+create table if not exists public.profile_favorites (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  media_id integer not null references public.media(id) on delete cascade,
+  media_type text not null check (media_type in ('movie', 'tv')),
+  position smallint not null check (position between 1 and 5),
+  primary key (user_id, media_type, position),
+  unique (user_id, media_id)
+);
+
+create table if not exists public.follows (
+  follower_id uuid not null references auth.users(id) on delete cascade,
+  following_id uuid not null references auth.users(id) on delete cascade,
+  status text not null default 'pending' check (status in ('pending', 'accepted')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (follower_id, following_id),
+  check (follower_id <> following_id)
+);
+
+alter table public.follows replica identity full;
+do $$ begin
+  alter publication supabase_realtime add table public.follows;
+exception when duplicate_object then null;
+end $$;
  
  
 create table if not exists public.library_items (
@@ -172,12 +235,20 @@ create table if not exists public.episodes_progress (
   episode_number integer not null,
   watched        boolean not null default false,
   watched_at     timestamptz,
+  comment        text check (comment is null or char_length(comment) <= 4000),
+  is_rewatch     boolean not null default false,
   constraint episodes_progress_user_id_media_id_season_number_episode_nu_key
     unique (user_id, media_id, season_number, episode_number)
 );
  
 create index if not exists episodes_progress_user_idx
   on public.episodes_progress (user_id);
+
+-- Compatibilidade para bancos criados antes do diário por episódio.
+alter table public.episodes_progress
+  add column if not exists comment text;
+alter table public.episodes_progress
+  add column if not exists is_rewatch boolean not null default false;
  
  
 create table if not exists public.watch_entries (
@@ -523,6 +594,7 @@ create table if not exists public.character_media (
  
 alter table public.media                   enable row level security;
 alter table public.profiles                enable row level security;
+alter table public.profile_favorites       enable row level security;
 alter table public.library_items           enable row level security;
 alter table public.review_categories       enable row level security;
 alter table public.review_scores           enable row level security;
@@ -588,6 +660,11 @@ create policy "own profile" on public.profiles
   for all to authenticated
   using ((select auth.uid()) = id)
   with check ((select auth.uid()) = id);
+
+create policy "own profile favorites" on public.profile_favorites
+  for all to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
  
 create policy "own library" on public.library_items
   for all to authenticated

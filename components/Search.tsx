@@ -11,6 +11,7 @@ import {
   Drama,
   Layers3,
   ArrowRight,
+  Users,
 } from "lucide-react";
 
 import {
@@ -115,11 +116,14 @@ type CollectionResult = {
     string;
 };
 
+type UserResult = { kind: "user"; id: string; name: string; username: string; avatar_url?: string | null; href: string };
+
 type SearchSuggestion =
   | MediaResult
   | PersonResult
   | CharacterResult
-  | CollectionResult;
+  | CollectionResult
+  | UserResult;
 
 type SuggestResponse = {
   query?:
@@ -130,6 +134,7 @@ type SuggestResponse = {
 };
 
 export function Search() {
+  const [searchTab, setSearchTab] = useState<"all" | "movies" | "actors" | "users">("all");
   const router =
     useRouter();
 
@@ -138,6 +143,12 @@ export function Search() {
     setQ,
   ] =
     useState("");
+
+  useEffect(() => {
+    if (q.trim().startsWith("@")) {
+      setSearchTab("users");
+    }
+  }, [q]);
 
   const [
     results,
@@ -395,6 +406,8 @@ export function Search() {
       ]
     );
 
+  const userResults = useMemo(() => ["movies","actors"].includes(searchTab) ? [] : results.filter((item): item is UserResult => item.kind === "user"), [results, searchTab]);
+
   const personResults =
     useMemo(
       () =>
@@ -441,6 +454,7 @@ export function Search() {
     );
 
   function clearSearch() {
+    setSearchTab("all");
     setQ(
       ""
     );
@@ -699,7 +713,7 @@ export function Search() {
         onKeyDown={
           handleKeyDown
         }
-        placeholder="Filme, série, ator, diretor, personagem ou franquia..."
+        placeholder="Filme, série, ator ou @usuário..."
         aria-label="Pesquisa universal"
         autoComplete="off"
       />
@@ -752,7 +766,10 @@ export function Search() {
         results.length >
           0 && (
           <div className="results universal-search-results">
-            {characterResults.length >
+            <div className="search-result-tabs" role="tablist"><button type="button" className={searchTab === "all" ? "active" : ""} onMouseDown={(event) => event.preventDefault()} onClick={() => setSearchTab("all")}>Todos</button><button type="button" className={searchTab === "movies" ? "active" : ""} onMouseDown={(event) => event.preventDefault()} onClick={() => setSearchTab("movies")}>Filmes</button><button type="button" className={searchTab === "actors" ? "active" : ""} onMouseDown={(event) => event.preventDefault()} onClick={() => setSearchTab("actors")}>Atores</button><button type="button" className={searchTab === "users" ? "active" : ""} onMouseDown={(event) => event.preventDefault()} onClick={() => setSearchTab("users")}>Usuários</button></div>
+            {userResults.length > 0 && <><div className="search-group-label"><Users size={12} /> Usuários</div>{userResults.map((item) => <Link className={resultClass(item)} href={item.href} onClick={clearSearch} key={`user-${item.id}`}><div className="search-result-poster search-result-person">{item.avatar_url ? <img src={item.avatar_url} alt={item.name} /> : <div className="search-result-poster-empty"><UserRound size={20} /></div>}</div><div className="search-result-info"><b>{item.name}</b><div className="muted">@{item.username} · Ver perfil</div></div><ArrowRight size={14} /></Link>)}</>}
+
+            {(searchTab === "all" || searchTab === "actors") && characterResults.length >
               0 && (
               <>
                 <div className="search-group-label">
@@ -830,7 +847,7 @@ export function Search() {
               </>
             )}
 
-            {personResults.length >
+            {(searchTab === "all" || searchTab === "actors") && personResults.length >
               0 && (
               <>
                 <div className="search-group-label">
@@ -905,7 +922,7 @@ export function Search() {
               </>
             )}
 
-            {collectionResults.length >
+            {(searchTab === "all" || searchTab === "movies") && collectionResults.length >
               0 && (
               <>
                 <div className="search-group-label">
@@ -975,7 +992,7 @@ export function Search() {
               </>
             )}
 
-            {mediaResults.length >
+            {(searchTab === "all" || searchTab === "movies") && mediaResults.length >
               0 && (
               <>
                 <div className="search-group-label">

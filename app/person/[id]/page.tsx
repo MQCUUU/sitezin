@@ -253,6 +253,8 @@ export default function PersonPage() {
   ] =
     useState(false);
 
+  const [contentTab, setContentTab] = useState<"bio" | "acting" | "other">("bio");
+
   useEffect(() => {
     let cancelled =
       false;
@@ -344,10 +346,13 @@ export default function PersonPage() {
     params.id,
   ]);
 
+  const actingCredits = useMemo(() => credits.filter((item) => item.credit_kind === "cast" || Boolean(item.character)), [credits]);
+  const otherCredits = useMemo(() => credits.filter((item) => item.credit_kind === "crew" && !item.character), [credits]);
+
   const movies =
     useMemo(
       () =>
-        credits.filter(
+        actingCredits.filter(
           (
             item
           ) =>
@@ -355,14 +360,14 @@ export default function PersonPage() {
             "movie"
         ),
       [
-        credits,
+        actingCredits,
       ]
     );
 
   const series =
     useMemo(
       () =>
-        credits.filter(
+        actingCredits.filter(
           (
             item
           ) =>
@@ -370,14 +375,14 @@ export default function PersonPage() {
             "tv"
         ),
       [
-        credits,
+        actingCredits,
       ]
     );
 
   const knownFor =
     useMemo(
       () =>
-        credits
+        otherCredits
           .filter(
             (
               item
@@ -389,7 +394,7 @@ export default function PersonPage() {
             8
           ),
       [
-        credits,
+        otherCredits,
       ]
     );
 
@@ -576,6 +581,10 @@ export default function PersonPage() {
       <div className="title-back-wrap">
         <SmartBackButton />
       </div>
+
+      <nav className="title-content-tabs person-content-tabs" aria-label="Seções da pessoa">{([['bio','Biografia e detalhes'],['acting','Filmografia como ator'],['other','Outros trabalhos']] as const).map(([value,label])=><button key={value} className={contentTab===value?"active":""} onClick={()=>setContentTab(value)}>{label}</button>)}</nav>
+
+      {contentTab === "bio" && <>
 
       {/* ======================================
           HERO
@@ -857,11 +866,13 @@ export default function PersonPage() {
         </aside>
       </section>
 
+      </>}
+
       {/* ======================================
           MAIS CONHECIDO
           ====================================== */}
 
-      {knownFor.length >
+      {contentTab === "other" && knownFor.length >
         0 && (
         <section className="section">
           <div className="person-section-heading person-section-heading-row">
@@ -902,7 +913,7 @@ export default function PersonPage() {
           FILMES
           ====================================== */}
 
-      {movies.length >
+      {contentTab === "acting" && movies.length >
         0 && (
         <PersonCreditsSection
           title="Filmes"
@@ -932,7 +943,7 @@ export default function PersonPage() {
           SÉRIES
           ====================================== */}
 
-      {series.length >
+      {contentTab === "acting" && series.length >
         0 && (
         <PersonCreditsSection
           title="Séries"
@@ -957,6 +968,8 @@ export default function PersonPage() {
           }
         />
       )}
+      {contentTab === "acting" && movies.length === 0 && series.length === 0 && <div className="empty">Nenhum trabalho como ator encontrado.</div>}
+      {contentTab === "other" && knownFor.length === 0 && <div className="empty">Nenhum trabalho adicional encontrado.</div>}
     </>
   );
 }

@@ -3024,8 +3024,8 @@ export function PickForMe() {
                               />
 
                               {winner.favorite
-                                ? "Favoritado"
-                                : "Favoritar"}
+                                ? "Curtido"
+                                : "Curtir"}
                             </button>
                           </>
                         )}

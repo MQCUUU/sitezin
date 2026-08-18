@@ -95,18 +95,18 @@ export default function Favorites() {
 
       <div className="section">
         <div className="eyebrow">O que você mais gosta</div>
-        <h1>Favoritos</h1>
+        <h1>Curtidos</h1>
       </div>
 
       {estado === "carregando" && (
         <div className="library-page-loading" role="status" aria-live="polite">
-          Carregando seus favoritos…
+          Carregando seus curtidos…
         </div>
       )}
 
       {estado === "erro" && (
         <div className="empty" role="alert">
-          <strong>Não foi possível carregar seus favoritos.</strong>
+          <strong>Não foi possível carregar seus curtidos.</strong>
           <p className="muted">
             Verifique sua conexão e tente novamente.
           </p>
@@ -121,7 +121,7 @@ export default function Favorites() {
 
       {estado === "pronto" && itens.length === 0 && (
         <div className="empty">
-          <strong>Você ainda não marcou nenhum favorito.</strong>
+          <strong>Você ainda não curtiu nenhum título.</strong>
           <p className="muted">
             Toque no coração de qualquer título para guardá-lo aqui.
           </p>

@@ -5,6 +5,8 @@ import { Search } from '@/components/Search';
 import { createClient } from '@/lib/supabase/client';
 import { DataBackup } from '@/components/DataBackup';
 import { AccountPrivacy } from '@/components/AccountPrivacy';
+import { SocialSettings } from '@/components/SocialSettings';
+import { NotificationSettings } from '@/components/NotificationSettings';
 
 import {
   ACCENT_OPTIONS,
@@ -28,6 +30,7 @@ import {
 } from 'lucide-react';
 
 export default function Settings() {
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'account' | 'notifications' | 'appearance'>('general');
   const [d, setD] = useState<any[]>([]);
   const [name, setName] = useState('');
 
@@ -142,6 +145,14 @@ export default function Settings() {
       </div>
 
       <div className="settings-layout">
+
+        <nav className="settings-tabs" aria-label="Seções das configurações">
+          {[['general','Geral'],['account','Conta e privacidade'],['notifications','Notificações'],['appearance','Aparência']] .map(([value,label]) => <button key={value} className={activeSettingsTab === value ? 'active' : ''} onClick={() => setActiveSettingsTab(value as typeof activeSettingsTab)}>{label}</button>)}
+        </nav>
+
+        {activeSettingsTab === 'general' && <section className="panel settings-profile-moved"><div><span className="eyebrow">PERFIL</span><h2>Edite diretamente na sua página</h2><p className="muted">Avatar, biografia, @, visibilidade e Top 5 agora ficam juntos no seu perfil.</p></div><a className="btn primary" href="/profile">Abrir meu perfil</a></section>}
+
+        {activeSettingsTab === 'appearance' && <>
 
         {/* ========================= */}
         {/* PERSONALIZAÇÃO */}
@@ -733,17 +744,19 @@ export default function Settings() {
 
         </section>
 
+        </>}
+
         {/* ========================= */}
         {/* CONTA / PRIVACIDADE */}
         {/* ========================= */}
 
-        <AccountPrivacy />
+        {activeSettingsTab === 'account' && <><AccountPrivacy /><SocialSettings /><DataBackup /></>}
+
+        {activeSettingsTab === 'notifications' && <NotificationSettings />}
 
         {/* ========================= */}
         {/* SEUS DADOS / BACKUP */}
         {/* ========================= */}
-
-        <DataBackup />
 
       </div>
     </>

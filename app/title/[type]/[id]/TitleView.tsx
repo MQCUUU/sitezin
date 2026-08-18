@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 
@@ -33,7 +33,9 @@ import { ReviewPanel } from "@/components/ReviewPanel";
 import { SeasonProgress } from "@/components/SeasonProgress";
 import { WatchHistory } from "@/components/WatchHistory";
 import { SeriesSchedule } from "@/components/SeriesSchedule";
+import { EpisodeBrowser } from "@/components/EpisodeBrowser";
 import { useToast } from "@/components/ToastProvider";
+import { CarouselRail } from "@/components/CarouselRail";
 
 interface LibraryItem {
   id: string;
@@ -79,12 +81,21 @@ export default function TitlePage() {
 
   const [favorite, setFavorite] =
     useState(false);
+  const [contentTab, setContentTab] = useState<"info" | "cast" | "reviews" | "related">("info");
 
   const [loading, setLoading] =
     useState(true);
 
   const [saving, setSaving] =
     useState(false);
+
+  const [episodeProgress, setEpisodeProgress] = useState<Record<number, { watched: number; released: number }>>({});
+  const handleEpisodeProgress = useCallback((value: { season: number; watched: number; released: number }) => {
+    setEpisodeProgress((current) => ({
+      ...current,
+      [value.season]: { watched: value.watched, released: value.released },
+    }));
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -371,7 +382,7 @@ export default function TitlePage() {
         `${mediaTitle} adicionado à biblioteca`,
         {
           description:
-            "Status, favorito e nota foram salvos.",
+            "Status, curtida e nota foram salvos.",
 
           actionLabel:
             "Desfazer",
@@ -825,8 +836,8 @@ export default function TitlePage() {
 
           favorite:
             value
-              ? "Adicionado aos favoritos"
-              : "Removido dos favoritos",
+              ? "Adicionado aos curtidos"
+              : "Removido dos curtidos",
 
           personal_rating:
             value ===
@@ -1261,6 +1272,10 @@ export default function TitlePage() {
         <SmartBackButton />
       </div>
 
+      <nav className="title-content-tabs" aria-label="Seções do título">{([['info','Visão geral'],['cast','Elenco e equipe'],['reviews','Avaliações e resenhas'],['related','Relacionados e mídia']] as const).map(([value,label])=><button key={value} className={contentTab===value?"active":""} onClick={()=>setContentTab(value)}>{label}</button>)}</nav>
+
+      {contentTab === "info" && <>
+
       {/* ============================
           HERO
           ============================ */}
@@ -1491,8 +1506,8 @@ export default function TitlePage() {
                 />
 
                 {favorite
-                  ? "Favoritado"
-                  : "Favoritar"}
+                  ? "Curtido"
+                  : "Curtir"}
               </button>
 
             </div>
@@ -1688,6 +1703,8 @@ export default function TitlePage() {
             <SeasonProgress
               libraryItem={libraryItem}
               totalSeasons={Number(details.number_of_seasons || libraryItem?.media?.seasons_count || 0)}
+              tvId={Number(details.id)}
+              episodeProgress={episodeProgress}
               onChange={(item) => {
                 setLibraryItem((current: any) => ({ ...current, ...item }));
                 if (item.status) setStatus(item.status);
@@ -1712,6 +1729,22 @@ export default function TitlePage() {
             libraryItem={
               libraryItem
             }
+          />
+        </section>
+      )}
+
+      {type === "tv" && (
+        <section className="section">
+          <EpisodeBrowser
+            tvId={Number(details.id)}
+            libraryItem={libraryItem}
+            totalSeasons={Number(details.number_of_seasons || 1)}
+            initialSeason={Number(libraryItem?.current_season || 1)}
+            onProgressChange={handleEpisodeProgress}
+            onLibraryChange={(item) => {
+              setLibraryItem((current: any) => ({ ...current, ...item }));
+              if (item.status) setStatus(item.status);
+            }}
           />
         </section>
       )}
@@ -1998,11 +2031,13 @@ export default function TitlePage() {
 
       </section>
 
+      </>}
+
       {/* ============================
           DIRETOR / CRIADORES
           ============================ */}
 
-      {(directors.length > 0 ||
+      {contentTab === "cast" && (directors.length > 0 ||
         creators.length > 0) && (
         <section className="section">
 
@@ -2144,7 +2179,7 @@ export default function TitlePage() {
           ELENCO
           ============================ */}
 
-      {cast.length > 0 && (
+      {contentTab === "cast" && cast.length > 0 && (
         <section className="section">
 
           <div className="title-section-heading">
@@ -2321,7 +2356,7 @@ export default function TitlePage() {
           HISTÓRICO DE VISUALIZAÇÕES
           ============================ */}
 
-      {libraryItem && (
+      {contentTab === "reviews" && libraryItem && (
         <section className="section title-watch-history-section">
           <WatchHistory
             libraryId={
@@ -2384,6 +2419,10 @@ export default function TitlePage() {
           AVALIAÇÃO
           ============================ */}
 
+      {contentTab === "cast" && cast.length === 0 && directors.length === 0 && creators.length === 0 && <div className="empty">Nenhuma informação de elenco ou equipe disponível.</div>}
+
+      {contentTab === "reviews" && !libraryItem && <div className="empty">Adicione este título à biblioteca para registrar sua avaliação e resenha.</div>}
+
       {libraryItem && (
         <section className="section title-review-section">
 
@@ -2443,7 +2482,9 @@ export default function TitlePage() {
           TÍTULOS SEMELHANTES
           ============================ */}
 
-      {recommendations.length > 0 && (
+      {contentTab === "related" && recommendations.length === 0 && <div className="empty">Nenhum título relacionado disponível.</div>}
+
+      {contentTab === "related" && recommendations.length > 0 && (
         <section className="section">
 
           <div className="title-section-heading">
@@ -2456,14 +2497,7 @@ export default function TitlePage() {
             </h2>
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns:
-                "repeat(auto-fill, minmax(150px, 1fr))",
-              gap: "14px",
-            }}
-          >
+          <CarouselRail className="title-recommendation-carousel">
 
             {recommendations.map(
               (item: any) => (
@@ -2552,7 +2586,7 @@ export default function TitlePage() {
               )
             )}
 
-          </div>
+          </CarouselRail>
 
         </section>
       )}

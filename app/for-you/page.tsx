@@ -25,6 +25,7 @@ import {
   Tv,
   X,
 } from "lucide-react";
+import { CarouselRail } from "@/components/CarouselRail";
 
 import Link from "next/link";
 
@@ -1181,7 +1182,7 @@ export default function ForYouPage() {
       ) {
         throw new Error(
           data?.error ||
-            "Erro ao favoritar."
+            "Erro ao atualizar a curtida."
         );
       }
 
@@ -1397,7 +1398,7 @@ export default function ForYouPage() {
             </h1>
 
             <p>
-              Recomendações que aprendem com suas notas, favoritos e com o que você já assistiu.
+              Recomendações que aprendem com suas notas, curtidos e com o que você já assistiu.
             </p>
 
             {basedOn.length >
@@ -2231,7 +2232,7 @@ function ShelfRow({
         </span>
       </div>
 
-      <div className="fy-row">
+      <CarouselRail className="fy-row">
         {shelf.results.map(
           (
             item:
@@ -2272,7 +2273,7 @@ function ShelfRow({
             />
           )
         )}
-      </div>
+      </CarouselRail>
     </section>
   );
 }
@@ -2462,8 +2463,8 @@ function MovieCard({
               }
               title={
                 existing.favorite
-                  ? "Remover dos favoritos"
-                  : "Favoritar"
+                  ? "Remover dos curtidos"
+                  : "Curtir"
               }
               disabled={
                 busy

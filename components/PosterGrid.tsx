@@ -22,6 +22,7 @@ import { STATUS_LABELS } from "@/lib/types";
 import { useToast } from "@/components/ToastProvider";
 
 import { Poster } from "@/components/Poster";
+import { CarouselRail } from "@/components/CarouselRail";
 
 import { useEffect, useState } from "react";
 
@@ -35,6 +36,7 @@ export function PosterGrid({
   onChanged,
   viewMode = "grid",
   onViewModeChange,
+  carousel = false,
 }: {
   items: LibraryItem[];
   onChanged?: () => void;
@@ -42,6 +44,7 @@ export function PosterGrid({
   onViewModeChange?: (
     mode: ViewMode
   ) => void;
+  carousel?: boolean;
 }) {
   const toast =
     useToast();
@@ -419,14 +422,14 @@ useEffect(() => {
       ) {
         throw new Error(
           data?.error ||
-            "Não foi possível atualizar o favorito."
+            "Não foi possível atualizar a curtida."
         );
       }
 
       toast.success(
         nextValue
-          ? `${item.title} foi favoritado`
-          : `${item.title} saiu dos favoritos`,
+          ? `${item.title} foi curtido`
+          : `${item.title} saiu dos curtidos`,
         {
           actionLabel:
             "Desfazer",
@@ -492,7 +495,7 @@ useEffect(() => {
       );
 
       toast.error(
-        "Erro ao atualizar favorito",
+        "Erro ao atualizar curtida",
         {
           description:
             error instanceof Error
@@ -513,13 +516,8 @@ useEffect(() => {
     nextStatus:
       string
   ) {
-    const scrollSnapshot =
-      getScrollSnapshot();
-
     const oldStatus =
       item.status;
-
-    blurActiveElement();
 
     try {
       setProcessing(
@@ -629,9 +627,6 @@ useEffect(() => {
         }
       );
 
-      restoreScroll(
-        scrollSnapshot
-      );
     } catch (
       error
     ) {
@@ -661,9 +656,6 @@ useEffect(() => {
         null
       );
 
-      restoreScroll(
-        scrollSnapshot
-      );
     }
   }
 
@@ -674,9 +666,6 @@ useEffect(() => {
       number |
       null
   ) {
-    const scrollSnapshot =
-      getScrollSnapshot();
-
     const oldRating =
       item.personal_rating ??
       null;
@@ -786,9 +775,6 @@ useEffect(() => {
         }
       );
 
-      restoreScroll(
-        scrollSnapshot
-      );
     } catch (
       error
     ) {
@@ -818,9 +804,6 @@ useEffect(() => {
         null
       );
 
-      restoreScroll(
-        scrollSnapshot
-      );
     }
   }
 
@@ -1130,95 +1113,9 @@ useEffect(() => {
   }
 
 
-  function getScrollSnapshot() {
-    const main =
-      document.querySelector(
-        ".main"
-      ) as HTMLElement | null;
-
-    return {
-      windowX:
-        window.scrollX,
-      windowY:
-        window.scrollY,
-      mainTop:
-        main?.scrollTop ??
-        null,
-      mainLeft:
-        main?.scrollLeft ??
-        null,
-    };
-  }
-
-  function restoreScroll(
-    snapshot: ReturnType<
-      typeof getScrollSnapshot
-    >
-  ) {
-    const restore =
-      () => {
-        const main =
-          document.querySelector(
-            ".main"
-          ) as HTMLElement | null;
-
-        if (
-          main &&
-          snapshot.mainTop !==
-            null
-        ) {
-          main.scrollTop =
-            snapshot.mainTop;
-
-          main.scrollLeft =
-            snapshot.mainLeft ??
-            0;
-        }
-
-        window.scrollTo(
-          snapshot.windowX,
-          snapshot.windowY
-        );
-      };
-
-    restore();
-
-    requestAnimationFrame(
-      () => {
-        restore();
-
-        requestAnimationFrame(
-          restore
-        );
-      }
-    );
-
-    window.setTimeout(
-      restore,
-      50
-    );
-  }
-
-  function blurActiveElement() {
-    const active =
-      document.activeElement;
-
-    if (
-      active instanceof
-      HTMLElement
-    ) {
-      active.blur();
-    }
-  }
-
   function toggleStatusMenuWithoutScroll(
     key: string | number
   ) {
-    const snapshot =
-      getScrollSnapshot();
-
-    blurActiveElement();
-
     setOpenStatusMenu(
       (
         current
@@ -1226,10 +1123,6 @@ useEffect(() => {
         current === key
           ? null
           : key
-    );
-
-    restoreScroll(
-      snapshot
     );
   }
 
@@ -1276,8 +1169,8 @@ useEffect(() => {
             }
             title={
               item.favorite
-                ? "Remover dos favoritos"
-                : "Favoritar"
+                ? "Remover dos curtidos"
+                : "Curtir"
             }
             disabled={busy}
             onClick={(event) => {
@@ -1494,7 +1387,7 @@ useEffect(() => {
                 size={11}
                 fill="currentColor"
               />
-              Favorito
+              Curtido
             </span>
           )}
         </div>
@@ -1602,7 +1495,7 @@ useEffect(() => {
                   size={11}
                   fill="currentColor"
                 />
-                Favorito
+                Curtido
               </span>
             )}
           </div>
@@ -1698,7 +1591,13 @@ useEffect(() => {
         </div>
       )}
 
-      {viewMode === "list" ? (
+      {carousel && viewMode !== "list" ? (
+        <CarouselRail className="library-carousel">
+          {localItems.map((item) => (
+            <Card key={item.library_id} item={item} />
+          ))}
+        </CarouselRail>
+      ) : viewMode === "list" ? (
         <div className="library-list">
           {localItems.map((item) => (
             <ListItem
@@ -1991,8 +1890,8 @@ useEffect(() => {
                   />
 
                   {previewItem.favorite
-                    ? "Favoritado"
-                    : "Favoritar"}
+                    ? "Curtido"
+                    : "Curtir"}
                 </button>
               </div>
             </div>

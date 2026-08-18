@@ -209,6 +209,8 @@ export function AuthPage({
   ] =
     useState("");
 
+  const [username, setUsername] = useState("");
+
   const [
     password,
     setPassword,
@@ -272,6 +274,11 @@ export function AuthPage({
       return;
     }
 
+    if (isSignup && !/^[a-z0-9_]{3,24}$/.test(username)) {
+      setError("Escolha um @ de 3 a 24 letras, números ou _.");
+      return;
+    }
+
     if (
       !email.includes(
         "@"
@@ -318,6 +325,12 @@ export function AuthPage({
       if (
         isSignup
       ) {
+        const usernameResponse = await fetch(`/api/auth/username?username=${encodeURIComponent(username)}`, { cache: "no-store" });
+        const usernameData = await usernameResponse.json();
+        if (!usernameResponse.ok || !usernameData.available) {
+          throw new Error(usernameData.error || "Este @ de usuário já está em uso.");
+        }
+
         const origin =
           window.location.origin;
 
@@ -335,6 +348,8 @@ export function AuthPage({
               data: {
                 display_name:
                   name.trim(),
+                username,
+                profile_visibility: "private",
               },
 
               emailRedirectTo:
@@ -468,7 +483,7 @@ export function AuthPage({
                 </strong>
 
                 <small>
-                  Status, notas, favoritos e histórico.
+                  Status, notas, curtidos e histórico.
                 </small>
               </div>
             </div>
@@ -558,6 +573,7 @@ export function AuthPage({
             }
           >
             {isSignup && (
+              <>
               <label>
                 <span>
                   Nome
@@ -585,6 +601,23 @@ export function AuthPage({
                   />
                 </div>
               </label>
+              <label>
+                <span>@ de usuário</span>
+                <div className="auth-input">
+                  <User size={16} />
+                  <input
+                    autoComplete="username"
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+                    placeholder="seu_usuario"
+                    minLength={3}
+                    maxLength={24}
+                    required
+                  />
+                </div>
+                <small className="muted">Seu perfil será mycatalog.com/u/{username || "seu_usuario"}</small>
+              </label>
+              </>
             )}
 
             <label>

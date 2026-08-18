@@ -17,6 +17,7 @@ import {
   Heart,
   Eye,
   Loader2,
+  Layers3,
   Plus,
   RotateCcw,
   SlidersHorizontal,
@@ -36,10 +37,13 @@ import {
 import { Search } from "@/components/Search";
 import { PickForMe } from "@/components/PickForMe";
 import { img } from "@/lib/tmdb";
+import { useToast } from "@/components/ToastProvider";
 
-type DiscoverType =
+type MediaType =
   | "movie"
   | "tv";
+
+type DiscoverType = "all" | MediaType;
 
 type DiscoverSort =
   | "popular"
@@ -50,7 +54,7 @@ type DiscoverItem = {
   id: number;
 
   media_type:
-    DiscoverType;
+    MediaType;
 
   title?: string;
   name?: string;
@@ -265,6 +269,7 @@ export default function DiscoverPage() {
 }
 
 function DiscoverContent() {
+  const toast = useToast();
   const router =
     useRouter();
 
@@ -278,11 +283,11 @@ function DiscoverContent() {
     useState<
       DiscoverType
     >(
-      searchParams.get(
-        "type"
-      ) === "tv"
+      searchParams.get("type") === "tv"
         ? "tv"
-        : "movie"
+        : searchParams.get("type") === "movie"
+          ? "movie"
+          : "all"
     );
 
   const rawSort =
@@ -851,23 +856,21 @@ function DiscoverContent() {
           true
         );
 
-        const response =
-          await fetch(
-            `/api/discover/filters?type=${type}`
-          );
+        const filterTypes: MediaType[] = type === "all" ? ["movie", "tv"] : [type];
+        const responses = await Promise.all(filterTypes.map((mediaType) => fetch(`/api/discover/filters?type=${mediaType}`)));
+        const payloads = await Promise.all(responses.map((response) => response.json()));
 
-        const result =
-          await response.json();
-
-        if (
-          !response.ok ||
-          result?.error
-        ) {
+        if (responses.some((response) => !response.ok) || payloads.some((result) => result?.error)) {
           throw new Error(
-            result?.error ||
+            payloads.find((result) => result?.error)?.error ||
               "Erro ao carregar filtros."
           );
         }
+
+        const result = {
+          genres: Array.from(new Map(payloads.flatMap((entry) => entry.genres || []).map((entry: any) => [entry.id, entry])).values()),
+          providers: Array.from(new Map(payloads.flatMap((entry) => entry.providers || []).map((entry: any) => [entry.provider_id, entry])).values()),
+        };
 
         if (
           !cancelled
@@ -1004,26 +1007,35 @@ function DiscoverContent() {
           );
         }
 
-        const response =
-  await fetch(
-    `/api/discover?${params.toString()}`,
-    {
-      cache: "no-store",
-    }
-  );
+        const requestTypes: MediaType[] = type === "all" ? ["movie", "tv"] : [type];
+        const responses = await Promise.all(requestTypes.map((mediaType) => {
+          const requestParams = new URLSearchParams(params);
+          requestParams.set("type", mediaType);
+          return fetch(`/api/discover?${requestParams.toString()}`, { cache: "no-store" });
+        }));
+        const payloads = await Promise.all(responses.map((response) => response.json()));
 
-        const result =
-          await response.json();
-
-        if (
-          !response.ok ||
-          result?.error
-        ) {
+        if (responses.some((response) => !response.ok) || payloads.some((result) => result?.error)) {
           throw new Error(
-            result?.error ||
+            payloads.find((result) => result?.error)?.error ||
               "Erro ao carregar títulos."
           );
         }
+
+        const result = type === "all"
+          ? {
+              page,
+              total_pages: Math.max(...payloads.map((entry) => Number(entry.total_pages || 1))),
+              total_results: payloads.reduce((total, entry) => total + Number(entry.total_results || 0), 0),
+              results: payloads
+                .flatMap((entry) => entry.results || [])
+                .sort((a: any, b: any) => sort === "rating"
+                  ? Number(b.vote_average || 0) - Number(a.vote_average || 0)
+                  : sort === "newest"
+                    ? String(b.release_date || b.first_air_date || "").localeCompare(String(a.release_date || a.first_air_date || ""))
+                    : Number(b.popularity || 0) - Number(a.popularity || 0)),
+            }
+          : payloads[0];
 
         if (
           !cancelled
@@ -1275,7 +1287,7 @@ function DiscoverContent() {
         error
       );
 
-      alert(
+      toast.error(
         error instanceof Error
           ? error.message
           : "Erro ao adicionar."
@@ -1397,7 +1409,7 @@ function DiscoverContent() {
         error
       );
 
-      alert(
+      toast.error(
         error instanceof Error
           ? error.message
           : "Erro ao alterar status."
@@ -1505,7 +1517,7 @@ function DiscoverContent() {
         error
       );
 
-      alert(
+      toast.error(
         error instanceof Error
           ? error.message
           : "Erro ao remover."
@@ -1643,7 +1655,7 @@ function DiscoverContent() {
         error
       );
 
-      alert(
+      toast.error(
         error instanceof Error
           ? error.message
           : "Erro ao alterar sua nota."
@@ -1784,6 +1796,15 @@ function DiscoverContent() {
       <section className="section discover-toolbar">
 
         <div className="discover-tabs">
+
+          <button
+            type="button"
+            className={type === "all" ? "btn primary" : "btn"}
+            onClick={() => { setType("all"); resetPage(); }}
+          >
+            <Layers3 size={16} />
+            Todos
+          </button>
 
           <button
             type="button"
@@ -2379,7 +2400,7 @@ function DiscoverContent() {
                       ) {
                         throw new Error(
                           result?.error ||
-                            "Não foi possível alterar o favorito."
+                            "Não foi possível alterar a curtida."
                         );
                       }
 
@@ -2441,10 +2462,10 @@ function DiscoverContent() {
                         error
                       );
 
-                      alert(
+                      toast.error(
                         error instanceof Error
                           ? error.message
-                          : "Erro ao alterar favorito."
+                          : "Erro ao alterar curtida."
                       );
                     } finally {
                       setProcessing(
@@ -2585,8 +2606,8 @@ function DiscoverContent() {
                               }
                               title={
                                 item.favorite
-                                  ? "Remover dos favoritos"
-                                  : "Adicionar aos favoritos"
+                                  ? "Remover dos curtidos"
+                                  : "Curtir título"
                               }
                               disabled={
                                 isProcessing

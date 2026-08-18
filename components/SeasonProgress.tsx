@@ -17,12 +17,16 @@ import {
 type SeasonProgressProps = {
   libraryItem: any;
   totalSeasons: number;
+  tvId?: number;
+  episodeProgress?: Record<number, { watched: number; released: number }>;
   onChange?: (item: any) => void;
 };
 
 export function SeasonProgress({
   libraryItem,
   totalSeasons,
+  tvId,
+  episodeProgress,
   onChange,
 }: SeasonProgressProps) {
   const [saving, setSaving] =
@@ -158,19 +162,29 @@ export function SeasonProgress({
         return 100;
       }
 
+      let effectiveCompleted = completed;
+
+      for (const [seasonKey, value] of Object.entries(episodeProgress || {})) {
+        const seasonNumber = Number(seasonKey);
+        if (!value.released) continue;
+        const fraction = Math.min(1, value.watched / value.released);
+        effectiveCompleted += seasonNumber <= completed ? fraction - 1 : fraction;
+      }
+
       return Math.min(
         100,
         Math.round(
           (
-            completed /
+            Math.max(0, effectiveCompleted) /
             safeTotalSeasons
-          ) * 100
-        )
+          ) * 1000
+        ) / 10
       );
     }, [
       completed,
       safeTotalSeasons,
       isWatched,
+      episodeProgress,
     ]);
 
   /*
@@ -468,6 +482,29 @@ export function SeasonProgress({
 
     const seasonToComplete =
       current;
+
+    if (tvId && libraryItem?.id) {
+      try {
+        const response = await fetch(`/api/tv/${tvId}/season/${seasonToComplete}`);
+        const data = await response.json();
+        const episodeNumbers = (Array.isArray(data?.episodes) ? data.episodes : [])
+          .filter((episode: any) => !episode.air_date || new Date(`${episode.air_date}T23:59:59`) <= new Date())
+          .map((episode: any) => Number(episode.episode_number))
+          .filter((number: number) => Number.isInteger(number) && number > 0);
+
+        if (episodeNumbers.length > 0) {
+          const progressResponse = await fetch("/api/episodes", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ library_id: libraryItem.id, season_number: seasonToComplete, episode_numbers: episodeNumbers, watched: true, total_seasons: safeTotalSeasons }),
+          });
+          if (!progressResponse.ok) throw new Error("Não foi possível marcar os episódios.");
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Erro ao sincronizar episódios.");
+        return;
+      }
+    }
 
     const newCompleted =
       Math.max(
