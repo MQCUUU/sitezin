@@ -743,8 +743,13 @@ export default function ProfilePage() {
           library.reduce(
             (total, item) =>
               total +
-              Number(
-                item.rewatch_count || 0
+              Math.max(
+                Number(
+                  item.rewatch_count || 0
+                ),
+                item.status === "rewatched"
+                  ? 1
+                  : 0
               ),
             0
           );

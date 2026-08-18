@@ -69,6 +69,117 @@ export function DataBackup() {
       null
     );
 
+  const letterboxdInputRef = useRef<HTMLInputElement | null>(null);
+  const [letterboxdRows, setLetterboxdRows] = useState<any[]>([]);
+  const [letterboxdName, setLetterboxdName] = useState("");
+  const [letterboxdImporting, setLetterboxdImporting] = useState(false);
+
+  function parseCsv(text: string) {
+    const rows: string[][] = [];
+    let row: string[] = [];
+    let cell = "";
+    let quoted = false;
+
+    for (let index = 0; index < text.length; index++) {
+      const char = text[index];
+      if (char === '"' && quoted && text[index + 1] === '"') {
+        cell += '"';
+        index++;
+      } else if (char === '"') {
+        quoted = !quoted;
+      } else if (char === "," && !quoted) {
+        row.push(cell);
+        cell = "";
+      } else if ((char === "\n" || char === "\r") && !quoted) {
+        if (char === "\r" && text[index + 1] === "\n") index++;
+        row.push(cell);
+        if (row.some(Boolean)) rows.push(row);
+        row = [];
+        cell = "";
+      } else {
+        cell += char;
+      }
+    }
+    row.push(cell);
+    if (row.some(Boolean)) rows.push(row);
+    return rows;
+  }
+
+  async function selectLetterboxd(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("CSV muito grande", { description: "O arquivo deve ter no máximo 5 MB." });
+      return;
+    }
+
+    try {
+      const csv = parseCsv(await file.text());
+      const headers = (csv.shift() || []).map((value) => value.trim().toLowerCase());
+      const column = (name: string) => headers.indexOf(name.toLowerCase());
+      const source = headers.includes("watched date")
+        ? "diary"
+        : file.name.toLowerCase().includes("watchlist")
+          ? "watchlist"
+          : "ratings";
+
+      if (column("Name") < 0) throw new Error("A coluna Name não foi encontrada.");
+
+      const parsed = csv.map((values) => ({
+        name: values[column("Name")]?.trim(),
+        year: Number(values[column("Year")]) || null,
+        rating: Number(values[column("Rating")]) || null,
+        watchedDate: values[column("Watched Date")]?.trim() || null,
+        rewatch: /^(yes|true|1)$/i.test(values[column("Rewatch")] || ""),
+        source,
+      })).filter((item) => item.name).slice(0, 1000);
+
+      if (!parsed.length) throw new Error("Nenhum filme foi encontrado no arquivo.");
+      setLetterboxdRows(parsed);
+      setLetterboxdName(file.name);
+    } catch (error) {
+      toast.error("CSV inválido", {
+        description: error instanceof Error ? error.message : "Não foi possível ler o arquivo.",
+      });
+    }
+  }
+
+  async function importLetterboxd() {
+    try {
+      setLetterboxdImporting(true);
+      const total = { imported: 0, history: 0, notFound: 0 };
+
+      // Lotes menores evitam o limite de duração das funções da Vercel.
+      for (let start = 0; start < letterboxdRows.length; start += 40) {
+        const response = await fetch("/api/account/import/letterboxd", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rows: letterboxdRows.slice(start, start + 40) }),
+        });
+        const data = await response.json();
+        if (!response.ok || data?.error) throw new Error(data?.error || "Não foi possível importar.");
+
+        total.imported += Number(data.imported || 0);
+        total.history += Number(data.history || 0);
+        total.notFound += Number(data.not_found?.length || 0);
+      }
+
+      setLetterboxdRows([]);
+      setLetterboxdName("");
+      toast.success("Letterboxd importado", {
+        description: `${total.imported} filmes e ${total.history} registros do diário processados. ${total.notFound} não encontrados.`,
+      });
+    } catch (error) {
+      toast.error("Erro ao importar", {
+        description: error instanceof Error ? error.message : "Tente novamente.",
+      });
+    } finally {
+      setLetterboxdImporting(false);
+    }
+  }
+
   const [
     exporting,
     setExporting,
@@ -497,6 +608,29 @@ if (
             Selecionar backup
           </button>
         </article>
+
+        <article className="data-backup-card restore">
+          <div className="data-backup-card-icon">
+            <FileSpreadsheet size={19} />
+          </div>
+
+          <div>
+            <strong>Importar do Letterboxd</strong>
+            <p>Importe diary.csv, ratings.csv ou watchlist.csv. A importação mescla os filmes sem apagar sua biblioteca.</p>
+          </div>
+
+          <input
+            ref={letterboxdInputRef}
+            type="file"
+            accept="text/csv,.csv"
+            hidden
+            onChange={selectLetterboxd}
+          />
+
+          <button type="button" className="btn" onClick={() => letterboxdInputRef.current?.click()}>
+            <Upload size={15} /> Selecionar CSV
+          </button>
+        </article>
       </div>
 
       <div className="data-backup-safety">
@@ -575,6 +709,27 @@ if (
                 )}
 
                 Restaurar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {letterboxdRows.length > 0 && (
+        <div className="mycatalog-confirm-backdrop">
+          <div className="mycatalog-confirm-modal">
+            <div className="mycatalog-confirm-icon"><FileSpreadsheet size={20} /></div>
+            <div className="eyebrow">IMPORTAR LETTERBOXD</div>
+            <h3>Importar {letterboxdName}?</h3>
+            <p className="muted">
+              Encontramos {letterboxdRows.length} registros. Exemplo: {letterboxdRows.slice(0, 3).map((item) => `${item.name}${item.year ? ` (${item.year})` : ""}`).join(", ")}.
+            </p>
+            <p className="muted">Os títulos existentes serão mesclados e nenhum dado atual será apagado.</p>
+            <div className="mycatalog-confirm-actions">
+              <button type="button" className="btn" disabled={letterboxdImporting} onClick={() => { setLetterboxdRows([]); setLetterboxdName(""); }}>Cancelar</button>
+              <button type="button" className="btn primary" disabled={letterboxdImporting} onClick={importLetterboxd}>
+                {letterboxdImporting ? <Loader2 size={15} className="spin" /> : <Upload size={15} />}
+                {letterboxdImporting ? "Localizando filmes..." : "Importar"}
               </button>
             </div>
           </div>

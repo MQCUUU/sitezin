@@ -1540,7 +1540,15 @@ export async function POST(
       existingLibraryItem?.status !==
         "rewatching";
 
-    if (isStartingRewatch) {
+    const isDirectlyCompletingRewatch =
+      body.status === "rewatched" &&
+      existingLibraryItem?.status !== "rewatching" &&
+      existingLibraryItem?.status !== "rewatched";
+
+    if (
+      isStartingRewatch ||
+      isDirectlyCompletingRewatch
+    ) {
       rewatchCount += 1;
     }
 

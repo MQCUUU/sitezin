@@ -90,11 +90,14 @@ if (!currentItem) {
      * REASSISTIDAS
      * ==========================================
      *
-     * Só aumenta quando entra em "rewatching".
+     * Aumenta ao iniciar uma reassistida ou ao marcá-la como
+     * concluída diretamente, sem passar por "rewatching".
      *
      * watched -> rewatching = +1
      * rewatched -> rewatching = +1
      * rewatching -> rewatching = +0
+     * watching -> rewatched = +1
+     * rewatching -> rewatched = +0 (já contou ao iniciar)
      */
 
     let rewatchCount = Number(
@@ -105,7 +108,15 @@ if (!currentItem) {
       newStatus === "rewatching" &&
       oldStatus !== "rewatching";
 
-    if (isStartingRewatch) {
+    const isDirectlyCompletingRewatch =
+      newStatus === "rewatched" &&
+      oldStatus !== "rewatching" &&
+      oldStatus !== "rewatched";
+
+    if (
+      isStartingRewatch ||
+      isDirectlyCompletingRewatch
+    ) {
       rewatchCount += 1;
     }
 

@@ -52,6 +52,7 @@ type MediaResult = {
 
   vote_average?: number;
   overview?: string;
+  reason?: string;
 };
 
 type PersonResult = {
@@ -180,6 +181,10 @@ export function Search() {
       null
     >(null);
 
+  const suggestionCacheRef = useRef(
+    new Map<string, { expiresAt: number; suggestions: SearchSuggestion[] }>(),
+  );
+
   /*
    * ==========================================
    * BUSCA UNIVERSAL INSTANTÂNEA
@@ -237,6 +242,36 @@ export function Search() {
           requestRef.current
             ?.abort();
 
+          const cacheKey = query
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase();
+          const memoryCached = suggestionCacheRef.current.get(cacheKey);
+
+          if (memoryCached && memoryCached.expiresAt > Date.now()) {
+            setResults(memoryCached.suggestions);
+            setLoading(false);
+            setActiveIndex(-1);
+            return;
+          }
+
+          try {
+            const stored = sessionStorage.getItem(`mycatalog:suggest:v1:${cacheKey}`);
+            if (stored) {
+              const cached = JSON.parse(stored);
+              if (cached.expiresAt > Date.now() && Array.isArray(cached.suggestions)) {
+                suggestionCacheRef.current.set(cacheKey, cached);
+                setResults(cached.suggestions);
+                setLoading(false);
+                setActiveIndex(-1);
+                return;
+              }
+              sessionStorage.removeItem(`mycatalog:suggest:v1:${cacheKey}`);
+            }
+          } catch {
+            // A busca continua normalmente quando o storage está indisponível.
+          }
+
           const controller =
             new AbortController();
 
@@ -280,12 +315,18 @@ export function Search() {
                 ? data.suggestions
                 : [];
 
-            setResults(
-              normalized.slice(
-                0,
-                10
-              )
-            );
+            const suggestions = normalized.slice(0, 10);
+            const cached = { expiresAt: Date.now() + 15 * 60 * 1000, suggestions };
+            suggestionCacheRef.current.set(cacheKey, cached);
+            try {
+              sessionStorage.setItem(
+                `mycatalog:suggest:v1:${cacheKey}`,
+                JSON.stringify(cached),
+              );
+            } catch {
+              // Cache local é opcional.
+            }
+            setResults(suggestions);
 
             setActiveIndex(
               -1
@@ -1017,9 +1058,11 @@ export function Search() {
                               " · "
                             }
 
-                            {isMovie
-                              ? "Filme"
-                              : "Série"}
+                              {isMovie
+                                ? "Filme"
+                                : "Série"}
+
+                              {item.reason ? ` · ${item.reason}` : ""}
 
                             {typeof item.vote_average ===
                               "number" &&

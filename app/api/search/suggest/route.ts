@@ -4,8 +4,8 @@ import {
 } from "next/server";
 
 import {
-  createClient,
-} from "@/lib/supabase/server";
+  createClient as createSupabaseClient,
+} from "@supabase/supabase-js";
 
 const TMDB_BASE =
   "https://api.themoviedb.org/3";
@@ -401,8 +401,14 @@ export async function GET(
     );
   }
 
-  const supabase =
-    await createClient();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  const supabase = supabaseUrl && serviceRoleKey
+    ? createSupabaseClient(supabaseUrl, serviceRoleKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      })
+    : null;
 
   const [
     multi,
@@ -457,19 +463,12 @@ export async function GET(
           )
       ),
 
-      supabase.rpc(
-        "search_character_titles",
-        {
-          search_text:
-            q,
-
-          min_similarity:
-            0.45,
-
-          result_limit:
-            12,
-        }
-      ),
+      supabase
+        ? supabase.rpc("search_v4_characters", {
+            query_text: q,
+            result_limit: 5,
+          })
+        : Promise.resolve({ data: [], error: null }),
     ]);
 
   const suggestions:
@@ -620,15 +619,25 @@ export async function GET(
       ? characterSearch.data
       : [];
 
-  if (
-    characterRows.length >
-    0
-  ) {
+  let relatedCharacterMedia: any[] = [];
+
+  if (characterRows.length > 0 && supabase) {
     const bestName =
       characterRows[
         0
       ]
         .character_name;
+
+    const { data: mediaRows } = await supabase.rpc(
+      "search_v4_character_media",
+      { target_character_id: characterRows[0].character_id },
+    );
+
+    relatedCharacterMedia = Array.isArray(mediaRows)
+      ? [...mediaRows]
+          .sort((a: any, b: any) => Number(b.popularity || 0) - Number(a.popularity || 0))
+          .slice(0, 3)
+      : [];
 
     suggestions.push({
       kind:
@@ -641,15 +650,7 @@ export async function GET(
         q,
 
       count:
-        new Set(
-          characterRows.map(
-            (
-              item:
-                any
-            ) =>
-              `${item.media_type}-${item.tmdb_id}`
-          )
-        ).size,
+        Number(characterRows[0].media_count || relatedCharacterMedia.length),
 
       poster_path:
         characterRows[
@@ -663,6 +664,26 @@ export async function GET(
           bestName
         )}`,
     });
+
+    for (const media of relatedCharacterMedia) {
+      const alreadyIncluded = suggestions.some(
+        (item) =>
+          item.kind === "media" &&
+          item.id === media.tmdb_id &&
+          item.media_type === media.media_type,
+      );
+
+      if (!alreadyIncluded) {
+        suggestions.push({
+          kind: "media",
+          id: media.tmdb_id,
+          media_type: media.media_type,
+          title: media.media_title,
+          poster_path: null,
+          reason: `Com ${bestName}`,
+        });
+      }
+    }
   }
 
   /*
@@ -734,7 +755,7 @@ export async function GET(
     {
       headers: {
         "Cache-Control":
-          "public, s-maxage=60, stale-while-revalidate=600",
+          "public, max-age=60, s-maxage=600, stale-while-revalidate=86400",
       },
     }
   );
