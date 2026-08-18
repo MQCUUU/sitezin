@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Search } from '@/components/Search';
 import { createClient } from '@/lib/supabase/client';
 import { DataBackup } from '@/components/DataBackup';
@@ -30,9 +31,11 @@ import {
 } from 'lucide-react';
 
 export default function Settings() {
+  const searchParams = useSearchParams();
   const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'account' | 'notifications' | 'appearance'>('general');
   const [d, setD] = useState<any[]>([]);
   const [name, setName] = useState('');
+  useEffect(() => { const tab = searchParams.get('tab'); if (['general','account','notifications','appearance'].includes(tab || '')) setActiveSettingsTab(tab as typeof activeSettingsTab); }, [searchParams]);
 
   const [preferences, setPreferences] =
     useState<AppearancePreferences>(DEFAULT_PREFERENCES);

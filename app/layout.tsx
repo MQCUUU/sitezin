@@ -9,6 +9,7 @@ import { AppearanceProvider } from "@/components/AppearanceProvider";
 import { ScrollMemory } from "@/components/ScrollMemory";
 import { AppProviders } from "@/components/AppProviders";
 import { AccountMenu } from "@/components/AccountMenu";
+import { NotificationCenter } from "@/components/NotificationCenter";
 
 /*
  * O globals.css pede `font-family: Inter, ...` desde sempre,
@@ -143,6 +144,7 @@ export default function RootLayout({
 </main>
           </div>
 
+          <NotificationCenter />
           <AccountMenu />
         </AppProviders>
       </body>

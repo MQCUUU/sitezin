@@ -1323,11 +1323,7 @@ useEffect(() => {
             href={`/title/${item.media_type}/${item.tmdb_id}`}
             className="poster-link"
           >
-            <img
-  src={img(item.poster_path)}
-  alt={item.title}
-  loading="lazy"
-/>
+            <Poster path={item.poster_path} alt={item.title} sizes="(max-width:700px) 46vw, (max-width:1100px) 24vw, 170px" />
           </Link>
 
           <span className="badge">

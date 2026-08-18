@@ -16,6 +16,10 @@ type Tab = "activity" | "likes" | "lists" | "connections";
 type PersonRow = { follower_id?: string; following_id?: string; profile: { id: string; username: string; display_name: string; avatar_url?: string } };
 type OwnConnections = { following: PersonRow[]; followers: PersonRow[]; incoming: PersonRow[]; outgoing: PersonRow[] };
 const mediaOf = (row: any) => Array.isArray(row?.media) ? row.media[0] : row?.media;
+const normalizePerson = (row: any): PersonRow | null => {
+  const profile = Array.isArray(row?.profile) ? row.profile[0] : row?.profile;
+  return profile?.id ? { ...row, profile } : null;
+};
 
 function PosterRow({ items, empty }: { items: any[]; empty: string }) {
   if (!items.length) return <div className="profile-tab-empty">{empty}</div>;
@@ -131,8 +135,10 @@ export default function PublicProfilePage() {
 
   async function createList() { if (!listName.trim()) return; const response=await fetch("/api/lists",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:listName})});const result=await response.json();if(!response.ok)return toast.error("Não foi possível criar a lista",{description:result.error});setData((current:any)=>({...current,lists:[{...result,items:[{count:0}]},...(current.lists||[])]}));setListName("");toast.success("Lista criada"); }
 
-  const modalRows: PersonRow[] = connectionModal ? (data?.social?.[connectionModal] || []) : [];
-  const filteredRows = useMemo(() => modalRows.filter((row) => `${row.profile.display_name} ${row.profile.username}`.toLowerCase().includes(connectionSearch.toLowerCase())), [modalRows, connectionSearch]);
+  const modalRows: PersonRow[] = connectionModal
+    ? ((data?.social?.relationship === "self" ? ownConnections?.[connectionModal] : data?.social?.[connectionModal]) || []).map(normalizePerson).filter(Boolean) as PersonRow[]
+    : [];
+  const filteredRows = useMemo(() => modalRows.filter((row) => `${row.profile.display_name || ""} ${row.profile.username || ""}`.toLowerCase().includes(connectionSearch.trim().toLowerCase())), [modalRows, connectionSearch]);
   if (loading) return <><Search /><div className="empty"><Loader2 className="spin" /> Carregando perfil...</div></>;
   if (!data) return <><Search /><div className="empty"><LockKeyhole /> Este perfil não existe ou é privado.</div></>;
 
@@ -142,7 +148,7 @@ export default function PublicProfilePage() {
   return <><Search /><main className="public-profile profile-v2">
     <header className="profile-v2-hero panel">
       {data.profile.avatar_url ? <img src={data.profile.avatar_url} alt={data.profile.display_name} /> : <div className="public-profile-avatar">{data.profile.display_name?.slice(0, 2).toUpperCase()}</div>}
-      <div className="profile-v2-copy"><span>@{data.profile.username}</span><h1>{data.profile.display_name}</h1>{data.profile.bio && <p>{data.profile.bio}</p>}<div className="profile-v2-counts"><button onClick={() => data.social.followers && setConnectionModal("followers")}><strong>{data.social.followers_count}</strong> seguidores</button><button onClick={() => data.social.following && setConnectionModal("following")}><strong>{data.social.following_count}</strong> seguindo</button></div></div>
+      <div className="profile-v2-copy"><span>@{data.profile.username}</span><h1>{data.profile.display_name}</h1>{data.profile.bio && <p>{data.profile.bio}</p>}<div className="profile-v2-counts"><button disabled={relationship !== "self" && data.social.followers == null} onClick={() => setConnectionModal("followers")}><strong>{data.social.followers_count}</strong> seguidores</button><button disabled={relationship !== "self" && data.social.following == null} onClick={() => setConnectionModal("following")}><strong>{data.social.following_count}</strong> seguindo</button></div></div>
       {relationship === "self" ? <button className={`btn profile-v2-action ${editingProfile ? "" : "primary"}`} onClick={() => setEditingProfile((value) => !value)}>{editingProfile ? <X size={15}/> : <Pencil size={15} />}{editingProfile ? "Fechar edição" : "Editar perfil"}</button> : data.social.can_follow && <button className={`btn profile-v2-action ${relationship === "none" ? "primary" : ""}`} disabled={busy} onClick={toggleFollow}>{busy ? <Loader2 className="spin" size={15} /> : relationship === "accepted" ? <UserCheck size={15} /> : <UserPlus size={15} />}{relationship === "accepted" ? "Seguindo" : relationship === "pending" ? "Solicitação enviada" : "Seguir"}</button>}
     </header>
     {relationship === "self" && editingProfile && <section className="profile-inline-editor"><div className="profile-inline-editor-head"><div><span className="eyebrow">EDITAR PERFIL</span><h2>Personalize sua página</h2><p className="muted">Foto, informações e seus Top 5 ficam todos aqui.</p></div><Link className="btn" href="/settings">Configurações da conta</Link></div><AvatarSettings/><ProfileShowcaseEditor/></section>}

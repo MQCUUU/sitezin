@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-const defaults = { new_follower_site: true, new_follower_email: false, follow_request_site: true, follow_request_email: false, review_like_site: true, review_like_email: false, product_updates_email: false };
+const defaults = { new_follower_site: true, new_follower_email: false, follow_request_site: true, follow_request_email: false, review_like_site: true, review_like_email: false, product_updates_email: false, new_season_site: true, new_episode_site: true };
 export async function GET() {
   const s = await createClient(); const { data: { user } } = await s.auth.getUser();
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });

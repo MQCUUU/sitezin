@@ -145,6 +145,39 @@ do $$ begin
   alter publication supabase_realtime add table public.follows;
 exception when duplicate_object then null;
 end $$;
+
+create table if not exists public.notification_preferences (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  new_follower_site boolean not null default true,
+  new_follower_email boolean not null default false,
+  follow_request_site boolean not null default true,
+  follow_request_email boolean not null default false,
+  review_like_site boolean not null default true,
+  review_like_email boolean not null default false,
+  product_updates_email boolean not null default false,
+  new_season_site boolean not null default true,
+  new_episode_site boolean not null default true,
+  updated_at timestamptz not null default now()
+);
+create table if not exists public.notifications (
+  id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade,
+  event_key text not null, type text not null check (type in ('new_season','new_episode')),
+  title text not null, message text not null, href text, release_at timestamptz,
+  release_precision text not null default 'date' check (release_precision in ('date','datetime')),
+  metadata jsonb not null default '{}'::jsonb, read_at timestamptz, created_at timestamptz not null default now(),
+  unique(user_id,event_key)
+);
+alter table public.notification_preferences add column if not exists new_season_site boolean not null default true;
+alter table public.notification_preferences add column if not exists new_episode_site boolean not null default true;
+create index if not exists notifications_user_unread_idx on public.notifications(user_id,created_at desc) where read_at is null;
+alter table public.notification_preferences enable row level security;
+alter table public.notifications enable row level security;
+drop policy if exists "own notification preferences" on public.notification_preferences;
+create policy "own notification preferences" on public.notification_preferences for all to authenticated using ((select auth.uid())=user_id) with check ((select auth.uid())=user_id);
+drop policy if exists "own notifications" on public.notifications;
+create policy "own notifications" on public.notifications for all to authenticated using ((select auth.uid())=user_id) with check ((select auth.uid())=user_id);
+alter table public.notifications replica identity full;
+do $$ begin alter publication supabase_realtime add table public.notifications; exception when duplicate_object then null; end $$;
  
  
 create table if not exists public.library_items (
