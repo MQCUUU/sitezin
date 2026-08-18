@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     return NextResponse.json(result, {
       headers: {
         "Cache-Control":
-          "public, s-maxage=300, stale-while-revalidate=1800",
+          "public, max-age=300, s-maxage=1800, stale-while-revalidate=86400",
       },
     });
   } catch (error) {

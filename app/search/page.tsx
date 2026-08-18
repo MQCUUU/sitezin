@@ -369,6 +369,69 @@ async function safeJson(
   return response.json();
 }
 
+const SEARCH_CACHE_TTL =
+  30 * 60 * 1000;
+
+type StoredSearchResponse = {
+  expiresAt: number;
+  data: any;
+};
+
+/*
+ * sessionStorage sobrevive ao F5, ao contrário de um cache React/em memória.
+ * Os endpoints abaixo só devolvem dados públicos do catálogo, portanto é
+ * seguro reaproveitá-los durante a sessão da aba.
+ */
+async function cachedSearchJson(
+  url: string,
+  signal: AbortSignal,
+) {
+  const key = `mycatalog:search:v1:${url}`;
+
+  try {
+    const stored =
+      sessionStorage.getItem(key);
+
+    if (stored) {
+      const cached = JSON.parse(
+        stored,
+      ) as StoredSearchResponse;
+
+      if (
+        cached.expiresAt > Date.now()
+      ) {
+        return cached.data;
+      }
+
+      sessionStorage.removeItem(key);
+    }
+  } catch {
+    // Storage bloqueado/cheio não pode impedir a pesquisa.
+  }
+
+  const response = await fetch(url, {
+    signal,
+  });
+  const data = await safeJson(response);
+
+  if (response.ok) {
+    try {
+      sessionStorage.setItem(
+        key,
+        JSON.stringify({
+          expiresAt:
+            Date.now() + SEARCH_CACHE_TTL,
+          data,
+        } satisfies StoredSearchResponse),
+      );
+    } catch {
+      // O resultado continua válido mesmo sem cache local.
+    }
+  }
+
+  return data;
+}
+
 export default function SearchPage() {
   return (
     <Suspense
@@ -904,29 +967,17 @@ function SearchPageContent() {
         });
 
         const [
-          searchResponse,
-          advancedResponse,
-        ] = await Promise.all([
-          fetch(
-            `/api/search?q=${encodeURIComponent(query)}`,
-            {
-              signal: controller.signal,
-            }
-          ),
-          fetch(
-            `/api/search/advanced?q=${encodeURIComponent(query)}`,
-            {
-              signal: controller.signal,
-            }
-          ),
-        ]);
-
-        const [
           searchData,
           advancedData,
         ] = await Promise.all([
-          safeJson(searchResponse),
-          safeJson(advancedResponse),
+          cachedSearchJson(
+            `/api/search?q=${encodeURIComponent(query)}`,
+            controller.signal,
+          ),
+          cachedSearchJson(
+            `/api/search/advanced?q=${encodeURIComponent(query)}`,
+            controller.signal,
+          ),
         ]);
 
         const rawResults =
@@ -968,7 +1019,7 @@ function SearchPageContent() {
          */
         if (
           !cancelled &&
-          advancedResponse.ok &&
+          !advancedData?.error &&
           advancedData?.handled &&
           Array.isArray(advancedData.results) &&
           advancedData.results.length > 0
@@ -1084,7 +1135,7 @@ function SearchPageContent() {
 
           if (
             !cancelled &&
-            advancedResponse.ok &&
+            !advancedData?.error &&
             advancedData?.handled &&
             Array.isArray(
               advancedData.results
