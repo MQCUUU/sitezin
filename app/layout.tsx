@@ -10,6 +10,7 @@ import { ScrollMemory } from "@/components/ScrollMemory";
 import { AppProviders } from "@/components/AppProviders";
 import { AccountMenu } from "@/components/AccountMenu";
 import { NotificationCenter } from "@/components/NotificationCenter";
+import { getSiteUrl } from "@/lib/site-url";
 
 /*
  * O globals.css pede `font-family: Inter, ...` desde sempre,
@@ -33,8 +34,7 @@ const inter = Inter({
  * compartilhamento. Sem ele, WhatsApp e Twitter não conseguem
  * resolver a imagem.
  */
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+const siteUrl = getSiteUrl();
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

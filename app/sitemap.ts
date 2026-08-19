@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { createClient } from "@supabase/supabase-js";
+import { getSiteUrl } from "@/lib/site-url";
 
 /*
  * SUBSTITUI app/sitemap.ts
@@ -26,24 +27,8 @@ import { createClient } from "@supabase/supabase-js";
 
 export const revalidate = 86400; // 24h
 
-const DEFAULT_SITE_URL = "http://localhost:3000";
-
 /** Teto de URLs. O limite do protocolo é 50.000. */
 const MAX_TITULOS = 5000;
-
-function getSiteUrl() {
-  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-
-  try {
-    return new URL(configured || DEFAULT_SITE_URL).origin;
-  } catch {
-    console.error(
-      "[sitemap] NEXT_PUBLIC_SITE_URL inválida; usando localhost."
-    );
-
-    return DEFAULT_SITE_URL;
-  }
-}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = getSiteUrl();

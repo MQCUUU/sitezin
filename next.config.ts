@@ -1,4 +1,34 @@
 import type { NextConfig } from "next";
+
+const isDevelopment = process.env.NODE_ENV === "development";
+
+/*
+ * CSP estatica: preserva o prerender/cache do App Router e bloqueia fontes
+ * de conteudo que o site nao usa. O bootstrap do Next e estilos dinamicos
+ * exigem unsafe-inline; unsafe-eval fica limitado ao desenvolvimento.
+ */
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  [
+    "connect-src 'self'",
+    "https://*.supabase.co",
+    "wss://*.supabase.co",
+    ...(isDevelopment ? ["http://localhost:*", "ws://localhost:*"] : []),
+  ].join(" "),
+  "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
+  "media-src 'self' blob: https:",
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  ...(!isDevelopment ? ["upgrade-insecure-requests"] : []),
+].join("; ");
  
 const nextConfig: NextConfig = {
   images: {
@@ -36,16 +66,18 @@ const nextConfig: NextConfig = {
    * funcionalidade existente — são todos restrições que o app
    * já respeita na prática.
    *
-   * Deliberadamente NÃO incluí Content-Security-Policy: uma CSP
-   * mal calibrada quebra estilos e scripts de forma difícil de
-   * diagnosticar, e o app usa estilos inline em vários lugares.
-   * Fica para um lote próprio, com tempo de testar.
+   * A CSP foi calibrada para o App Router, Supabase, imagens externas
+   * e trailers do YouTube sem desativar o prerender das páginas.
    */
   async headers() {
     return [
       {
         source: "/:path*",
         headers: [
+          {
+            key: "Content-Security-Policy",
+            value: contentSecurityPolicy,
+          },
           {
             /*
              * Impede o navegador de "adivinhar" o tipo de um
@@ -93,6 +125,5 @@ const nextConfig: NextConfig = {
     ];
   },
 };
- 
+
 export default nextConfig;
- 
