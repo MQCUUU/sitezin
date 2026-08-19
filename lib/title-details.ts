@@ -28,6 +28,75 @@ const TMDB_BASE = "https://api.themoviedb.org/3";
 
 export type TitleType = "movie" | "tv";
 
+type TmdbRecord = Record<string, unknown>;
+
+function compactPerson(value: unknown, crew = false) {
+  if (!value || typeof value !== "object") return null;
+
+  const person = value as TmdbRecord;
+  if (!Number.isInteger(Number(person.id)) || typeof person.name !== "string") {
+    return null;
+  }
+
+  return {
+    id: Number(person.id),
+    name: person.name,
+    profile_path: typeof person.profile_path === "string" ? person.profile_path : null,
+    ...(crew
+      ? {
+          department: typeof person.department === "string" ? person.department : null,
+          job: typeof person.job === "string" ? person.job : null,
+        }
+      : {
+          character: typeof person.character === "string" ? person.character : null,
+          order: Number.isInteger(Number(person.order)) ? Number(person.order) : null,
+        }),
+  };
+}
+
+/**
+ * Reduz a resposta pública do TMDB aos dados realmente usados pela interface.
+ * Além de diminuir o RSC/JSON, remove credit_id e números financeiros que
+ * scanners confundem com cartões ou timestamps.
+ */
+export function sanitizeTitleDetails(value: unknown): TmdbRecord {
+  if (!value || typeof value !== "object") return {};
+
+  const details = value as TmdbRecord;
+  const credits = details.credits && typeof details.credits === "object"
+    ? details.credits as TmdbRecord
+    : {};
+  const cast = Array.isArray(credits.cast)
+    ? credits.cast.map((person) => compactPerson(person)).filter(Boolean).slice(0, 24)
+    : [];
+  const crew = Array.isArray(credits.crew)
+    ? credits.crew
+        .filter((person) => person && typeof person === "object" && (person as TmdbRecord).job === "Director")
+        .map((person) => compactPerson(person, true))
+        .filter(Boolean)
+        .slice(0, 5)
+    : [];
+  const createdBy = Array.isArray(details.created_by)
+    ? details.created_by.map((person) => compactPerson(person)).filter(Boolean).slice(0, 10)
+    : [];
+
+  const {
+    budget: _budget,
+    revenue: _revenue,
+    credits: _credits,
+    aggregate_credits: _aggregateCredits,
+    images: _images,
+    created_by: _createdBy,
+    ...safeDetails
+  } = details;
+
+  return {
+    ...safeDetails,
+    credits: { cast, crew },
+    created_by: createdBy,
+  };
+}
+
 /**
  * Detalhes completos de um título + onde assistir.
  *
@@ -76,7 +145,7 @@ export async function getTitleDetails(
   }
 
   return {
-    ...(details as Record<string, unknown>),
+    ...sanitizeTitleDetails(details),
     watch_providers: watchProviders,
   };
 }

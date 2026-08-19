@@ -4,6 +4,7 @@ import {
 } from "next/server";
 
 import { detailsTMDB } from "@/lib/tmdb";
+import { sanitizeTitleDetails } from "@/lib/title-details";
 
 const TMDB_BASE =
   "https://api.themoviedb.org/3";
@@ -121,7 +122,7 @@ export async function GET(
     }
 
     return NextResponse.json({
-      ...details,
+      ...sanitizeTitleDetails(details),
       watch_providers: watchProviders,
     });
   } catch (error) {

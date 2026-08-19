@@ -10,8 +10,18 @@ const isDevelopment = process.env.NODE_ENV === "development";
 const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https:",
+  "script-src-attr 'none'",
+  "style-src 'self'",
+  "style-src-attr 'unsafe-inline'",
+  [
+    "img-src 'self' data: blob:",
+    "https://image.tmdb.org",
+    "https://qjjwbprpvtltvszoeojx.supabase.co",
+    "https://cdn.discordapp.com",
+    "https://lh3.googleusercontent.com",
+    "https://avatars.githubusercontent.com",
+    "https://secure.gravatar.com",
+  ].join(" "),
   "font-src 'self' data:",
   [
     "connect-src 'self'",
@@ -20,7 +30,7 @@ const contentSecurityPolicy = [
     ...(isDevelopment ? ["http://localhost:*", "ws://localhost:*"] : []),
   ].join(" "),
   "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
-  "media-src 'self' blob: https:",
+  "media-src 'self' blob:",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
   "object-src 'none'",
@@ -31,6 +41,8 @@ const contentSecurityPolicy = [
 ].join("; ");
  
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
+
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "image.tmdb.org" },
