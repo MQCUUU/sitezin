@@ -10,7 +10,7 @@ alter table public.profiles add column if not exists username text;
 alter table public.profiles add column if not exists bio text;
 alter table public.profiles add column if not exists avatar_url text;
 alter table public.profiles add column if not exists is_public boolean not null default false;
-alter table public.profiles add column if not exists visibility text not null default 'friends';
+alter table public.profiles add column if not exists visibility text not null default 'private';
 alter table public.profiles add column if not exists follow_policy text not null default 'profile';
 alter table public.profiles add column if not exists followers_visibility text not null default 'profile';
 alter table public.profiles add column if not exists following_visibility text not null default 'profile';
@@ -25,6 +25,8 @@ update public.profiles set visibility = 'private' where visibility = 'friends';
 
 alter table public.profiles add constraint profiles_visibility_check
   check (visibility in ('public', 'private'));
+
+alter table public.profiles alter column visibility set default 'private';
 
 alter table public.profiles drop constraint if exists profiles_follow_policy_check;
 alter table public.profiles add constraint profiles_follow_policy_check
@@ -84,6 +86,8 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created_profile
   after insert on auth.users
   for each row execute function public.handle_new_user_profile();
+
+revoke all on function public.handle_new_user_profile() from public, anon, authenticated, service_role;
 
 create table if not exists public.profile_favorites (
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -223,6 +227,12 @@ create policy "follow participants delete" on public.follows
   for delete to authenticated
   using ((select auth.uid()) in (follower_id, following_id));
 
+-- As alteracoes sociais passam pela rota autenticada do servidor, que valida
+-- politica de seguimento e identidade antes de usar a service_role.
+revoke insert, update, delete on table public.follows from anon, authenticated;
+revoke insert, update, delete on table public.friendships from anon, authenticated;
+grant select on table public.follows, public.friendships to authenticated;
+
 drop policy if exists "own username changes" on public.username_changes;
 create policy "own username changes" on public.username_changes
   for select to authenticated
@@ -276,7 +286,7 @@ begin
 end;
 $$;
 
-revoke all on function public.change_my_username(text) from public;
+revoke all on function public.change_my_username(text) from public, anon, authenticated;
 grant execute on function public.change_my_username(text) to authenticated;
 
 -- Avatares públicos; cada usuário só pode gravar dentro da própria pasta.

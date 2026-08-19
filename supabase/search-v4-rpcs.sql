@@ -244,10 +244,10 @@ as $$
     sm.popularity desc;
 $$;
 
-revoke all on function public.search_v4_people(text, integer) from public;
-revoke all on function public.search_v4_characters(text, integer) from public;
-revoke all on function public.search_v4_character_media(bigint) from public;
-revoke all on function public.search_v4_person_media(integer) from public;
+revoke all on function public.search_v4_people(text, integer) from public, anon, authenticated;
+revoke all on function public.search_v4_characters(text, integer) from public, anon, authenticated;
+revoke all on function public.search_v4_character_media(bigint) from public, anon, authenticated;
+revoke all on function public.search_v4_person_media(integer) from public, anon, authenticated;
 grant execute on function public.search_v4_people(text, integer) to service_role;
 grant execute on function public.search_v4_characters(text, integer) to service_role;
 grant execute on function public.search_v4_character_media(bigint) to service_role;

@@ -111,6 +111,7 @@ alter table public.profiles add column if not exists activity_visibility text no
 alter table public.profiles add column if not exists diary_visibility text not null default 'profile';
 alter table public.profiles add column if not exists lists_visibility text not null default 'profile';
 alter table public.profiles add column if not exists likes_visibility text not null default 'profile';
+alter table public.profiles alter column visibility set default 'private';
 alter table public.profiles drop constraint if exists profiles_activity_visibility_check;
 alter table public.profiles add constraint profiles_activity_visibility_check check (activity_visibility in ('profile', 'followers', 'private'));
 alter table public.profiles drop constraint if exists profiles_diary_visibility_check;
@@ -146,6 +147,27 @@ end; $$;
 drop trigger if exists on_auth_user_created_profile on auth.users;
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created_profile after insert on auth.users for each row execute function public.handle_new_user_profile();
+revoke all on function public.handle_new_user_profile() from public, anon, authenticated, service_role;
+
+create or replace function public.guard_profile_username_change()
+returns trigger
+language plpgsql
+security invoker
+set search_path = pg_catalog
+as $$
+begin
+  if new.username is distinct from old.username
+     and current_user not in ('postgres', 'service_role', 'supabase_admin') then
+    raise exception 'use_change_my_username';
+  end if;
+  return new;
+end;
+$$;
+revoke all on function public.guard_profile_username_change() from public, anon, authenticated;
+drop trigger if exists guard_profile_username_change on public.profiles;
+create trigger guard_profile_username_change
+  before update of username on public.profiles
+  for each row execute function public.guard_profile_username_change();
 
 create table if not exists public.profile_favorites (
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -165,6 +187,10 @@ create table if not exists public.follows (
   primary key (follower_id, following_id),
   check (follower_id <> following_id)
 );
+
+-- Escritas em follows sao feitas pela rota autenticada do servidor.
+revoke insert, update, delete on table public.follows from anon, authenticated;
+grant select on table public.follows to authenticated;
 
 alter table public.follows replica identity full;
 do $$ begin
@@ -715,8 +741,16 @@ create policy "media atualizavel" on public.media
 -- por linha.
 -- ------------------------------------------------------------
  
-create policy "own profile" on public.profiles
-  for all to authenticated
+create policy "own profile select" on public.profiles
+  for select to authenticated
+  using ((select auth.uid()) = id);
+
+create policy "own profile insert" on public.profiles
+  for insert to authenticated
+  with check ((select auth.uid()) = id);
+
+create policy "own profile update" on public.profiles
+  for update to authenticated
   using ((select auth.uid()) = id)
   with check ((select auth.uid()) = id);
 
@@ -877,12 +911,10 @@ create policy "own list items v2" on public.list_items
 -- Cache da IA
 -- ------------------------------------------------------------
  
-create policy "ai cache read global" on public.ai_recommendation_cache
-  for select to authenticated using (scope = 'global');
- 
-create policy "ai cache read own personalized" on public.ai_recommendation_cache
+create policy "ai cache read allowed" on public.ai_recommendation_cache
   for select to authenticated
-  using (scope = 'personalized' and user_id = (select auth.uid()));
+  using (scope = 'global'
+         or (scope = 'personalized' and user_id = (select auth.uid())));
  
 create policy "ai cache insert own personalized" on public.ai_recommendation_cache
   for insert to authenticated
