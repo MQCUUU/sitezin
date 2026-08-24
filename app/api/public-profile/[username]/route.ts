@@ -25,7 +25,7 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
       s.from("follows").select("follower_id", { count: "exact", head: true }).eq("following_id", profile.id).eq("status", "accepted"),
       s.from("follows").select("following_id", { count: "exact", head: true }).eq("follower_id", profile.id).eq("status", "accepted"),
     ]);
-    return NextResponse.json({ profile, locked: true, favorites: [], activity: [], recent_reviews: [], liked_titles: [], lists: [], diary: [], social: { followers_count: followersCount || 0, following_count: followingCount || 0, relationship: viewerFollow?.status || "none", can_follow: profile.follow_policy !== "nobody", followers: null, following: null, viewer_following_ids: [] } }, { headers: { "Cache-Control": "private, no-store", Vary: "Cookie" } });
+    return NextResponse.json({ profile, locked: true, favorites: [], activity: [], reviews: [], recent_reviews: [], liked_titles: [], lists: [], diary: [], social: { followers_count: followersCount || 0, following_count: followingCount || 0, relationship: viewerFollow?.status || "none", can_follow: profile.follow_policy !== "nobody", followers: null, following: null, viewer_following_ids: [] } }, { headers: { "Cache-Control": "private, no-store", Vary: "Cookie" } });
   }
   const [{ data: favorites }, { data: library }, { data: followers }, { data: following }, { data: lists }, { data: diary }] = await Promise.all([
     s.from("profile_favorites").select("media_type,position,media:media_id(*)").eq("user_id", profile.id).order("position"),
@@ -57,11 +57,23 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
   const diaryVisible = sectionVisible(profile.diary_visibility);
   const listsVisible = sectionVisible(profile.lists_visibility);
   const likesVisible = sectionVisible(profile.likes_visibility);
+  const reviews = activityVisible
+    ? rows
+      .filter((item: any) => Boolean(String(item.review || "").trim()))
+      .sort((a: any, b: any) => new Date(b.updated_at || b.watched_at || b.added_at).getTime() - new Date(a.updated_at || a.watched_at || a.added_at).getTime())
+    : [];
+  const recentReviews = activityVisible
+    ? rows
+      .filter((item: any) => Boolean(String(item.review || "").trim()) || item.personal_rating != null)
+      .sort((a: any, b: any) => new Date(b.updated_at || b.watched_at || b.added_at).getTime() - new Date(a.updated_at || a.watched_at || a.added_at).getTime())
+      .slice(0, 8)
+    : [];
   return NextResponse.json(
     {
       profile, favorites: favorites || [], stats,
       activity: activityVisible ? rows.slice().sort((a: any, b: any) => new Date(b.updated_at || b.added_at).getTime() - new Date(a.updated_at || a.added_at).getTime()).slice(0, 12) : [],
-      recent_reviews: activityVisible ? rows.filter((item: any) => item.review || item.personal_rating != null).sort((a: any, b: any) => new Date(b.updated_at || b.added_at).getTime() - new Date(a.updated_at || a.added_at).getTime()).slice(0, 8) : [],
+      reviews,
+      recent_reviews: recentReviews,
       liked_titles: likesVisible ? rows.filter((item: any) => item.favorite).slice(0, 20) : [],
       lists: listsVisible ? lists || [] : [], diary: diaryVisible ? diary || [] : [],
       section_visibility: { activity: activityVisible, diary: diaryVisible, lists: listsVisible, likes: likesVisible },

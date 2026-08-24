@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Ban, BookOpen, Check, Film, Heart, List, Loader2, LockKeyhole, Pencil, Search as SearchIcon, Star, UserCheck, UserMinus, UserPlus, Users, X } from "lucide-react";
+import { Ban, BookOpen, Check, Film, Heart, List, Loader2, LockKeyhole, MessageSquareText, Pencil, Search as SearchIcon, Star, UserCheck, UserMinus, UserPlus, Users, X } from "lucide-react";
 import { Search } from "@/components/Search";
 import { useToast } from "@/components/ToastProvider";
 import { img } from "@/lib/tmdb";
@@ -12,7 +12,7 @@ import { useConfirm } from "@/components/ConfirmProvider";
 import { ProfileShowcaseEditor } from "@/components/ProfileShowcaseEditor";
 import { AvatarSettings } from "@/components/AvatarSettings";
 
-type Tab = "activity" | "likes" | "lists" | "connections";
+type Tab = "activity" | "reviews" | "likes" | "lists" | "connections";
 type PersonRow = { follower_id?: string; following_id?: string; profile: { id: string; username: string; display_name: string; avatar_url?: string } };
 type OwnConnections = { following: PersonRow[]; followers: PersonRow[]; incoming: PersonRow[]; outgoing: PersonRow[] };
 const mediaOf = (row: any) => Array.isArray(row?.media) ? row.media[0] : row?.media;
@@ -24,6 +24,36 @@ const normalizePerson = (row: any): PersonRow | null => {
 function PosterRow({ items, empty }: { items: any[]; empty: string }) {
   if (!items.length) return <div className="profile-tab-empty">{empty}</div>;
   return <CarouselRail className="profile-media-row profile-media-carousel">{items.map((row, index) => { const media = mediaOf(row); return media && <Link href={`/title/${media.media_type}/${media.tmdb_id}`} key={row.id || `${media.media_type}-${media.tmdb_id}-${index}`}><div>{media.poster_path ? <img src={img(media.poster_path, "w342")} alt={media.title} /> : <Film />}</div><strong>{media.title}</strong>{row.personal_rating != null && <small><Star size={11} fill="currentColor" /> {Number(row.personal_rating).toFixed(1)}</small>}</Link>; })}</CarouselRail>;
+}
+
+function ReviewList({ items }: { items: any[] }) {
+  if (!items.length) return <div className="profile-tab-empty">Nenhuma review publicada ainda.</div>;
+  return <div className="profile-review-list">{items.map((row, index) => {
+    const media = mediaOf(row);
+    if (!media) return null;
+    const date = row.watched_at || row.updated_at || row.added_at;
+    return <Link
+      className="profile-review-card"
+      href={`/title/${media.media_type}/${media.tmdb_id}`}
+      key={row.id || `${media.media_type}-${media.tmdb_id}-${index}`}
+    >
+      <div className="profile-review-poster">
+        {media.poster_path
+          ? <img loading="lazy" src={img(media.poster_path, "w342")} alt={media.title} />
+          : <Film size={24} />}
+      </div>
+      <article>
+        <header>
+          <div>
+            <strong>{media.title}</strong>
+            <small>{media.media_type === "movie" ? "Filme" : "Série"}{date ? ` · ${new Date(date).toLocaleDateString("pt-BR")}` : ""}</small>
+          </div>
+          {row.personal_rating != null && <span><Star size={13} fill="currentColor" /> {Number(row.personal_rating).toFixed(1)}</span>}
+        </header>
+        <p>{String(row.review || "").trim() || "Avaliação registrada sem texto."}</p>
+      </article>
+    </Link>;
+  })}</div>;
 }
 
 export default function PublicProfilePage() {
@@ -84,7 +114,7 @@ export default function PublicProfilePage() {
     window.addEventListener("mycatalog:follows-updated", refreshFollows);
     return () => window.removeEventListener("mycatalog:follows-updated", refreshFollows);
   }, [username, data?.social?.relationship]);
-  useEffect(() => { const requested = searchParams.get("tab"); if (["activity","likes","lists","connections"].includes(requested || "")) setTab(requested as Tab); }, [searchParams]);
+  useEffect(() => { const requested = searchParams.get("tab"); if (["activity","reviews","likes","lists","connections"].includes(requested || "")) setTab(requested as Tab); }, [searchParams]);
 
   async function toggleFollow() {
     if (busy || !data) return;
@@ -156,9 +186,10 @@ export default function PublicProfilePage() {
 
     {!data.locked && <section className="panel profile-top5-fold"><div><span className="eyebrow">TOP 5 FILMES</span><div className="profile-top5-row">{favoriteMovies.map((item:any)=><Link href={`/title/movie/${item.media.tmdb_id}`} key={`movie-${item.position}`}>{item.media.poster_path?<img loading="lazy" src={img(item.media.poster_path,"w342")} alt={item.media.title}/>:<Film/>}<small>{item.media.title}</small></Link>)}</div></div><div><span className="eyebrow">TOP 5 SÉRIES</span><div className="profile-top5-row">{favoriteSeries.map((item:any)=><Link href={`/title/tv/${item.media.tmdb_id}`} key={`tv-${item.position}`}>{item.media.poster_path?<img loading="lazy" src={img(item.media.poster_path,"w342")} alt={item.media.title}/>:<Film/>}<small>{item.media.title}</small></Link>)}</div></div></section>}
 
-    <nav className="profile-tabs" aria-label="Conteúdo do perfil">{([['activity','Atividade',BookOpen],['likes','Curtidos',Heart],['lists','Listas',List],['connections',relationship === "self" && ownConnections?.incoming.length ? `Solicitações (${ownConnections.incoming.length})` : 'Seguidores / Seguindo',Users]] as const).map(([value,label,Icon]) => <button key={value} className={tab === value ? "active" : ""} onClick={() => setTab(value)}><Icon size={15} />{label}</button>)}</nav>
+    <nav className="profile-tabs" aria-label="Conteúdo do perfil">{([['activity','Atividade',BookOpen],['reviews','Reviews',MessageSquareText],['likes','Curtidos',Heart],['lists','Listas',List],['connections',relationship === "self" && ownConnections?.incoming.length ? `Solicitações (${ownConnections.incoming.length})` : 'Seguidores / Seguindo',Users]] as const).map(([value,label,Icon]) => <button key={value} className={tab === value ? "active" : ""} onClick={() => setTab(value)}><Icon size={15} />{label}</button>)}</nav>
     <section className="panel profile-tab-content">
       {tab === "activity" && <><div className="profile-tab-heading"><div><span className="eyebrow">ATIVIDADE</span><h2>Assistidos recentemente</h2></div></div><PosterRow items={data.activity?.slice(0, 6) || []} empty="Nenhuma atividade pública ainda." />{data.recent_reviews?.length > 0 && <div className="profile-reviews"><h3>Avaliações recentes</h3>{data.recent_reviews.slice(0, 4).map((row: any) => { const media = mediaOf(row); return <Link href={`/title/${media.media_type}/${media.tmdb_id}`} key={row.id}><strong>{media.title}</strong><span>{row.personal_rating != null ? `★ ${Number(row.personal_rating).toFixed(1)}` : "Resenha"}</span>{row.review && <p>{row.review}</p>}</Link>; })}</div>}{data.diary?.length > 0 && <div className="profile-diary"><h3>Diário recente</h3>{data.diary.slice(0, 5).map((entry: any) => { const library = Array.isArray(entry.library) ? entry.library[0] : entry.library; const media = mediaOf(library); return media && <div key={entry.id}><span>{new Date(entry.watched_at).toLocaleDateString("pt-BR")}</span><Link href={`/title/${media.media_type}/${media.tmdb_id}`}>{media.title}</Link>{entry.rating != null && <b>★ {Number(entry.rating).toFixed(1)}</b>}</div>; })}</div>}</>}
+      {tab === "reviews" && <><div className="profile-tab-heading"><div><span className="eyebrow">REVIEWS</span><h2>Todas as reviews</h2></div><span className="profile-tab-total">{data.reviews?.length || 0}</span></div><ReviewList items={data.reviews || []} /></>}
       {tab === "lists" && <><div className="profile-tab-heading"><div><span className="eyebrow">COLEÇÕES</span><h2>Listas criadas</h2></div></div>{relationship === "self" && <div className="profile-list-create"><input value={listName} maxLength={80} onChange={event=>setListName(event.target.value)} onKeyDown={event=>event.key==="Enter"&&createList()} placeholder="Nome da nova lista"/><button className="btn primary" onClick={createList}><List size={15}/> Criar lista</button></div>}<div className="profile-list-grid">{data.lists?.map((list: any) => <article key={list.id}><List /><div><strong>{list.name}</strong><p>{list.description || "Lista pessoal"}</p><small>{list.items?.[0]?.count || 0} títulos</small></div></article>)}</div>{!data.lists?.length && <div className="profile-tab-empty">Nenhuma lista criada ainda.</div>}</>}
       {tab === "likes" && <><div className="profile-tab-heading"><div><span className="eyebrow">CURTIDAS</span><h2>Títulos curtidos</h2></div></div><PosterRow items={data.liked_titles || []} empty="Nenhum título curtido ainda." /></>}
       {tab === "connections" && <><div className="profile-tab-heading"><div><span className="eyebrow">CONEXÕES</span><h2>Seguidores, seguindo e solicitações</h2></div></div>{relationship === "self" && ownConnections ? <div className="profile-own-connections">

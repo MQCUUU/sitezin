@@ -76,10 +76,11 @@ export async function PUT(request: Request) {
         );
       }
     }
+    // A foto não participa deste upsert: /api/profile/avatar é a única rota
+    // autorizada a alterá-la, inclusive se os dois salvamentos coincidirem.
     const { error: profileError } = await s.from("profiles").upsert({
       id: user.id, display_name: user.user_metadata?.name || user.user_metadata?.full_name || username,
       username, bio: String(body.bio || "").trim().slice(0, 280) || null,
-      avatar_url: /^https?:\/\//i.test(String(body.avatar_url || "")) ? String(body.avatar_url).trim().slice(0, 1000) : user.user_metadata?.avatar_url || null,
       visibility: body.visibility === "public" ? "public" : "private",
       is_public: body.visibility === "public",
     }, { onConflict: "id" });

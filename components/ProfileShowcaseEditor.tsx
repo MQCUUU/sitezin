@@ -23,7 +23,6 @@ export function ProfileShowcaseEditor() {
   const [originalUsername, setOriginalUsername] = useState("");
   const [remainingChanges, setRemainingChanges] = useState(2);
   const [bio, setBio] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
   const [visibility, setVisibility] = useState<"public" | "private">("private");
   const [selected, setSelected] = useState<Record<string, number | "">>({});
   const [picker, setPicker] = useState<{ type: "movie" | "tv"; position: number } | null>(null);
@@ -34,7 +33,7 @@ export function ProfileShowcaseEditor() {
 
   useEffect(() => { Promise.all([fetch("/api/profile/showcase"), fetch("/api/library", { cache: "no-store" })]).then(async ([profileResponse, libraryResponse]) => {
     const profileData = await profileResponse.json(); const libraryData = await libraryResponse.json(); const loadedUsername = profileData.profile?.username || "";
-    setUsername(loadedUsername); setOriginalUsername(loadedUsername); setRemainingChanges(Number(profileData.username_changes?.remaining ?? 2)); setBio(profileData.profile?.bio || ""); setAvatarUrl(profileData.profile?.avatar_url || ""); setVisibility(profileData.profile?.visibility === "public" || profileData.profile?.is_public ? "public" : "private");
+    setUsername(loadedUsername); setOriginalUsername(loadedUsername); setRemainingChanges(Number(profileData.username_changes?.remaining ?? 2)); setBio(profileData.profile?.bio || ""); setVisibility(profileData.profile?.visibility === "public" || profileData.profile?.is_public ? "public" : "private");
     const choices: Record<string, number> = {}; for (const item of profileData.favorites || []) choices[`${item.media_type}-${item.position}`] = Number(item.media_id);
     setSelected(choices); setLibrary(Array.isArray(libraryData) ? libraryData : libraryData?.items || []); setLoading(false);
   }).catch(() => setLoading(false)); }, []);
@@ -54,7 +53,7 @@ export function ProfileShowcaseEditor() {
   async function persistSave() {
     setSaving(true);
     const favorites = Object.entries(selected).filter(([, mediaId]) => mediaId).map(([key, mediaId]) => { const [media_type, position] = key.split("-"); return { media_id: Number(mediaId), media_type, position: Number(position) }; });
-    const response = await fetch("/api/profile/showcase", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, bio, avatar_url: avatarUrl, visibility, favorites }) });
+    const response = await fetch("/api/profile/showcase", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, bio, visibility, favorites }) });
     const data = await response.json(); setSaving(false); setConfirmUsername(false);
     if (!response.ok) return toast.error("Não foi possível salvar", { description: data.error });
     if (username !== originalUsername) { setOriginalUsername(username); setRemainingChanges(Number(data.username_change?.changes_remaining ?? Math.max(0, remainingChanges - 1))); }

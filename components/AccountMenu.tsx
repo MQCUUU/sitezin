@@ -215,6 +215,26 @@ export function AccountMenu(): React.ReactElement {
   }, []);
 
   useEffect(() => {
+    function refreshAccount(event: Event): void {
+      const avatarUrl = (event as CustomEvent<{ avatar_url?: string | null }>).detail?.avatar_url;
+      if (avatarUrl !== undefined) {
+        setUser((current) => current ? {
+          ...current,
+          user_metadata: { ...current.user_metadata, avatar_url: avatarUrl },
+        } : current);
+        return;
+      }
+
+      createClient().auth.getUser().then(({ data }: { data: { user: AccountUser | null } }) => {
+        setUser(data.user as AccountUser | null);
+      });
+    }
+
+    window.addEventListener("mycatalog:account-updated", refreshAccount);
+    return () => window.removeEventListener("mycatalog:account-updated", refreshAccount);
+  }, []);
+
+  useEffect(() => {
     if (
       !open
     ) {
