@@ -1,7 +1,11 @@
 "use client";
 
 import { AlertTriangle } from "lucide-react";
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createContext, type ReactNode, useCallback, useContext, useRef, useState } from "react";
+
+import { Dialog } from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/Button";
+import { cx } from "@/components/ui/cx";
 
 type ConfirmOptions = { title?: string; description: string; confirmLabel?: string; cancelLabel?: string; danger?: boolean };
 type PendingConfirm = ConfirmOptions & { resolve: (answer: boolean) => void };
@@ -24,29 +28,44 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     setPending(next);
   }), []);
 
-  useEffect(() => {
-    if (!pending) return;
-    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") finish(false); };
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    document.addEventListener("keydown", onKeyDown);
-    return () => { document.body.style.overflow = previous; document.removeEventListener("keydown", onKeyDown); };
-  }, [finish, pending]);
-
-  return <ConfirmContext.Provider value={confirm}>
-    {children}
-    {pending && <div className="mycatalog-confirm-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) finish(false); }}>
-      <div className="mycatalog-confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="global-confirm-title" aria-describedby="global-confirm-description">
-        <div className={`mycatalog-confirm-icon ${pending.danger ? "danger" : ""}`}><AlertTriangle size={21}/></div>
-        <h3 id="global-confirm-title">{pending.title}</h3>
-        <p id="global-confirm-description" className="muted">{pending.description}</p>
-        <div className="mycatalog-confirm-actions">
-          <button className="btn ghost" type="button" onClick={() => finish(false)}>{pending.cancelLabel}</button>
-          <button className={`btn ${pending.danger ? "danger" : "primary"}`} type="button" autoFocus onClick={() => finish(true)}>{pending.confirmLabel}</button>
-        </div>
-      </div>
-    </div>}
-  </ConfirmContext.Provider>;
+  return (
+    <ConfirmContext.Provider value={confirm}>
+      {children}
+      <Dialog
+        open={!!pending}
+        onClose={() => finish(false)}
+        role="alertdialog"
+        labelledBy="global-confirm-title"
+        describedBy="global-confirm-description"
+        className="mc-confirm-dialog"
+      >
+        {pending && (
+          <>
+            <div className={cx("mc-confirm-icon", pending.danger && "mc-confirm-icon--danger")}>
+              <AlertTriangle size={21} />
+            </div>
+            <h3 id="global-confirm-title">{pending.title}</h3>
+            <p id="global-confirm-description" className="mc-confirm-description">
+              {pending.description}
+            </p>
+            <div className="mc-confirm-actions">
+              <Button variant="ghost" type="button" onClick={() => finish(false)}>
+                {pending.cancelLabel}
+              </Button>
+              <Button
+                variant={pending.danger ? "danger" : "primary"}
+                type="button"
+                autoFocus
+                onClick={() => finish(true)}
+              >
+                {pending.confirmLabel}
+              </Button>
+            </div>
+          </>
+        )}
+      </Dialog>
+    </ConfirmContext.Provider>
+  );
 }
 
 export function useConfirm() {

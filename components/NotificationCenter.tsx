@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell, CalendarClock, Check, CheckCheck, Tv2 } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
+import { Popover } from "@/components/ui/Popover";
+import { authClient } from "@/lib/auth/client";
 
 type Notice = {
   id: string;
@@ -28,6 +30,7 @@ const when = (notice: Notice) =>
     : "Data ainda não divulgada";
 
 export function NotificationCenter() {
+  const { data: session, isPending: sessionPending } = authClient.useSession();
   const [items, setItems] = useState<Notice[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
@@ -98,17 +101,6 @@ export function NotificationCenter() {
     return () => window.removeEventListener("mycatalog:notifications-updated", refresh);
   }, []);
 
-  useEffect(() => {
-    if (!open) return;
-    const close = (event: MouseEvent) => {
-      if (event.target instanceof Node && !ref.current?.contains(event.target)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, [open]);
-
   async function read(id?: string) {
     const targetWasUnread = id
       ? items.some((item) => item.id === id && !item.read_at)
@@ -132,12 +124,20 @@ export function NotificationCenter() {
     );
   }
 
-  if (!ready) return <div className="notification-center-slot" />;
+  if (!ready || sessionPending) return <div className="notification-center-slot" />;
+
+  /*
+   * A API sempre retorna 401 para visitantes anônimos (GET /api/notifications
+   * exige sessão) — mostrar o sino vazio para quem nunca vai ter notificação
+   * era UI morta e a causa raiz da colisão com os botões de Entrar/Criar
+   * conta no topo (BUG-A2.5-01).
+   */
+  if (!session?.user?.id) return null;
 
   return (
     <div className="notification-center" ref={ref}>
       <button
-        className={`notification-bell ${open ? "active" : ""}`}
+        className={`notification-bell mc-focusable ${open ? "active" : ""}`}
         onClick={() => setOpen((value) => !value)}
         aria-label={`Notificações${unread ? `, ${unread} não lidas` : ""}`}
         aria-expanded={open}
@@ -146,8 +146,14 @@ export function NotificationCenter() {
         {unread > 0 && <b>{unread > 99 ? "99+" : unread}</b>}
       </button>
 
-      {open && (
-        <section className="notification-dropdown">
+      <Popover
+        open={open}
+        onClose={() => setOpen(false)}
+        containerRef={ref}
+        className="notification-dropdown"
+        role="region"
+        aria-label="Notificações"
+      >
           <header>
             <div>
               <strong>Notificações</strong>
@@ -158,7 +164,7 @@ export function NotificationCenter() {
               </small>
             </div>
             {unread > 0 && (
-              <button onClick={() => read()}>
+              <button className="mc-focusable" onClick={() => read()}>
                 <CheckCheck size={15} /> Marcar todas
               </button>
             )}
@@ -175,6 +181,7 @@ export function NotificationCenter() {
                   )}
                 </span>
                 <Link
+                  className="mc-focusable"
                   href={item.href || "#"}
                   onClick={() => {
                     setOpen(false);
@@ -187,6 +194,7 @@ export function NotificationCenter() {
                 </Link>
                 {!item.read_at && (
                   <button
+                    className="mc-focusable"
                     onClick={() => read(item.id)}
                     aria-label="Marcar como lida"
                   >
@@ -208,14 +216,13 @@ export function NotificationCenter() {
           </div>
 
           <Link
-            className="notification-settings-link"
+            className="notification-settings-link mc-focusable"
             href="/settings?tab=notifications"
             onClick={() => setOpen(false)}
           >
             Configurar notificações
           </Link>
-        </section>
-      )}
+      </Popover>
     </div>
   );
 }

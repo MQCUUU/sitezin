@@ -178,15 +178,24 @@
 
   /* ---------------------------------------------------------------- */
   /* Z-index                                                            */
+  /*                                                                    */
+  /* NOTE: app/globals.css already hardcodes large ad hoc z-index       */
+  /* values in several places (.sidebar 20, .mobile-more-backdrop 70,   */
+  /* .search-result-tabs 4, .notification-center 9001,                  */
+  /* .mycatalog-toast-region 10000, PopoverCollisionGuard menus 10060,  */
+  /* .profile-connections-backdrop 10020). This scale is set HIGH       */
+  /* enough that anything using --mc-z-* is guaranteed to stack above   */
+  /* all of that legacy content, since a Dialog/Popover must always win */
+  /* against a page-level menu. Legacy values are left untouched.       */
   /* ---------------------------------------------------------------- */
   --mc-z-content: 1;
   --mc-z-sticky: 10;
-  --mc-z-navbar: 100;
-  --mc-z-dropdown: 200;
-  --mc-z-popover: 300;
-  --mc-z-overlay: 400;
-  --mc-z-modal: 500;
-  --mc-z-toast: 600;
+  --mc-z-navbar: 20;
+  --mc-z-dropdown: 9000;
+  --mc-z-popover: 9500;
+  --mc-z-overlay: 10100;
+  --mc-z-modal: 10200;
+  --mc-z-toast: 10300;
 
   /* ---------------------------------------------------------------- */
   /* Containers / layout                                               */
@@ -204,6 +213,14 @@
   --mc-breakpoint-xl: 1280px;
 
   --mc-focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
+
+  /*
+   * Space reserved on `.topbar` for the fixed TopbarActions region
+   * (notifications + account/auth). Kept in sync with its real width by
+   * components/TopbarActions.tsx (ResizeObserver); this static value is
+   * only the fallback used before that JS runs on first paint.
+   */
+  --mc-topbar-reserved-width: 200px;
 }
 
 /*

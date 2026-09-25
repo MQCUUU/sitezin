@@ -1,0 +1,117 @@
+/*
+ * MyCatalog Premium UI V2 — shell layer.
+ *
+ * Visual refinement of Nav.tsx, layered additively onto its EXISTING
+ * class names (`.sidebar`, `.nav`, `.mobile-nav`, `.mobile-more-*`).
+ * Nothing here touches layout math already solved in app/globals.css
+ * (widths, breakpoints, safe-area insets) — only tokens for color,
+ * motion, focus and the handful of concretely missing states below.
+ */
+
+/* =====================================================================
+   Desktop sidebar nav
+   ===================================================================== */
+
+.nav a {
+  position: relative;
+  transition: background var(--mc-duration-fast) var(--mc-ease-standard),
+    color var(--mc-duration-fast) var(--mc-ease-standard);
+}
+
+/* There was previously no hover feedback at all on sidebar links. */
+.nav a:hover:not(.active) {
+  background: var(--mc-color-surface-hover);
+  color: var(--mc-color-text);
+}
+
+.nav a.active {
+  background: var(--mc-color-accent-soft);
+  color: var(--mc-color-text);
+}
+
+.nav a.active::before {
+  content: "";
+  position: absolute;
+  left: -14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 18px;
+  border-radius: var(--mc-radius-pill);
+  background: var(--mc-color-accent);
+}
+
+[data-motion="reduced"] .nav a {
+  transition: none;
+}
+
+/* =====================================================================
+   Mobile bottom nav
+   ===================================================================== */
+
+.mobile-nav > a,
+.mobile-nav > button {
+  min-height: 44px;
+  transition: color var(--mc-duration-fast) var(--mc-ease-standard);
+}
+
+.mobile-more-sheet a,
+.mobile-more-sheet header button {
+  transition: border-color var(--mc-duration-fast) var(--mc-ease-standard),
+    color var(--mc-duration-fast) var(--mc-ease-standard);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-nav > a,
+  .mobile-nav > button,
+  .mobile-more-sheet a,
+  .mobile-more-sheet header button {
+    transition: none;
+  }
+}
+
+/* =====================================================================
+   Global error boundary (app/global-error.tsx)
+   ===================================================================== */
+
+.mc-global-error {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--mc-space-24);
+  font-family: var(--mc-font-sans);
+}
+
+.mc-global-error-card {
+  width: min(480px, 100%);
+  padding: var(--mc-space-32);
+  border: var(--mc-border-default);
+  border-radius: var(--mc-radius-lg);
+  background: var(--mc-color-bg-elevated);
+  text-align: center;
+}
+
+.mc-global-error-eyebrow {
+  color: var(--mc-color-text-muted);
+  font-size: var(--mc-text-overline-size);
+  font-weight: var(--mc-text-overline-weight);
+  letter-spacing: var(--mc-text-overline-tracking);
+}
+
+.mc-global-error-card h1 {
+  margin: var(--mc-space-8) 0;
+  color: var(--mc-color-text);
+  font-size: var(--mc-text-h2-size);
+}
+
+.mc-global-error-card p {
+  margin: 0 auto var(--mc-space-20);
+  max-width: 420px;
+  color: var(--mc-color-text-secondary);
+  font-size: var(--mc-text-body-small-size);
+  line-height: var(--mc-text-body-small-line);
+}
+
+.mc-global-error-card .mc-btn {
+  margin: 0 auto;
+}

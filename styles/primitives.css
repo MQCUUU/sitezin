@@ -332,7 +332,14 @@
    Skeleton
    ===================================================================== */
 
-.mc-skeleton {
+/*
+ * Named `mc-ui-skeleton`, NOT `mc-skeleton`: app/globals.css already owns
+ * `.mc-skeleton` for the existing shimmer system used across the app
+ * (components/AsyncState.tsx, app/loading.tsx, page-level loading.tsx
+ * files). Reusing that name here would have silently repainted every
+ * loading state in the app the moment this file loaded.
+ */
+.mc-ui-skeleton {
   display: block;
   border-radius: var(--mc-radius-sm);
   background: linear-gradient(
@@ -342,10 +349,10 @@
     var(--mc-color-surface-muted) 60%
   );
   background-size: 200% 100%;
-  animation: mc-skeleton-sweep 1.4s ease-in-out infinite;
+  animation: mc-ui-skeleton-sweep 1.4s ease-in-out infinite;
 }
 
-@keyframes mc-skeleton-sweep {
+@keyframes mc-ui-skeleton-sweep {
   from {
     background-position: 200% 0;
   }
@@ -354,13 +361,13 @@
   }
 }
 
-[data-motion="reduced"] .mc-skeleton {
+[data-motion="reduced"] .mc-ui-skeleton {
   animation: none;
   background: var(--mc-color-surface-muted);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mc-skeleton {
+  .mc-ui-skeleton {
     animation: none;
     background: var(--mc-color-surface-muted);
   }

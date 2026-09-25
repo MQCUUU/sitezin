@@ -536,7 +536,7 @@ export function ToastProvider({
               {toast.onAction && (
                 <button
                   type="button"
-                  className="mycatalog-toast-action"
+                  className="mycatalog-toast-action mc-focusable"
                   disabled={
                     toast.actionRunning
                   }
@@ -564,7 +564,7 @@ export function ToastProvider({
 
               <button
                 type="button"
-                className="mycatalog-toast-close"
+                className="mycatalog-toast-close mc-focusable"
                 aria-label="Fechar notificação"
                 onClick={() =>
                   dismiss(

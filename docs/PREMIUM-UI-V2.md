@@ -200,6 +200,13 @@ páginas inteiras sem querer. `mc-`/`--mc-` garante que o sistema novo só
 afeta quem optar entrando (`components/ui/*`), até a migração incremental
 de cada página.
 
+**Exceção conhecida:** `globals.css` já usa `mc-` para um sistema próprio
+de loading/erro (`.mc-skeleton`, `.mc-error-state`, `.mc-route-error`,
+`.mc-page-skeleton`...), criado antes desta fundação. Por isso o
+`Skeleton` de `components/ui/` usa a classe `mc-ui-skeleton` (não
+`mc-skeleton`) para não colidir. **Antes de nomear uma classe/token novo,
+sempre `grep` `mc-<nome>` em `app/globals.css` primeiro.**
+
 ## Estrutura de arquivos
 
 ```

@@ -18,7 +18,7 @@ export function Skeleton({
 }: SkeletonProps) {
   return (
     <span
-      className={cx("mc-skeleton", className)}
+      className={cx("mc-ui-skeleton", className)}
       style={{
         width,
         height,

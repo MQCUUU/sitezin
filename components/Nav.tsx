@@ -67,6 +67,24 @@ export function Nav() {
   const [moreOpen, setMoreOpen] = useState(false);
   useEffect(() => setMoreOpen(false), [pathname]);
 
+  useEffect(() => {
+    if (!moreOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setMoreOpen(false);
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [moreOpen]);
+
   /*
    * ==========================================
    * ESCONDER NAV NAS TELAS DE AUTENTICAÇÃO
@@ -118,7 +136,7 @@ export function Nav() {
 
         <Link
           href="/"
-          className="brand"
+          className="brand mc-focusable"
           aria-label="Ir para o início"
         >
           My<span>Catalog</span>
@@ -136,9 +154,10 @@ export function Nav() {
                 key={href}
                 href={href}
                 className={
-                  isActive(href)
+                  "mc-focusable " +
+                  (isActive(href)
                     ? "active"
-                    : ""
+                    : "")
                 }
                 aria-current={
                   isActive(href)
@@ -180,9 +199,10 @@ export function Nav() {
               key={href}
               href={href}
               className={
-                isActive(href)
+                "mc-focusable " +
+                (isActive(href)
                   ? "active"
-                  : ""
+                  : "")
               }
               aria-current={
                 isActive(href)
@@ -201,14 +221,14 @@ export function Nav() {
             </Link>
           )
         )}
-        <button className={moreOpen ? "active" : ""} onClick={() => setMoreOpen((open) => !open)} aria-expanded={moreOpen} aria-label="Abrir mais páginas">
+        <button className={`mc-focusable ${moreOpen ? "active" : ""}`} onClick={() => setMoreOpen((open) => !open)} aria-expanded={moreOpen} aria-label="Abrir mais páginas">
           <MoreHorizontal size={18} strokeWidth={2} /><span>Mais</span>
         </button>
       </nav>
       {moreOpen && <div className="mobile-more-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setMoreOpen(false)}>
-        <section className="mobile-more-sheet" aria-label="Mais páginas">
-          <header><strong>Todas as páginas</strong><button onClick={() => setMoreOpen(false)} aria-label="Fechar"><X size={20} /></button></header>
-          <div>{[items[2], items[3], items[5], items[6], items[7], items[8], items[9]].map(([href, label, Icon]) => <Link key={href} href={href} className={isActive(href) ? "active" : ""}><Icon size={20} /><span>{label}</span></Link>)}</div>
+        <section className="mobile-more-sheet" aria-label="Mais páginas" role="dialog" aria-modal="true">
+          <header><strong>Todas as páginas</strong><button className="mc-focusable" onClick={() => setMoreOpen(false)} aria-label="Fechar"><X size={20} /></button></header>
+          <div>{[items[2], items[3], items[5], items[6], items[7], items[8], items[9]].map(([href, label, Icon]) => <Link key={href} href={href} className={`mc-focusable ${isActive(href) ? "active" : ""}`}><Icon size={20} /><span>{label}</span></Link>)}</div>
         </section>
       </div>}
     </>

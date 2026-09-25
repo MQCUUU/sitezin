@@ -1,0 +1,174 @@
+/*
+ * MyCatalog Premium UI V2 — overlay layer.
+ *
+ * CSS for components/ui/Dialog + components/ui/Popover, plus the visual
+ * migration of ConfirmProvider onto Dialog. Toast keeps its own legacy
+ * class names (`.mycatalog-toast-*`, owned solely by ToastProvider.tsx) —
+ * restyled here in place rather than renamed, to avoid touching the
+ * provider's markup.
+ */
+
+/* =====================================================================
+   Dialog
+   ===================================================================== */
+
+.mc-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--mc-z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--mc-space-16);
+  background: color-mix(in srgb, black 55%, transparent);
+  backdrop-filter: blur(6px);
+  animation: mc-overlay-fade-in var(--mc-duration-normal) var(--mc-ease-enter);
+}
+
+.mc-dialog {
+  width: min(420px, 100%);
+  max-height: calc(100dvh - var(--mc-space-32));
+  overflow-y: auto;
+  padding: var(--mc-space-24);
+  border-radius: var(--mc-radius-lg);
+  border: var(--mc-border-default);
+  background: var(--mc-color-bg-elevated);
+  box-shadow: var(--mc-shadow-modal);
+  outline: none;
+  animation: mc-dialog-in var(--mc-duration-normal) var(--mc-ease-enter);
+}
+
+@keyframes mc-overlay-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes mc-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+[data-motion="reduced"] .mc-dialog-backdrop,
+[data-motion="reduced"] .mc-dialog {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mc-dialog-backdrop,
+  .mc-dialog {
+    animation: none;
+  }
+}
+
+/* ---- Confirm dialog content (rendered inside <Dialog>) ---- */
+
+.mc-confirm-dialog {
+  text-align: center;
+}
+
+.mc-confirm-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: var(--mc-space-12);
+  border-radius: var(--mc-radius-md);
+  background: var(--mc-color-warning-soft);
+  color: var(--mc-color-warning);
+}
+
+.mc-confirm-icon--danger {
+  background: var(--mc-color-danger-soft);
+  color: var(--mc-color-danger);
+}
+
+.mc-confirm-dialog h3 {
+  margin: 0 0 var(--mc-space-6);
+  font-family: var(--mc-font-sans);
+  font-size: var(--mc-text-h4-size);
+  font-weight: var(--mc-text-h4-weight);
+  color: var(--mc-color-text);
+}
+
+.mc-confirm-description {
+  margin: 0;
+  color: var(--mc-color-text-secondary);
+  font-size: var(--mc-text-body-small-size);
+  line-height: var(--mc-text-body-small-line);
+}
+
+.mc-confirm-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mc-space-8);
+  margin-top: var(--mc-space-20);
+}
+
+.mc-confirm-actions .mc-btn {
+  flex: 1;
+}
+
+/* =====================================================================
+   Popover (AccountMenu / NotificationCenter dropdown panels)
+   ===================================================================== */
+
+.mc-popover {
+  animation: mc-popover-in var(--mc-duration-fast) var(--mc-ease-enter);
+}
+
+@keyframes mc-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+[data-motion="reduced"] .mc-popover {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mc-popover {
+    animation: none;
+  }
+}
+
+/* =====================================================================
+   Toast — visual refinement over the existing ToastProvider markup
+   ===================================================================== */
+
+/*
+ * The entrance animation, stacking and blur already work well
+ * (app/globals.css `.mycatalog-toast` / `mycatalogToastIn`) — left as is.
+ * The one real inconsistency was status color: icons used flat hardcoded
+ * hex (#22c55e / #ef4444) that don't match the app's actual success/danger
+ * theme variables (--good / --danger). Aligning them to tokens here.
+ */
+
+.mycatalog-toast-success {
+  border-color: color-mix(in srgb, var(--mc-color-success) 24%, var(--mc-color-border));
+}
+
+.mycatalog-toast-success .mycatalog-toast-icon {
+  color: var(--mc-color-success);
+  background: var(--mc-color-success-soft);
+}
+
+.mycatalog-toast-error {
+  border-color: color-mix(in srgb, var(--mc-color-danger) 28%, var(--mc-color-border));
+}
+
+.mycatalog-toast-error .mycatalog-toast-icon {
+  color: var(--mc-color-danger);
+  background: var(--mc-color-danger-soft);
+}
+
+.mycatalog-toast-info .mycatalog-toast-icon {
+  color: var(--mc-color-info);
+  background: var(--mc-color-info-soft);
+}

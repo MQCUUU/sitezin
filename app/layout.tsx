@@ -2,6 +2,9 @@ import "./globals.css";
 import "@/styles/tokens.css";
 import "@/styles/base.css";
 import "@/styles/primitives.css";
+import "@/styles/overlays.css";
+import "@/styles/shell.css";
+import "@/styles/topbar.css";
 
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
@@ -11,8 +14,7 @@ import { Nav } from "@/components/Nav";
 import { AppearanceProvider } from "@/components/AppearanceProvider";
 import { ScrollMemory } from "@/components/ScrollMemory";
 import { AppProviders } from "@/components/AppProviders";
-import { AccountMenu } from "@/components/AccountMenu";
-import { NotificationCenter } from "@/components/NotificationCenter";
+import { TopbarActions } from "@/components/TopbarActions";
 import { getSiteUrl } from "@/lib/site-url";
 
 /*
@@ -147,8 +149,7 @@ export default function RootLayout({
 </main>
           </div>
 
-          <NotificationCenter />
-          <AccountMenu />
+          <TopbarActions />
         </AppProviders>
       </body>
     </html>

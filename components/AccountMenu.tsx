@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { authClient } from "@/lib/auth/client";
+import { Popover } from "@/components/ui/Popover";
 
 type AccountUser = {
   id:
@@ -191,70 +192,6 @@ export function AccountMenu(): React.ReactElement {
       }
     : null;
 
-  useEffect(() => {
-    if (
-      !open
-    ) {
-      return;
-    }
-
-    function outside(
-      event: MouseEvent
-    ): void {
-      const target =
-        event.target;
-
-      if (
-        target instanceof Node &&
-        !ref.current
-          ?.contains(
-            target
-          )
-      ) {
-        setOpen(
-          false
-        );
-      }
-    }
-
-    function keydown(
-      event: KeyboardEvent
-    ): void {
-      if (
-        event.key ===
-        "Escape"
-      ) {
-        setOpen(
-          false
-        );
-      }
-    }
-
-    document.addEventListener(
-      "mousedown",
-      outside
-    );
-
-    document.addEventListener(
-      "keydown",
-      keydown
-    );
-
-    return () => {
-      document.removeEventListener(
-        "mousedown",
-        outside
-      );
-
-      document.removeEventListener(
-        "keydown",
-        keydown
-      );
-    };
-  }, [
-    open,
-  ]);
-
   async function signOut(): Promise<void> {
     try {
       await authClient.signOut();
@@ -320,7 +257,7 @@ export function AccountMenu(): React.ReactElement {
       <button
         type="button"
         className={
-          "account-avatar-button " +
+          "account-avatar-button mc-focusable " +
           (
             open
               ? "active"
@@ -362,8 +299,7 @@ export function AccountMenu(): React.ReactElement {
         />
       </button>
 
-      {open && (
-        <div className="account-dropdown">
+      <Popover open={open} onClose={() => setOpen(false)} containerRef={ref} className="account-dropdown">
           <div className="account-dropdown-user">
             <span className="account-avatar large">
               {avatar ? (
@@ -400,6 +336,7 @@ export function AccountMenu(): React.ReactElement {
           <div className="account-dropdown-divider" />
 
           <Link
+            className="mc-focusable"
             href={user.user_metadata?.username ? `/u/${user.user_metadata.username}` : "/profile"}
             onClick={() =>
               setOpen(
@@ -415,6 +352,7 @@ export function AccountMenu(): React.ReactElement {
           </Link>
 
           <Link
+            className="mc-focusable"
             href="/settings"
             onClick={() =>
               setOpen(
@@ -430,6 +368,7 @@ export function AccountMenu(): React.ReactElement {
           </Link>
 
           <Link
+            className="mc-focusable"
             href={user.user_metadata?.username ? `/u/${user.user_metadata.username}?tab=lists` : "/profile"}
             onClick={() =>
               setOpen(
@@ -448,7 +387,7 @@ export function AccountMenu(): React.ReactElement {
 
           <button
             type="button"
-            className="account-signout"
+            className="account-signout mc-focusable"
             onClick={
               signOut
             }
@@ -459,8 +398,7 @@ export function AccountMenu(): React.ReactElement {
 
             Sair
           </button>
-        </div>
-      )}
+      </Popover>
     </div>
   );
 }

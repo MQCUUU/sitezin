@@ -1,0 +1,71 @@
+/*
+ * MyCatalog Premium UI V2 — topbar actions region (A2.6).
+ *
+ * BUG-A2.5-01: NotificationCenter and AccountMenu/auth-actions each had
+ * their own independent `position: fixed` + hardcoded coordinates in
+ * app/globals.css, fighting over the same top-right corner (this got
+ * worse when logged out, since `.account-auth-actions` is wider than the
+ * single avatar button it replaces). Fixed architecturally: both now
+ * mount inside ONE fixed wrapper (`components/TopbarActions.tsx`,
+ * `.mc-topbar-actions`), which is the single owner of that screen region.
+ * The legacy per-component `position: fixed` rules are neutralized here
+ * (not deleted from globals.css — every other property on those
+ * selectors, e.g. `.account-auth-actions` flex/gap, is still in use).
+ */
+
+.account-menu,
+.account-auth-actions,
+.account-slot,
+.notification-center,
+.notification-center-slot {
+  position: relative;
+  top: auto;
+  right: auto;
+  z-index: auto;
+}
+
+.mc-topbar-actions {
+  position: fixed;
+  top: 17px;
+  right: 20px;
+  z-index: var(--mc-z-dropdown);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+@media (max-width: 620px) {
+  .mc-topbar-actions {
+    top: 10px;
+    right: 14px;
+    gap: 8px;
+  }
+}
+
+/*
+ * BUG-A2.5-02 / BUG-A2.5-04: `.topbar` is the shared in-page header row
+ * used by Home, Discover, Search, Library, and 8 other pages. Whatever it
+ * contains (Search, quick actions, ...) must never render underneath the
+ * fixed topbar actions above. Reserving space here — instead of a
+ * Home-specific margin — fixes the collision for every current and
+ * future page that uses `.topbar`, and stays correct across auth states
+ * because TopbarActions measures its own real width via ResizeObserver
+ * and writes it to this variable. The static fallback covers the first
+ * paint before that JS runs.
+ */
+.topbar {
+  padding-right: var(--mc-topbar-reserved-width);
+  box-sizing: border-box;
+}
+
+/*
+ * BUG-A2.5-03: at exactly 768px (sidebar 240px + ~528px of content), the
+ * discover toolbar's row (`.discover-tabs` + `.discover-toolbar-actions`)
+ * has no room in `nowrap` and overflows horizontally. The existing
+ * `max-width:700px` rule already stacks it into a column, so this only
+ * needs to hold above 700px: allow the row to wrap instead of overflow,
+ * without touching the 700px breakpoint or any other rule in that block.
+ */
+.discover-toolbar {
+  flex-wrap: wrap;
+}
