@@ -1,79 +1,250 @@
-import { NextResponse } from "next/server";
-import { createClient as createAdmin } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/server";
-
-async function context() {
-  const server = await createClient();
-  const { data: { user } } = await server.auth.getUser();
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const admin = url && key ? createAdmin(url, key, { auth: { persistSession: false, autoRefreshToken: false } }) : null;
-  return { user, admin };
-}
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth/server";
+import { getDb } from "@/lib/db/neon";
+import { entradaInvalida, naoAutenticado, respostaDeErro } from "@/lib/api-error";
 
 export async function GET() {
-  const { user, admin } = await context();
-  if (!user || !admin) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
-  const { data: rows } = await admin.from("follows").select("follower_id,following_id,status,created_at")
-    .or(`follower_id.eq.${user.id},following_id.eq.${user.id}`).order("created_at", { ascending: false });
-  const ids = [...new Set((rows || []).map((row: any) => row.follower_id === user.id ? row.following_id : row.follower_id))];
-  const { data: profiles } = ids.length
-    ? await admin.from("profiles").select("id,username,display_name,avatar_url,visibility").in("id", ids)
-    : { data: [] as any[] };
-  const profileMap = new Map((profiles || []).map((profile: any) => [profile.id, profile]));
-  const enriched = (rows || []).map((row: any) => ({
-    ...row,
-    direction: row.follower_id === user.id ? "following" : "follower",
-    profile: profileMap.get(row.follower_id === user.id ? row.following_id : row.follower_id),
-  }));
-  return NextResponse.json({
-    following: enriched.filter((row: any) => row.direction === "following" && row.status === "accepted"),
-    followers: enriched.filter((row: any) => row.direction === "follower" && row.status === "accepted"),
-    incoming: enriched.filter((row: any) => row.direction === "follower" && row.status === "pending"),
-    outgoing: enriched.filter((row: any) => row.direction === "following" && row.status === "pending"),
-  });
-}
+  try {
+    const session = await auth.getSession().catch(() => null);
+    const user = session?.data?.user;
+    if (!user || !user.id) {
+      return naoAutenticado();
+    }
 
-export async function POST(request: Request) {
-  const { user, admin } = await context();
-  if (!user || !admin) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
-  const { username } = await request.json();
-  const { data: target } = await admin.from("profiles").select("id,visibility,follow_policy")
-    .ilike("username", String(username || "").trim()).maybeSingle();
-  if (!target || target.id === user.id) return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
-  if (target.follow_policy === "nobody") return NextResponse.json({ error: "Este usuário não está aceitando novos seguidores." }, { status: 403 });
-  const automatic = target.follow_policy === "profile" && target.visibility === "public";
-  const status = automatic ? "accepted" : "pending";
-  const { error } = await admin.from("follows").upsert({
-    follower_id: user.id, following_id: target.id, status, updated_at: new Date().toISOString(),
-  }, { onConflict: "follower_id,following_id" });
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ status });
-}
+    const sql = getDb();
+    const rows = await sql`
+      SELECT follower_id, following_id, status, created_at, updated_at
+      FROM public.follows
+      WHERE follower_id = ${user.id} OR following_id = ${user.id}
+      ORDER BY created_at DESC
+    `;
 
-export async function PATCH(request: Request) {
-  const { user, admin } = await context();
-  if (!user || !admin) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
-  const { follower_id, action } = await request.json();
-  if (!follower_id || !["accept", "reject"].includes(action)) return NextResponse.json({ error: "Ação inválida." }, { status: 400 });
-  if (action === "reject") {
-    await admin.from("follows").delete().eq("follower_id", follower_id).eq("following_id", user.id).eq("status", "pending");
-  } else {
-    await admin.from("follows").update({ status: "accepted", updated_at: new Date().toISOString() })
-      .eq("follower_id", follower_id).eq("following_id", user.id).eq("status", "pending");
+    const counterpartIds = [
+      ...new Set(
+        rows.map((row: any) =>
+          row.follower_id === user.id ? row.following_id : row.follower_id
+        )
+      ),
+    ];
+
+    let profiles: any[] = [];
+    if (counterpartIds.length > 0) {
+      profiles = await sql`
+        SELECT id, username, display_name, avatar_url, visibility
+        FROM public.profiles
+        WHERE id = ANY(${counterpartIds})
+      `;
+    }
+
+    const profileMap = new Map(profiles.map((p) => [p.id, p]));
+
+    const enriched = rows.map((row: any) => {
+      const isFollowing = row.follower_id === user.id;
+      const otherId = isFollowing ? row.following_id : row.follower_id;
+      return {
+        ...row,
+        direction: isFollowing ? "following" : "follower",
+        profile: profileMap.get(otherId) || null,
+      };
+    });
+
+    return NextResponse.json(
+      {
+        following: enriched.filter(
+          (row: any) => row.direction === "following" && row.status === "accepted"
+        ),
+        followers: enriched.filter(
+          (row: any) => row.direction === "follower" && row.status === "accepted"
+        ),
+        incoming: enriched.filter(
+          (row: any) => row.direction === "follower" && row.status === "pending"
+        ),
+        outgoing: enriched.filter(
+          (row: any) => row.direction === "following" && row.status === "pending"
+        ),
+      },
+      { headers: { "Cache-Control": "private, no-store" } }
+    );
+  } catch (error) {
+    return respostaDeErro(error, "GET /api/follows");
   }
-  return NextResponse.json({ success: true });
 }
 
-export async function DELETE(request: Request) {
-  const { user, admin } = await context();
-  if (!user || !admin) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
-  const { user_id, mode } = await request.json();
-  if (!user_id || !["unfollow", "remove_follower"].includes(mode)) return NextResponse.json({ error: "Ação inválida." }, { status: 400 });
-  const query = admin.from("follows").delete();
-  const { error } = mode === "unfollow"
-    ? await query.eq("follower_id", user.id).eq("following_id", user_id)
-    : await query.eq("follower_id", user_id).eq("following_id", user.id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ success: true });
+export async function POST(request: NextRequest) {
+  try {
+    const session = await auth.getSession().catch(() => null);
+    const user = session?.data?.user;
+    if (!user || !user.id) {
+      return naoAutenticado();
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const rawUsername = String(body.username || "").trim();
+    const targetId = body.target_id ? String(body.target_id).trim() : null;
+
+    if (!rawUsername && !targetId) {
+      return entradaInvalida("Username ou target_id é obrigatório.");
+    }
+
+    const sql = getDb();
+
+    let targetRows: any[] = [];
+    if (targetId) {
+      targetRows = await sql`
+        SELECT id, username, display_name, visibility, is_public, follow_policy
+        FROM public.profiles
+        WHERE id = ${targetId}
+        LIMIT 1
+      `;
+    } else {
+      const cleanUsername = rawUsername.replace(/^@+/, "").toLowerCase();
+      targetRows = await sql`
+        SELECT id, username, display_name, visibility, is_public, follow_policy
+        FROM public.profiles
+        WHERE lower(username) = ${cleanUsername}
+        LIMIT 1
+      `;
+    }
+
+    if (targetRows.length === 0) {
+      return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
+    }
+
+    const target = targetRows[0];
+    if (target.id === user.id) {
+      return entradaInvalida("Você não pode seguir a si mesmo.");
+    }
+
+    if (target.follow_policy === "nobody") {
+      return NextResponse.json(
+        { error: "Este usuário não está aceitando novos seguidores." },
+        { status: 403 }
+      );
+    }
+
+    const automatic =
+      target.follow_policy === "profile" &&
+      (target.visibility === "public" || target.is_public === true);
+    const status = automatic ? "accepted" : "pending";
+
+    await sql`
+      INSERT INTO public.follows (follower_id, following_id, status, created_at, updated_at)
+      VALUES (${user.id}, ${target.id}, ${status}, now(), now())
+      ON CONFLICT (follower_id, following_id)
+      DO UPDATE SET status = EXCLUDED.status, updated_at = now()
+    `;
+
+    return NextResponse.json({ status });
+  } catch (error) {
+    return respostaDeErro(error, "POST /api/follows");
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await auth.getSession().catch(() => null);
+    const user = session?.data?.user;
+    if (!user || !user.id) {
+      return naoAutenticado();
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const followerId = String(body.follower_id || "").trim();
+    const action = String(body.action || "").trim();
+
+    if (!followerId || !["accept", "reject"].includes(action)) {
+      return entradaInvalida("follower_id e action ('accept' ou 'reject') são obrigatórios.");
+    }
+
+    const sql = getDb();
+
+    if (action === "reject") {
+      const del = await sql`
+        DELETE FROM public.follows
+        WHERE follower_id = ${followerId}
+          AND following_id = ${user.id}
+          AND status = 'pending'
+        RETURNING follower_id
+      `;
+      if (del.length === 0) {
+        return NextResponse.json(
+          { error: "Solicitação não encontrada ou sem permissão." },
+          { status: 404 }
+        );
+      }
+    } else {
+      const upd = await sql`
+        UPDATE public.follows
+        SET status = 'accepted', updated_at = now()
+        WHERE follower_id = ${followerId}
+          AND following_id = ${user.id}
+          AND status = 'pending'
+        RETURNING follower_id
+      `;
+      if (upd.length === 0) {
+        return NextResponse.json(
+          { error: "Solicitação não encontrada ou sem permissão." },
+          { status: 404 }
+        );
+      }
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return respostaDeErro(error, "PATCH /api/follows");
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await auth.getSession().catch(() => null);
+    const user = session?.data?.user;
+    if (!user || !user.id) {
+      return naoAutenticado();
+    }
+
+    let userId: string | null = null;
+    let mode: string = "unfollow";
+
+    const body = await request.json().catch(() => ({}));
+    userId = body?.user_id ? String(body.user_id).trim() : null;
+    mode = body?.mode ? String(body.mode).trim() : "unfollow";
+
+    if (!userId) {
+      userId = request.nextUrl.searchParams.get("user_id");
+      mode = request.nextUrl.searchParams.get("mode") || mode;
+    }
+
+    if (!userId || !["unfollow", "remove_follower", "cancel"].includes(mode)) {
+      return entradaInvalida("user_id e mode ('unfollow', 'remove_follower' ou 'cancel') são obrigatórios.");
+    }
+
+    const sql = getDb();
+    let res: any[] = [];
+
+    if (mode === "unfollow" || mode === "cancel") {
+      res = await sql`
+        DELETE FROM public.follows
+        WHERE follower_id = ${user.id} AND following_id = ${userId}
+        RETURNING follower_id, following_id
+      `;
+    } else {
+      res = await sql`
+        DELETE FROM public.follows
+        WHERE follower_id = ${userId} AND following_id = ${user.id}
+        RETURNING follower_id, following_id
+      `;
+    }
+
+    if (res.length === 0) {
+      return NextResponse.json(
+        { error: "Relação não encontrada ou já removida." },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return respostaDeErro(error, "DELETE /api/follows");
+  }
 }

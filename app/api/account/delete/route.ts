@@ -1,126 +1,52 @@
 import { NextResponse } from "next/server";
-import { createClient as createAdminClient } from "@supabase/supabase-js";
-
-import { createClient } from "@/lib/supabase/server";
-
-const RECENT_LOGIN_MAX_AGE_MS = 10 * 60 * 1000;
-
-function hasRecentLogin(
-  lastSignInAt: string | undefined
-): boolean {
-  if (!lastSignInAt) {
-    return false;
-  }
-
-  const timestamp = Date.parse(lastSignInAt);
-
-  return (
-    Number.isFinite(timestamp) &&
-    Date.now() - timestamp <= RECENT_LOGIN_MAX_AGE_MS
-  );
-}
+import { auth } from "@/lib/auth/server";
+import { getDb } from "@/lib/db/neon";
 
 export async function DELETE() {
-  const supabase = await createClient();
+  const session = await auth.getSession().catch(() => null);
+  const user = session?.data?.user;
 
-  const {
-    data: { user },
-    error: authError
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
+  if (!user || !user.id) {
     return NextResponse.json(
       {
-        error: "Não autenticado"
+        error: "Não autenticado",
       },
       {
-        status: 401
+        status: 401,
       }
     );
   }
 
-  if (!hasRecentLogin(user.last_sign_in_at)) {
+  try {
+    const sql = getDb();
+
+    // A exclusão de neon_auth."user" aciona ON DELETE CASCADE em todas as 28 FKs
+    // (incluindo neon_auth.session, neon_auth.account, public.profiles e dados do usuário)
+    await sql`DELETE FROM neon_auth."user" WHERE id = ${user.id}`;
+
     return NextResponse.json(
       {
-        error:
-          "Por segurança, saia da conta, entre novamente e repita a exclusão em até 10 minutos."
+        ok: true,
       },
       {
-        status: 403,
         headers: {
-          "Cache-Control": "private, no-store"
-        }
+          "Cache-Control": "private, no-store",
+        },
       }
     );
-  }
-
-  const url =
-    process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-  const serviceRoleKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!url || !serviceRoleKey) {
-    console.error(
-      "[DELETE /api/account/delete] Configuração administrativa ausente."
-    );
+  } catch (deleteError) {
+    console.error("[DELETE /api/account/delete]", deleteError);
 
     return NextResponse.json(
       {
-        error:
-          "A exclusão de conta está temporariamente indisponível."
-      },
-      {
-        status: 503
-      }
-    );
-  }
-
-  const admin = createAdminClient(
-    url,
-    serviceRoleKey,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    }
-  );
-
-  const { error: deleteError } =
-    await admin.auth.admin.deleteUser(
-      user.id,
-      false
-    );
-
-  if (deleteError) {
-    console.error(
-      "[DELETE /api/account/delete]",
-      deleteError
-    );
-
-    return NextResponse.json(
-      {
-        error:
-          "Não foi possível excluir a conta agora. Tente novamente."
+        error: "Não foi possível excluir a conta agora. Tente novamente.",
       },
       {
         status: 500,
         headers: {
-          "Cache-Control": "private, no-store"
-        }
+          "Cache-Control": "private, no-store",
+        },
       }
     );
   }
-
-  return NextResponse.json(
-    {
-      ok: true
-    },
-    {
-      headers: {
-        "Cache-Control": "private, no-store"
-      }
-    }
-  );
 }

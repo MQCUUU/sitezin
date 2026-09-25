@@ -1,3 +1,4 @@
+import { getDb } from "@/lib/db/neon";
 import {
   NextRequest,
   NextResponse,
@@ -5,9 +6,7 @@ import {
 
 import { respostaDeErro } from "@/lib/api-error";
 
-import {
-  createClient,
-} from "@/lib/supabase/server";
+import { auth } from "@/lib/auth/server";
 
 const TMDB_BASE =
   "https://api.themoviedb.org/3";
@@ -115,15 +114,8 @@ export async function GET(
   req:
     NextRequest
 ) {
-  const s =
-    await createClient();
-
-  const {
-    data: {
-      user,
-    },
-  } =
-    await s.auth.getUser();
+  const session = await auth.getSession().catch(() => null);
+  const user = session?.data?.user;
 
   if (!user) {
     return NextResponse.json(
@@ -265,38 +257,30 @@ export async function GET(
    * NÃO selecionamos vote_average da tabela media.
    * Essa coluna não existe no seu Supabase.
    */
-  const {
-    data:
-      library,
-    error,
-  } =
-    await s
-      .from(
-        "library_items"
-      )
-      .select(`
-        id,
-        status,
-        favorite,
-        personal_rating,
-        media:media_id(
-          tmdb_id,
-          media_type,
-          title,
-          genres
-        )
-      `)
-      .eq(
-        "user_id",
-        user.id
-      );
+  let library: any[] = [];
+  try {
+    const sql = getDb();
+    library = await sql`
+      SELECT
+        li.id,
+        li.status,
+        li.favorite,
+        li.personal_rating,
+        json_build_object(
+          'tmdb_id', m.tmdb_id,
+          'media_type', m.media_type,
+          'title', m.title,
+          'genres', m.genres
+        ) AS media
+      FROM public.library_items li
+      JOIN public.media m ON m.id = li.media_id
+      WHERE li.user_id = ${user.id}
+    `;
+  } catch (error: any) {
+    return respostaDeErro(error, "GET /api/for-you");
+  }
 
-  if (error) {
-  return respostaDeErro(
-    error,
-    "GET /api/for-you",
-  );
-}
+
 
   const items =
     Array.isArray(
@@ -335,23 +319,18 @@ export async function GET(
     );
   }
 
-  const {
-    data:
-      hidden,
-    error:
-      hiddenError,
-  } =
-    await s
-      .from(
-        "user_hidden_titles"
-      )
-      .select(
-        "tmdb_id, media_type"
-      )
-      .eq(
-        "user_id",
-        user.id
-      );
+  const sql = getDb();
+  let hidden: any[] = [];
+  let hiddenError: any = null;
+  try {
+    hidden = await sql`
+      SELECT tmdb_id, media_type
+      FROM public.user_hidden_titles
+      WHERE user_id = ${user.id}
+    `;
+  } catch (err: any) {
+    hiddenError = err;
+  }
 
   if (
     hiddenError

@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { getDb } from "@/lib/db/neon";
 
 /*
  * ============================================================
@@ -70,20 +70,7 @@ export function normalizarNome(valor: string): string {
     .trim();
 }
 
-function clienteIndice() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const chave = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!url || !chave) {
-    throw new Error(
-      "Índice de busca indisponível: credenciais ausentes."
-    );
-  }
-
-  return createClient(url, chave, {
-    auth: { persistSession: false },
-  });
-}
+// Migrado para Neon Serverless getDb()
 
 /**
  * Junta as ligações com os títulos e ordena por popularidade.
@@ -92,7 +79,6 @@ function clienteIndice() {
  * search_people_media; ambas trazem (media_type, tmdb_id).
  */
 async function montarResultados(
-  supabase: ReturnType<typeof clienteIndice>,
   ligacoes: { media_type: string; tmdb_id: number }[],
   motivoPorChave: Map<string, string>,
   limite: number
@@ -102,7 +88,7 @@ async function montarResultados(
   /*
    * Uma consulta por tipo de mídia. A PK de search_media é
    * (media_type, tmdb_id), então filtrar por media_type e usar
-   * .in() no tmdb_id aproveita o índice da chave primária.
+   * ANY(...) no tmdb_id aproveita o índice da chave primária.
    */
   const porTipo = new Map<string, number[]>();
 
@@ -114,20 +100,17 @@ async function montarResultados(
     porTipo.set(l.media_type, lista);
   }
 
+  const sql = getDb();
   const consultas = Array.from(porTipo.entries()).map(
     async ([tipo, ids]) => {
-      /*
-       * Teto de segurança: um personagem muito recorrente pode
-       * ter centenas de ligações, e um .in() gigante vira uma
-       * URL enorme.
-       */
-      const { data } = await supabase
-        .from("search_media")
-        .select("media_type, tmdb_id, title, popularity")
-        .eq("media_type", tipo)
-        .in("tmdb_id", ids.slice(0, 300));
-
-      return data || [];
+      const targetIds = ids.slice(0, 300);
+      const rows = await sql`
+        SELECT media_type, tmdb_id, title, popularity
+        FROM public.search_media
+        WHERE media_type = ${tipo}
+          AND tmdb_id = ANY(${targetIds})
+      `;
+      return rows || [];
     }
   );
 
@@ -169,40 +152,36 @@ export async function buscarPorPersonagem(
     return { personagem: null, resultados: [] };
   }
 
-  const supabase = clienteIndice();
+  const sql = getDb();
 
   /* 1. Exato — usa o índice único de normalized_name. */
-  let { data: personagens } = await supabase
-    .from("search_characters")
-    .select("id, name, normalized_name")
-    .eq("normalized_name", normalizada)
-    .limit(5);
+  let personagens = await sql`
+    SELECT id, name, normalized_name
+    FROM public.search_characters
+    WHERE normalized_name = ${normalizada}
+    LIMIT 5
+  `;
 
   /* 2. Começa com — btree cobre prefixo sem precisar de trigram. */
   if (!personagens?.length) {
-    const r = await supabase
-      .from("search_characters")
-      .select("id, name, normalized_name")
-      .like("normalized_name", `${normalizada}%`)
-      .limit(8);
-
-    personagens = r.data;
+    personagens = await sql`
+      SELECT id, name, normalized_name
+      FROM public.search_characters
+      WHERE normalized_name LIKE ${normalizada + '%'}
+      LIMIT 8
+    `;
   }
 
   /*
-   * 3. Contém — só se os anteriores falharem. Sem a extensão
-   * pg_trgm isto vira varredura completa das 166 mil linhas;
-   * é aceitável como último recurso, e o limite baixo segura.
-   * Ver a nota sobre pg_trgm no fim deste arquivo.
+   * 3. Contém — só se os anteriores falharem.
    */
   if (!personagens?.length) {
-    const r = await supabase
-      .from("search_characters")
-      .select("id, name, normalized_name")
-      .like("normalized_name", `%${normalizada}%`)
-      .limit(5);
-
-    personagens = r.data;
+    personagens = await sql`
+      SELECT id, name, normalized_name
+      FROM public.search_characters
+      WHERE normalized_name LIKE ${'%' + normalizada + '%'}
+      LIMIT 5
+    `;
   }
 
   if (!personagens?.length) {
@@ -215,11 +194,12 @@ export async function buscarPorPersonagem(
     personagens.map((p: any) => [p.id, p.name])
   );
 
-  const { data: ligacoes } = await supabase
-    .from("search_character_media")
-    .select("character_id, media_type, tmdb_id")
-    .in("character_id", ids)
-    .limit(600);
+  const ligacoes = await sql`
+    SELECT character_id, media_type, tmdb_id
+    FROM public.search_character_media
+    WHERE character_id = ANY(${ids})
+    LIMIT 600
+  `;
 
   if (!ligacoes?.length) {
     return {
@@ -242,7 +222,6 @@ export async function buscarPorPersonagem(
   }
 
   const resultados = await montarResultados(
-    supabase,
     ligacoes as any[],
     motivos,
     limite
@@ -273,22 +252,22 @@ export async function buscarPorPessoa(
     return { pessoa: null, resultados: [] };
   }
 
-  const supabase = clienteIndice();
+  const sql = getDb();
 
-  let { data: pessoas } = await supabase
-    .from("search_people")
-    .select("person_id, name, normalized_name")
-    .eq("normalized_name", normalizada)
-    .limit(5);
+  let pessoas = await sql`
+    SELECT person_id, name, normalized_name
+    FROM public.search_people
+    WHERE normalized_name = ${normalizada}
+    LIMIT 5
+  `;
 
   if (!pessoas?.length) {
-    const r = await supabase
-      .from("search_people")
-      .select("person_id, name, normalized_name")
-      .like("normalized_name", `${normalizada}%`)
-      .limit(8);
-
-    pessoas = r.data;
+    pessoas = await sql`
+      SELECT person_id, name, normalized_name
+      FROM public.search_people
+      WHERE normalized_name LIKE ${normalizada + '%'}
+      LIMIT 8
+    `;
   }
 
   if (!pessoas?.length) {
@@ -301,11 +280,12 @@ export async function buscarPorPessoa(
     pessoas.map((p: any) => [p.person_id, p.name])
   );
 
-  const { data: ligacoes } = await supabase
-    .from("search_people_media")
-    .select("person_id, media_type, tmdb_id, role")
-    .in("person_id", ids)
-    .limit(600);
+  const ligacoes = await sql`
+    SELECT person_id, media_type, tmdb_id, role
+    FROM public.search_people_media
+    WHERE person_id = ANY(${ids})
+    LIMIT 600
+  `;
 
   if (!ligacoes?.length) {
     return { pessoa: pessoas[0]?.name || null, resultados: [] };
@@ -327,7 +307,6 @@ export async function buscarPorPessoa(
   }
 
   const resultados = await montarResultados(
-    supabase,
     ligacoes as any[],
     motivos,
     limite

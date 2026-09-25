@@ -18,9 +18,7 @@ import {
   UserPlus,
 } from "lucide-react";
 
-import {
-  createClient,
-} from "@/lib/supabase/client";
+import { authClient } from "@/lib/auth/client";
 
 type AccountUser = {
   id:
@@ -116,123 +114,82 @@ function initials(
 }
 
 export function AccountMenu(): React.ReactElement {
-  const [
-    user,
-    setUser,
-  ] =
-    useState<
-      AccountUser |
-      null
-    >(null);
+  const { data: session, isPending } = authClient.useSession();
+  const [profileMeta, setProfileMeta] = useState<{
+    username?: string;
+    avatar_url?: string;
+    display_name?: string;
+  }>({});
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
 
-  const [
-    ready,
-    setReady,
-  ] =
-    useState(
-      false
-    );
-
-  const [
-    open,
-    setOpen,
-  ] =
-    useState(
-      false
-    );
-
-  const ref =
-    useRef<
-      HTMLDivElement |
-      null
-    >(
-      null
-    );
+  const ready = !isPending;
 
   useEffect(() => {
-    const s =
-      createClient();
+    if (!session?.user?.id) {
+      setProfileMeta({});
+      return;
+    }
 
-    let mounted =
-      true;
+    let active = true;
 
-    s.auth
-      .getUser()
-      .then(
-        ({
-          data,
-        }: {
-          data: {
-            user: AccountUser | null;
-          };
-        }) => {
-          if (
-            mounted
-          ) {
-            setUser(
-              data.user as
-                | AccountUser
-                | null
-            );
-
-            setReady(
-              true
-            );
-          }
+    fetch("/api/profile/username")
+      .then((r) => r.json())
+      .then((d) => {
+        if (active && d?.username) {
+          setProfileMeta((prev) => ({ ...prev, username: d.username }));
         }
-      );
-
-    const {
-      data:
-        subscription,
-    } =
-      s.auth.onAuthStateChange(
-        (
-          _: any,
-          session: any
-        ) => {
-          setUser(
-            session
-              ?.user as
-              | AccountUser
-              | null
-          );
-
-          setReady(
-            true
-          );
-        }
-      );
+      })
+      .catch(() => {});
 
     return () => {
-      mounted =
-        false;
-
-      subscription
-        .subscription
-        .unsubscribe();
+      active = false;
     };
-  }, []);
+  }, [session?.user?.id]);
 
   useEffect(() => {
     function refreshAccount(event: Event): void {
-      const avatarUrl = (event as CustomEvent<{ avatar_url?: string | null }>).detail?.avatar_url;
-      if (avatarUrl !== undefined) {
-        setUser((current) => current ? {
-          ...current,
-          user_metadata: { ...current.user_metadata, avatar_url: avatarUrl },
-        } : current);
-        return;
+      const custom = event as CustomEvent<{
+        avatar_url?: string | null;
+        display_name?: string | null;
+        username?: string | null;
+      }>;
+      if (custom.detail) {
+        setProfileMeta((prev) => ({
+          ...prev,
+          ...(custom.detail.avatar_url !== undefined
+            ? { avatar_url: custom.detail.avatar_url || "" }
+            : {}),
+          ...(custom.detail.display_name !== undefined
+            ? { display_name: custom.detail.display_name || "" }
+            : {}),
+          ...(custom.detail.username !== undefined
+            ? { username: custom.detail.username || "" }
+            : {}),
+        }));
       }
-
-      createClient().auth.getUser().then(({ data }: { data: { user: AccountUser | null } }) => {
-        setUser(data.user as AccountUser | null);
-      });
     }
 
     window.addEventListener("mycatalog:account-updated", refreshAccount);
-    return () => window.removeEventListener("mycatalog:account-updated", refreshAccount);
+    return () =>
+      window.removeEventListener("mycatalog:account-updated", refreshAccount);
   }, []);
+
+  const user: AccountUser | null = session?.user
+    ? {
+        id: session.user.id,
+        email: session.user.email,
+        user_metadata: {
+          display_name: profileMeta.display_name || session.user.name,
+          name: session.user.name,
+          avatar_url:
+            profileMeta.avatar_url ||
+            (session.user as any).image ||
+            "",
+          username: profileMeta.username,
+        },
+      }
+    : null;
 
   useEffect(() => {
     if (
@@ -299,12 +256,13 @@ export function AccountMenu(): React.ReactElement {
   ]);
 
   async function signOut(): Promise<void> {
-    await createClient()
-      .auth
-      .signOut();
+    try {
+      await authClient.signOut();
+    } catch {
+      // ignore
+    }
 
-    location.href =
-      "/login";
+    location.href = "/login";
   }
 
   if (

@@ -27,9 +27,7 @@ import {
   User,
 } from "lucide-react";
 
-import {
-  createClient,
-} from "@/lib/supabase/client";
+import { authClient } from "@/lib/auth/client";
 
 import {
   useToast,
@@ -316,9 +314,6 @@ export function AuthPage({
         true
       );
 
-      const s =
-        createClient();
-
       if (
         isSignup
       ) {
@@ -328,79 +323,50 @@ export function AuthPage({
           throw new Error(usernameData.error || "Este @ de usuário já está em uso.");
         }
 
-        const origin = authRedirectOrigin();
+        const res = await authClient.signUp.email({
+          email: email.trim(),
+          password,
+          name: name.trim(),
+        });
 
-        const {
-          data,
-          error,
-        } =
-          await s.auth.signUp({
-            email:
-              email.trim(),
-
-            password,
-
-            options: {
-              data: {
-                display_name:
-                  name.trim(),
-                username,
-                profile_visibility: "private",
-              },
-
-              emailRedirectTo:
-                `${origin}/auth/callback?next=${encodeURIComponent(
-                  returnTo
-                )}`,
-            },
-          });
-
-        if (
-          error
-        ) {
-          throw error;
+        if (res.error) {
+          throw new Error(res.error.message || "Erro ao criar conta.");
         }
 
-        if (
-          data.session
-        ) {
-          toast.success(
-            "Conta criada com sucesso"
-          );
+        const profileRes = await fetch("/api/auth/profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: name.trim(),
+            username,
+          }),
+        });
 
-          router.replace(
-            returnTo
-          );
-
-          router.refresh();
-
-          return;
+        const profileData = await profileRes.json().catch(() => ({}));
+        if (!profileRes.ok) {
+          throw new Error(profileData.error || "Conta criada, mas falha ao configurar perfil.");
         }
+
+        toast.success(
+          "Conta criada com sucesso"
+        );
 
         router.replace(
-          `/signup/success?email=${encodeURIComponent(
-            email.trim()
-          )}`
+          returnTo
         );
+
+        router.refresh();
 
         return;
       }
 
-      const {
-        error,
-      } =
-        await s.auth
-          .signInWithPassword({
-            email:
-              email.trim(),
+      const res = await authClient.signIn.email({
+        email: email.trim(),
+        password,
+      });
 
-            password,
-          });
-
-      if (
-        error
-      ) {
-        throw error;
+      if (res.error) {
+        throw new Error(res.error.message || "Credenciais inválidas.");
       }
 
       toast.success(

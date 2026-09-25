@@ -1,5 +1,10 @@
+import dns from "node:dns";
+dns.setDefaultResultOrder("ipv4first");
+import { Agent, setGlobalDispatcher } from "undici";
+setGlobalDispatcher(new Agent({ connect: { timeout: 30000 } }));
+
 import dotenv from "dotenv";
-import { createClient } from "@supabase/supabase-js";
+import { neon } from "@neondatabase/serverless";
 import fs from "node:fs";
 
 dotenv.config({
@@ -36,11 +41,8 @@ dotenv.config({
 const TMDB_API_KEY =
   process.env.TMDB_API_KEY;
 
-const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-const SERVICE_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY;
+const DATABASE_URL =
+  process.env.DATABASE_URL;
 
 if (!TMDB_API_KEY) {
   throw new Error(
@@ -48,15 +50,9 @@ if (!TMDB_API_KEY) {
   );
 }
 
-if (!SUPABASE_URL) {
+if (!DATABASE_URL) {
   throw new Error(
-    "NEXT_PUBLIC_SUPABASE_URL não encontrada."
-  );
-}
-
-if (!SERVICE_KEY) {
-  throw new Error(
-    "SUPABASE_SERVICE_ROLE_KEY não encontrada."
+    "DATABASE_URL não encontrada."
   );
 }
 
@@ -143,74 +139,16 @@ const PAGE_BLOCK =
     )
   );
 
-const SUPABASE_TIMEOUT_MS =
-  Math.max(
-    10000,
-    Number(
-      process.env.V4_SUPABASE_TIMEOUT_MS ||
-        120000
-    )
-  );
-
 const CHECKPOINT_FILE =
   "scripts/.universal-index-v43.json";
 
 /*
  * ============================================================
- * SUPABASE
+ * DATABASE (Neon PostgreSQL)
  * ============================================================
  */
 
-async function fetchWithTimeout(
-  input,
-  init = {}
-) {
-  const controller =
-    new AbortController();
-
-  const timeout =
-    setTimeout(
-      () =>
-        controller.abort(
-          new Error(
-            "Supabase request timeout"
-          )
-        ),
-      SUPABASE_TIMEOUT_MS
-    );
-
-  try {
-    return await fetch(
-      input,
-      {
-        ...init,
-        signal:
-          controller.signal,
-      }
-    );
-  } finally {
-    clearTimeout(
-      timeout
-    );
-  }
-}
-
-const supabase =
-  createClient(
-    SUPABASE_URL,
-    SERVICE_KEY,
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-
-      global: {
-        fetch:
-          fetchWithTimeout,
-      },
-    }
-  );
+const sql = neon(DATABASE_URL);
 
 /*
  * ============================================================
@@ -570,23 +508,42 @@ async function bulkUpsert(
 
     await retry(
       async () => {
-        const {
-          error,
-        } =
-          await supabase
-            .from(table)
-            .upsert(
-              chunk,
-              {
-                onConflict,
-              }
-            );
+        const cols = Object.keys(chunk[0]);
+        const colNames = cols.map((c) => `"${c}"`).join(", ");
+        const conflictCols = onConflict
+          .split(",")
+          .map((c) => `"${c.trim()}"`)
+          .join(", ");
+        const updateCols = cols.filter(
+          (c) => !onConflict.split(",").map((s) => s.trim()).includes(c)
+        );
 
-        if (error) {
-          throw new Error(
-            `${table}: ${error.message}`
-          );
+        const updateClause =
+          updateCols.length > 0
+            ? `DO UPDATE SET ${updateCols.map((c) => `"${c}" = EXCLUDED."${c}"`).join(", ")}`
+            : `DO NOTHING`;
+
+        const valuePlaceholders = [];
+        const params = [];
+        let paramIdx = 1;
+
+        for (const row of chunk) {
+          const rowPlaceholders = [];
+          for (const col of cols) {
+            rowPlaceholders.push(`$${paramIdx++}`);
+            params.push(row[col] ?? null);
+          }
+          valuePlaceholders.push(`(${rowPlaceholders.join(", ")})`);
         }
+
+        const queryText = `
+          INSERT INTO ${table} (${colNames})
+          VALUES ${valuePlaceholders.join(", ")}
+          ON CONFLICT (${conflictCols})
+          ${updateClause}
+        `;
+
+        await sql.query(queryText, params);
       },
       `${table} ${start + 1}-${Math.min(
         start + chunk.length,
@@ -1352,27 +1309,11 @@ async function loadCharacterIds(
         start + 100
       );
 
-    const {
-      data,
-      error,
-    } =
-      await supabase
-        .from(
-          "search_characters"
-        )
-        .select(
-          "id,normalized_name"
-        )
-        .in(
-          "normalized_name",
-          chunk
-        );
-
-    if (error) {
-      throw new Error(
-        `search_characters lookup: ${error.message}`
-      );
-    }
+    const data = await sql`
+      SELECT id, normalized_name
+      FROM search_characters
+      WHERE normalized_name = ANY(${chunk});
+    `;
 
     for (
       const value of
@@ -1636,39 +1577,13 @@ async function processPage(
         validId
       );
 
-  const {
-    data:
-      alreadyIndexed,
-    error:
-      indexedError,
-  } =
-    await supabase
-      .from(
-        "search_indexed_media"
-      )
-      .select(
-        "tmdb_id"
-      )
-      .eq(
-        "media_type",
-        mediaType
-      )
-      .gte(
-        "version",
-        VERSION
-      )
-      .in(
-        "tmdb_id",
-        ids
-      );
-
-  if (
-    indexedError
-  ) {
-    throw new Error(
-      `search_indexed_media: ${indexedError.message}`
-    );
-  }
+  const alreadyIndexed = await sql`
+    SELECT tmdb_id
+    FROM search_indexed_media
+    WHERE media_type = ${mediaType}
+      AND version >= ${VERSION}
+      AND tmdb_id = ANY(${ids});
+  `;
 
   const done =
     new Set(
@@ -1788,7 +1703,7 @@ async function processPage(
    */
 
   console.log(
-    "💾 Salvando no Supabase..."
+    "💾 Salvando no banco Neon..."
   );
 
   const saved =
@@ -1841,27 +1756,12 @@ async function processPage(
 async function countTable(
   table
 ) {
-  const {
-    count,
-    error,
-  } =
-    await supabase
-      .from(table)
-      .select(
-        "*",
-        {
-          count: "exact",
-          head: true,
-        }
-      );
-
-  if (error) {
+  try {
+    const rows = await sql.query(`SELECT COUNT(*)::int AS total FROM ${table}`);
+    return Number(rows[0]?.total || 0);
+  } catch {
     return null;
   }
-
-  return Number(
-    count || 0
-  );
 }
 
 async function printStats() {
@@ -2103,10 +2003,7 @@ async function main() {
   );
 
   console.log(
-    `Timeout Supabase: ${Math.round(
-      SUPABASE_TIMEOUT_MS /
-        1000
-    )}s`
+    "Banco de dados: Neon PostgreSQL"
   );
 
   console.log("");

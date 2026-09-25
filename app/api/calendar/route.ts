@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { respostaDeErro } from "@/lib/api-error";
 
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth/server";
+import { getDb } from "@/lib/db/neon";
 
 import {
   calendarTMDB,
@@ -68,22 +69,13 @@ type CalendarResponse = {
 };
 
 export async function GET(req: NextRequest) {
-  const s =
-    await createClient();
+  const session = await auth.getSession().catch(() => null);
+  const user = session?.data?.user;
 
-  const {
-    data: { user },
-  } = await s.auth.getUser();
-
-  if (!user) {
+  if (!user || !user.id) {
     return NextResponse.json(
-      {
-        error:
-          "Não autenticado",
-      },
-      {
-        status: 401,
-      }
+      { error: "Não autenticado" },
+      { status: 401 }
     );
   }
 
@@ -118,36 +110,31 @@ export async function GET(req: NextRequest) {
    * ==========================================
    */
 
-  const {
-    data: library,
-    error,
-  } = await s
-    .from("library_items")
-    .select(`
-      id,
-      status,
-      current_season,
-      completed_seasons,
-      stopped_season,
+  let library: any[] = [];
+  try {
+    const sql = getDb();
+    library = await sql`
+      SELECT
+        li.id,
+        li.status,
+        li.current_season,
+        li.completed_seasons,
+        li.stopped_season,
+        json_build_object(
+          'id', m.id,
+          'tmdb_id', m.tmdb_id,
+          'media_type', m.media_type,
+          'title', m.title
+        ) AS media
+      FROM public.library_items li
+      JOIN public.media m ON m.id = li.media_id
+      WHERE li.user_id = ${user.id}
+    `;
+  } catch (error: any) {
+    return respostaDeErro(error, "GET /api/calendar");
+  }
 
-      media:media_id(
-        id,
-        tmdb_id,
-        media_type,
-        title
-      )
-    `)
-    .eq(
-      "user_id",
-      user.id
-    );
 
-  if (error) {
-  return respostaDeErro(
-    error,
-    "GET /api/calendar",
-  );
-}
 
   const items =
     Array.isArray(

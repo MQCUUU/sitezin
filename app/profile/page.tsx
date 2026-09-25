@@ -1,17 +1,21 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth/server";
+import { getDb } from "@/lib/db/neon";
 
 export default async function MyProfileRedirect() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const session = await auth.getSession().catch(() => null);
+  const user = session?.data?.user;
+  if (!user || !user.id) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("username")
-    .eq("id", user.id)
-    .maybeSingle();
+  const sql = getDb();
+  const rows = await sql`
+    SELECT username
+    FROM public.profiles
+    WHERE id = ${user.id}
+    LIMIT 1
+  `;
 
-  if (!profile?.username) redirect("/");
-  redirect(`/u/${profile.username}`);
+  const username = rows[0]?.username;
+  if (!username) redirect("/");
+  redirect(`/u/${username}`);
 }

@@ -17,9 +17,7 @@ import {
   LockKeyhole,
 } from "lucide-react";
 
-import {
-  createClient,
-} from "@/lib/supabase/client";
+import { authClient } from "@/lib/auth/client";
 import { passwordValidationError, PASSWORD_HINT } from "@/lib/auth-client";
 
 export default function ResetPasswordPage() {
@@ -81,19 +79,19 @@ export default function ResetPasswordPage() {
         true
       );
 
-      const {
-        error,
-      } =
-        await createClient()
-          .auth
-          .updateUser({
-            password,
-          });
+      const token = typeof window !== "undefined"
+        ? (new URLSearchParams(window.location.search).get("token") || "")
+        : "";
+
+      const res = await authClient.resetPassword({
+        newPassword: password,
+        token: token || undefined,
+      });
 
       if (
-        error
+        res.error
       ) {
-        throw error;
+        throw new Error(res.error.message || "Não foi possível alterar a senha.");
       }
 
       router.replace(

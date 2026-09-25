@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Search } from '@/components/Search';
-import { createClient } from '@/lib/supabase/client';
+
 import { DataBackup } from '@/components/DataBackup';
 import { AccountPrivacy } from '@/components/AccountPrivacy';
 import { SocialSettings } from '@/components/SocialSettings';
@@ -41,14 +41,12 @@ export default function Settings() {
     useState<AppearancePreferences>(DEFAULT_PREFERENCES);
 
   useEffect(() => {
-    const s = createClient();
-
-    s.from('rating_categories')
-      .select('*')
-      .order('position')
-      .then(({ data }: { data: any[] | null }) => {
-        setD(data || []);
-      });
+    fetch('/api/rating-categories')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: any[] | null) => {
+        setD(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {});
 
     setPreferences(readPreferences());
   }, []);
@@ -56,20 +54,23 @@ export default function Settings() {
   const add = async () => {
     if (!name.trim()) return;
 
-    const s = createClient();
+    try {
+      const res = await fetch('/api/rating-categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          weight: 0,
+          position: d.length,
+        }),
+      });
 
-    const { data } = await s
-      .from('rating_categories')
-      .insert({
-        name,
-        weight: 0,
-        position: d.length,
-      })
-      .select()
-      .single();
-
-    if (data) {
-      setD([...d, data]);
+      if (res.ok) {
+        const data = await res.json();
+        setD([...d, data]);
+      }
+    } catch (err) {
+      console.error('Erro ao adicionar categoria:', err);
     }
 
     setName('');
@@ -80,36 +81,45 @@ export default function Settings() {
     k: string,
     v: any
   ) => {
-    const s = createClient();
+    try {
+      const res = await fetch('/api/rating-categories', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id,
+          [k]: v,
+        }),
+      });
 
-    await s
-      .from('rating_categories')
-      .update({
-        [k]: v,
-      })
-      .eq('id', id);
-
-    setD(
-      d.map((x) =>
-        x.id === id
-          ? {
-              ...x,
-              [k]: v,
-            }
-          : x
-      )
-    );
+      if (res.ok) {
+        setD(
+          d.map((x) =>
+            x.id === id
+              ? {
+                  ...x,
+                  [k]: v,
+                }
+              : x
+          )
+        );
+      }
+    } catch (err) {
+      console.error('Erro ao atualizar categoria:', err);
+    }
   };
 
   const remove = async (id: string) => {
-    const s = createClient();
+    try {
+      const res = await fetch(`/api/rating-categories?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
 
-    await s
-      .from('rating_categories')
-      .delete()
-      .eq('id', id);
-
-    setD(d.filter((x) => x.id !== id));
+      if (res.ok) {
+        setD(d.filter((x) => x.id !== id));
+      }
+    } catch (err) {
+      console.error('Erro ao remover categoria:', err);
+    }
   };
 
   const changePreference = <

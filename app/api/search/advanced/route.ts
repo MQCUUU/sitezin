@@ -3,10 +3,7 @@ import {
   NextResponse,
 } from "next/server";
 
-import {
-  createClient as createSupabaseClient,
-  SupabaseClient,
-} from "@supabase/supabase-js";
+import { getDb } from "@/lib/db/neon";
 
 const TMDB_BASE =
   "https://api.themoviedb.org/3";
@@ -843,135 +840,69 @@ async function enrichMedia(
 }
 
 async function localCharacterSearch(
-  supabase:
-    SupabaseClient,
-  query:
-    string
+  query: string
 ) {
-  const {
-    data,
-    error,
-  } =
-    await supabase.rpc(
-      "search_v4_characters",
-      {
-        query_text:
-          query,
-
-        result_limit:
-          120,
-      }
-    );
-
-  if (
-    error
-  ) {
-    console.error(
-      "search_v4_characters:",
-      error.message
-    );
-
+  try {
+    const sql = getDb();
+    const rows = await sql`
+      SELECT character_id, character_name, normalized_name, name_similarity, match_kind,
+             media_count, max_media_popularity, avg_media_popularity, sum_media_popularity, entity_score
+      FROM public.search_v4_characters(${query}, 120)
+    `;
+    return (rows || []) as CharacterRow[];
+  } catch (error: any) {
+    console.error("search_v4_characters:", error?.message);
     return [];
   }
-
-  return (
-    Array.isArray(
-      data
-    )
-      ? data
-      : []
-  ) as
-    CharacterRow[];
 }
 
 async function localPersonSearch(
-  supabase:
-    SupabaseClient,
-  query:
-    string
+  query: string
 ) {
-  const {
-    data,
-    error,
-  } =
-    await supabase.rpc(
-      "search_v4_people",
-      {
-        query_text:
-          query,
-
-        result_limit:
-          120,
-      }
-    );
-
-  if (
-    error
-  ) {
-    console.error(
-      "search_v4_people:",
-      error.message
-    );
-
+  try {
+    const sql = getDb();
+    const rows = await sql`
+      SELECT person_id, person_name, normalized_name, name_similarity, match_kind,
+             media_count, important_credit_count, max_media_popularity, avg_media_popularity, sum_media_popularity, entity_score
+      FROM public.search_v4_people(${query}, 120)
+    `;
+    return (rows || []) as PersonRow[];
+  } catch (error: any) {
+    console.error("search_v4_people:", error?.message);
     return [];
   }
-
-  return (
-    Array.isArray(
-      data
-    )
-      ? data
-      : []
-  ) as
-    PersonRow[];
 }
 
 async function loadCharacterMedia(
-  supabase: SupabaseClient,
   characterId: number
 ) {
-  const { data, error } =
-    await supabase.rpc(
-      "search_v4_character_media",
-      {
-        target_character_id:
-          characterId,
-      }
-    );
-
-  if (error) {
-    console.error(
-      "search_v4_character_media:",
-      error.message
-    );
+  try {
+    const sql = getDb();
+    const rows = await sql`
+      SELECT media_type, tmdb_id, media_title, character_name, person_name, popularity
+      FROM public.search_v4_character_media(${characterId})
+    `;
+    return (rows || []) as CharacterMediaRow[];
+  } catch (error: any) {
+    console.error("search_v4_character_media:", error?.message);
     return [];
   }
-
-  return (Array.isArray(data) ? data : []) as CharacterMediaRow[];
 }
 
 async function loadPersonMedia(
-  supabase: SupabaseClient,
   personId: number
 ) {
-  const { data, error } =
-    await supabase.rpc(
-      "search_v4_person_media",
-      {
-        target_person_id:
-          personId,
-      }
-    );
-
-  if (error) {
-    console.error(
-      "search_v4_person_media:",
-      error.message
-    );
+  try {
+    const sql = getDb();
+    const rows = await sql`
+      SELECT media_type, tmdb_id, media_title, role, popularity
+      FROM public.search_v4_person_media(${personId})
+    `;
+    return (rows || []) as PersonMediaRow[];
+  } catch (error: any) {
+    console.error("search_v4_person_media:", error?.message);
     return [];
   }
-
-  return (Array.isArray(data) ? data : []) as PersonMediaRow[];
 }
 
 function characterMediaResults(
@@ -1880,47 +1811,8 @@ export async function GET(
     }
   }
 
-  const supabaseUrl =
-    process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-  const serviceRoleKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (
-    !supabaseUrl ||
-    !serviceRoleKey
-  ) {
-    console.error(
-      "Busca local indisponível: credenciais do índice ausentes."
-    );
-
-    return NextResponse.json(
-      {
-        error:
-          "Índice de busca indisponível.",
-      },
-      {
-        status:
-          500,
-      }
-    );
-  }
-
-  const supabase =
-    createSupabaseClient(
-      supabaseUrl,
-      serviceRoleKey,
-      {
-        auth: {
-          persistSession:
-            false,
-          autoRefreshToken:
-            false,
-        },
-      }
-    );
-
-  /*
+  // Busca no índice PostgreSQL Neon direto via getDb()
+/*
    * ========================================================
    * 1. COLEÇÃO / FRANQUIA
    * ========================================================
@@ -2250,15 +2142,9 @@ export async function GET(
         }
       ),
 
-      localCharacterSearch(
-        supabase,
-        characterTerm
-      ),
+      localCharacterSearch(characterTerm),
 
-      localPersonSearch(
-        supabase,
-        personTerm
-      ),
+      localPersonSearch(personTerm),
     ]);
 
   /*
@@ -2474,10 +2360,7 @@ export async function GET(
     resolvedEntity.score >= 620
   ) {
     const mediaRows =
-      await loadCharacterMedia(
-        supabase,
-        Number(bestCharacter.character_id)
-      );
+      await loadCharacterMedia(Number(bestCharacter.character_id));
 
     const results =
       await enrichMedia(
@@ -2508,10 +2391,7 @@ export async function GET(
     resolvedEntity.score >= 620
   ) {
     const mediaRows =
-      await loadPersonMedia(
-        supabase,
-        Number(bestPerson.person_id)
-      );
+      await loadPersonMedia(Number(bestPerson.person_id));
 
     const results =
       await enrichMedia(

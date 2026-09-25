@@ -1,15 +1,19 @@
-import { createClient } from "@supabase/supabase-js";
+import dns from "node:dns";
+dns.setDefaultResultOrder("ipv4first");
+import { Agent, setGlobalDispatcher } from "undici";
+setGlobalDispatcher(new Agent({ connect: { timeout: 30000 } }));
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
+import { neon } from "@neondatabase/serverless";
 
-if (!url || !key) {
-  throw new Error("Credenciais do Supabase ausentes.");
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL ausente.");
 }
 
-const supabase = createClient(url, key, {
-  auth: { persistSession: false, autoRefreshToken: false },
-});
+const sql = neon(databaseUrl);
 
 const cases = [
   ["Bruce Wayne", "character"],
@@ -41,24 +45,15 @@ function normalize(value) {
 for (const [label, expected] of cases) {
   const query = normalize(label);
   const wordCount = query.split(/\s+/).length;
+
   const [people, characters] = await Promise.all([
-    supabase.rpc("search_v4_people", {
-      query_text: query,
-      result_limit: 120,
-    }),
-    supabase.rpc("search_v4_characters", {
-      query_text: query,
-      result_limit: 120,
-    }),
+    sql`SELECT * FROM search_v4_people(query_text := ${query}, result_limit := 120)`,
+    sql`SELECT * FROM search_v4_characters(query_text := ${query}, result_limit := 120)`,
   ]);
 
-  if (people.error || characters.error) {
-    throw people.error || characters.error;
-  }
-
-  const person = [...(people.data || [])]
+  const person = [...(people || [])]
     .sort((a, b) => Number(b.entity_score) - Number(a.entity_score))[0];
-  const character = [...(characters.data || [])]
+  const character = [...(characters || [])]
     .sort((a, b) => Number(b.entity_score) - Number(a.entity_score))[0];
 
   const characterRelevant =

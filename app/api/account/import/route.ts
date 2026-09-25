@@ -1,3 +1,4 @@
+import { getDb } from "@/lib/db/neon";
 import {
   NextRequest,
   NextResponse,
@@ -5,9 +6,7 @@ import {
 
 import { respostaDeErro } from "@/lib/api-error";
 
-import {
-  createClient,
-} from "@/lib/supabase/server";
+import { auth } from "@/lib/auth/server";
 
 import {
   InvalidJsonError,
@@ -58,31 +57,17 @@ export async function POST(
   req:
     NextRequest
 ) {
-  const s =
-    await createClient();
+  const session = await auth.getSession().catch(() => null);
+    const user = session?.data?.user;
 
-  const {
-    data: {
-      user,
-    },
-  } =
-    await s.auth
-      .getUser();
+    if (!user || !user.id) {
+      return NextResponse.json(
+        { error: "Não autenticado" },
+        { status: 401 }
+      );
+    }
 
-  if (
-    !user
-  ) {
-    return NextResponse.json(
-      {
-        error:
-          "Não autenticado",
-      },
-      {
-        status:
-          401,
-      }
-    );
-  }
+    const sql = getDb();
 
   try {
     const backup =
@@ -152,108 +137,36 @@ export async function POST(
         continue;
       }
 
-      const {
-        data:
-          savedMedia,
-        error:
-          mediaError,
-      } =
-        await s
-          .from(
-            "media"
-          )
-          .upsert(
-            {
-              tmdb_id:
-                media.tmdb_id,
 
-              media_type:
-                media.media_type,
+      const savedMediaRows = await sql`
+        INSERT INTO public.media (
+          tmdb_id, media_type, title, original_title, overview, poster_path, backdrop_path,
+          release_date, first_air_date, genres, tmdb_rating, tmdb_vote_count, runtime,
+          seasons_count, episodes_count, creator_names, cast_names, raw, updated_at
+        )
+        VALUES (
+          ${media.tmdb_id}, ${media.media_type}, ${media.title || "Sem título"},
+          ${media.original_title ?? null}, ${media.overview ?? null}, ${media.poster_path ?? null},
+          ${media.backdrop_path ?? null}, ${media.release_date ?? null}, ${media.first_air_date ?? null},
+          ${genres(media.genres)}, ${media.tmdb_rating ?? null}, ${media.tmdb_vote_count ?? null},
+          ${media.runtime ?? null}, ${media.seasons_count ?? null}, ${media.episodes_count ?? null},
+          ${media.creator_names || []}, ${media.cast_names || []}, ${JSON.stringify(media.raw || media)}, now()
+        )
+        ON CONFLICT (tmdb_id, media_type)
+        DO UPDATE SET
+          title = EXCLUDED.title,
+          original_title = COALESCE(EXCLUDED.original_title, media.original_title),
+          overview = COALESCE(EXCLUDED.overview, media.overview),
+          poster_path = COALESCE(EXCLUDED.poster_path, media.poster_path),
+          backdrop_path = COALESCE(EXCLUDED.backdrop_path, media.backdrop_path),
+          genres = COALESCE(EXCLUDED.genres, media.genres),
+          updated_at = now()
+        RETURNING id
+      `;
 
-              title:
-                media.title ||
-                "Sem título",
-
-              original_title:
-                media.original_title ??
-                null,
-
-              overview:
-                media.overview ??
-                null,
-
-              poster_path:
-                media.poster_path ??
-                null,
-
-              backdrop_path:
-                media.backdrop_path ??
-                null,
-
-              release_date:
-                media.release_date ??
-                null,
-
-              first_air_date:
-                media.first_air_date ??
-                null,
-
-              genres:
-                genres(
-                  media.genres
-                ),
-
-              tmdb_rating:
-                media.tmdb_rating ??
-                null,
-
-              tmdb_vote_count:
-                media.tmdb_vote_count ??
-                null,
-
-              runtime:
-                media.runtime ??
-                null,
-
-              seasons_count:
-                media.seasons_count ??
-                null,
-
-              episodes_count:
-                media.episodes_count ??
-                null,
-
-              creator_names:
-                media.creator_names ||
-                [],
-
-              cast_names:
-                media.cast_names ||
-                [],
-
-              raw:
-                media.raw ||
-                media,
-            },
-            {
-              onConflict:
-                "tmdb_id,media_type",
-            }
-          )
-          .select(
-            "id"
-          )
-          .single();
-
-      if (
-        mediaError ||
-        !savedMedia
-      ) {
-        throw new Error(
-          mediaError
-            ?.message ||
-          `Erro restaurando ${media.title}.`
-        );
+      const savedMedia = savedMediaRows[0];
+      if (!savedMedia) {
+        throw new Error(`Erro restaurando ${media.title}.`);
       }
 
       if (
@@ -336,37 +249,36 @@ export async function POST(
           item.updated_at;
       }
 
-      const {
-        data:
-          savedLibrary,
-        error:
-          libraryError,
-      } =
-        await s
-          .from(
-            "library_items"
-          )
-          .upsert(
-            payload,
-            {
-              onConflict:
-                "user_id,media_id",
-            }
-          )
-          .select(
-            "id"
-          )
-          .single();
 
-      if (
-        libraryError ||
-        !savedLibrary
-      ) {
-        throw new Error(
-          libraryError
-            ?.message ||
-          `Erro restaurando ${media.title}.`
-        );
+      const savedLibraryRows = await sql`
+        INSERT INTO public.library_items (
+          user_id, media_id, status, favorite, personal_rating, review,
+          watched_at, rewatch_count, current_season, completed_seasons, stopped_season, added_at, updated_at
+        )
+        VALUES (
+          ${user.id}, ${savedMedia.id}, ${payload.status}, ${payload.favorite},
+          ${payload.personal_rating ?? null}, ${payload.review ?? null}, ${payload.watched_at ?? null},
+          ${payload.rewatch_count ?? 0}, ${payload.current_season ?? null}, ${payload.completed_seasons ?? []},
+          ${payload.stopped_season ?? null}, ${payload.added_at || new Date().toISOString()}, ${payload.updated_at || new Date().toISOString()}
+        )
+        ON CONFLICT (user_id, media_id)
+        DO UPDATE SET
+          status = EXCLUDED.status,
+          favorite = EXCLUDED.favorite,
+          personal_rating = EXCLUDED.personal_rating,
+          review = EXCLUDED.review,
+          watched_at = EXCLUDED.watched_at,
+          rewatch_count = EXCLUDED.rewatch_count,
+          current_season = EXCLUDED.current_season,
+          completed_seasons = EXCLUDED.completed_seasons,
+          stopped_season = EXCLUDED.stopped_season,
+          updated_at = EXCLUDED.updated_at
+        RETURNING id
+      `;
+
+      const savedLibrary = savedLibraryRows[0];
+      if (!savedLibrary) {
+        throw new Error(`Erro restaurando ${media.title}.`);
       }
 
       if (
@@ -410,43 +322,27 @@ export async function POST(
         continue;
       }
 
-      const {
-        error,
-      } =
-        await s
-          .from(
-            "user_hidden_titles"
+      try {
+
+        await sql`
+          INSERT INTO public.user_hidden_titles (
+            user_id, tmdb_id, media_type, reason, created_at
           )
-          .upsert(
-            {
-              user_id:
-                user.id,
-
-              tmdb_id:
-                item.tmdb_id,
-
-              media_type:
-                item.media_type,
-
-              reason:
-                item.reason ||
-                "not_interested",
-
-              created_at:
-                item.created_at ||
-                new Date()
-                  .toISOString(),
-            },
-            {
-              onConflict:
-                "user_id,tmdb_id,media_type",
-            }
-          );
-
-      if (
-        !error
-      ) {
+          VALUES (
+            ${user.id},
+            ${item.tmdb_id},
+            ${item.media_type},
+            ${item.reason || "not_interested"},
+            ${item.created_at || new Date().toISOString()}
+          )
+          ON CONFLICT (user_id, tmdb_id, media_type)
+          DO UPDATE SET
+            reason = EXCLUDED.reason,
+            created_at = EXCLUDED.created_at
+        `;
         hiddenCount++;
+      } catch (err: any) {
+        console.error("Erro ao importar hidden title:", err?.message);
       }
     }
 
@@ -527,25 +423,39 @@ export async function POST(
           entry.updated_at,
       };
 
-      const {
-        error,
-      } =
-        await s
-          .from(
-            "watch_entries"
-          )
-          .upsert(
-            payload,
-            {
-              onConflict:
-                "id",
-            }
-          );
+      try {
 
-      if (
-        !error
-      ) {
+        await sql`
+          INSERT INTO public.watch_entries (
+            id, user_id, library_item_id, media_id, watched_at,
+            rating, comment, is_rewatch, created_at, updated_at
+          )
+          VALUES (
+            ${payload.id},
+            ${user.id},
+            ${payload.library_item_id},
+            ${payload.media_id},
+            ${payload.watched_at},
+            ${payload.rating},
+            ${payload.comment},
+            ${payload.is_rewatch},
+            ${payload.created_at || new Date().toISOString()},
+            ${payload.updated_at || new Date().toISOString()}
+          )
+          ON CONFLICT (id)
+          DO UPDATE SET
+            user_id = EXCLUDED.user_id,
+            library_item_id = EXCLUDED.library_item_id,
+            media_id = EXCLUDED.media_id,
+            watched_at = EXCLUDED.watched_at,
+            rating = EXCLUDED.rating,
+            comment = EXCLUDED.comment,
+            is_rewatch = EXCLUDED.is_rewatch,
+            updated_at = EXCLUDED.updated_at
+        `;
         watchCount++;
+      } catch (err: any) {
+        console.error("Erro ao importar watch entry:", err?.message);
       }
     }
 
@@ -589,47 +499,34 @@ export async function POST(
             null
           : null;
 
-      const {
-        error,
-      } =
-        await s
-          .from(
-            "activity_events"
+            try {
+
+        await sql`
+          INSERT INTO public.activity_events (
+            id, user_id, media_id, library_item_id, event_type, metadata, occurred_at, created_at
           )
-          .upsert(
-            {
-              id:
-                event.id,
-
-              user_id:
-                user.id,
-
-              media_id:
-                newMediaId,
-
-              library_item_id:
-                newLibraryId,
-
-              event_type:
-                event.event_type,
-
-              metadata:
-                event.metadata ||
-                {},
-
-              occurred_at:
-                event.occurred_at,
-            },
-            {
-              onConflict:
-                "id",
-            }
-          );
-
-      if (
-        !error
-      ) {
+          VALUES (
+            ${event.id || crypto.randomUUID()},
+            ${user.id},
+            ${newMediaId},
+            ${newLibraryId},
+            ${event.event_type},
+            ${JSON.stringify(event.metadata || {})},
+            ${event.occurred_at || new Date().toISOString()},
+            ${new Date().toISOString()}
+          )
+          ON CONFLICT (id)
+          DO UPDATE SET
+            user_id = EXCLUDED.user_id,
+            media_id = EXCLUDED.media_id,
+            library_item_id = EXCLUDED.library_item_id,
+            event_type = EXCLUDED.event_type,
+            metadata = EXCLUDED.metadata,
+            occurred_at = EXCLUDED.occurred_at
+        `;
         activityCount++;
+      } catch (err: any) {
+        console.error("Erro ao importar activity event:", err?.message);
       }
     }
 
@@ -681,7 +578,7 @@ if (
     }
   );
 }
-    
+
     console.error(
       "Erro ao importar backup:",
       error

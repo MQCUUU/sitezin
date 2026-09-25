@@ -3,9 +3,7 @@ import {
   NextResponse,
 } from "next/server";
 
-import {
-  createClient as createSupabaseClient,
-} from "@supabase/supabase-js";
+import { getDb } from "@/lib/db/neon";
 
 const TMDB_BASE =
   "https://api.themoviedb.org/3";
@@ -406,33 +404,22 @@ export async function GET(
     );
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  const supabase = supabaseUrl && serviceRoleKey
-    ? createSupabaseClient(supabaseUrl, serviceRoleKey, {
-        auth: { persistSession: false, autoRefreshToken: false },
-      })
-    : null;
-
-  /*
+  // Busca via Neon PostgreSQL getDb()
+/*
    * @username e uma intencao explicita de procurar perfis. Nesse caso nao
    * fazemos nenhuma requisicao ao TMDB nem ao indice de personagens.
    */
   if (usersOnly) {
-    if (!supabase) {
-      return NextResponse.json({ query: rawQuery, suggestions: [] });
-    }
-
+    const sql = getDb();
     const safeQuery = q.replace(/[,%()]/g, "");
-    const { data } = await supabase
-      .from("profiles")
-      .select("id,username,display_name,avatar_url")
-      .not("username", "is", null)
-      .or(
-        `username.ilike.%${safeQuery}%,display_name.ilike.%${safeQuery}%`,
-      )
-      .limit(10);
+    const pattern = `%${safeQuery}%`;
+    const data = await sql`
+      SELECT id, username, display_name, avatar_url
+      FROM public.profiles
+      WHERE username IS NOT NULL
+        AND (username ILIKE ${pattern} OR display_name ILIKE ${pattern})
+      LIMIT 10
+    `;
 
     const normalizedQuery = normalize(q);
     const suggestions = [...(data || [])]
@@ -521,15 +508,36 @@ export async function GET(
           )
       ),
 
-      supabase
-        ? supabase.rpc("search_v4_characters", {
-            query_text: q,
-            result_limit: 5,
-          })
-        : Promise.resolve({ data: [], error: null }),
-      supabase
-        ? supabase.from("profiles").select("id,username,display_name,avatar_url").or(`username.ilike.%${q.replace(/[,%()]/g, "")}%,display_name.ilike.%${q.replace(/[,%()]/g, "")}%`).limit(4)
-        : Promise.resolve({ data: [], error: null }),
+      (async () => {
+        try {
+          const sql = getDb();
+          const rows = await sql`
+            SELECT character_id, character_name, normalized_name, name_similarity, match_kind,
+                   media_count, max_media_popularity, avg_media_popularity, sum_media_popularity, entity_score
+            FROM public.search_v4_characters(${q}, 5)
+          `;
+          return { data: rows || [], error: null };
+        } catch (e: any) {
+          return { data: [], error: e };
+        }
+      })(),
+      (async () => {
+        try {
+          const sql = getDb();
+          const safeQuery = q.replace(/[,%()]/g, "");
+          const pattern = `%${safeQuery}%`;
+          const rows = await sql`
+            SELECT id, username, display_name, avatar_url
+            FROM public.profiles
+            WHERE username IS NOT NULL
+              AND (username ILIKE ${pattern} OR display_name ILIKE ${pattern})
+            LIMIT 4
+          `;
+          return { data: rows || [], error: null };
+        } catch (e: any) {
+          return { data: [], error: e };
+        }
+      })(),
     ]);
 
   const suggestions:
@@ -691,17 +699,18 @@ export async function GET(
 
   let relatedCharacterMedia: any[] = [];
 
-  if (characterRows.length > 0 && supabase) {
+  if (characterRows.length > 0) {
     const bestName =
       characterRows[
         0
       ]
         .character_name;
 
-    const { data: mediaRows } = await supabase.rpc(
-      "search_v4_character_media",
-      { target_character_id: characterRows[0].character_id },
-    );
+    const sql = getDb();
+    const mediaRows = await sql`
+      SELECT media_type, tmdb_id, media_title, character_name, person_name, popularity
+      FROM public.search_v4_character_media(${characterRows[0].character_id})
+    `;
 
     relatedCharacterMedia = Array.isArray(mediaRows)
       ? [...mediaRows]

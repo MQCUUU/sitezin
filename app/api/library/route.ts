@@ -1,8 +1,7 @@
-import { NextResponse } from "next/server";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth/server";
+import { getDb } from "@/lib/db/neon";
 import { respostaDeErro } from "@/lib/api-error";
-import { createClient } from "@/lib/supabase/server";
-import { completeSeriesProgress, resetSeriesProgress, restoreSeriesProgress } from "@/lib/complete-series-progress";
 
 interface ErrorResponse {
   error: string;
@@ -42,38 +41,23 @@ interface LibraryItem {
   review: string | null;
   watched_at: string | null;
   rewatch_count: number;
-
   current_season: number | null;
   completed_seasons: number;
   stopped_season: number | null;
-
   added_at: string;
   updated_at: string;
-
   media: MediaData;
 }
 
-
 interface PaginatedLibraryResponse {
   items: LibraryItem[];
-
   page: number;
-
   per_page: number;
-
   total_pages: number;
-
   total_results: number;
-
   total_library: number;
-
-  counts: Record<
-    string,
-    number
-  >;
-
+  counts: Record<string, number>;
   genres: string[];
-
   years: string[];
 }
 
@@ -81,104 +65,30 @@ interface PostRequestBody {
   media: {
     id: number;
     media_type: string;
-
     title?: string;
     name?: string;
-
     original_title?: string;
     original_name?: string;
-
     overview?: string;
-
     poster_path?: string;
     backdrop_path?: string;
-
     release_date?: string;
     first_air_date?: string;
-
     genres?: any[];
-
     vote_average?: number;
     tmdb_rating?: number;
-
     vote_count?: number;
-
     runtime?: number;
-
     number_of_seasons?: number;
     number_of_episodes?: number;
-
     creator_names?: string[];
     cast_names?: string[];
   };
-
   status?: string;
-
   favorite?: boolean;
-
   personal_rating?: number | null;
-
   review?: string | null;
 }
-
-interface MediaUpsertData {
-  tmdb_id: number;
-  media_type: string;
-
-  title: string | null;
-  original_title: string | null;
-
-  overview: string | null;
-
-  poster_path: string | null;
-  backdrop_path: string | null;
-
-  release_date: string | null;
-  first_air_date: string | null;
-
-  genres: string[];
-
-  tmdb_rating: number | null;
-  tmdb_vote_count: number | null;
-
-  runtime: number | null;
-
-  seasons_count: number | null;
-  episodes_count: number | null;
-
-  creator_names: string[];
-  cast_names: string[];
-
-  raw: Record<string, unknown>;
-}
-
-interface LibraryItemUpsertData {
-  user_id: string;
-
-  media_id: number;
-
-  status: string;
-
-  favorite: boolean;
-
-  personal_rating: number | null;
-
-  review?: string | null;
-
-  rewatch_count: number;
-
-  current_season: number | null;
-
-  completed_seasons: number;
-
-  stopped_season: number | null;
-}
-
-/*
- * ==========================================
- * STATUS PERMITIDOS
- * ==========================================
- */
 
 const VALID_STATUSES = [
   "want",
@@ -190,15 +100,7 @@ const VALID_STATUSES = [
   "rewatched",
 ];
 
-/*
- * ==========================================
- * NORMALIZAR GÊNEROS
- * ==========================================
- */
-
-function normalizeGenres(
-  genres: any[] | undefined
-): string[] {
+function normalizeGenres(genres: any[] | undefined): string[] {
   if (!Array.isArray(genres)) {
     return [];
   }
@@ -208,14 +110,9 @@ function normalizeGenres(
       if (typeof genre === "string") {
         return genre;
       }
-
-      if (
-        genre &&
-        typeof genre === "object"
-      ) {
+      if (genre && typeof genre === "object") {
         return genre.name || "";
       }
-
       return "";
     })
     .filter(Boolean);
@@ -226,1056 +123,312 @@ function normalizeGenres(
  * GET
  * ==========================================
  */
-
 export async function GET(
   req: NextRequest
 ): Promise<
   NextResponse<
-    LibraryItem |
-      LibraryItem[] |
-      PaginatedLibraryResponse |
-      null |
-      ErrorResponse
+    LibraryItem | LibraryItem[] | PaginatedLibraryResponse | null | ErrorResponse
   >
 > {
-  const s =
-    await createClient();
+  try {
+    const session = await auth.getSession().catch(() => null);
+    const user = session?.data?.user;
 
-  const {
-    data: { user },
-  } = await s.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json(
-      {
-        error:
-          "Não autenticado",
-      },
-      {
-        status: 401,
-      }
-    );
-  }
-
-  const url =
-    new URL(req.url);
-
-  const tmdbIdParam =
-    url.searchParams.get(
-      "tmdb_id"
-    );
-
-  const typeParam =
-    url.searchParams.get(
-      "type"
-    );
-
-  /*
-   * ==========================================
-   * CONSULTA INDIVIDUAL
-   * ==========================================
-   *
-   * Mantém compatibilidade com:
-   *
-   * /api/library?tmdb_id=123&type=tv
-   */
-
-  if (
-    tmdbIdParam !== null
-  ) {
-    const tmdbId =
-      Number(
-        tmdbIdParam
-      );
-
-    if (
-      !tmdbIdParam ||
-      !Number.isFinite(
-        tmdbId
-      )
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "tmdb_id inválido.",
-        },
-        {
-          status: 400,
-        }
-      );
+    if (!user || !user.id) {
+      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
     }
 
-    if (
-      typeParam !== "movie" &&
-      typeParam !== "tv"
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "type deve ser movie ou tv.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    const {
-      data: media,
-      error: mediaError,
-    } = await s
-      .from("media")
-      .select("id")
-      .eq(
-        "tmdb_id",
-        tmdbId
-      )
-      .eq(
-        "media_type",
-        typeParam
-      )
-      .maybeSingle();
-
-    if (mediaError) {
-  return respostaDeErro(
-    mediaError,
-    "GET /api/library media",
-  );
-}
-
-    if (!media) {
-      return NextResponse.json(
-        null
-      );
-    }
-
-    const {
-      data,
-      error,
-    } = await s
-      .from("library_items")
-      .select(
-        `
-        id,
-        status,
-        favorite,
-        personal_rating,
-        review,
-        watched_at,
-        rewatch_count,
-        current_season,
-        completed_seasons,
-        stopped_season,
-        added_at,
-        updated_at,
-        media:media_id(*)
-        `
-      )
-      .eq(
-        "user_id",
-        user.id
-      )
-      .eq(
-        "media_id",
-        media.id
-      )
-      .maybeSingle();
-
-    if (error) {
-  return respostaDeErro(
-    error,
-    "GET /api/library item",
-  );
-}
-
-    return NextResponse.json(
-      data
-        ? (
-            data as unknown as LibraryItem
-          )
-        : null
-    );
-  }
-
-  /*
-   * ==========================================
-   * MODO PAGINADO DA BIBLIOTECA
-   * ==========================================
-   *
-   * /api/library?paginated=true&page=1&limit=27
-   *
-   * O GET antigo sem "paginated=true"
-   * continua existindo para Home, Stats,
-   * Ranking e qualquer outra tela.
-   */
-
-  const paginated =
-    url.searchParams.get(
-      "paginated"
-    ) === "true";
-
-  if (paginated) {
-    const requestedPage =
-      Number(
-        url.searchParams.get(
-          "page"
-        ) || 1
-      );
-
-    const requestedLimit =
-      Number(
-        url.searchParams.get(
-          "limit"
-        ) || 27
-      );
-
-    const page =
-      Number.isFinite(
-        requestedPage
-      )
-        ? Math.max(
-            1,
-            Math.floor(
-              requestedPage
-            )
-          )
-        : 1;
-
-    const limit =
-      Number.isFinite(
-        requestedLimit
-      )
-        ? Math.min(
-            100,
-            Math.max(
-              1,
-              Math.floor(
-                requestedLimit
-              )
-            )
-          )
-        : 27;
-
-    const search =
-      (
-        url.searchParams.get(
-          "search"
-        ) || ""
-      )
-        .trim()
-        .toLowerCase();
-
-    const mediaType =
-      url.searchParams.get(
-        "media_type"
-      );
-
-    const status =
-      url.searchParams.get(
-        "status"
-      );
-
-    const genre =
-      (
-        url.searchParams.get(
-          "genre"
-        ) || ""
-      )
-        .trim()
-        .toLowerCase();
-
-    const year =
-      (
-        url.searchParams.get(
-          "year"
-        ) || ""
-      ).trim();
-
-    const favoriteOnly =
-      url.searchParams.get(
-        "favorite"
-      ) === "true";
-
-    const minRating =
-      Number(
-        url.searchParams.get(
-          "min_rating"
-        ) || ""
-      );
-
-    const minTmdbRating =
-      Number(
-        url.searchParams.get(
-          "min_tmdb_rating"
-        ) || ""
-      );
-
-    const sort =
-      (
-        url.searchParams.get(
-          "sort"
-        ) || "added"
-      ).trim();
+    const userId = user.id;
+    const sql = getDb();
+    const url = new URL(req.url);
+    const tmdbIdParam = url.searchParams.get("tmdb_id");
+    const typeParam = url.searchParams.get("type");
 
     /*
-     * Primeira consulta:
-     * somente os campos necessários para
-     * filtrar, ordenar, contar e paginar.
-     *
-     * Assim não transportamos overview,
-     * raw, elenco etc. da biblioteca inteira.
+     * Consulta individual: /api/library?tmdb_id=123&type=tv
      */
+    if (tmdbIdParam !== null) {
+      const tmdbId = Number(tmdbIdParam);
+      if (!tmdbIdParam || !Number.isFinite(tmdbId)) {
+        return NextResponse.json({ error: "tmdb_id inválido." }, { status: 400 });
+      }
 
-    const {
-      data: indexRows,
-      error: indexError,
-    } = await s
-      .from("library_items")
-      .select(
-        `
-        id,
-        status,
-        favorite,
-        personal_rating,
-        added_at,
-        updated_at,
-        media:media_id(
-          id,
-          media_type,
-          title,
-          original_title,
-          release_date,
-          first_air_date,
-          genres,
-          tmdb_rating
-        )
-        `
-      )
-      .eq(
-        "user_id",
-        user.id
-      );
+      if (typeParam !== "movie" && typeParam !== "tv") {
+        return NextResponse.json(
+          { error: "type deve ser movie ou tv." },
+          { status: 400 }
+        );
+      }
 
-    if (indexError) {
-  return respostaDeErro(
-    indexError,
-    "GET /api/library index",
-  );
-}
+      const rows = await sql`
+        SELECT
+          li.id,
+          li.status,
+          li.favorite,
+          li.personal_rating,
+          li.review,
+          li.watched_at,
+          li.rewatch_count,
+          li.current_season,
+          li.completed_seasons,
+          li.stopped_season,
+          li.added_at,
+          li.updated_at,
+          to_jsonb(m.*) as media
+        FROM public.library_items li
+        JOIN public.media m ON m.id = li.media_id
+        WHERE li.user_id = ${userId}
+          AND m.tmdb_id = ${tmdbId}
+          AND m.media_type = ${typeParam}
+        LIMIT 1;
+      `;
 
-    const allRows =
-      Array.isArray(
-        indexRows
-      )
-        ? (
-            indexRows as any[]
-          )
-        : [];
+      if (rows.length === 0) {
+        return NextResponse.json(null);
+      }
+
+      return NextResponse.json(rows[0] as unknown as LibraryItem);
+    }
 
     /*
-     * ==========================================
-     * FACETAS / CONTADORES GLOBAIS
-     * ==========================================
+     * Consulta da biblioteca completa ou paginada
      */
+    const allRows = await sql`
+      SELECT
+        li.id,
+        li.status,
+        li.favorite,
+        li.personal_rating,
+        li.review,
+        li.watched_at,
+        li.rewatch_count,
+        li.current_season,
+        li.completed_seasons,
+        li.stopped_season,
+        li.added_at,
+        li.updated_at,
+        to_jsonb(m.*) as media
+      FROM public.library_items li
+      JOIN public.media m ON m.id = li.media_id
+      WHERE li.user_id = ${userId}
+      ORDER BY li.added_at DESC;
+    `;
 
-    const counts:
-      Record<
-        string,
-        number
-      > = {
-        all:
-          allRows.length,
+    const paginated = url.searchParams.get("paginated") === "true";
 
-        want: 0,
-        watching: 0,
-        watched: 0,
-        paused: 0,
-        dropped: 0,
-        rewatching: 0,
-        rewatched: 0,
-        favorites: 0,
-      };
+    /*
+     * Modo normal (não-paginado) para Home, Ranking, Stats, etc.
+     */
+    if (!paginated) {
+      return NextResponse.json(allRows as unknown as LibraryItem[]);
+    }
 
-    const genreSet =
-      new Set<string>();
+    /*
+     * Modo paginado (/library)
+     */
+    const requestedPage = Number(url.searchParams.get("page") || 1);
+    const requestedLimit = Number(url.searchParams.get("limit") || 27);
 
-    const yearSet =
-      new Set<string>();
+    const page = Number.isFinite(requestedPage)
+      ? Math.max(1, Math.floor(requestedPage))
+      : 1;
 
-    for (
-      const row
-      of allRows
-    ) {
-      if (
-        row.status
-      ) {
-        counts[
-          row.status
-        ] =
-          (
-            counts[
-              row.status
-            ] || 0
-          ) + 1;
+    const limit = Number.isFinite(requestedLimit)
+      ? Math.min(100, Math.max(1, Math.floor(requestedLimit)))
+      : 27;
+
+    const search = (url.searchParams.get("search") || "").trim().toLowerCase();
+    const mediaType = url.searchParams.get("media_type");
+    const status = url.searchParams.get("status");
+    const genre = (url.searchParams.get("genre") || "").trim().toLowerCase();
+    const year = (url.searchParams.get("year") || "").trim();
+    const favoriteOnly = url.searchParams.get("favorite") === "true";
+    const minRating = Number(url.searchParams.get("min_rating") || "");
+    const minTmdbRating = Number(url.searchParams.get("min_tmdb_rating") || "");
+    const sort = (url.searchParams.get("sort") || "added").trim();
+
+    const counts: Record<string, number> = {
+      all: allRows.length,
+      want: 0,
+      watching: 0,
+      watched: 0,
+      paused: 0,
+      dropped: 0,
+      rewatching: 0,
+      rewatched: 0,
+      favorites: 0,
+    };
+
+    const genreSet = new Set<string>();
+    const yearSet = new Set<string>();
+
+    for (const row of allRows as any[]) {
+      if (row.status) {
+        counts[row.status] = (counts[row.status] || 0) + 1;
+      }
+      if (row.favorite) {
+        counts.favorites += 1;
       }
 
-      if (
-        row.favorite
-      ) {
-        counts.favorites +=
-          1;
-      }
-
-      const media =
-        row.media;
-
-      const genres =
-        Array.isArray(
-          media?.genres
-        )
-          ? media.genres
-          : [];
-
-      for (
-        const itemGenre
-        of genres
-      ) {
-        if (
-          typeof itemGenre ===
-            "string" &&
-          itemGenre.trim()
-        ) {
-          genreSet.add(
-            itemGenre.trim()
-          );
+      const media = row.media;
+      const genres = Array.isArray(media?.genres) ? media.genres : [];
+      for (const itemGenre of genres) {
+        if (typeof itemGenre === "string" && itemGenre.trim()) {
+          genreSet.add(itemGenre.trim());
         } else if (
           itemGenre &&
-          typeof itemGenre ===
-            "object" &&
-          typeof itemGenre.name ===
-            "string"
+          typeof itemGenre === "object" &&
+          typeof itemGenre.name === "string"
         ) {
-          genreSet.add(
-            itemGenre.name.trim()
-          );
+          genreSet.add(itemGenre.name.trim());
         }
       }
 
       const date =
-        media?.media_type ===
-          "tv"
+        media?.media_type === "tv"
           ? media?.first_air_date
           : media?.release_date;
 
       if (date) {
-        const parsedYear =
-          new Date(
-            date
-          )
-            .getFullYear();
-
-        if (
-          Number.isFinite(
-            parsedYear
-          )
-        ) {
-          yearSet.add(
-            String(
-              parsedYear
-            )
-          );
+        const parsedYear = new Date(date).getFullYear();
+        if (Number.isFinite(parsedYear)) {
+          yearSet.add(String(parsedYear));
         }
       }
     }
 
-    /*
-     * ==========================================
-     * FILTRAR
-     * ==========================================
-     */
+    const filteredRows = (allRows as any[]).filter((row: any) => {
+      const media = row.media;
+      if (!media) return false;
 
-    const filteredRows =
-      allRows.filter(
-        (
-          row: any
-        ) => {
-          const media =
-            row.media;
-
-          if (!media) {
-            return false;
-          }
-
-          if (
-            search
-          ) {
-            const title =
-              String(
-                media.title ||
-                  ""
-              )
-                .toLowerCase();
-
-            const originalTitle =
-              String(
-                media.original_title ||
-                  ""
-              )
-                .toLowerCase();
-
-            if (
-              !title.includes(
-                search
-              ) &&
-              !originalTitle.includes(
-                search
-              )
-            ) {
-              return false;
-            }
-          }
-
-          if (
-            mediaType ===
-              "movie" ||
-            mediaType ===
-              "tv"
-          ) {
-            if (
-              media.media_type !==
-              mediaType
-            ) {
-              return false;
-            }
-          }
-
-          if (
-            status &&
-            status !== "all" &&
-            row.status !==
-              status
-          ) {
-            return false;
-          }
-
-          if (
-            genre
-          ) {
-            const genres =
-              Array.isArray(
-                media.genres
-              )
-                ? media.genres
-                : [];
-
-            const matchesGenre =
-              genres.some(
-                (
-                  itemGenre: any
-                ) => {
-                  const name =
-                    typeof itemGenre ===
-                    "string"
-                      ? itemGenre
-                      : itemGenre
-                          ?.name;
-
-                  return (
-                    typeof name ===
-                      "string" &&
-                    name
-                      .trim()
-                      .toLowerCase() ===
-                      genre
-                  );
-                }
-              );
-
-            if (
-              !matchesGenre
-            ) {
-              return false;
-            }
-          }
-
-          if (
-            year &&
-            /^\d{4}$/.test(
-              year
-            )
-          ) {
-            const date =
-              media.media_type ===
-                "tv"
-                ? media.first_air_date
-                : media.release_date;
-
-            const itemYear =
-              date
-                ? String(
-                    new Date(
-                      date
-                    ).getFullYear()
-                  )
-                : "";
-
-            if (
-              itemYear !==
-              year
-            ) {
-              return false;
-            }
-          }
-
-          if (
-            favoriteOnly &&
-            !row.favorite
-          ) {
-            return false;
-          }
-
-          if (
-            Number.isFinite(
-              minRating
-            ) &&
-            minRating > 0 &&
-            Number(
-              row.personal_rating ||
-                0
-            ) <
-              minRating
-          ) {
-            return false;
-          }
-
-          if (
-            Number.isFinite(
-              minTmdbRating
-            ) &&
-            minTmdbRating > 0 &&
-            Number(
-              media.tmdb_rating ||
-                0
-            ) <
-              minTmdbRating
-          ) {
-            return false;
-          }
-
-          return true;
+      if (search) {
+        const title = String(media.title || "").toLowerCase();
+        const originalTitle = String(media.original_title || "").toLowerCase();
+        if (!title.includes(search) && !originalTitle.includes(search)) {
+          return false;
         }
-      );
+      }
 
-    /*
-     * ==========================================
-     * ORDENAR
-     * ==========================================
-     */
-
-    filteredRows.sort(
-      (
-        a: any,
-        b: any
-      ) => {
-        if (
-          sort ===
-          "rating"
-        ) {
-          return (
-            Number(
-              b.personal_rating ??
-                -1
-            ) -
-            Number(
-              a.personal_rating ??
-                -1
-            )
-          );
+      if (mediaType === "movie" || mediaType === "tv") {
+        if (media.media_type !== mediaType) {
+          return false;
         }
+      }
 
-        if (
-          sort ===
-          "rating-low"
-        ) {
-          return (
-            Number(
-              a.personal_rating ??
-                999
-            ) -
-            Number(
-              b.personal_rating ??
-                999
-            )
-          );
-        }
+      if (status && status !== "all" && row.status !== status) {
+        return false;
+      }
 
-        if (
-          sort ===
-          "tmdb"
-        ) {
-          return (
-            Number(
-              b.media
-                ?.tmdb_rating ??
-                -1
-            ) -
-            Number(
-              a.media
-                ?.tmdb_rating ??
-                -1
-            )
-          );
-        }
+      if (genre) {
+        const genres = Array.isArray(media.genres) ? media.genres : [];
+        const matchesGenre = genres.some((itemGenre: any) => {
+          const name =
+            typeof itemGenre === "string" ? itemGenre : itemGenre?.name;
+          return typeof name === "string" && name.trim().toLowerCase() === genre;
+        });
+        if (!matchesGenre) return false;
+      }
 
-        if (
-          sort === "az"
-        ) {
-          return String(
-            a.media?.title ||
-              ""
-          ).localeCompare(
-            String(
-              b.media?.title ||
-                ""
-            ),
-            "pt-BR"
-          );
-        }
+      if (year && /^\d{4}$/.test(year)) {
+        const date =
+          media.media_type === "tv"
+            ? media.first_air_date
+            : media.release_date;
+        const itemYear = date ? String(new Date(date).getFullYear()) : "";
+        if (itemYear !== year) return false;
+      }
 
-        if (
-          sort === "za"
-        ) {
-          return String(
-            b.media?.title ||
-              ""
-          ).localeCompare(
-            String(
-              a.media?.title ||
-                ""
-            ),
-            "pt-BR"
-          );
-        }
+      if (favoriteOnly && !row.favorite) {
+        return false;
+      }
 
-        if (
-          sort ===
-            "newest" ||
-          sort ===
-            "oldest"
-        ) {
-          const getDate =
-            (
-              row: any
-            ) => {
-              const media =
-                row.media;
+      if (
+        Number.isFinite(minRating) &&
+        minRating > 0 &&
+        Number(row.personal_rating || 0) < minRating
+      ) {
+        return false;
+      }
 
-              const date =
-                media?.media_type ===
-                  "tv"
-                  ? media
-                      ?.first_air_date
-                  : media
-                      ?.release_date;
+      if (
+        Number.isFinite(minTmdbRating) &&
+        minTmdbRating > 0 &&
+        Number(media.tmdb_rating || 0) < minTmdbRating
+      ) {
+        return false;
+      }
 
-              return date
-                ? new Date(
-                    date
-                  ).getTime()
-                : 0;
-            };
+      return true;
+    });
 
-          return sort ===
-            "newest"
-            ? getDate(
-                b
-              ) -
-                getDate(
-                  a
-                )
-            : getDate(
-                a
-              ) -
-                getDate(
-                  b
-                );
-        }
-
-        if (
-          sort ===
-          "updated"
-        ) {
-          return (
-            new Date(
-              b.updated_at
-            ).getTime() -
-            new Date(
-              a.updated_at
-            ).getTime()
-          );
-        }
-
+    filteredRows.sort((a: any, b: any) => {
+      if (sort === "rating") {
+        return Number(b.personal_rating ?? -1) - Number(a.personal_rating ?? -1);
+      }
+      if (sort === "rating-low") {
+        return Number(a.personal_rating ?? 999) - Number(b.personal_rating ?? 999);
+      }
+      if (sort === "tmdb") {
+        return Number(b.media?.tmdb_rating ?? -1) - Number(a.media?.tmdb_rating ?? -1);
+      }
+      if (sort === "az") {
+        return String(a.media?.title || "").localeCompare(
+          String(b.media?.title || ""),
+          "pt-BR"
+        );
+      }
+      if (sort === "za") {
+        return String(b.media?.title || "").localeCompare(
+          String(a.media?.title || ""),
+          "pt-BR"
+        );
+      }
+      if (sort === "newest" || sort === "oldest") {
+        const getDate = (row: any) => {
+          const date =
+            row.media?.media_type === "tv"
+              ? row.media?.first_air_date
+              : row.media?.release_date;
+          return date ? new Date(date).getTime() : 0;
+        };
+        return sort === "newest" ? getDate(b) - getDate(a) : getDate(a) - getDate(b);
+      }
+      if (sort === "updated") {
         return (
-          new Date(
-            b.added_at
-          ).getTime() -
-          new Date(
-            a.added_at
-          ).getTime()
+          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
         );
       }
-    );
+      return new Date(b.added_at).getTime() - new Date(a.added_at).getTime();
+    });
 
-    const totalResults =
-      filteredRows.length;
-
-    const totalPages =
-      Math.max(
-        1,
-        Math.ceil(
-          totalResults /
-            limit
-        )
-      );
-
-    const safePage =
-      Math.min(
-        page,
-        totalPages
-      );
-
-    const start =
-      (
-        safePage - 1
-      ) * limit;
-
-    const pageRows =
-      filteredRows.slice(
-        start,
-        start + limit
-      );
-
-    const pageIds =
-      pageRows.map(
-        (
-          row: any
-        ) =>
-          String(
-            row.id
-          )
-      );
-
-    let pageItems:
-      LibraryItem[] =
-      [];
-
-    /*
-     * Segunda consulta:
-     * agora sim buscamos os dados completos
-     * somente dos 27 itens da página atual.
-     */
-
-    if (
-      pageIds.length >
-      0
-    ) {
-      const {
-        data: fullRows,
-        error: fullError,
-      } = await s
-        .from("library_items")
-        .select(
-          `
-          id,
-          status,
-          favorite,
-          personal_rating,
-          review,
-          watched_at,
-          rewatch_count,
-          current_season,
-          completed_seasons,
-          stopped_season,
-          added_at,
-          updated_at,
-          media:media_id(*)
-          `
-        )
-        .eq(
-          "user_id",
-          user.id
-        )
-        .in(
-          "id",
-          pageIds
-        );
-
-      if (fullError) {
-  return respostaDeErro(
-    fullError,
-    "GET /api/library page",
-  );
-}
-
-      const orderMap =
-        new Map<
-          string,
-          number
-        >();
-
-      pageIds.forEach(
-        (
-          id,
-          index
-        ) => {
-          orderMap.set(
-            id,
-            index
-          );
-        }
-      );
-
-      pageItems =
-        (
-          (
-            fullRows ||
-            []
-          ) as unknown as LibraryItem[]
-        ).sort(
-          (
-            a,
-            b
-          ) =>
-            (
-              orderMap.get(
-                String(
-                  a.id
-                )
-              ) ?? 9999
-            ) -
-            (
-              orderMap.get(
-                String(
-                  b.id
-                )
-              ) ?? 9999
-            )
-        );
-    }
+    const totalResults = filteredRows.length;
+    const totalPages = Math.max(1, Math.ceil(totalResults / limit));
+    const safePage = Math.min(page, totalPages);
+    const start = (safePage - 1) * limit;
+    const pageRows = filteredRows.slice(start, start + limit);
 
     return NextResponse.json(
       {
-        items:
-          pageItems,
-
-        page:
-          safePage,
-
-        per_page:
-          limit,
-
-        total_pages:
-          totalPages,
-
-        total_results:
-          totalResults,
-
-        total_library:
-          allRows.length,
-
+        items: pageRows as LibraryItem[],
+        page: safePage,
+        per_page: limit,
+        total_pages: totalPages,
+        total_results: totalResults,
+        total_library: (allRows as any[]).length,
         counts,
-
-        genres:
-          Array.from(
-            genreSet
-          ).sort(
-            (
-              a,
-              b
-            ) =>
-              a.localeCompare(
-                b,
-                "pt-BR"
-              )
-          ),
-
-        years:
-          Array.from(
-            yearSet
-          ).sort(
-            (
-              a,
-              b
-            ) =>
-              Number(
-                b
-              ) -
-              Number(
-                a
-              )
-          ),
+        genres: Array.from(genreSet).sort((a, b) => a.localeCompare(b, "pt-BR")),
+        years: Array.from(yearSet).sort((a, b) => Number(b) - Number(a)),
       } satisfies PaginatedLibraryResponse,
       {
         headers: {
-          "Cache-Control":
-            "private, no-store",
+          "Cache-Control": "private, no-store",
         },
       }
     );
+  } catch (error) {
+    console.error("Erro em GET /api/library:", error);
+    return respostaDeErro(error, "GET /api/library");
   }
-
-  /*
-   * ==========================================
-   * GET ANTIGO — COMPATIBILIDADE
-   * ==========================================
-   */
-
-  const {
-    data,
-    error,
-  } = await s
-    .from("library_items")
-    .select(
-      `
-      id,
-      status,
-      favorite,
-      personal_rating,
-      review,
-      watched_at,
-      rewatch_count,
-      current_season,
-      completed_seasons,
-      stopped_season,
-      added_at,
-      updated_at,
-      media:media_id(*)
-      `
-    )
-    .eq(
-      "user_id",
-      user.id
-    )
-    .order(
-      "added_at",
-      {
-        ascending:
-          false,
-      }
-    );
-
-  if (error) {
-  return respostaDeErro(
-    error,
-    "GET /api/library",
-  );
-}
-
-  return NextResponse.json(
-    (
-      data ?? []
-    ) as unknown as LibraryItem[]
-  );
 }
 
 /*
@@ -1283,219 +436,133 @@ export async function GET(
  * POST
  * ==========================================
  */
-
 export async function POST(
   req: Request
-): Promise<
-  NextResponse<
-    LibraryItem |
-      ErrorResponse |
-      SuccessResponse
-  >
-> {
-  const s = await createClient();
-
-  const {
-    data: { user },
-  } = await s.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json(
-      {
-        error: "Não autenticado",
-      },
-      {
-        status: 401,
-      }
-    );
-  }
-
+): Promise<NextResponse<LibraryItem | ErrorResponse | SuccessResponse>> {
   try {
-    const body: PostRequestBody =
-      await req.json();
+    const session = await auth.getSession().catch(() => null);
+    const user = session?.data?.user;
 
+    if (!user || !user.id) {
+      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+    }
+
+    const userId = user.id;
+    const body: PostRequestBody = await req.json();
     const media = body.media;
 
     if (!media?.id) {
       return NextResponse.json(
-        {
-          error:
-            "Dados do título inválidos.",
-        },
-        {
-          status: 400,
-        }
+        { error: "Dados do título inválidos." },
+        { status: 400 }
       );
     }
 
-    /*
-     * ==========================================
-     * VALIDAR STATUS
-     * ==========================================
-     */
+    if (body.status && !VALID_STATUSES.includes(body.status)) {
+      return NextResponse.json({ error: "Status inválido." }, { status: 400 });
+    }
 
-    if (
-      body.status &&
-      !VALID_STATUSES.includes(
-        body.status
+    const mediaType = media.media_type === "tv" ? "tv" : "movie";
+    const mediaTitle = media.title ?? media.name ?? "Sem título";
+    const originalTitle = media.original_title ?? media.original_name ?? null;
+    const overview = media.overview ?? null;
+    const posterPath = media.poster_path ?? null;
+    const backdropPath = media.backdrop_path ?? null;
+    const releaseDate = media.release_date ?? null;
+    const firstAirDate = media.first_air_date ?? null;
+    const normalizedGenres = normalizeGenres(media.genres);
+    const tmdbRating = media.vote_average ?? media.tmdb_rating ?? null;
+    const tmdbVoteCount = media.vote_count ?? null;
+    const runtime = media.runtime ?? null;
+    const seasonsCount = media.number_of_seasons ?? null;
+    const episodesCount = media.number_of_episodes ?? null;
+    const creatorNames = media.creator_names || [];
+    const castNames = media.cast_names || [];
+    const rawJson = media || {};
+
+    const sql = getDb();
+
+    /*
+     * 1. Salvar / atualizar mídia
+     */
+    const mediaRows = await sql`
+      INSERT INTO public.media (
+        tmdb_id,
+        media_type,
+        title,
+        original_title,
+        overview,
+        poster_path,
+        backdrop_path,
+        release_date,
+        first_air_date,
+        genres,
+        tmdb_rating,
+        tmdb_vote_count,
+        runtime,
+        seasons_count,
+        episodes_count,
+        creator_names,
+        cast_names,
+        raw,
+        updated_at
       )
-    ) {
+      VALUES (
+        ${media.id},
+        ${mediaType},
+        ${mediaTitle},
+        ${originalTitle},
+        ${overview},
+        ${posterPath},
+        ${backdropPath},
+        ${releaseDate},
+        ${firstAirDate},
+        ${normalizedGenres},
+        ${tmdbRating},
+        ${tmdbVoteCount},
+        ${runtime},
+        ${seasonsCount},
+        ${episodesCount},
+        ${creatorNames},
+        ${castNames},
+        ${rawJson},
+        NOW()
+      )
+      ON CONFLICT (tmdb_id, media_type)
+      DO UPDATE SET
+        title = EXCLUDED.title,
+        original_title = EXCLUDED.original_title,
+        overview = EXCLUDED.overview,
+        poster_path = EXCLUDED.poster_path,
+        backdrop_path = EXCLUDED.backdrop_path,
+        release_date = EXCLUDED.release_date,
+        first_air_date = EXCLUDED.first_air_date,
+        genres = EXCLUDED.genres,
+        tmdb_rating = EXCLUDED.tmdb_rating,
+        tmdb_vote_count = EXCLUDED.tmdb_vote_count,
+        runtime = EXCLUDED.runtime,
+        seasons_count = EXCLUDED.seasons_count,
+        episodes_count = EXCLUDED.episodes_count,
+        creator_names = EXCLUDED.creator_names,
+        cast_names = EXCLUDED.cast_names,
+        raw = EXCLUDED.raw,
+        updated_at = NOW()
+      RETURNING *;
+    `;
+
+    const existingMedia = mediaRows[0];
+    if (!existingMedia) {
       return NextResponse.json(
-        {
-          error:
-            "Status inválido.",
-        },
-        {
-          status: 400,
-        }
+        { error: "Não foi possível salvar os dados do título." },
+        { status: 500 }
       );
     }
 
     /*
-     * ==========================================
-     * NORMALIZAR TIPO
-     * ==========================================
+     * 2. Procurar item na biblioteca do usuário
      */
-
-    const mediaType =
-      media.media_type === "tv"
-        ? "tv"
-        : "movie";
-
-    const mediaTitle =
-      media.title ??
-      media.name ??
-      "Sem título";
-
-    /*
-     * ==========================================
-     * SALVAR / ATUALIZAR MÍDIA
-     * ==========================================
-     */
-
-    const {
-      data: existingMedia,
-      error: mediaError,
-    } = await s
-      .from("media")
-      .upsert<MediaUpsertData>(
-        {
-          tmdb_id: media.id,
-
-          media_type:
-            mediaType,
-
-          title:
-            mediaTitle,
-
-          original_title:
-            media.original_title ??
-            media.original_name ??
-            null,
-
-          overview:
-            media.overview ??
-            null,
-
-          poster_path:
-            media.poster_path ??
-            null,
-
-          backdrop_path:
-            media.backdrop_path ??
-            null,
-
-          release_date:
-            media.release_date ??
-            null,
-
-          first_air_date:
-            media.first_air_date ??
-            null,
-
-          genres:
-            normalizeGenres(
-              media.genres
-            ),
-
-          tmdb_rating:
-            media.vote_average ??
-            media.tmdb_rating ??
-            null,
-
-          tmdb_vote_count:
-            media.vote_count ??
-            null,
-
-          runtime:
-            media.runtime ??
-            null,
-
-          seasons_count:
-            media.number_of_seasons ??
-            null,
-
-          episodes_count:
-            media.number_of_episodes ??
-            null,
-
-          creator_names:
-            media.creator_names ||
-            [],
-
-          cast_names:
-            media.cast_names ||
-            [],
-
-          raw:
-            media as Record<
-              string,
-              unknown
-            >,
-        },
-        {
-          onConflict:
-            "tmdb_id,media_type",
-        }
-      )
-      .select()
-      .single();
-
-    if (
-  mediaError ||
-  !existingMedia
-) {
-  if (mediaError) {
-    return respostaDeErro(
-      mediaError,
-      "POST /api/library media",
-    );
-  }
-
-  return NextResponse.json(
-    {
-      error:
-        "Não foi possível salvar os dados do título.",
-    },
-    {
-      status: 500,
-    },
-  );
-}
-
-    /*
-     * ==========================================
-     * PROCURAR NA BIBLIOTECA
-     * ==========================================
-     */
-
-    const {
-      data: existingLibraryItem,
-      error: existingLibraryError,
-    } = await s
-      .from("library_items")
-      .select(
-        `
+    const existingItemRows = await sql`
+      SELECT
         id,
         status,
         favorite,
@@ -1505,142 +572,51 @@ export async function POST(
         current_season,
         completed_seasons,
         stopped_season
-        `
-      )
-      .eq(
-        "user_id",
-        user.id
-      )
-      .eq(
-        "media_id",
-        existingMedia.id
-      )
-      .maybeSingle();
-
-    if (existingLibraryError) {
-  return respostaDeErro(
-    existingLibraryError,
-    "POST /api/library existing",
-  );
-}
+      FROM public.library_items
+      WHERE user_id = ${userId} AND media_id = ${existingMedia.id}
+      LIMIT 1;
+    `;
+    const existingLibraryItem = existingItemRows[0] || null;
 
     /*
-     * ==========================================
-     * REASSISTIDAS
-     * ==========================================
+     * 3. Calcular reassistidas e progresso
      */
-
-    let rewatchCount =
-      Number(
-        existingLibraryItem
-          ?.rewatch_count || 0
-      );
-
+    let rewatchCount = Number(existingLibraryItem?.rewatch_count || 0);
     const isStartingRewatch =
       body.status === "rewatching" &&
-      existingLibraryItem?.status !==
-        "rewatching";
+      existingLibraryItem?.status !== "rewatching";
 
     const isDirectlyCompletingRewatch =
       body.status === "rewatched" &&
       existingLibraryItem?.status !== "rewatching" &&
       existingLibraryItem?.status !== "rewatched";
 
-    if (
-      isStartingRewatch ||
-      isDirectlyCompletingRewatch
-    ) {
+    if (isStartingRewatch || isDirectlyCompletingRewatch) {
       rewatchCount += 1;
     }
 
-    /*
-     * ==========================================
-     * STATUS
-     * ==========================================
-     */
-
     const newStatus =
-      body.status ??
-      existingLibraryItem?.status ??
-      "want";
-
-    /*
-     * ==========================================
-     * FAVORITO
-     * ==========================================
-     */
-
+      body.status ?? existingLibraryItem?.status ?? "want";
     const newFavorite =
-      body.favorite ??
-      existingLibraryItem?.favorite ??
-      false;
-
-    /*
-     * ==========================================
-     * NOTA
-     * ==========================================
-     */
-
+      body.favorite ?? existingLibraryItem?.favorite ?? false;
     const personalRating =
-      body.personal_rating !==
-      undefined
+      body.personal_rating !== undefined
         ? body.personal_rating
-        : existingLibraryItem
-            ?.personal_rating ??
-          null;
-
-    /*
-     * ==========================================
-     * REVIEW
-     * ==========================================
-     */
-
+        : existingLibraryItem?.personal_rating ?? null;
     const review =
       body.review !== undefined
         ? body.review
-        : existingLibraryItem
-            ?.review ??
-          null;
+        : existingLibraryItem?.review ?? null;
 
-    /*
-     * ==========================================
-     * PROGRESSO INICIAL DA SÉRIE
-     * ==========================================
-     */
+    let currentSeason = existingLibraryItem?.current_season ?? null;
+    let completedSeasons = Number(existingLibraryItem?.completed_seasons || 0);
+    let stoppedSeason = existingLibraryItem?.stopped_season ?? null;
 
-    let currentSeason =
-      existingLibraryItem
-        ?.current_season ??
-      null;
-
-    let completedSeasons =
-      Number(
-        existingLibraryItem
-          ?.completed_seasons || 0
-      );
-
-    let stoppedSeason =
-      existingLibraryItem
-        ?.stopped_season ??
-      null;
-
-    /*
-     * Se for uma série nova,
-     * começa na temporada 1.
-     */
-
-    if (
-      mediaType === "tv" &&
-      !existingLibraryItem
-    ) {
+    if (mediaType === "tv" && !existingLibraryItem) {
       currentSeason = 1;
       completedSeasons = 0;
       stoppedSeason = null;
     }
-
-    /*
-     * Filme não usa temporadas.
-     */
 
     if (mediaType === "movie") {
       currentSeason = null;
@@ -1649,84 +625,60 @@ export async function POST(
     }
 
     if (mediaType === "tv" && isStartingRewatch) {
-      await resetSeriesProgress({
-        supabase: s,
-        userId: user.id,
-        mediaId: existingMedia.id,
-      });
       completedSeasons = 0;
       currentSeason = 1;
       stoppedSeason = null;
     }
 
-    /* Reassistido em série sempre representa a obra completa. */
     if (mediaType === "tv" && newStatus === "rewatched") {
       const totalSeasons = Number(existingMedia.seasons_count || 0);
-      if (existingLibraryItem?.status === "rewatching") {
-        await restoreSeriesProgress({ supabase: s, userId: user.id, mediaId: existingMedia.id });
-      } else {
-        await completeSeriesProgress({
-          supabase: s,
-          userId: user.id,
-          mediaId: existingMedia.id,
-          tmdbId: Number(existingMedia.tmdb_id),
-          seasonsCount: totalSeasons,
-        });
-      }
       completedSeasons = totalSeasons;
       currentSeason = totalSeasons || 1;
       stoppedSeason = null;
     }
 
     /*
-     * ==========================================
-     * SALVAR NA BIBLIOTECA
-     * ==========================================
+     * 4. Salvar na biblioteca (Upsert)
      */
-
-    const {
-      data: item,
-      error: itemError,
-    } = await s
-      .from("library_items")
-      .upsert<LibraryItemUpsertData>(
-        {
-          user_id:
-            user.id,
-
-          media_id:
-            existingMedia.id,
-
-          status:
-            newStatus,
-
-          favorite:
-            newFavorite,
-
-          personal_rating:
-            personalRating,
-
-          review,
-
-          rewatch_count:
-            rewatchCount,
-
-          current_season:
-            currentSeason,
-
-          completed_seasons:
-            completedSeasons,
-
-          stopped_season:
-            stoppedSeason,
-        },
-        {
-          onConflict:
-            "user_id,media_id",
-        }
+    const itemRows = await sql`
+      INSERT INTO public.library_items (
+        user_id,
+        media_id,
+        status,
+        favorite,
+        personal_rating,
+        review,
+        rewatch_count,
+        current_season,
+        completed_seasons,
+        stopped_season,
+        updated_at
       )
-      .select(
-        `
+      VALUES (
+        ${userId},
+        ${existingMedia.id},
+        ${newStatus},
+        ${newFavorite},
+        ${personalRating},
+        ${review},
+        ${rewatchCount},
+        ${currentSeason},
+        ${completedSeasons},
+        ${stoppedSeason},
+        NOW()
+      )
+      ON CONFLICT (user_id, media_id)
+      DO UPDATE SET
+        status = EXCLUDED.status,
+        favorite = EXCLUDED.favorite,
+        personal_rating = EXCLUDED.personal_rating,
+        review = EXCLUDED.review,
+        rewatch_count = EXCLUDED.rewatch_count,
+        current_season = EXCLUDED.current_season,
+        completed_seasons = EXCLUDED.completed_seasons,
+        stopped_season = EXCLUDED.stopped_season,
+        updated_at = NOW()
+      RETURNING
         id,
         status,
         favorite,
@@ -1738,150 +690,75 @@ export async function POST(
         completed_seasons,
         stopped_season,
         added_at,
-        updated_at,
-        media:media_id(*)
-        `
-      )
-      .single();
+        updated_at;
+    `;
 
-    if (
-  itemError ||
-  !item
-) {
-  if (itemError) {
-    return respostaDeErro(
-      itemError,
-      "POST /api/library item",
-    );
-  }
-
-  return NextResponse.json(
-    {
-      error:
-        "Não foi possível salvar o título na biblioteca.",
-    },
-    {
-      status: 500,
-    },
-  );
-}
-
-    /*
-     * ==========================================
-     * REGISTRAR NO DIÁRIO
-     * ==========================================
-     *
-     * Só registra "adicionado"
-     * se ainda não existia.
-     */
-
-    if (!existingLibraryItem) {
-      const {
-        error: activityError,
-      } = await s
-        .from(
-          "activity_events"
-        )
-        .insert({
-          user_id:
-            user.id,
-
-          media_id:
-            existingMedia.id,
-
-          library_item_id:
-            item.id,
-
-          event_type:
-            "library_added",
-
-          metadata: {
-            status:
-              newStatus,
-
-            media_type:
-              mediaType,
-
-            title:
-              mediaTitle,
-          },
-        });
-
-      if (activityError) {
-        console.error(
-          "Erro ao registrar atividade:",
-          activityError.message
-        );
-      }
+    const item = itemRows[0];
+    if (!item) {
+      return NextResponse.json(
+        { error: "Não foi possível salvar o título na biblioteca." },
+        { status: 500 }
+      );
     }
 
+    item.media = existingMedia;
+
     /*
-     * ==========================================
-     * REGISTRAR REASSISTIDA
-     * ==========================================
+     * 5. Registrar no diário (safe / não-bloqueante)
      */
-
-    if (
-      isStartingRewatch &&
-      existingLibraryItem
-    ) {
-      const {
-        error: rewatchActivityError,
-      } = await s
-        .from(
-          "activity_events"
-        )
-        .insert({
-          user_id:
-            user.id,
-
-          media_id:
-            existingMedia.id,
-
-          library_item_id:
-            item.id,
-
-          event_type:
-            "rewatch_started",
-
-          metadata: {
-            rewatch_count:
-              rewatchCount,
-
-            title:
-              mediaTitle,
-          },
-        });
-
-      if (
-        rewatchActivityError
-      ) {
-        console.error(
-          "Erro ao registrar reassistida:",
-          rewatchActivityError.message
-        );
+    try {
+      if (!existingLibraryItem) {
+        await sql`
+          INSERT INTO public.activity_events (
+            user_id,
+            media_id,
+            library_item_id,
+            event_type,
+            metadata
+          )
+          VALUES (
+            ${userId},
+            ${existingMedia.id},
+            ${item.id},
+            'library_added',
+            ${{
+              status: newStatus,
+              media_type: mediaType,
+              title: mediaTitle,
+            }}
+          );
+        `;
       }
+
+      if (isStartingRewatch && existingLibraryItem) {
+        await sql`
+          INSERT INTO public.activity_events (
+            user_id,
+            media_id,
+            library_item_id,
+            event_type,
+            metadata
+          )
+          VALUES (
+            ${userId},
+            ${existingMedia.id},
+            ${item.id},
+            'rewatch_started',
+            ${{
+              rewatch_count: rewatchCount,
+              title: mediaTitle,
+            }}
+          );
+        `;
+      }
+    } catch (actErr: any) {
+      console.warn("[activity_events] Registro de atividade não pôde ser completado:", actErr?.message);
     }
 
-    /*
-     * ==========================================
-     * RETORNO
-     * ==========================================
-     */
-
-    return NextResponse.json(
-      item as unknown as LibraryItem
-    );
+    return NextResponse.json(item as unknown as LibraryItem);
   } catch (error) {
-    console.error(
-      "Erro ao atualizar biblioteca:",
-      error
-    );
-
-    return respostaDeErro(
-  error,
-  "POST /api/library",
-);
+    console.error("Erro ao atualizar biblioteca:", error);
+    return respostaDeErro(error, "POST /api/library");
   }
 }
 
@@ -1890,78 +767,34 @@ export async function POST(
  * DELETE
  * ==========================================
  */
-
 export async function DELETE(
   req: NextRequest
-): Promise<
-  NextResponse<
-    SuccessResponse | ErrorResponse
-  >
-> {
-  const s =
-    await createClient();
+): Promise<NextResponse<SuccessResponse | ErrorResponse>> {
+  try {
+    const session = await auth.getSession().catch(() => null);
+    const user = session?.data?.user;
 
-  const {
-    data: { user },
-  } = await s.auth.getUser();
+    if (!user || !user.id) {
+      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+    }
 
-  if (!user) {
-    return NextResponse.json(
-      {
-        error:
-          "Não autenticado",
-      },
-      {
-        status: 401,
-      }
-    );
+    const id = req.nextUrl.searchParams.get("id");
+    if (!id) {
+      return NextResponse.json(
+        { error: "ID da biblioteca não informado." },
+        { status: 400 }
+      );
+    }
+
+    const sql = getDb();
+    await sql`
+      DELETE FROM public.library_items
+      WHERE id = ${id} AND user_id = ${user.id};
+    `;
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Erro em DELETE /api/library:", error);
+    return respostaDeErro(error, "DELETE /api/library");
   }
-
-  const url =
-    new URL(req.url);
-
-  const id =
-    url.searchParams.get(
-      "id"
-    );
-
-  if (!id) {
-    return NextResponse.json(
-      {
-        error:
-          "ID da biblioteca não informado.",
-      },
-      {
-        status: 400,
-      }
-    );
-  }
-
-  /*
-   * ==========================================
-   * DELETAR
-   * ==========================================
-   */
-
-  const {
-    error,
-  } = await s
-    .from("library_items")
-    .delete()
-    .eq("id", id)
-    .eq(
-      "user_id",
-      user.id
-    );
-
-  if (error) {
-  return respostaDeErro(
-    error,
-    "DELETE /api/library",
-  );
-}
-
-  return NextResponse.json({
-    success: true,
-  });
 }

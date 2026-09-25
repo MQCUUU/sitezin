@@ -36,3 +36,9 @@ pnpm-debug.log*
 # Sistema operacional
 .DS_Store
 Thumbs.db
+.vercel
+.env*
+
+# Next.js agent files
+AGENTS.md
+CLAUDE.md

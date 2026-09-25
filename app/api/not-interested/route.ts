@@ -1,185 +1,83 @@
-import {
-  NextRequest,
-  NextResponse,
-} from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { entradaInvalida, naoAutenticado, respostaDeErro } from "@/lib/api-error";
+import { auth } from "@/lib/auth/server";
+import { getDb } from "@/lib/db/neon";
 
-import {
-  entradaInvalida,
-  naoAutenticado,
-  respostaDeErro,
-} from "@/lib/api-error";
-import { createClient } from "@/lib/supabase/server";
-
-function validType(
-  value: unknown,
-): value is "movie" | "tv" {
-  return (
-    value === "movie" ||
-    value === "tv"
-  );
+function validType(value: unknown): value is "movie" | "tv" {
+  return value === "movie" || value === "tv";
 }
 
 export async function GET() {
-  const supabase = await createClient();
+  try {
+    const session = await auth.getSession().catch(() => null);
+    const user = session?.data?.user;
+    if (!user || !user.id) return naoAutenticado();
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return naoAutenticado();
+    const sql = getDb();
+    const rows = await sql`
+      SELECT id, tmdb_id, media_type, reason, created_at
+      FROM public.user_hidden_titles
+      WHERE user_id = ${user.id}
+      ORDER BY created_at DESC
+      LIMIT 100
+    `;
+    return NextResponse.json(rows || [], { headers: { "Cache-Control": "private, no-store" } });
+  } catch (error) {
+    return respostaDeErro(error, "GET /api/not-interested");
   }
-
-  const { data, error } = await supabase
-    .from("user_hidden_titles")
-    .select(
-      "id, tmdb_id, media_type, reason, created_at",
-    )
-    .eq("user_id", user.id)
-    .order("created_at", {
-      ascending: false,
-    })
-    .limit(100);
-
-  if (error) {
-    return respostaDeErro(
-      error,
-      "GET /api/not-interested",
-    );
-  }
-
-  return NextResponse.json(data || [], {
-    headers: {
-      "Cache-Control": "private, no-store",
-    },
-  });
 }
 
-export async function POST(
-  request: NextRequest,
-) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return naoAutenticado();
-  }
-
+export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const session = await auth.getSession().catch(() => null);
+    const user = session?.data?.user;
+    if (!user || !user.id) return naoAutenticado();
+
+    const body = await request.json().catch(() => ({}));
     const tmdbId = Number(body?.tmdb_id);
     const mediaType = body?.media_type;
 
-    if (
-      !Number.isInteger(tmdbId) ||
-      tmdbId <= 0 ||
-      !validType(mediaType)
-    ) {
-      return entradaInvalida(
-        "Título inválido.",
-      );
+    if (!Number.isInteger(tmdbId) || tmdbId <= 0 || !validType(mediaType)) {
+      return entradaInvalida("Título inválido.");
     }
 
-    const suppliedReason =
-      typeof body?.reason === "string"
-        ? body.reason.trim()
-        : "";
+    const suppliedReason = typeof body?.reason === "string" ? body.reason.trim() : "";
+    const reason = suppliedReason.slice(0, 100) || "not_interested";
 
-    const reason =
-      suppliedReason.slice(0, 100) ||
-      "not_interested";
-
-    const { data, error } = await supabase
-      .from("user_hidden_titles")
-      .upsert(
-        {
-          user_id: user.id,
-          tmdb_id: tmdbId,
-          media_type: mediaType,
-          reason,
-        },
-        {
-          onConflict:
-            "user_id,tmdb_id,media_type",
-        },
-      )
-      .select(
-        "id, tmdb_id, media_type, reason, created_at",
-      )
-      .single();
-
-    if (error) {
-      return respostaDeErro(
-        error,
-        "POST /api/not-interested",
-      );
-    }
-
-    return NextResponse.json(data, {
-      status: 201,
-    });
-  } catch {
-    return entradaInvalida(
-      "Dados inválidos.",
-    );
+    const sql = getDb();
+    const rows = await sql`
+      INSERT INTO public.user_hidden_titles (user_id, tmdb_id, media_type, reason)
+      VALUES (${user.id}, ${tmdbId}, ${mediaType}, ${reason})
+      ON CONFLICT (user_id, tmdb_id, media_type)
+      DO UPDATE SET reason = EXCLUDED.reason
+      RETURNING id, tmdb_id, media_type, reason, created_at
+    `;
+    return NextResponse.json(rows[0], { status: 201 });
+  } catch (error) {
+    return respostaDeErro(error, "POST /api/not-interested");
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-) {
-  const supabase = await createClient();
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await auth.getSession().catch(() => null);
+    const user = session?.data?.user;
+    if (!user || !user.id) return naoAutenticado();
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+    const tmdbId = Number(request.nextUrl.searchParams.get("tmdb_id"));
+    const mediaType = request.nextUrl.searchParams.get("media_type");
 
-  if (authError || !user) {
-    return naoAutenticado();
+    if (!Number.isInteger(tmdbId) || tmdbId <= 0 || !validType(mediaType)) {
+      return entradaInvalida("Título inválido.");
+    }
+
+    const sql = getDb();
+    await sql`
+      DELETE FROM public.user_hidden_titles
+      WHERE user_id = ${user.id} AND tmdb_id = ${tmdbId} AND media_type = ${mediaType}
+    `;
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return respostaDeErro(error, "DELETE /api/not-interested");
   }
-
-  const tmdbId = Number(
-    request.nextUrl.searchParams.get(
-      "tmdb_id",
-    ),
-  );
-
-  const mediaType =
-    request.nextUrl.searchParams.get(
-      "media_type",
-    );
-
-  if (
-    !Number.isInteger(tmdbId) ||
-    tmdbId <= 0 ||
-    !validType(mediaType)
-  ) {
-    return entradaInvalida(
-      "Título inválido.",
-    );
-  }
-
-  const { error } = await supabase
-    .from("user_hidden_titles")
-    .delete()
-    .eq("user_id", user.id)
-    .eq("tmdb_id", tmdbId)
-    .eq("media_type", mediaType);
-
-  if (error) {
-    return respostaDeErro(
-      error,
-      "DELETE /api/not-interested",
-    );
-  }
-
-  return NextResponse.json({
-    ok: true,
-  });
 }

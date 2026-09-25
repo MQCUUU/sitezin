@@ -1,110 +1,146 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { put, del } from "@vercel/blob";
+import { auth } from "@/lib/auth/server";
+import { getDb } from "@/lib/db/neon";
 
-const AVATAR_BUCKET = "avatars";
-const MAX_PROCESSED_SIZE = 2 * 1024 * 1024;
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5 MB
 
-function ownedAvatarPath(value: unknown, userId: string): string | null {
-  if (typeof value !== "string" || !value) return null;
-  try {
-    const marker = `/storage/v1/object/public/${AVATAR_BUCKET}/`;
-    const pathname = new URL(value).pathname;
-    const markerIndex = pathname.indexOf(marker);
-    if (markerIndex < 0) return null;
-    const path = decodeURIComponent(pathname.slice(markerIndex + marker.length));
-    return path.startsWith(`${userId}/`) ? path : null;
-  } catch {
-    return null;
+const ALLOWED_MIME_TYPES = new Set([
+  "image/webp",
+  "image/jpeg",
+  "image/png",
+]);
+
+function isValidImageBuffer(buffer: Buffer, mime: string): boolean {
+  if (buffer.length < 4) return false;
+  if (mime === "image/webp") {
+    return (
+      buffer.length >= 12 &&
+      buffer.subarray(0, 4).toString("ascii") === "RIFF" &&
+      buffer.subarray(8, 12).toString("ascii") === "WEBP"
+    );
   }
+  if (mime === "image/png") {
+    return (
+      buffer.length >= 8 &&
+      buffer[0] === 0x89 &&
+      buffer[1] === 0x50 &&
+      buffer[2] === 0x4e &&
+      buffer[3] === 0x47
+    );
+  }
+  if (mime === "image/jpeg") {
+    return buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+  }
+  return false;
 }
 
-function isWebp(buffer: Buffer): boolean {
-  return buffer.length >= 12
-    && buffer.subarray(0, 4).toString("ascii") === "RIFF"
-    && buffer.subarray(8, 12).toString("ascii") === "WEBP";
+function getExtension(mime: string): string {
+  if (mime === "image/png") return "png";
+  if (mime === "image/jpeg") return "jpg";
+  return "webp";
+}
+
+function isVercelBlobUrl(url: unknown): boolean {
+  return typeof url === "string" && url.includes("blob.vercel-storage.com");
 }
 
 async function authenticatedProfile() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { supabase, user: null, profile: null };
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select("avatar_url")
-    .eq("id", user.id)
-    .single();
-  if (error) throw error;
-  return { supabase, user, profile };
+  const session = await auth.getSession().catch(() => null);
+  const user = session?.data?.user;
+  if (!user || !user.id) return { user: null, profile: null };
+
+  const sql = getDb();
+  const rows = await sql`
+    SELECT id, username, avatar_url
+    FROM public.profiles
+    WHERE id = ${user.id}
+    LIMIT 1
+  `;
+  const profile = rows[0] || null;
+  return { user, profile };
 }
 
 export async function POST(request: Request) {
-  let uploadedPath: string | null = null;
+  let uploadedBlobUrl: string | null = null;
   try {
-    const { supabase, user, profile } = await authenticatedProfile();
-    if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    const { user, profile } = await authenticatedProfile();
+    if (!user || !user.id) {
+      return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    }
 
     const formData = await request.formData();
     const avatar = formData.get("avatar");
     if (!(avatar instanceof File)) {
       return NextResponse.json({ error: "Selecione uma imagem válida." }, { status: 400 });
     }
-    if (avatar.type !== "image/webp" || avatar.size <= 0 || avatar.size > MAX_PROCESSED_SIZE) {
-      return NextResponse.json({ error: "A imagem processada é inválida ou muito grande." }, { status: 400 });
+
+    if (!ALLOWED_MIME_TYPES.has(avatar.type)) {
+      return NextResponse.json(
+        { error: "Formato de imagem inválido. Formatos permitidos: WebP, JPEG, PNG." },
+        { status: 400 },
+      );
+    }
+
+    if (avatar.size <= 0 || avatar.size > MAX_AVATAR_BYTES) {
+      return NextResponse.json(
+        { error: "A imagem é inválida ou excede o limite máximo de 5 MB." },
+        { status: 400 },
+      );
     }
 
     const buffer = Buffer.from(await avatar.arrayBuffer());
-    if (!isWebp(buffer)) {
-      return NextResponse.json({ error: "O arquivo enviado não é uma imagem WebP válida." }, { status: 400 });
+    if (!isValidImageBuffer(buffer, avatar.type)) {
+      return NextResponse.json(
+        { error: "O conteúdo do arquivo não corresponde a uma imagem válida." },
+        { status: 400 },
+      );
     }
 
-    uploadedPath = `${user.id}/avatar-${crypto.randomUUID()}.webp`;
-    const { error: uploadError } = await supabase.storage
-      .from(AVATAR_BUCKET)
-      .upload(uploadedPath, buffer, {
-        contentType: "image/webp",
-        cacheControl: "31536000",
-        upsert: false,
-      });
-    if (uploadError) throw uploadError;
+    const ext = getExtension(avatar.type);
+    const blobPathname = `avatars/${user.id}/avatar-${crypto.randomUUID()}.${ext}`;
 
-    const { data: publicData } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(uploadedPath);
-    const avatarUrl = publicData.publicUrl;
-    const { data: updatedProfile, error: profileError } = await supabase
-      .from("profiles")
-      .update({ avatar_url: avatarUrl })
-      .eq("id", user.id)
-      .select("avatar_url")
-      .single();
-    if (profileError || updatedProfile?.avatar_url !== avatarUrl) {
-      throw profileError || new Error("O perfil não confirmou a nova foto.");
-    }
-
-    // O perfil é a fonte de verdade. Os metadados mantêm o menu da conta
-    // sincronizado, mas uma falha secundária aqui não desfaz a foto já salva.
-    await supabase.auth.updateUser({
-      data: { ...user.user_metadata, avatar_url: avatarUrl },
+    // Upload seguro para o novo Vercel Blob Storage
+    const blob = await put(blobPathname, buffer, {
+      access: "public",
+      contentType: avatar.type,
+      addRandomSuffix: false,
+      allowOverwrite: true,
     });
+    uploadedBlobUrl = blob.url;
 
-    const oldPath = ownedAvatarPath(profile?.avatar_url, user.id);
-    const obsoletePaths = [...new Set([oldPath, `${user.id}/avatar.webp`])]
-      .filter((path): path is string => Boolean(path && path !== uploadedPath));
-    if (obsoletePaths.length) {
-      await supabase.storage.from(AVATAR_BUCKET).remove(obsoletePaths);
+    // Atualiza o avatar_url no banco Neon
+    const sql = getDb();
+    const updatedRows = await sql`
+      UPDATE public.profiles
+      SET avatar_url = ${blob.url}
+      WHERE id = ${user.id}
+      RETURNING avatar_url
+    `;
+
+    if (!updatedRows.length || updatedRows[0]?.avatar_url !== blob.url) {
+      throw new Error("O perfil não confirmou a atualização da foto no banco de dados.");
+    }
+
+    // Remoção segura do avatar anterior se pertencia ao novo Storage (preservar legado Supabase)
+    const oldAvatarUrl = profile?.avatar_url;
+    if (oldAvatarUrl && isVercelBlobUrl(oldAvatarUrl) && oldAvatarUrl !== blob.url) {
+      await del(oldAvatarUrl).catch(() => {});
     }
 
     return NextResponse.json(
-      { success: true, avatar_url: avatarUrl },
+      { success: true, avatar_url: blob.url },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error: any) {
-    if (uploadedPath) {
+    // Se o upload no Blob ocorreu mas o banco falhou, remove o novo arquivo para evitar órfãos
+    if (uploadedBlobUrl) {
       try {
-        const supabase = await createClient();
-        await supabase.storage.from(AVATAR_BUCKET).remove([uploadedPath]);
+        await del(uploadedBlobUrl);
       } catch {}
     }
     return NextResponse.json(
-      { error: error?.message || "Não foi possível salvar a foto." },
+      { error: error?.message || "Não foi possível salvar a foto de perfil." },
       { status: 400 },
     );
   }
@@ -112,27 +148,33 @@ export async function POST(request: Request) {
 
 export async function DELETE() {
   try {
-    const { supabase, user, profile } = await authenticatedProfile();
-    if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
-
-    const { data: updatedProfile, error: profileError } = await supabase
-      .from("profiles")
-      .update({ avatar_url: null })
-      .eq("id", user.id)
-      .select("avatar_url")
-      .single();
-    if (profileError || updatedProfile?.avatar_url !== null) {
-      throw profileError || new Error("O perfil não confirmou a remoção da foto.");
+    const { user, profile } = await authenticatedProfile();
+    if (!user || !user.id) {
+      return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
     }
 
-    await supabase.auth.updateUser({
-      data: { ...user.user_metadata, avatar_url: null },
-    });
-    const currentPath = ownedAvatarPath(profile?.avatar_url, user.id);
-    const paths = [...new Set([currentPath, `${user.id}/avatar.webp`])].filter(Boolean) as string[];
-    if (paths.length) await supabase.storage.from(AVATAR_BUCKET).remove(paths);
+    const sql = getDb();
+    const updatedRows = await sql`
+      UPDATE public.profiles
+      SET avatar_url = null
+      WHERE id = ${user.id}
+      RETURNING avatar_url
+    `;
 
-    return NextResponse.json({ success: true }, { headers: { "Cache-Control": "no-store" } });
+    if (!updatedRows.length) {
+      throw new Error("O perfil não confirmou a remoção da foto.");
+    }
+
+    // Remove do novo Storage somente se for objeto do Vercel Blob (legado Supabase preservado)
+    const currentAvatarUrl = profile?.avatar_url;
+    if (currentAvatarUrl && isVercelBlobUrl(currentAvatarUrl)) {
+      await del(currentAvatarUrl).catch(() => {});
+    }
+
+    return NextResponse.json(
+      { success: true },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || "Não foi possível remover a foto." },

@@ -1,629 +1,251 @@
-import {
-  NextRequest,
-  NextResponse,
-} from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { entradaInvalida, respostaDeErro } from "@/lib/api-error";
+import { auth } from "@/lib/auth/server";
+import { getDb } from "@/lib/db/neon";
 
-import {
-  entradaInvalida,
-  respostaDeErro,
-} from "@/lib/api-error";
-
-import {
-  createClient,
-} from "@/lib/supabase/server";
-
-function parseRating(
-  value:
-    unknown
-) {
-  if (
-    value ===
-      null ||
-    value ===
-      undefined ||
-    value ===
-      ""
-  ) {
+function parseRating(value: unknown) {
+  if (value === null || value === undefined || value === "") {
     return null;
   }
-
-  const rating =
-    Number(value);
-
-  if (
-    !Number.isFinite(
-      rating
-    ) ||
-    rating <
-      0 ||
-    rating >
-      10
-  ) {
-    throw new Error(
-      "A nota precisa estar entre 0 e 10."
-    );
+  const rating = Number(value);
+  if (!Number.isFinite(rating) || rating < 0 || rating > 10) {
+    throw new Error("A nota precisa estar entre 0 e 10.");
   }
-
-  return Math.round(
-    rating *
-      2
-  ) /
-    2;
+  return Math.round(rating * 2) / 2;
 }
 
 export async function PATCH(
-  req:
-    NextRequest,
+  req: NextRequest,
   {
     params,
   }: {
     params: Promise<{
-      id:
-        string;
+      id: string;
     }>;
-  }
+  },
 ) {
-  const {
-    id,
-  } =
-    await params;
-
-  const s =
-    await createClient();
-
-  const {
-    data: {
-      user,
-    },
-  } =
-    await s.auth.getUser();
-
-  if (
-    !user
-  ) {
-    return NextResponse.json(
-      {
-        error:
-          "Não autenticado",
-      },
-      {
-        status:
-          401,
-      }
-    );
-  }
+  const { id } = await params;
 
   try {
-    const {
-      data:
-        current,
-      error:
-        currentError,
-    } =
-      await s
-        .from(
-          "watch_entries"
-        )
-        .select(`
-          id,
-          library_item_id,
-          media_id,
-          watched_at,
-          rating,
-          comment,
-          is_rewatch
-        `)
-        .eq(
-          "id",
-          id
-        )
-        .eq(
-          "user_id",
-          user.id
-        )
-        .single();
+    const session = await auth.getSession().catch(() => null);
+    const user = session?.data?.user;
 
-    if (
-      currentError ||
-      !current
-    ) {
+    if (!user || !user.id) {
+      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+    }
+
+    const sql = getDb();
+    const currentRows = await sql`
+      SELECT
+        id,
+        library_item_id,
+        media_id,
+        watched_at,
+        rating,
+        comment,
+        is_rewatch
+      FROM public.watch_entries
+      WHERE id = ${id} AND user_id = ${user.id}
+      LIMIT 1
+    `;
+
+    if (currentRows.length === 0) {
       return NextResponse.json(
-        {
-          error:
-            "Visualização não encontrada.",
-        },
-        {
-          status:
-            404,
-        }
+        { error: "Visualização não encontrada." },
+        { status: 404 },
       );
     }
 
-    const body =
-      await req.json();
+    const current = currentRows[0];
+    const body = await req.json();
 
-    const update:
-      Record<
-        string,
-        any
-      > = {
-        updated_at:
-          new Date()
-            .toISOString(),
-      };
-
-    if (
-      body.watched_at !==
-      undefined
-    ) {
-      const date =
-        new Date(
-          String(
-            body.watched_at
-          )
-        );
-
-      if (
-        Number.isNaN(
-          date.getTime()
-        )
-      ) {
-        return NextResponse.json(
-          {
-            error:
-              "Data inválida.",
-          },
-          {
-            status:
-              400,
-          }
-        );
+    let nextWatchedAt = current.watched_at;
+    if (body.watched_at !== undefined) {
+      const date = new Date(String(body.watched_at));
+      if (Number.isNaN(date.getTime())) {
+        return NextResponse.json({ error: "Data inválida." }, { status: 400 });
       }
-
-      update.watched_at =
-        date.toISOString();
+      nextWatchedAt = date.toISOString();
     }
 
-    if (
-      body.rating !==
-      undefined
-    ) {
-      update.rating =
-        parseRating(
-          body.rating
-        );
+    let nextRating = current.rating;
+    if (body.rating !== undefined) {
+      nextRating = parseRating(body.rating);
     }
 
-    if (
-      body.comment !==
-      undefined
-    ) {
-      update.comment =
-        typeof body.comment ===
-          "string"
-          ? body.comment
-              .trim()
-              .slice(
-                0,
-                4000
-              ) ||
-            null
+    let nextComment = current.comment;
+    if (body.comment !== undefined) {
+      nextComment =
+        typeof body.comment === "string"
+          ? body.comment.trim().slice(0, 4000) || null
           : null;
     }
 
-    if (
-      body.is_rewatch !==
-      undefined
-    ) {
-      update.is_rewatch =
-        Boolean(
-          body.is_rewatch
-        );
+    let nextIsRewatch = current.is_rewatch;
+    if (body.is_rewatch !== undefined) {
+      nextIsRewatch = Boolean(body.is_rewatch);
     }
 
-    const {
-      data,
-      error,
-    } =
-      await s
-        .from(
-          "watch_entries"
-        )
-        .update(
-          update
-        )
-        .eq(
-          "id",
-          id
-        )
-        .eq(
-          "user_id",
-          user.id
-        )
-        .select(`
-          id,
-          library_item_id,
-          media_id,
-          watched_at,
-          rating,
-          comment,
-          is_rewatch,
-          created_at,
-          updated_at
-        `)
-        .single();
+    const now = new Date().toISOString();
+    const updatedRows = await sql`
+      UPDATE public.watch_entries
+      SET
+        watched_at = ${nextWatchedAt},
+        rating = ${nextRating},
+        comment = ${nextComment},
+        is_rewatch = ${nextIsRewatch},
+        updated_at = ${now}
+      WHERE id = ${id} AND user_id = ${user.id}
+      RETURNING
+        id,
+        library_item_id,
+        media_id,
+        watched_at,
+        rating,
+        comment,
+        is_rewatch,
+        created_at,
+        updated_at
+    `;
 
-    if (
-      error ||
-      !data
-    ) {
-      throw (
-        error ||
-        new Error(
-          "Não foi possível atualizar."
-        )
-      );
+    const data = updatedRows[0];
+
+    // Sincronizar com library_items se for a visualização mais recente
+    const latestRows = await sql`
+      SELECT id, watched_at, rating, is_rewatch
+      FROM public.watch_entries
+      WHERE user_id = ${user.id}
+        AND library_item_id = ${current.library_item_id}
+      ORDER BY watched_at DESC
+      LIMIT 1
+    `;
+
+    if (latestRows.length > 0) {
+      const latest = latestRows[0];
+      await sql`
+        UPDATE public.library_items
+        SET
+          watched_at = ${latest.watched_at},
+          personal_rating = COALESCE(${latest.rating}, personal_rating),
+          updated_at = ${now}
+        WHERE id = ${current.library_item_id} AND user_id = ${user.id}
+      `;
     }
 
-    /*
-     * Se esta ainda é a visualização mais recente,
-     * sincronizamos watched_at e a nota atual.
-     */
-    const {
-      data:
-        latest,
-    } =
-      await s
-        .from(
-          "watch_entries"
-        )
-        .select(
-          "id, watched_at, rating, is_rewatch"
-        )
-        .eq(
-          "user_id",
-          user.id
-        )
-        .eq(
-          "library_item_id",
-          current.library_item_id
-        )
-        .order(
-          "watched_at",
-          {
-            ascending:
-              false,
-          }
-        )
-        .limit(
-          1
-        )
-        .maybeSingle();
+    // Atualizar evento do Diário
+    try {
+      const updatedMetadata = JSON.stringify({
+        watch_entry_id: data.id,
+        rating: data.rating,
+        comment: data.comment,
+        is_rewatch: data.is_rewatch,
+      });
 
-    if (
-      latest
-    ) {
-      const patch:
-        Record<
-          string,
-          any
-        > = {
-          watched_at:
-            latest.watched_at,
-
-          updated_at:
-            new Date()
-              .toISOString(),
-        };
-
-      if (
-        latest.rating !==
-        null
-      ) {
-        patch.personal_rating =
-          latest.rating;
-      }
-
-      await s
-        .from(
-          "library_items"
-        )
-        .update(
-          patch
-        )
-        .eq(
-          "id",
-          current.library_item_id
-        )
-        .eq(
-          "user_id",
-          user.id
-        );
+      await sql`
+        UPDATE public.activity_events
+        SET
+          occurred_at = ${data.watched_at},
+          metadata = ${updatedMetadata}::jsonb
+        WHERE user_id = ${user.id}
+          AND event_type = 'watch_logged'
+          AND metadata->>'watch_entry_id' = ${id}
+      `;
+    } catch (e: any) {
+      console.error("Erro ao sincronizar evento de diário:", e?.message);
     }
 
-    /*
-     * Atualiza o evento do Diário ligado
-     * à visualização, se ele existir.
-     */
-    await s
-      .from(
-        "activity_events"
-      )
-      .update({
-        occurred_at:
-          data.watched_at,
-
-        metadata: {
-          watch_entry_id:
-            data.id,
-
-          rating:
-            data.rating,
-
-          comment:
-            data.comment,
-
-          is_rewatch:
-            data.is_rewatch,
-        },
-      })
-      .eq(
-        "user_id",
-        user.id
-      )
-      .eq(
-        "event_type",
-        "watch_logged"
-      )
-      .contains(
-        "metadata",
-        {
-          watch_entry_id:
-            data.id,
-        }
-      );
-
-    return NextResponse.json(
-      data
-    );
-  } catch (
-  error
-) {
-  if (
-    error instanceof Error &&
-    error.message ===
-      "A nota precisa estar entre 0 e 10."
-  ) {
-    return entradaInvalida(
-      error.message,
-    );
+    return NextResponse.json(data);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "A nota precisa estar entre 0 e 10."
+    ) {
+      return entradaInvalida(error.message);
+    }
+    return respostaDeErro(error, "PATCH /api/watch-history/[id]");
   }
-
-  return respostaDeErro(
-    error,
-    "PATCH /api/watch-history/[id]",
-  );
-}
 }
 
 export async function DELETE(
-  _:
-    NextRequest,
+  _: NextRequest,
   {
     params,
   }: {
     params: Promise<{
-      id:
-        string;
+      id: string;
     }>;
-  }
+  },
 ) {
-  const {
-    id,
-  } =
-    await params;
+  const { id } = await params;
 
-  const s =
-    await createClient();
+  try {
+    const session = await auth.getSession().catch(() => null);
+    const user = session?.data?.user;
 
-  const {
-    data: {
-      user,
-    },
-  } =
-    await s.auth.getUser();
+    if (!user || !user.id) {
+      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+    }
 
-  if (
-    !user
-  ) {
-    return NextResponse.json(
-      {
-        error:
-          "Não autenticado",
-      },
-      {
-        status:
-          401,
-      }
-    );
-  }
+    const sql = getDb();
+    const currentRows = await sql`
+      SELECT id, library_item_id
+      FROM public.watch_entries
+      WHERE id = ${id} AND user_id = ${user.id}
+      LIMIT 1
+    `;
 
-  const {
-    data:
-      current,
-    error:
-      currentError,
-  } =
-    await s
-      .from(
-        "watch_entries"
-      )
-      .select(
-        "id, library_item_id"
-      )
-      .eq(
-        "id",
-        id
-      )
-      .eq(
-        "user_id",
-        user.id
-      )
-      .single();
-
-  if (
-    currentError ||
-    !current
-  ) {
-    return NextResponse.json(
-      {
-        error:
-          "Visualização não encontrada.",
-      },
-      {
-        status:
-          404,
-      }
-    );
-  }
-
-  const {
-    error,
-  } =
-    await s
-      .from(
-        "watch_entries"
-      )
-      .delete()
-      .eq(
-        "id",
-        id
-      )
-      .eq(
-        "user_id",
-        user.id
+    if (currentRows.length === 0) {
+      return NextResponse.json(
+        { error: "Visualização não encontrada." },
+        { status: 404 },
       );
+    }
 
-  if (error) {
-  return respostaDeErro(
-    error,
-    "DELETE /api/watch-history/[id]",
-  );
-}
+    const current = currentRows[0];
 
-  /*
-   * Remove o evento correspondente do Diário.
-   */
-  await s
-    .from(
-      "activity_events"
-    )
-    .delete()
-    .eq(
-      "user_id",
-      user.id
-    )
-    .eq(
-      "event_type",
-      "watch_logged"
-    )
-    .contains(
-      "metadata",
-      {
-        watch_entry_id:
-          id,
-      }
-    );
+    // Deletar da watch_entries
+    await sql`
+      DELETE FROM public.watch_entries
+      WHERE id = ${id} AND user_id = ${user.id}
+    `;
 
-  const {
-    data:
-      remaining,
-  } =
-    await s
-      .from(
-        "watch_entries"
-      )
-      .select(
-        "watched_at, rating, is_rewatch"
-      )
-      .eq(
-        "user_id",
-        user.id
-      )
-      .eq(
-        "library_item_id",
-        current.library_item_id
-      )
-      .order(
-        "watched_at",
-        {
-          ascending:
-            false,
-        }
-      );
+    // Deletar evento correspondente do Diário
+    try {
+      await sql`
+        DELETE FROM public.activity_events
+        WHERE user_id = ${user.id}
+          AND event_type = 'watch_logged'
+          AND metadata->>'watch_entry_id' = ${id}
+      `;
+    } catch (e: any) {
+      console.error("Erro ao deletar activity_event do diário:", e?.message);
+    }
 
-  const latest =
-    remaining?.[
-      0
-    ] ||
-    null;
+    // Recalcular library_items
+    const remaining = await sql`
+      SELECT watched_at, rating, is_rewatch
+      FROM public.watch_entries
+      WHERE user_id = ${user.id}
+        AND library_item_id = ${current.library_item_id}
+      ORDER BY watched_at DESC
+    `;
 
-  const rewatchCount =
-    (
-      remaining ||
-      []
-    ).filter(
-      (
-        item
-      ) =>
-        item.is_rewatch
-    ).length;
+    const latest = remaining[0] || null;
+    const rewatchCount = remaining.filter((item: any) => item.is_rewatch).length;
+    const now = new Date().toISOString();
 
-  const patch:
-    Record<
-      string,
-      any
-    > = {
-      watched_at:
-        latest?.watched_at ||
-        null,
+    await sql`
+      UPDATE public.library_items
+      SET
+        watched_at = ${latest?.watched_at || null},
+        rewatch_count = ${rewatchCount},
+        personal_rating = ${latest?.rating ?? null},
+        updated_at = ${now}
+      WHERE id = ${current.library_item_id} AND user_id = ${user.id}
+    `;
 
-      rewatch_count:
-        rewatchCount,
-
-      updated_at:
-        new Date()
-          .toISOString(),
-    };
-
-  if (
-    latest?.rating !==
-    null &&
-    latest?.rating !==
-    undefined
-  ) {
-    patch.personal_rating =
-      latest.rating;
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return respostaDeErro(error, "DELETE /api/watch-history/[id]");
   }
-
-  await s
-    .from(
-      "library_items"
-    )
-    .update(
-      patch
-    )
-    .eq(
-      "id",
-      current.library_item_id
-    )
-    .eq(
-      "user_id",
-      user.id
-    );
-
-  return NextResponse.json({
-    ok:
-      true,
-  });
 }

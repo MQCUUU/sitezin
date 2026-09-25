@@ -16,7 +16,7 @@ const contentSecurityPolicy = [
   [
     "img-src 'self' data: blob:",
     "https://image.tmdb.org",
-    "https://qjjwbprpvtltvszoeojx.supabase.co",
+    "https://*.public.blob.vercel-storage.com",
     "https://cdn.discordapp.com",
     "https://lh3.googleusercontent.com",
     "https://avatars.githubusercontent.com",
@@ -25,8 +25,8 @@ const contentSecurityPolicy = [
   "font-src 'self' data:",
   [
     "connect-src 'self'",
-    "https://*.supabase.co",
-    "wss://*.supabase.co",
+    "https://auth.neon.tech",
+    "https://*.neon.tech",
     ...(isDevelopment ? ["http://localhost:*", "ws://localhost:*"] : []),
   ].join(" "),
   "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
@@ -46,6 +46,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "image.tmdb.org" },
+      { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
     ],
  
     /*
@@ -78,7 +79,7 @@ const nextConfig: NextConfig = {
    * funcionalidade existente — são todos restrições que o app
    * já respeita na prática.
    *
-   * A CSP foi calibrada para o App Router, Supabase, imagens externas
+   * A CSP foi calibrada para o App Router, Neon Auth, Vercel Blob, imagens externas
    * e trailers do YouTube sem desativar o prerender das páginas.
    */
   async headers() {

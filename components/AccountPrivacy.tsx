@@ -23,9 +23,7 @@ import {
   UserRound,
 } from "lucide-react";
 
-import {
-  createClient,
-} from "@/lib/supabase/client";
+import { authClient } from "@/lib/auth/client";
 
 import {
   useToast,
@@ -313,60 +311,35 @@ export function AccountPrivacy() {
         true
       );
 
-      const s =
-        createClient();
+      const res = await authClient.getSession();
+      const user = res?.data?.user;
 
-      const {
-        data: {
-          user,
-        },
-        error,
-      } =
-        await s.auth.getUser();
-
-      if (
-        error
-      ) {
-        throw error;
-      }
-
-      if (
-        !user
-      ) {
-        setAccount(
-          null
-        );
-
+      if (!user) {
+        setAccount(null);
         return;
       }
 
+      let visibility: "private" | "public" = "private";
+      try {
+        const socRes = await fetch("/api/profile/social-settings");
+        if (socRes.ok) {
+          const socData = await socRes.json();
+          if (socData.visibility === "public") {
+            visibility = "public";
+          }
+        }
+      } catch {
+        // fallback para private
+      }
+
       const next = {
-        id:
-          user.id,
-
-        email:
-          user.email ||
-          "",
-
+        id: user.id,
+        email: user.email || "",
         displayName:
-          user.user_metadata
-            ?.display_name ||
-          user.user_metadata
-            ?.full_name ||
-          user.user_metadata
-            ?.name ||
-          user.email
-            ?.split(
-              "@"
-            )[0] ||
+          user.name ||
+          user.email?.split("@")[0] ||
           "",
-
-        visibility:
-          user.user_metadata
-            ?.profile_visibility ===
-          "public"
-            ? "public"
-            : "private",
+        visibility,
       } as AccountData;
 
       setAccount(
@@ -474,30 +447,19 @@ export function AccountPrivacy() {
         true
       );
 
-      const s =
-        createClient();
+      const updateRes = await authClient.updateUser({
+        name: clean,
+      });
 
-      const {
-        data,
-        error,
-      } =
-        await s.auth.updateUser({
-          data: {
-            display_name:
-              clean,
-
-            profile_visibility:
-              account
-                ?.visibility ||
-              "private",
-          },
-        });
-
-      if (
-        error
-      ) {
-        throw error;
+      if (updateRes.error) {
+        throw updateRes.error;
       }
+
+      await fetch("/api/auth/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ display_name: clean }),
+      }).catch(() => {});
 
       setAccount(
         (
@@ -567,28 +529,15 @@ export function AccountPrivacy() {
     );
 
     try {
-      const {
-        error,
-      } =
-        await createClient()
-          .auth
-          .updateUser({
-            data: {
-              display_name:
-                displayName.trim() ||
-                account
-                  ?.displayName ||
-                "",
+      const res = await fetch("/api/profile/social-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visibility }),
+      });
 
-              profile_visibility:
-                visibility,
-            },
-          });
-
-      if (
-        error
-      ) {
-        throw error;
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Não foi possível salvar a privacidade");
       }
 
       toast.success(
@@ -666,76 +615,13 @@ export function AccountPrivacy() {
       return;
     }
 
-    try {
-      setSavingEmail(
-        true
-      );
-
-      const {
-        data,
-        error,
-      } =
-        await createClient()
-          .auth
-          .updateUser({
-            email:
-              clean,
-          });
-
-      if (
-        error
-      ) {
-        throw error;
+    toast.info(
+      "A alteração de e-mail está desativada no momento pelo provedor de autenticação.",
+      {
+        description:
+          "O provedor Neon Managed Auth mantém o e-mail de cadastro fixo por segurança.",
       }
-
-      toast.success(
-        "Confirme o novo e-mail",
-        {
-          description:
-            "Por segurança, o Supabase pode enviar uma confirmação antes de concluir a troca.",
-        }
-      );
-
-      /*
-       * Não assumimos que a mudança foi aplicada
-       * imediatamente: projetos Supabase podem exigir
-       * confirmação do endereço novo.
-       */
-      if (
-        data.user
-          ?.email ===
-        clean
-      ) {
-        setAccount(
-          (
-            current
-          ) =>
-            current
-              ? {
-                  ...current,
-                  email:
-                    clean,
-                }
-              : current
-        );
-      }
-    } catch (
-      error
-    ) {
-      toast.error(
-        "Não foi possível alterar o e-mail",
-        {
-          description:
-            errorMessage(
-              error
-            ),
-        }
-      );
-    } finally {
-      setSavingEmail(
-        false
-      );
-    }
+    );
   }
 
   async function savePassword(
@@ -771,54 +657,14 @@ export function AccountPrivacy() {
         true
       );
 
-      const s =
-        createClient();
+      const res = await authClient.changePassword({
+        currentPassword,
+        newPassword,
+        revokeOtherSessions: true,
+      });
 
-      /*
-       * Se o usuário informou a senha atual,
-       * fazemos uma reautenticação simples antes.
-       * Isso também evita trocar a senha caso ele
-       * tenha digitado a senha atual errada.
-       */
-      if (
-        currentPassword &&
-        account?.email
-      ) {
-        const {
-          error:
-            signInError,
-        } =
-          await s.auth
-            .signInWithPassword({
-              email:
-                account.email,
-
-              password:
-                currentPassword,
-            });
-
-        if (
-          signInError
-        ) {
-          throw new Error(
-            "A senha atual está incorreta."
-          );
-        }
-      }
-
-      const {
-        error,
-      } =
-        await s.auth
-          .updateUser({
-            password:
-              newPassword,
-          });
-
-      if (
-        error
-      ) {
-        throw error;
+      if (res.error) {
+        throw new Error(res.error.message || "A senha atual está incorreta ou nova senha é inválida.");
       }
 
       setCurrentPassword(
@@ -952,9 +798,11 @@ export function AccountPrivacy() {
         }
       );
 
-      await createClient()
-        .auth
-        .signOut();
+      try {
+        await authClient.signOut();
+      } catch {
+        // ignore
+      }
 
       location.href =
         "/?account=deleted";

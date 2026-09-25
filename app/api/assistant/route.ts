@@ -7,9 +7,8 @@ import {
   NextResponse,
 } from "next/server";
 
-import {
-  createClient,
-} from "@/lib/supabase/server";
+import { auth } from "@/lib/auth/server";
+import { getDb } from "@/lib/db/neon";
 
 const TMDB_BASE =
   "https://api.themoviedb.org/3";
@@ -478,120 +477,66 @@ async function buildFallback(
  */
 
 async function findCache({
-  s,
+  sql,
   queryKey,
   scope,
   userId,
   profileKey,
 }: {
-  s: any;
+  sql: ReturnType<typeof getDb>;
   queryKey: string;
-  scope:
-    | "global"
-    | "personalized";
+  scope: "global" | "personalized";
   userId: string;
-  profileKey:
-    string | null;
+  profileKey: string | null;
 }) {
-  let query =
-    s
-      .from(
-        "ai_recommendation_cache"
-      )
-      .select(
+  try {
+    const rows = scope === "personalized"
+      ? await sql`
+          SELECT id, answer, result_refs, hit_count, expires_at
+          FROM public.ai_recommendation_cache
+          WHERE query_key = ${queryKey}
+            AND scope = ${scope}
+            AND expires_at > now()
+            AND user_id = ${userId}
+            AND profile_key = ${profileKey}
+          LIMIT 1
         `
-        id,
-        answer,
-        result_refs,
-        hit_count,
-        expires_at
-        `
-      )
-      .eq(
-        "query_key",
-        queryKey
-      )
-      .eq(
-        "scope",
-        scope
-      )
-      .gt(
-        "expires_at",
-        new Date()
-          .toISOString()
-      )
-      .limit(
-        1
-      );
-
-  if (
-    scope ===
-    "personalized"
-  ) {
-    query =
-      query
-        .eq(
-          "user_id",
-          userId
-        )
-        .eq(
-          "profile_key",
-          profileKey
-        );
-  }
-
-  const {
-    data,
-    error,
-  } =
-    await query
-      .maybeSingle();
-
-  if (error) {
-    console.error(
-      "Erro ao consultar cache de IA:",
-      error
-    );
-
+      : await sql`
+          SELECT id, answer, result_refs, hit_count, expires_at
+          FROM public.ai_recommendation_cache
+          WHERE query_key = ${queryKey}
+            AND scope = ${scope}
+            AND expires_at > now()
+          LIMIT 1
+        `;
+    return rows[0] || null;
+  } catch (error) {
+    console.error("Erro ao consultar cache de IA:", error);
     return null;
   }
-
-  return data ||
-    null;
 }
 
 async function countCacheHit(
-  s: any,
-  cache:
-    any
+  sql: ReturnType<typeof getDb>,
+  cache: any
 ) {
-  const nextCount =
-    Number(
-      cache.hit_count ||
-        0
-    ) + 1;
-
-  await s
-    .from(
-      "ai_recommendation_cache"
-    )
-    .update({
-      hit_count:
-        nextCount,
-      last_hit_at:
-        new Date()
-          .toISOString(),
-    })
-    .eq(
-      "id",
-      cache.id
-    );
-
+  const nextCount = Number(cache.hit_count || 0) + 1;
+  try {
+    await sql`
+      UPDATE public.ai_recommendation_cache
+      SET
+        hit_count = ${nextCount},
+        last_hit_at = now()
+      WHERE id = ${cache.id}
+    `;
+  } catch (error) {
+    console.error("Erro ao atualizar hit count de IA:", error);
+  }
   return nextCount;
 }
 
 async function saveCache({
-  s,
+  sql,
   userId,
   scope,
   queryKey,
@@ -600,115 +545,64 @@ async function saveCache({
   answer,
   refs,
 }: {
-  s: any;
+  sql: ReturnType<typeof getDb>;
   userId: string;
-  scope:
-    | "global"
-    | "personalized";
+  scope: "global" | "personalized";
   queryKey: string;
-  normalizedQuery:
-    string;
-  profileKey:
-    string | null;
-  answer:
-    string;
-  refs:
-    CachedRef[];
+  normalizedQuery: string;
+  profileKey: string | null;
+  answer: string;
+  refs: CachedRef[];
 }) {
-  const expiresAt =
-    new Date(
-      Date.now() +
-      CACHE_DAYS *
-        24 *
-        60 *
-        60 *
-        1000
-    )
-      .toISOString();
+  const expiresAt = new Date(
+    Date.now() + CACHE_DAYS * 24 * 60 * 60 * 1000
+  ).toISOString();
 
-  const payload = {
-    scope,
-    user_id:
-      scope ===
-      "personalized"
-        ? userId
-        : null,
-    query_key:
-      queryKey,
-    query_text:
-      normalizedQuery,
-    profile_key:
-      scope ===
-      "personalized"
-        ? profileKey
-        : null,
-    answer,
-    result_refs:
-      refs,
-    hit_count:
-      0,
-    expires_at:
-      expiresAt,
-    last_hit_at:
-      null,
-  };
+  const targetUserId = scope === "personalized" ? userId : null;
+  const targetProfileKey = scope === "personalized" ? profileKey : null;
 
-  const {
-    error,
-  } =
-    await s
-      .from(
-        "ai_recommendation_cache"
+  try {
+    await sql`
+      INSERT INTO public.ai_recommendation_cache (
+        scope,
+        user_id,
+        query_key,
+        query_text,
+        profile_key,
+        answer,
+        result_refs,
+        hit_count,
+        expires_at,
+        last_hit_at
       )
-      .insert(
-        payload
-      );
-
-  /*
-   * Duas pessoas podem fazer a mesma
-   * pergunta nova exatamente ao mesmo tempo.
-   * Nesse caso o índice unique pode ganhar
-   * a corrida e a segunda inserção falhar
-   * com 23505. Isso é normal e não derruba
-   * a resposta.
-   */
-  if (
-    error &&
-    error.code !==
-      "23505"
-  ) {
-    console.error(
-      "Erro ao salvar cache da IA:",
-      error
-    );
+      VALUES (
+        ${scope},
+        ${targetUserId},
+        ${queryKey},
+        ${normalizedQuery},
+        ${targetProfileKey},
+        ${answer},
+        ${JSON.stringify(refs)}::jsonb,
+        0,
+        ${expiresAt},
+        null
+      )
+    `;
+  } catch (error: any) {
+    if (error?.code !== "23505") {
+      console.error("Erro ao salvar cache da IA:", error);
+    }
   }
 }
 
 async function cleanupExpiredCache(
-  s: any
+  sql: ReturnType<typeof getDb>
 ) {
-  /*
-   * Limpeza oportunista.
-   * Não precisa de cron para começar.
-   */
   try {
-    await s
-      .from(
-        "ai_recommendation_cache"
-      )
-      .delete()
-      .lt(
-        "expires_at",
-        new Date(
-          Date.now() -
-          7 *
-            24 *
-            60 *
-            60 *
-            1000
-        )
-          .toISOString()
-      );
+    await sql`
+      DELETE FROM public.ai_recommendation_cache
+      WHERE expires_at < (now() - interval '7 days')
+    `;
   } catch {
     // Cache nunca deve derrubar o assistente.
   }
@@ -723,21 +617,13 @@ async function cleanupExpiredCache(
 export async function POST(
   req: NextRequest
 ) {
-  const s =
-    await createClient();
+  const session = await auth.getSession().catch(() => null);
+  const user = session?.data?.user;
 
-  const {
-    data: {
-      user,
-    },
-  } =
-    await s.auth.getUser();
-
-  if (!user) {
+  if (!user || !user.id) {
     return NextResponse.json(
       {
-        error:
-          "Não autenticado",
+        error: "Não autenticado",
       },
       {
         status: 401,
@@ -745,166 +631,114 @@ export async function POST(
     );
   }
 
-const {
-  data: assistantAllowed,
-  error: rateLimitError
-} = await s.rpc(
-  "consume_assistant_rate_limit"
-);
+  const sql = getDb();
 
-if (rateLimitError) {
-  /*
-   * O rate limiting é uma camada adicional de proteção.
-   * Uma falha temporária na RPC não pode derrubar o
-   * Assistente inteiro.
-   */
-  console.error(
-    "Erro ao verificar limite do assistente:",
-    {
-      message:
-        rateLimitError.message,
-      code:
-        rateLimitError.code,
-      details:
-        rateLimitError.details,
-      hint:
-        rateLimitError.hint
-    }
-  );
-}
+  let assistantAllowed = true;
+  try {
+    const rlRows = await sql`
+      INSERT INTO public.api_rate_limits (
+        user_id,
+        action,
+        window_started_at,
+        request_count
+      )
+      VALUES (
+        ${user.id},
+        'assistant',
+        clock_timestamp(),
+        1
+      )
+      ON CONFLICT (user_id, action)
+      DO UPDATE SET
+        window_started_at =
+          CASE
+            WHEN api_rate_limits.window_started_at <= clock_timestamp() - interval '10 minutes'
+            THEN clock_timestamp()
+            ELSE api_rate_limits.window_started_at
+          END,
+        request_count =
+          CASE
+            WHEN api_rate_limits.window_started_at <= clock_timestamp() - interval '10 minutes'
+            THEN 1
+            ELSE api_rate_limits.request_count + 1
+          END
+      RETURNING request_count;
+    `;
+    const count = Number(rlRows[0]?.request_count || 1);
+    assistantAllowed = count <= 20;
+  } catch (rateLimitError: any) {
+    console.error(
+      "Erro ao verificar limite do assistente:",
+      rateLimitError
+    );
+  }
 
-/*
- * Bloqueamos somente quando a função respondeu
- * explicitamente `false`.
- *
- * null pode significar que a RPC não foi encontrada ou
- * apresentou uma falha temporária.
- */
-if (
-  !rateLimitError &&
-  assistantAllowed === false
-) {
-  return NextResponse.json(
-    {
-      error:
-        "Você atingiu o limite de 20 perguntas em 10 minutos. Aguarde um pouco e tente novamente."
-    },
-    {
-      status: 429,
-
-      headers: {
-        "Retry-After": "600",
-        "Cache-Control":
-          "private, no-store"
+  if (!assistantAllowed) {
+    return NextResponse.json(
+      {
+        error:
+          "Você atingiu o limite de 20 perguntas em 10 minutos. Aguarde um pouco e tente novamente."
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": "600",
+          "Cache-Control": "private, no-store"
+        }
       }
-    }
-  );
-}
+    );
+  }
 
-  const body =
-    await req.json();
-
-  const message =
-    String(
-      body?.message ||
-        ""
-    ).trim();
+  const body = await req.json();
+  const message = String(body?.message || "").trim();
 
   if (!message) {
     return NextResponse.json(
-      {
-        error:
-          "Digite o que você quer assistir.",
-      },
-      {
-        status: 400,
-      }
+      { error: "Digite o que você quer assistir." },
+      { status: 400 }
     );
   }
 
-  if (
-    message.length >
-    1000
-  ) {
+  if (message.length > 1000) {
     return NextResponse.json(
-      {
-        error:
-          "A pergunta está muito longa.",
-      },
-      {
-        status: 400,
-      }
+      { error: "A pergunta está muito longa." },
+      { status: 400 }
     );
   }
 
-  const normalized =
-    normalizeQuery(
-      message
-    );
+  const normalized = normalizeQuery(message);
+  const personalized = isPersonalizedPrompt(normalized);
+  const scope: "global" | "personalized" = personalized ? "personalized" : "global";
 
-  const personalized =
-    isPersonalizedPrompt(
-      normalized
-    );
-
-  const scope:
-    | "global"
-    | "personalized" =
-    personalized
-      ? "personalized"
-      : "global";
-
-  /*
-   * Biblioteca só é necessária para
-   * perguntas personalizadas e fallback.
-   */
-
-  const {
-    data: library,
-    error:
-      libraryError,
-  } =
-    await s
-      .from(
-        "library_items"
-      )
-      .select(`
-        id,
-        status,
-        favorite,
-        personal_rating,
-        media:media_id(
-          tmdb_id,
-          media_type,
-          title,
-          genres,
-          release_date,
-          first_air_date
-        )
-      `)
-      .eq(
-        "user_id",
-        user.id
-      );
-
-  if (libraryError) {
+  let items: any[] = [];
+  try {
+    const libraryRows = await sql`
+      SELECT
+        li.id,
+        li.status,
+        li.favorite,
+        li.personal_rating,
+        json_build_object(
+          'tmdb_id', m.tmdb_id,
+          'media_type', m.media_type,
+          'title', m.title,
+          'genres', m.genres,
+          'release_date', m.release_date,
+          'first_air_date', m.first_air_date
+        ) as media
+      FROM public.library_items li
+      JOIN public.media m ON m.id = li.media_id
+      WHERE li.user_id = ${user.id}
+    `;
+    items = libraryRows || [];
+  } catch (libraryError: any) {
     return NextResponse.json(
-      {
-        error:
-          libraryError.message,
-      },
-      {
-        status: 500,
-      }
+      { error: libraryError?.message || "Erro ao consultar biblioteca" },
+      { status: 500 }
     );
   }
 
-  const items =
-    Array.isArray(
-      library
-    )
-      ? library
-      : [];
+
 
   const profileKey =
     personalized
@@ -934,7 +768,7 @@ if (
 
   const cached =
     await findCache({
-      s,
+      sql,
       queryKey,
       scope,
       userId:
@@ -965,10 +799,7 @@ if (
       0
     ) {
       const hitCount =
-        await countCacheHit(
-          s,
-          cached
-        );
+        await countCacheHit(sql, cached);
 
       return NextResponse.json({
         mode:
@@ -1314,7 +1145,7 @@ Formato:
       );
 
     await saveCache({
-      s,
+      sql,
       userId:
         user.id,
       scope,
@@ -1330,9 +1161,7 @@ Formato:
      * Não esperamos essa limpeza para
      * responder ao usuário.
      */
-    cleanupExpiredCache(
-      s
-    );
+    cleanupExpiredCache(sql);
 
     return NextResponse.json({
       mode:

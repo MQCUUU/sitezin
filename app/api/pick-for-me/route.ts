@@ -1,11 +1,10 @@
+import { getDb } from "@/lib/db/neon";
 import {
   NextRequest,
   NextResponse,
 } from "next/server";
 
-import {
-  createClient,
-} from "@/lib/supabase/server";
+import { auth } from "@/lib/auth/server";
 
 const TMDB_BASE =
   "https://api.themoviedb.org/3";
@@ -345,15 +344,8 @@ export async function GET(
     );
   }
 
-  const s =
-    await createClient();
-
-  const {
-    data: {
-      user,
-    },
-  } =
-    await s.auth.getUser();
+  const session = await auth.getSession().catch(() => null);
+  const user = session?.data?.user ?? null;
 
   const url =
     new URL(
@@ -622,28 +614,21 @@ export async function GET(
   if (
     user
   ) {
-    const {
-      data:
-        library,
-    } =
-      await s
-        .from(
-          "library_items"
-        )
-        .select(`
-          id,
-          status,
-          favorite,
-          personal_rating,
-          media:media_id(
-            tmdb_id,
-            media_type
-          )
-        `)
-        .eq(
-          "user_id",
-          user.id
-        );
+    const sql = getDb();
+    const library = await sql`
+      SELECT
+        li.id,
+        li.status,
+        li.favorite,
+        li.personal_rating,
+        json_build_object(
+          'tmdb_id', m.tmdb_id,
+          'media_type', m.media_type
+        ) AS media
+      FROM public.library_items li
+      JOIN public.media m ON m.id = li.media_id
+      WHERE li.user_id = ${user.id}
+    `;
 
     for (
       const item
@@ -667,23 +652,17 @@ export async function GET(
       );
     }
 
-    const {
-      data:
-        hidden,
-      error:
-        hiddenError,
-    } =
-      await s
-        .from(
-          "user_hidden_titles"
-        )
-        .select(
-          "tmdb_id, media_type"
-        )
-        .eq(
-          "user_id",
-          user.id
-        );
+    let hidden: any[] = [];
+    let hiddenError: any = null;
+    try {
+      hidden = await sql`
+        SELECT tmdb_id, media_type
+        FROM public.user_hidden_titles
+        WHERE user_id = ${user.id}
+      `;
+    } catch (err: any) {
+      hiddenError = err;
+    }
 
     if (
       hiddenError

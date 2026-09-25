@@ -1,7 +1,8 @@
 import { seasonTMDB } from "@/lib/tmdb";
+import { getDb } from "@/lib/db/neon";
 
 type ProgressClient = {
-  from: (table: string) => any;
+  from?: (table: string) => any;
 };
 
 export async function completeSeriesProgress({
@@ -11,7 +12,7 @@ export async function completeSeriesProgress({
   tmdbId,
   seasonsCount,
 }: {
-  supabase: ProgressClient;
+  supabase?: ProgressClient;
   userId: string;
   mediaId: number;
   tmdbId: number;
@@ -34,12 +35,18 @@ export async function completeSeriesProgress({
     })),
   ).filter((row) => Number.isInteger(row.episode_number) && row.episode_number > 0);
 
-  // Evita requisições grandes demais em séries com muitas temporadas.
-  for (let index = 0; index < rows.length; index += 500) {
-    const { error } = await supabase.from("episodes_progress").upsert(rows.slice(index, index + 500), {
-      onConflict: "user_id,media_id,season_number,episode_number",
-    });
-    if (error) throw error;
+  const sql = getDb();
+  for (const row of rows) {
+    await sql`
+      INSERT INTO public.episodes_progress (
+        user_id, media_id, season_number, episode_number, watched, watched_at
+      )
+      VALUES (
+        ${row.user_id}, ${row.media_id}, ${row.season_number}, ${row.episode_number}, true, ${row.watched_at}
+      )
+      ON CONFLICT (user_id, media_id, season_number, episode_number)
+      DO UPDATE SET watched = true, watched_at = EXCLUDED.watched_at
+    `;
   }
 }
 
@@ -48,15 +55,16 @@ export async function resetSeriesProgress({
   userId,
   mediaId,
 }: {
-  supabase: ProgressClient;
+  supabase?: ProgressClient;
   userId: string;
   mediaId: number;
 }) {
-  const { error } = await supabase.from("episodes_progress").update({
-    watched: false,
-    watched_at: null,
-  }).eq("user_id", userId).eq("media_id", mediaId);
-  if (error) throw error;
+  const sql = getDb();
+  await sql`
+    UPDATE public.episodes_progress
+    SET watched = false, watched_at = null
+    WHERE user_id = ${userId} AND media_id = ${mediaId}
+  `;
 }
 
 export async function restoreSeriesProgress({
@@ -64,13 +72,14 @@ export async function restoreSeriesProgress({
   userId,
   mediaId,
 }: {
-  supabase: ProgressClient;
+  supabase?: ProgressClient;
   userId: string;
   mediaId: number;
 }) {
-  const { error } = await supabase.from("episodes_progress").update({
-    watched: true,
-    watched_at: new Date().toISOString(),
-  }).eq("user_id", userId).eq("media_id", mediaId);
-  if (error) throw error;
+  const sql = getDb();
+  await sql`
+    UPDATE public.episodes_progress
+    SET watched = true, watched_at = now()
+    WHERE user_id = ${userId} AND media_id = ${mediaId}
+  `;
 }

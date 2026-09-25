@@ -1,22 +1,8 @@
 "use client";
 
-import {
-  useEffect,
-} from "react";
-
-import {
-  usePathname,
-  useRouter,
-} from "next/navigation";
-
-import {
-  createClient,
-} from "@/lib/supabase/client";
-
-import type {
-  Session,
-  AuthChangeEvent,
-} from "@supabase/supabase-js";
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth/client";
 
 const PRIVATE_ROUTES = [
   "/library",
@@ -32,120 +18,30 @@ const PRIVATE_ROUTES = [
   "/settings",
 ];
 
-function isPrivate(
-  pathname:
-    string
-) {
+function isPrivate(pathname: string) {
   return PRIVATE_ROUTES.some(
-    (
-      route
-    ) =>
-      pathname ===
-        route ||
-      pathname.startsWith(
-        `${route}/`
-      )
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
 }
 
 export function SessionSync() {
-  const router =
-    useRouter();
-
-  const pathname =
-    usePathname();
+  const router = useRouter();
+  const pathname = usePathname();
+  const { data: session, isPending } = authClient.useSession();
 
   useEffect(() => {
-    const supabase =
-      createClient();
+    if (isPending) return;
 
-    const {
-      data:
-        subscription,
-    } =
-      supabase.auth
-        .onAuthStateChange(
-          (
-            event: AuthChangeEvent,
-            session: Session | null
-          ): void | null | undefined => {
-            /*
-             * Mantém Server Components, AccountMenu,
-             * Home e layouts sincronizados quando a
-             * sessão muda no browser.
-             */
-            if (
-              event ===
-                "SIGNED_IN" ||
-              event ===
-                "TOKEN_REFRESHED" ||
-              event ===
-                "USER_UPDATED"
-            ) {
-              router.refresh();
+    if (!session?.user && isPrivate(pathname)) {
+      const params = new URLSearchParams({
+        reason: "session",
+        next: pathname,
+      });
 
-              window.dispatchEvent(
-                new Event(
-                  "mycatalog:session-updated"
-                )
-              );
-
-              return;
-            }
-
-            if (
-              event ===
-                "SIGNED_OUT" ||
-              (
-                !session &&
-                event ===
-                  "INITIAL_SESSION"
-              )
-            ) {
-              window.dispatchEvent(
-                new Event(
-                  "mycatalog:session-updated"
-                )
-              );
-
-              /*
-               * Se a sessão morrer enquanto o usuário
-               * está em uma página privada, não deixamos
-               * a UI continuar fingindo que está logada.
-               */
-              if (
-                isPrivate(
-                  pathname
-                )
-              ) {
-                const params =
-                  new URLSearchParams({
-                    reason:
-                      "session",
-
-                    next:
-                      pathname,
-                  });
-
-                router.replace(
-                  `/login?${params.toString()}`
-                );
-
-                router.refresh();
-              }
-            }
-          }
-        );
-
-    return () => {
-      subscription
-        .subscription
-        .unsubscribe();
-    };
-  }, [
-    pathname,
-    router,
-  ]);
+      router.replace(`/login?${params.toString()}`);
+      router.refresh();
+    }
+  }, [session, isPending, pathname, router]);
 
   return null;
 }

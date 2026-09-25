@@ -8,7 +8,8 @@ import {
 } from "@/lib/client-request";
 
 import { respostaDeErro } from "@/lib/api-error";
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth/server";
+import { getDb } from "@/lib/db/neon";
 
 const TMDB_BASE =
   "https://api.themoviedb.org/3";
@@ -523,13 +524,8 @@ export async function GET(
      * ==========================================
      */
 
-    const s =
-      await createClient();
-
-    const {
-      data: { user },
-    } =
-      await s.auth.getUser();
+    const session = await auth.getSession().catch(() => null);
+    const user = session?.data?.user;
 
     const libraryMap =
       new Map<
@@ -574,35 +570,14 @@ export async function GET(
         tmdbIds.length >
         0
       ) {
-        const {
-          data: mediaRows,
-          error:
-            mediaError,
-        } =
-          await s
-            .from(
-              "media"
-            )
-            .select(
-              "id, tmdb_id, media_type"
-            )
-            .eq(
-              "media_type",
-              type
-            )
-            .in(
-              "tmdb_id",
-              tmdbIds
-            );
+        const sql = getDb();
+        const mediaRows = await sql`
+          SELECT id, tmdb_id, media_type
+          FROM public.media
+          WHERE media_type = ${type}
+            AND tmdb_id = ANY(${tmdbIds})
+        `;
 
-        if (
-          mediaError
-        ) {
-          console.error(
-            "Erro ao consultar mídias da descoberta:",
-            mediaError.message
-          );
-        }
 
         const mediaById =
           new Map<
@@ -650,36 +625,14 @@ export async function GET(
           mediaIds.length >
           0
         ) {
-          const {
-            data:
-              libraryRows,
-            error:
-              libraryError,
-          } =
-            await s
-              .from(
-                "library_items"
-              )
-              .select(
-                "id, media_id, favorite, status, personal_rating"
-              )
-              .eq(
-                "user_id",
-                user.id
-              )
-              .in(
-                "media_id",
-                mediaIds
-              );
+          const sql = getDb();
+          const libraryRows = await sql`
+            SELECT id, media_id, favorite, status, personal_rating
+            FROM public.library_items
+            WHERE user_id = ${user.id}
+              AND media_id = ANY(${mediaIds})
+          `;
 
-          if (
-            libraryError
-          ) {
-            console.error(
-              "Erro ao consultar biblioteca na descoberta:",
-              libraryError.message
-            );
-          }
 
           for (
             const item

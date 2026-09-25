@@ -1,7 +1,8 @@
+import { getDb } from "@/lib/db/neon";
 import { NextResponse } from "next/server";
 
 import { respostaDeErro } from "@/lib/api-error";
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth/server";
 import { searchTMDB } from "@/lib/tmdb";
 
 type LetterboxdRow = {
@@ -68,10 +69,10 @@ async function parallelMap<T, R>(
 }
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const session = await auth.getSession().catch(() => null);
+  const user = session?.data?.user;
 
-  if (!user) {
+  if (!user || !user.id) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
 
@@ -113,76 +114,69 @@ export async function POST(request: Request) {
       let library = libraryByTmdb.get(Number(movie.id));
 
       if (!library) {
-        const { data: savedMedia, error: mediaError } = await supabase
-          .from("media")
-          .upsert({
-            tmdb_id: movie.id,
-            media_type: "movie",
-            title: movie.title || row.name,
-            original_title: movie.original_title || null,
-            overview: movie.overview || null,
-            poster_path: movie.poster_path || null,
-            backdrop_path: movie.backdrop_path || null,
-            release_date: movie.release_date || null,
-            genres: [],
-            popularity: movie.popularity ?? null,
-            tmdb_rating: movie.vote_average ?? null,
-            tmdb_vote_count: movie.vote_count ?? null,
-            raw: movie,
-          }, { onConflict: "tmdb_id,media_type" })
-          .select("id")
-          .single();
+        const sql = getDb();
+        const savedMediaRows = await sql`
+          INSERT INTO public.media (
+            tmdb_id, media_type, title, original_title, overview, poster_path, backdrop_path,
+            release_date, genres, popularity, tmdb_rating, tmdb_vote_count, raw, updated_at
+          )
+          VALUES (
+            ${movie.id}, 'movie', ${movie.title || row.name}, ${movie.original_title || null},
+            ${movie.overview || null}, ${movie.poster_path || null}, ${movie.backdrop_path || null},
+            ${movie.release_date || null}, ${[]}, ${movie.popularity ?? null},
+            ${movie.vote_average ?? null}, ${movie.vote_count ?? null}, ${JSON.stringify(movie)}, now()
+          )
+          ON CONFLICT (tmdb_id, media_type)
+          DO UPDATE SET
+            title = EXCLUDED.title,
+            original_title = COALESCE(EXCLUDED.original_title, media.original_title),
+            overview = COALESCE(EXCLUDED.overview, media.overview),
+            poster_path = COALESCE(EXCLUDED.poster_path, media.poster_path),
+            backdrop_path = COALESCE(EXCLUDED.backdrop_path, media.backdrop_path),
+            updated_at = now()
+          RETURNING id
+        `;
+        const savedMedia = savedMediaRows[0];
+        if (!savedMedia) throw new Error("Falha ao salvar filme.");
 
-        if (mediaError || !savedMedia) throw mediaError || new Error("Falha ao salvar filme.");
+        const existingRows = await sql`
+          SELECT id, status, personal_rating
+          FROM public.library_items
+          WHERE user_id = ${user.id} AND media_id = ${savedMedia.id}
+          LIMIT 1
+        `;
 
-        const { data: existing } = await supabase
-          .from("library_items")
-          .select("id, status, personal_rating")
-          .eq("user_id", user.id)
-          .eq("media_id", savedMedia.id)
-          .maybeSingle();
-
-        let savedLibrary = existing;
+        let savedLibrary = existingRows[0] || null;
 
         if (!savedLibrary) {
-          // Todo importado entra primeiro na biblioteca com o status padrÃ£o.
-          // A mudanÃ§a para "assistido" (ou outro status futuro) acontece abaixo.
-          const { data, error: libraryError } = await supabase
-            .from("library_items")
-            .insert({
-              user_id: user.id,
-              media_id: savedMedia.id,
-              status: "want",
-              personal_rating: null,
-            })
-            .select("id, status, personal_rating")
-            .single();
-
-          if (libraryError || !data) {
-            throw libraryError || new Error("Falha ao adicionar Ã  biblioteca.");
+          const insertRows = await sql`
+            INSERT INTO public.library_items (
+              user_id, media_id, status, personal_rating, added_at, updated_at
+            )
+            VALUES (${user.id}, ${savedMedia.id}, 'want', null, now(), now())
+            RETURNING id, status, personal_rating
+          `;
+          if (!insertRows?.length) {
+            throw new Error("Falha ao adicionar à biblioteca.");
           }
-
-          savedLibrary = data;
+          savedLibrary = insertRows[0];
           imported++;
 
-          const { error: activityError } = await supabase
-            .from("activity_events")
-            .insert({
-              user_id: user.id,
-              media_id: savedMedia.id,
-              library_item_id: data.id,
-              event_type: "library_added",
-              metadata: {
+          await sql`
+            INSERT INTO public.activity_events (
+              user_id, media_id, library_item_id, event_type, metadata, occurred_at, created_at
+            )
+            VALUES (
+              ${user.id}, ${savedMedia.id}, ${savedLibrary.id}, 'library_added',
+              ${JSON.stringify({
                 status: "want",
                 media_type: "movie",
                 title: movie.title || row.name,
                 source: "letterboxd",
-              },
-            });
-
-          if (activityError) {
-            console.error("Erro ao registrar importaÃ§Ã£o na biblioteca:", activityError.message);
-          }
+              })},
+              now(), now()
+            )
+          `.catch((err) => console.error("Erro ao registrar importação na biblioteca:", err?.message));
         }
 
         library = {
@@ -205,57 +199,61 @@ export async function POST(request: Request) {
 
       if (nextStatus !== library.status || rating !== library.personalRating) {
         const previousStatus = library.status;
-        const { error: updateError } = await supabase
-          .from("library_items")
-          .update({ status: nextStatus, personal_rating: rating })
-          .eq("id", library.id)
-          .eq("user_id", user.id);
-
-        if (updateError) throw updateError;
+        const sql = getDb();
+        await sql`
+          UPDATE public.library_items
+          SET status = ${nextStatus}, personal_rating = ${rating}, updated_at = now()
+          WHERE id = ${library.id} AND user_id = ${user.id}
+        `;
 
         library.status = nextStatus;
         library.personalRating = rating;
 
         if (nextStatus !== previousStatus) {
-          const { error: activityError } = await supabase
-            .from("activity_events")
-            .insert({
-              user_id: user.id,
-              media_id: library.mediaId,
-              library_item_id: library.id,
-              event_type: "status_changed",
-              metadata: {
+          await sql`
+            INSERT INTO public.activity_events (
+              user_id, media_id, library_item_id, event_type, metadata, occurred_at, created_at
+            )
+            VALUES (
+              ${user.id}, ${library.mediaId}, ${library.id}, 'status_changed',
+              ${JSON.stringify({
                 from: previousStatus,
                 to: nextStatus,
                 source: "letterboxd",
-              },
-            });
-
-          if (activityError) {
-            console.error("Erro ao registrar status importado:", activityError.message);
-          }
+              })},
+              now(), now()
+            )
+          `.catch((err) => console.error("Erro ao registrar status importado:", err?.message));
         }
       }
 
       if (row.watchedDate) {
         const watchedAt = new Date(`${row.watchedDate}T12:00:00`).toISOString();
-        const { count } = await supabase
-          .from("watch_entries")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id)
-          .eq("library_item_id", library.id)
-          .eq("watched_at", watchedAt);
+        const sql = getDb();
+        const existingCount = await sql`
+          SELECT count(*)::int as count
+          FROM public.watch_entries
+          WHERE user_id = ${user.id}
+            AND library_item_id = ${library.id}
+            AND watched_at = ${watchedAt}
+        `;
 
-        if (!count) {
-          const { error } = await supabase.from("watch_entries").insert({
-            user_id: user.id,
-            library_item_id: library.id,
-            media_id: library.mediaId,
-            watched_at: watchedAt,
-            rating: row.rating == null ? null : Number(row.rating) * 2,
-            is_rewatch: Boolean(row.rewatch),
-          });
-          if (!error) history++;
+        if (Number(existingCount[0]?.count || 0) === 0) {
+          const ratingVal = row.rating == null ? null : Number(row.rating) * 2;
+          const isRewatch = Boolean(row.rewatch);
+          try {
+            await sql`
+              INSERT INTO public.watch_entries (
+                user_id, library_item_id, media_id, watched_at, rating, is_rewatch
+              )
+              VALUES (
+                ${user.id}, ${library.id}, ${library.mediaId}, ${watchedAt}, ${ratingVal}, ${isRewatch}
+              )
+            `;
+            history++;
+          } catch (insertErr: any) {
+            console.error("Erro ao inserir watch entry importada:", insertErr?.message);
+          }
         }
       }
     }

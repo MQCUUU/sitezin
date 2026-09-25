@@ -1,334 +1,153 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth/server";
+import { getDb } from "@/lib/db/neon";
 import { respostaDeErro } from "@/lib/api-error";
-import { createClient } from "@/lib/supabase/server";
-import { completeSeriesProgress, resetSeriesProgress, restoreSeriesProgress } from "@/lib/complete-series-progress";
 
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
-
-  const s = await createClient();
-
-  const {
-    data: { user },
-  } = await s.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json(
-      {
-        error: "Não autenticado",
-      },
-      {
-        status: 401,
-      }
-    );
-  }
-
   try {
-    const body = await req.json();
+    const { id } = await params;
+    const session = await auth.getSession().catch(() => null);
+    const user = session?.data?.user;
+
+    if (!user || !user.id) {
+      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+    }
+
+    const userId = user.id;
+    const sql = getDb();
 
     /*
-     * ==========================================
-     * BUSCAR ITEM ATUAL
-     * ==========================================
+     * 1. Buscar item atual
      */
+    const currentRows = await sql`
+      SELECT
+        li.id,
+        li.user_id,
+        li.media_id,
+        li.status,
+        li.favorite,
+        li.personal_rating,
+        li.review,
+        li.rewatch_count,
+        li.current_season,
+        li.completed_seasons,
+        li.stopped_season,
+        to_jsonb(m.*) as media
+      FROM public.library_items li
+      JOIN public.media m ON m.id = li.media_id
+      WHERE li.id = ${id} AND li.user_id = ${userId}
+      LIMIT 1;
+    `;
 
-    const {
-      data: currentItem,
-      error: currentError,
-    } = await s
-      .from("library_items")
-      .select(`
-        id,
-        user_id,
-        media_id,
-        status,
-        rewatch_count,
-        current_season,
-        completed_seasons,
-        stopped_season,
-        media:media_id(tmdb_id,media_type,seasons_count)
-      `)
-      .eq("id", id)
-      .eq("user_id", user.id)
-      .single();
+    if (currentRows.length === 0) {
+      return NextResponse.json(
+        { error: "Item não encontrado." },
+        { status: 404 }
+      );
+    }
 
-    if (currentError) {
-  return respostaDeErro(
-    currentError,
-    "PATCH /api/library/[id] current",
-  );
-}
-
-if (!currentItem) {
-  return NextResponse.json(
-    {
-      error: "Item não encontrado.",
-    },
-    {
-      status: 404,
-    },
-  );
-}
+    const currentItem = currentRows[0];
+    const media = currentItem.media;
+    const body = await req.json().catch(() => ({}));
 
     /*
-     * ==========================================
-     * STATUS
-     * ==========================================
+     * 2. Status e reassistidas
      */
+    const oldStatus = currentItem.status;
+    const newStatus = body.status !== undefined ? body.status : oldStatus;
 
-    const oldStatus =
-      currentItem.status;
-
-    const newStatus =
-      body.status !== undefined
-        ? body.status
-        : oldStatus;
-
-    /*
-     * ==========================================
-     * REASSISTIDAS
-     * ==========================================
-     *
-     * Aumenta ao iniciar uma reassistida ou ao marcá-la como
-     * concluída diretamente, sem passar por "rewatching".
-     *
-     * watched -> rewatching = +1
-     * rewatched -> rewatching = +1
-     * rewatching -> rewatching = +0
-     * watching -> rewatched = +1
-     * rewatching -> rewatched = +0 (já contou ao iniciar)
-     */
-
-    let rewatchCount = Number(
-      currentItem.rewatch_count || 0
-    );
-
+    let rewatchCount = Number(currentItem.rewatch_count || 0);
     const isStartingRewatch =
-      newStatus === "rewatching" &&
-      oldStatus !== "rewatching";
-
+      newStatus === "rewatching" && oldStatus !== "rewatching";
     const isDirectlyCompletingRewatch =
       newStatus === "rewatched" &&
       oldStatus !== "rewatching" &&
       oldStatus !== "rewatched";
 
-    if (
-      isStartingRewatch ||
-      isDirectlyCompletingRewatch
-    ) {
+    if (isStartingRewatch || isDirectlyCompletingRewatch) {
       rewatchCount += 1;
     }
 
     /*
-     * ==========================================
-     * PROGRESSO DE TEMPORADAS
-     * ==========================================
+     * 3. Temporadas e progresso
      */
-
-    const oldCompletedSeasons =
-      Number(
-        currentItem.completed_seasons || 0
-      );
-
+    const oldCompletedSeasons = Number(currentItem.completed_seasons || 0);
     let newCompletedSeasons =
       body.completed_seasons !== undefined
-        ? Number(
-            body.completed_seasons
-          )
+        ? Number(body.completed_seasons)
         : oldCompletedSeasons;
-
-    /*
-     * Nunca deixa ficar negativo.
-     */
-
-    newCompletedSeasons =
-      Math.max(
-        0,
-        newCompletedSeasons
-      );
+    newCompletedSeasons = Math.max(0, newCompletedSeasons);
 
     const oldCurrentSeason =
-      currentItem.current_season !==
-        null &&
-      currentItem.current_season !==
-        undefined
-        ? Number(
-            currentItem.current_season
-          )
+      currentItem.current_season !== null &&
+      currentItem.current_season !== undefined
+        ? Number(currentItem.current_season)
         : null;
 
     let newCurrentSeason =
       body.current_season !== undefined
         ? body.current_season === null
           ? null
-          : Number(
-              body.current_season
-            )
+          : Number(body.current_season)
         : oldCurrentSeason;
 
-    /*
-     * Temporada atual mínima = 1.
-     */
-
-    if (
-      newCurrentSeason !== null
-    ) {
-      newCurrentSeason =
-        Math.max(
-          1,
-          newCurrentSeason
-        );
+    if (newCurrentSeason !== null) {
+      newCurrentSeason = Math.max(1, newCurrentSeason);
     }
 
-    /*
-     * ==========================================
-     * ONDE PAROU
-     * ==========================================
-     */
-
-    let stoppedSeason =
-      currentItem.stopped_season;
-
-    /*
-     * Se o front mandar explicitamente,
-     * respeitamos o valor.
-     */
-
-    if (
-      body.stopped_season !== undefined
-    ) {
-      stoppedSeason =
-        body.stopped_season;
+    let stoppedSeason = currentItem.stopped_season;
+    if (body.stopped_season !== undefined) {
+      stoppedSeason = body.stopped_season;
     }
-
-    /*
-     * Quando abandona:
-     *
-     * guarda a temporada atual.
-     */
-
-    if (
-      newStatus === "dropped" &&
-      oldStatus !== "dropped"
-    ) {
-      stoppedSeason =
-        newCurrentSeason ||
-        oldCurrentSeason ||
-        1;
+    if (newStatus === "dropped" && oldStatus !== "dropped") {
+      stoppedSeason = newCurrentSeason || oldCurrentSeason || 1;
     }
-
-    /*
-     * Se continuar assistindo novamente,
-     * limpa o "parou na temporada".
-     */
-
-    if (
-      body.status !== undefined &&
-      newStatus !== "dropped"
-    ) {
+    if (body.status !== undefined && newStatus !== "dropped") {
       stoppedSeason = null;
     }
 
-    /*
-     * ==========================================
-     * DADOS PARA ATUALIZAÇÃO
-     * ==========================================
-     */
-
-    const updateData: Record<
-      string,
-      any
-    > = {
-      ...body,
-
-      rewatch_count:
-        rewatchCount,
-
-      updated_at:
-        new Date().toISOString(),
-    };
-
-    const mediaRelation = currentItem.media as any;
-    const media = Array.isArray(mediaRelation) ? mediaRelation[0] : mediaRelation;
     if (isStartingRewatch && media?.media_type === "tv") {
-      await resetSeriesProgress({
-        supabase: s,
-        userId: user.id,
-        mediaId: currentItem.media_id,
-      });
-      updateData.completed_seasons = 0;
-      updateData.current_season = 1;
-      updateData.stopped_season = null;
+      newCompletedSeasons = 0;
+      newCurrentSeason = 1;
+      stoppedSeason = null;
     }
+
     if (newStatus === "rewatched" && media?.media_type === "tv") {
       const totalSeasons = Number(media.seasons_count || 0);
-      if (oldStatus === "rewatching") {
-        await restoreSeriesProgress({ supabase: s, userId: user.id, mediaId: currentItem.media_id });
-      } else {
-        await completeSeriesProgress({
-          supabase: s,
-          userId: user.id,
-          mediaId: currentItem.media_id,
-          tmdbId: Number(media.tmdb_id),
-          seasonsCount: totalSeasons,
-        });
-      }
-      updateData.completed_seasons = totalSeasons;
-      updateData.current_season = totalSeasons || 1;
-      updateData.stopped_season = null;
+      newCompletedSeasons = totalSeasons;
+      newCurrentSeason = totalSeasons || 1;
+      stoppedSeason = null;
     }
+
+    const newFavorite =
+      body.favorite !== undefined ? Boolean(body.favorite) : currentItem.favorite;
+    const newPersonalRating =
+      body.personal_rating !== undefined
+        ? body.personal_rating
+        : currentItem.personal_rating;
+    const newReview =
+      body.review !== undefined ? body.review : currentItem.review;
 
     /*
-     * Só atualizamos temporada se
-     * ela realmente veio na requisição.
+     * 4. Executar UPDATE no Neon PostgreSQL
      */
-
-    if (
-      body.current_season !== undefined
-    ) {
-      updateData.current_season =
-        newCurrentSeason;
-    }
-
-    if (
-      body.completed_seasons !==
-      undefined
-    ) {
-      updateData.completed_seasons =
-        newCompletedSeasons;
-    }
-
-    /*
-     * stopped_season pode mudar
-     * automaticamente quando muda status.
-     */
-
-    if (
-      body.status !== undefined ||
-      body.stopped_season !== undefined
-    ) {
-      updateData.stopped_season =
-        stoppedSeason;
-    }
-
-    /*
-     * ==========================================
-     * ATUALIZAR ITEM
-     * ==========================================
-     */
-
-    const {
-      data,
-      error,
-    } = await s
-      .from("library_items")
-      .update(updateData)
-      .eq("id", id)
-      .eq("user_id", user.id)
-      .select(`
+    const updatedRows = await sql`
+      UPDATE public.library_items
+      SET
+        status = ${newStatus},
+        favorite = ${newFavorite},
+        personal_rating = ${newPersonalRating},
+        review = ${newReview},
+        rewatch_count = ${rewatchCount},
+        current_season = ${newCurrentSeason},
+        completed_seasons = ${newCompletedSeasons},
+        stopped_season = ${stoppedSeason},
+        updated_at = NOW()
+      WHERE id = ${id} AND user_id = ${userId}
+      RETURNING
         id,
         status,
         favorite,
@@ -340,436 +159,97 @@ if (!currentItem) {
         completed_seasons,
         stopped_season,
         added_at,
-        updated_at,
-        media:media_id(*)
-      `)
-      .single();
+        updated_at;
+    `;
 
-    if (error) {
-  return respostaDeErro(
-    error,
-    "PATCH /api/library/[id]",
-  );
-}
+    if (updatedRows.length === 0) {
+      return NextResponse.json(
+        { error: "Item não encontrado ao atualizar." },
+        { status: 404 }
+      );
+    }
+
+    const updatedItem = updatedRows[0];
+    updatedItem.media = media;
 
     /*
-     * ==========================================
-     * CORRIGIR O DIÁRIO AO DIMINUIR PROGRESSO
-     * ==========================================
-     *
-     * Exemplo:
-     *
-     * antes: 6 temporadas concluídas
-     * agora: 5 temporadas concluídas
-     *
-     * Nesse caso, apagamos do histórico
-     * qualquer evento "season_completed"
-     * acima da temporada 5.
+     * 5. Registrar eventos de atividade (não-bloqueante)
      */
-
-    if (
-      body.completed_seasons !== undefined &&
-      newCompletedSeasons < oldCompletedSeasons
-    ) {
-      const {
-        data: seasonHistory,
-        error: seasonHistoryError,
-      } = await s
-        .from("activity_events")
-        .select("id, metadata")
-        .eq("user_id", user.id)
-        .eq(
-          "library_item_id",
-          currentItem.id
-        )
-        .eq(
-          "event_type",
-          "season_completed"
-        );
-
-      if (seasonHistoryError) {
-        console.error(
-          "Erro ao buscar histórico de temporadas:",
-          seasonHistoryError.message
-        );
-      } else {
-        const idsToDelete =
-          (seasonHistory || [])
-            .filter((event: any) => {
-              const season = Number(
-                event?.metadata?.season || 0
-              );
-
-              return (
-                season >
-                newCompletedSeasons
-              );
-            })
-            .map(
-              (event: any) =>
-                event.id
-            );
-
-        if (
-          idsToDelete.length > 0
-        ) {
-          const {
-            error: deleteHistoryError,
-          } = await s
-            .from("activity_events")
-            .delete()
-            .in(
-              "id",
-              idsToDelete
-            )
-            .eq(
-              "user_id",
-              user.id
-            );
-
-          if (
-            deleteHistoryError
-          ) {
-            console.error(
-              "Erro ao corrigir Diário:",
-              deleteHistoryError.message
-            );
-          }
-        }
+    try {
+      if (body.status !== undefined && newStatus !== oldStatus) {
+        await sql`
+          INSERT INTO public.activity_events (
+            user_id,
+            media_id,
+            library_item_id,
+            event_type,
+            metadata
+          )
+          VALUES (
+            ${userId},
+            ${currentItem.media_id},
+            ${currentItem.id},
+            'status_changed',
+            ${{
+              from: oldStatus,
+              to: newStatus,
+              current_season: newCurrentSeason,
+              stopped_season: stoppedSeason,
+            }}
+          );
+        `;
       }
-
-      /*
-       * Se existia um registro de
-       * "série concluída", ele deixa de
-       * ser válido quando o progresso
-       * volta para menos temporadas.
-       */
-
-      const {
-        error: deleteSeriesCompletedError,
-      } = await s
-        .from("activity_events")
-        .delete()
-        .eq(
-          "user_id",
-          user.id
-        )
-        .eq(
-          "library_item_id",
-          currentItem.id
-        )
-        .eq(
-          "event_type",
-          "series_completed"
-        );
-
-      if (
-        deleteSeriesCompletedError
-      ) {
-        console.error(
-          "Erro ao corrigir conclusão da série no Diário:",
-          deleteSeriesCompletedError.message
-        );
+      if (isStartingRewatch) {
+        await sql`
+          INSERT INTO public.activity_events (
+            user_id,
+            media_id,
+            library_item_id,
+            event_type,
+            metadata
+          )
+          VALUES (
+            ${userId},
+            ${currentItem.media_id},
+            ${currentItem.id},
+            'rewatch_started',
+            ${{ rewatch_count: rewatchCount }}
+          );
+        `;
       }
+    } catch (actErr: any) {
+      console.warn("[activity_events] Registro de histórico não completado:", actErr?.message);
     }
 
-    /*
-     * ==========================================
-     * DIÁRIO / HISTÓRICO
-     * ==========================================
-     */
-
-    const activityEvents: any[] =
-      [];
-
-    /*
-     * ==========================================
-     * STATUS ALTERADO
-     * ==========================================
-     */
-
-    if (
-      body.status !== undefined &&
-      newStatus !== oldStatus
-    ) {
-      activityEvents.push({
-        user_id:
-          user.id,
-
-        media_id:
-          currentItem.media_id,
-
-        library_item_id:
-          currentItem.id,
-
-        event_type:
-          "status_changed",
-
-        metadata: {
-          from:
-            oldStatus,
-
-          to:
-            newStatus,
-
-          current_season:
-            newCurrentSeason,
-
-          stopped_season:
-            stoppedSeason,
-        },
-      });
-    }
-
-    /*
-     * ==========================================
-     * COMEÇOU A REASSISTIR
-     * ==========================================
-     */
-
-    if (isStartingRewatch) {
-      activityEvents.push({
-        user_id:
-          user.id,
-
-        media_id:
-          currentItem.media_id,
-
-        library_item_id:
-          currentItem.id,
-
-        event_type:
-          "rewatch_started",
-
-        metadata: {
-          rewatch_count:
-            rewatchCount,
-        },
-      });
-    }
-
-    /*
-     * ==========================================
-     * TEMPORADAS CONCLUÍDAS
-     * ==========================================
-     *
-     * Se passou:
-     *
-     * 2 -> 3
-     *
-     * cria:
-     *
-     * temporada 3 concluída.
-     *
-     * Se passou:
-     *
-     * 2 -> 5
-     *
-     * cria:
-     *
-     * temporada 3
-     * temporada 4
-     * temporada 5
-     */
-
-    if (
-      body.completed_seasons !==
-        undefined &&
-      newCompletedSeasons >
-        oldCompletedSeasons
-    ) {
-      for (
-        let season =
-          oldCompletedSeasons + 1;
-        season <=
-        newCompletedSeasons;
-        season++
-      ) {
-        activityEvents.push({
-          user_id:
-            user.id,
-
-          media_id:
-            currentItem.media_id,
-
-          library_item_id:
-            currentItem.id,
-
-          event_type:
-            "season_completed",
-
-          metadata: {
-            season,
-          },
-        });
-      }
-    }
-
-    /*
-     * ==========================================
-     * SÉRIE CONCLUÍDA
-     * ==========================================
-     *
-     * Consideramos conclusão quando
-     * muda para "watched".
-     */
-
-    const isCompleted =
-      newStatus === "watched" &&
-      oldStatus !== "watched";
-
-    if (isCompleted) {
-      activityEvents.push({
-        user_id:
-          user.id,
-
-        media_id:
-          currentItem.media_id,
-
-        library_item_id:
-          currentItem.id,
-
-        event_type:
-          "series_completed",
-
-        metadata: {
-          completed_seasons:
-            newCompletedSeasons,
-
-          current_season:
-            newCurrentSeason,
-        },
-      });
-    }
-
-    /*
-     * ==========================================
-     * ABANDONOU
-     * ==========================================
-     *
-     * A tabela não precisa de um tipo
-     * "dropped" separado.
-     *
-     * O status_changed já registra isso,
-     * incluindo a temporada onde parou.
-     */
-
-    /*
-     * ==========================================
-     * SALVAR ATIVIDADES
-     * ==========================================
-     */
-
-    if (
-      activityEvents.length > 0
-    ) {
-      const {
-        error: activityError,
-      } = await s
-        .from(
-          "activity_events"
-        )
-        .insert(
-          activityEvents
-        );
-
-      /*
-       * Se o histórico falhar,
-       * não desfazemos a atualização
-       * da biblioteca.
-       */
-
-      if (activityError) {
-        console.error(
-          "Erro ao registrar atividade:",
-          activityError.message
-        );
-      }
-    }
-
-    /*
-     * ==========================================
-     * RETORNO
-     * ==========================================
-     */
-
-    return NextResponse.json(
-      data
-    );
+    return NextResponse.json(updatedItem);
   } catch (error) {
-    console.error(
-      "Erro ao atualizar biblioteca:",
-      error
-    );
-
-    return respostaDeErro(
-  error,
-  "PATCH /api/library/[id]",
-);
+    console.error("Erro em PATCH /api/library/[id]:", error);
+    return respostaDeErro(error, "PATCH /api/library/[id]");
   }
 }
-
-/*
- * ==========================================
- * REMOVER DA BIBLIOTECA
- * ==========================================
- */
 
 export async function DELETE(
   _: Request,
-  {
-    params,
-  }: {
-    params: Promise<{
-      id: string;
-    }>;
-  }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const {
-    id,
-  } = await params;
+  try {
+    const { id } = await params;
+    const session = await auth.getSession().catch(() => null);
+    const user = session?.data?.user;
 
-  const s =
-    await createClient();
+    if (!user || !user.id) {
+      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+    }
 
-  const {
-    data: { user },
-  } = await s.auth.getUser();
+    const sql = getDb();
+    await sql`
+      DELETE FROM public.library_items
+      WHERE id = ${id} AND user_id = ${user.id};
+    `;
 
-  if (!user) {
-    return NextResponse.json(
-      {
-        error:
-          "Não autenticado",
-      },
-      {
-        status: 401,
-      }
-    );
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("Erro em DELETE /api/library/[id]:", error);
+    return respostaDeErro(error, "DELETE /api/library/[id]");
   }
-
-  const {
-    error,
-  } = await s
-    .from("library_items")
-    .delete()
-    .eq(
-      "id",
-      id
-    )
-    .eq(
-      "user_id",
-      user.id
-    );
-
-  if (error) {
-  return respostaDeErro(
-    error,
-    "DELETE /api/library/[id]",
-  );
-}
-
-  return NextResponse.json({
-    ok: true,
-  });
 }

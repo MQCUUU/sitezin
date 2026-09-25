@@ -1,190 +1,63 @@
-import {
-  NextRequest,
-  NextResponse,
-} from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { entradaInvalida, respostaDeErro } from "@/lib/api-error";
+import { auth } from "@/lib/auth/server";
+import { getDb } from "@/lib/db/neon";
 
-import {
-  entradaInvalida,
-  respostaDeErro,
-} from "@/lib/api-error";
-
-import {
-  createClient,
-} from "@/lib/supabase/server";
-
-function parseRating(
-  value:
-    unknown
-) {
-  if (
-    value ===
-      null ||
-    value ===
-      undefined ||
-    value ===
-      ""
-  ) {
+function parseRating(value: unknown) {
+  if (value === null || value === undefined || value === "") {
     return null;
   }
-
-  const rating =
-    Number(value);
-
-  if (
-    !Number.isFinite(
-      rating
-    ) ||
-    rating <
-      0 ||
-    rating >
-      10
-  ) {
-    throw new Error(
-      "A nota precisa estar entre 0 e 10."
-    );
+  const rating = Number(value);
+  if (!Number.isFinite(rating) || rating < 0 || rating > 10) {
+    throw new Error("A nota precisa estar entre 0 e 10.");
   }
-
-  return Math.round(
-    rating *
-      2
-  ) /
-    2;
+  return Math.round(rating * 2) / 2;
 }
 
-function parseDate(
-  value:
-    unknown
-) {
-  if (
-    !value
-  ) {
-    return new Date()
-      .toISOString();
+function parseDate(value: unknown) {
+  if (!value) {
+    return new Date().toISOString();
   }
-
-  const date =
-    new Date(
-      String(value)
-    );
-
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-    throw new Error(
-      "Data de visualização inválida."
-    );
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) {
+    throw new Error("Data de visualização inválida.");
   }
-
   return date.toISOString();
 }
 
-export async function GET(
-  req:
-    NextRequest
-) {
-  const s =
-    await createClient();
+export async function GET(req: NextRequest) {
+  try {
+    const session = await auth.getSession().catch(() => null);
+    const user = session?.data?.user;
+    if (!user || !user.id) {
+      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+    }
 
-  const {
-    data: {
-      user,
-    },
-  } =
-    await s.auth.getUser();
+    const url = new URL(req.url);
+    const libraryId = (url.searchParams.get("library_id") || "").trim();
+    if (!libraryId) {
+      return NextResponse.json(
+        { error: "library_id é obrigatório." },
+        { status: 400 },
+      );
+    }
 
-  if (
-    !user
-  ) {
-    return NextResponse.json(
-      {
-        error:
-          "Não autenticado",
-      },
-      {
-        status:
-          401,
-      }
-    );
-  }
+    const sql = getDb();
+    const itemRows = await sql`
+      SELECT id
+      FROM public.library_items
+      WHERE id = ${libraryId} AND user_id = ${user.id}
+      LIMIT 1
+    `;
+    if (itemRows.length === 0) {
+      return NextResponse.json(
+        { error: "Item da biblioteca não encontrado." },
+        { status: 404 },
+      );
+    }
 
-  const url =
-    new URL(
-      req.url
-    );
-
-  const libraryId =
-    (
-      url.searchParams.get(
-        "library_id"
-      ) ||
-      ""
-    ).trim();
-
-  if (
-    !libraryId
-  ) {
-    return NextResponse.json(
-      {
-        error:
-          "library_id é obrigatório.",
-      },
-      {
-        status:
-          400,
-      }
-    );
-  }
-
-  const {
-    data:
-      libraryItem,
-    error:
-      libraryError,
-  } =
-    await s
-      .from(
-        "library_items"
-      )
-      .select(
-        "id"
-      )
-      .eq(
-        "id",
-        libraryId
-      )
-      .eq(
-        "user_id",
-        user.id
-      )
-      .maybeSingle();
-
-  if (
-    libraryError ||
-    !libraryItem
-  ) {
-    return NextResponse.json(
-      {
-        error:
-          "Item da biblioteca não encontrado.",
-      },
-      {
-        status:
-          404,
-      }
-    );
-  }
-
-  const {
-    data,
-    error,
-  } =
-    await s
-      .from(
-        "watch_entries"
-      )
-      .select(`
+    const data = await sql`
+      SELECT
         id,
         library_item_id,
         media_id,
@@ -194,466 +67,195 @@ export async function GET(
         is_rewatch,
         created_at,
         updated_at
-      `)
-      .eq(
-        "user_id",
-        user.id
-      )
-      .eq(
-        "library_item_id",
-        libraryId
-      )
-      .order(
-        "watched_at",
-        {
-          ascending:
-            false,
-        }
-      );
+      FROM public.watch_entries
+      WHERE user_id = ${user.id}
+        AND library_item_id = ${libraryId}
+      ORDER BY watched_at DESC
+    `;
 
-  if (error) {
-  return respostaDeErro(
-    error,
-    "GET /api/watch-history",
-  );
-}
-
-  return NextResponse.json(
-    data ||
-    [],
-    {
-      headers: {
-        "Cache-Control":
-          "private, no-store",
-      },
-    }
-  );
-}
-
-export async function POST(
-  req:
-    NextRequest
-) {
-  const s =
-    await createClient();
-
-  const {
-    data: {
-      user,
-    },
-  } =
-    await s.auth.getUser();
-
-  if (
-    !user
-  ) {
-    return NextResponse.json(
-      {
-        error:
-          "Não autenticado",
-      },
-      {
-        status:
-          401,
-      }
-    );
+    return NextResponse.json(data || [], {
+      headers: { "Cache-Control": "private, no-store" },
+    });
+  } catch (error) {
+    return respostaDeErro(error, "GET /api/watch-history");
   }
+}
 
+export async function POST(req: NextRequest) {
   try {
-    const body =
-      await req.json();
+    const session = await auth.getSession().catch(() => null);
+    const user = session?.data?.user;
+    if (!user || !user.id) {
+      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+    }
 
-    const libraryId =
-      String(
-        body.library_id ||
-          ""
-      ).trim();
-
-    if (
-      !libraryId
-    ) {
+    const body = await req.json();
+    const libraryId = String(body.library_id || "").trim();
+    if (!libraryId) {
       return NextResponse.json(
-        {
-          error:
-            "library_id é obrigatório.",
-        },
-        {
-          status:
-            400,
-        }
+        { error: "library_id é obrigatório." },
+        { status: 400 },
       );
     }
 
-    const {
-      data:
-        libraryItem,
-      error:
-        libraryError,
-    } =
-      await s
-        .from(
-          "library_items"
-        )
-        .select(`
-          id,
-          media_id,
-          status,
-          rewatch_count,
-          personal_rating,
-          watched_at,
-          media:media_id(
-            media_type
-          )
-        `)
-        .eq(
-          "id",
-          libraryId
-        )
-        .eq(
-          "user_id",
-          user.id
-        )
-        .single();
+    const sql = getDb();
+    const itemRows = await sql`
+      SELECT
+        id,
+        media_id,
+        status,
+        rewatch_count,
+        personal_rating,
+        watched_at
+      FROM public.library_items
+      WHERE id = ${libraryId} AND user_id = ${user.id}
+      LIMIT 1
+    `;
 
-    if (
-      libraryError ||
-      !libraryItem
-    ) {
+    if (itemRows.length === 0) {
       return NextResponse.json(
-        {
-          error:
-            libraryError
-              ?.message ||
-            "Item da biblioteca não encontrado.",
-        },
-        {
-          status:
-            404,
-        }
+        { error: "Item da biblioteca não encontrado." },
+        { status: 404 },
       );
     }
 
-    const watchedAt =
-      parseDate(
-        body.watched_at
-      );
-
-    const rating =
-      parseRating(
-        body.rating
-      );
-
+    const libraryItem = itemRows[0];
+    const watchedAt = parseDate(body.watched_at);
+    const rating = parseRating(body.rating);
     const comment =
-      typeof body.comment ===
-        "string"
-        ? body.comment
-            .trim()
-            .slice(
-              0,
-              4000
-            ) ||
-          null
+      typeof body.comment === "string"
+        ? body.comment.trim().slice(0, 4000) || null
         : null;
 
-    const {
-      count:
-        previousCount,
-      error:
-        countError,
-    } =
-      await s
-        .from(
-          "watch_entries"
-        )
-        .select(
-          "id",
-          {
-            count:
-              "exact",
-            head:
-              true,
-          }
-        )
-        .eq(
-          "user_id",
-          user.id
-        )
-        .eq(
-          "library_item_id",
-          libraryId
-        );
+    const countRes = await sql`
+      SELECT count(*)::int as count
+      FROM public.watch_entries
+      WHERE user_id = ${user.id} AND library_item_id = ${libraryId}
+    `;
+    const previousCount = Number(countRes[0]?.count || 0);
 
-    if (
-      countError
-    ) {
-      throw countError;
-    }
-
-    /*
-     * A primeira sessão é visualização normal.
-     * Da segunda em diante é reassistida.
-     *
-     * O cliente pode sobrescrever explicitamente
-     * se necessário.
-     */
     const isRewatch =
-      typeof body.is_rewatch ===
-        "boolean"
+      typeof body.is_rewatch === "boolean"
         ? body.is_rewatch
-        : Number(
-            previousCount ||
-              0
-          ) >
-          0;
+        : previousCount > 0;
 
-    const {
-      data:
-        entry,
-      error:
-        entryError,
-    } =
-      await s
-        .from(
-          "watch_entries"
-        )
-        .insert({
-          user_id:
-            user.id,
+    const entryRows = await sql`
+      INSERT INTO public.watch_entries (
+        user_id,
+        library_item_id,
+        media_id,
+        watched_at,
+        rating,
+        comment,
+        is_rewatch
+      )
+      VALUES (
+        ${user.id},
+        ${libraryItem.id},
+        ${libraryItem.media_id},
+        ${watchedAt},
+        ${rating},
+        ${comment},
+        ${isRewatch}
+      )
+      RETURNING
+        id,
+        library_item_id,
+        media_id,
+        watched_at,
+        rating,
+        comment,
+        is_rewatch,
+        created_at,
+        updated_at
+    `;
 
-          library_item_id:
-            libraryItem.id,
+    const entry = entryRows[0];
+    const nextRewatchCount = Math.max(
+      Number(libraryItem.rewatch_count || 0),
+      isRewatch ? previousCount : 0,
+    );
 
-          media_id:
-            libraryItem.media_id,
+    const nextStatus = isRewatch ? "rewatched" : "watched";
+    const nextRating = rating !== null ? rating : libraryItem.personal_rating;
 
-          watched_at:
-            watchedAt,
+    const updatedLibraryRows = await sql`
+      UPDATE public.library_items
+      SET
+        watched_at = ${watchedAt},
+        status = ${nextStatus},
+        rewatch_count = ${nextRewatchCount},
+        personal_rating = ${nextRating},
+        updated_at = ${new Date().toISOString()}
+      WHERE id = ${libraryId} AND user_id = ${user.id}
+      RETURNING
+        id,
+        status,
+        favorite,
+        personal_rating,
+        review,
+        watched_at,
+        rewatch_count,
+        current_season,
+        completed_seasons,
+        stopped_season,
+        added_at,
+        updated_at
+    `;
 
-          rating,
+    const updatedLibrary = updatedLibraryRows[0] || null;
 
-          comment,
+    try {
+      const metadata = JSON.stringify({
+        watch_entry_id: entry.id,
+        rating,
+        comment,
+        is_rewatch: isRewatch,
+        watch_number: previousCount + 1,
+      });
 
-          is_rewatch:
-            isRewatch,
-        })
-        .select(`
-          id,
-          library_item_id,
+      await sql`
+        INSERT INTO public.activity_events (
+          user_id,
           media_id,
-          watched_at,
-          rating,
-          comment,
-          is_rewatch,
-          created_at,
-          updated_at
-        `)
-        .single();
-
-    if (
-      entryError ||
-      !entry
-    ) {
-      throw (
-        entryError ||
-        new Error(
-          "Não foi possível registrar a visualização."
+          library_item_id,
+          event_type,
+          occurred_at,
+          metadata
         )
-      );
-    }
-
-    const nextRewatchCount =
-      Math.max(
-        Number(
-          libraryItem
-            .rewatch_count ||
-            0
-        ),
-        isRewatch
-          ? Number(
-              previousCount ||
-                0
-            )
-          : 0
-      );
-
-    const libraryUpdate:
-      Record<
-        string,
-        any
-      > = {
-        watched_at:
-          watchedAt,
-
-        status:
-          isRewatch
-            ? "rewatched"
-            : "watched",
-
-        rewatch_count:
-          nextRewatchCount,
-
-        updated_at:
-          new Date()
-            .toISOString(),
-      };
-
-    /*
-     * A nota da sessão passa a ser também
-     * a nota atual do título. O histórico
-     * mantém as notas antigas intactas.
-     */
-    if (
-      rating !==
-      null
-    ) {
-      libraryUpdate
-        .personal_rating =
-        rating;
-    }
-
-    const {
-      data:
-        updatedLibrary,
-      error:
-        updateError,
-    } =
-      await s
-        .from(
-          "library_items"
+        VALUES (
+          ${user.id},
+          ${libraryItem.media_id},
+          ${libraryItem.id},
+          'watch_logged',
+          ${watchedAt},
+          ${metadata}::jsonb
         )
-        .update(
-          libraryUpdate
-        )
-        .eq(
-          "id",
-          libraryId
-        )
-        .eq(
-          "user_id",
-          user.id
-        )
-        .select(`
-          id,
-          status,
-          favorite,
-          personal_rating,
-          review,
-          watched_at,
-          rewatch_count,
-          current_season,
-          completed_seasons,
-          stopped_season,
-          added_at,
-          updated_at,
-          media:media_id(*)
-        `)
-        .single();
-
-    if (
-      updateError
-    ) {
-      /*
-       * A sessão já foi salva. Não apagamos
-       * o histórico por uma falha secundária
-       * ao sincronizar library_items.
-       */
-      console.error(
-        "Erro ao sincronizar library_items:",
-        updateError.message
-      );
-    }
-
-    const {
-      error:
-        activityError,
-    } =
-      await s
-        .from(
-          "activity_events"
-        )
-        .insert({
-          user_id:
-            user.id,
-
-          media_id:
-            libraryItem.media_id,
-
-          library_item_id:
-            libraryItem.id,
-
-          event_type:
-            "watch_logged",
-
-          occurred_at:
-            watchedAt,
-
-          metadata: {
-            watch_entry_id:
-              entry.id,
-
-            rating,
-
-            comment,
-
-            is_rewatch:
-              isRewatch,
-
-            watch_number:
-              Number(
-                previousCount ||
-                  0
-              ) +
-              1,
-          },
-        });
-
-    if (
-      activityError
-    ) {
+      `;
+    } catch (activityError: any) {
       console.error(
         "Erro ao registrar visualização no Diário:",
-        activityError.message
+        activityError?.message,
       );
     }
 
     return NextResponse.json(
       {
         entry,
-
-        library_item:
-          updatedLibrary ||
-          null,
+        library_item: updatedLibrary,
       },
       {
-        status:
-          201,
-      }
+        status: 201,
+      },
     );
-  } catch (
-    error
-  ) {
-    console.error(
-      "Erro em POST /api/watch-history:",
-      error
-    );
-
+  } catch (error) {
     if (
-    error instanceof Error &&
-    (
-      error.message ===
-        "A nota precisa estar entre 0 e 10." ||
-      error.message ===
-        "Data de visualização inválida."
-    )
-  ) {
-    return entradaInvalida(
-      error.message,
-    );
-  }
-
-  return respostaDeErro(
-    error,
-    "POST /api/watch-history",
-  );
+      error instanceof Error &&
+      (error.message === "A nota precisa estar entre 0 e 10." ||
+        error.message === "Data de visualização inválida.")
+    ) {
+      return entradaInvalida(error.message);
+    }
+    return respostaDeErro(error, "POST /api/watch-history");
   }
 }

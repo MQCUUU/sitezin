@@ -14,9 +14,7 @@ import {
   Send,
 } from "lucide-react";
 
-import {
-  createClient,
-} from "@/lib/supabase/client";
+import { authClient } from "@/lib/auth/client";
 import { authRedirectOrigin } from "@/lib/auth-client";
 
 export default function ForgotPasswordPage() {
@@ -73,18 +71,12 @@ export default function ForgotPasswordPage() {
 
       const origin = authRedirectOrigin();
 
-      const {
-        error,
-      } =
-        await createClient()
-          .auth
-          .resetPasswordForEmail(
-            email.trim(),
-            {
-              redirectTo:
-                `${origin}/auth/callback?next=/reset-password`,
-            }
-          );
+      const res = await authClient.requestPasswordReset({
+        email: email.trim(),
+        redirectTo: `${origin}/reset-password`,
+      });
+
+      const error = res.error;
 
       if (
         error

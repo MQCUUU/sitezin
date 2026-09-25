@@ -40,9 +40,7 @@ import {
   PickForMe,
 } from "@/components/PickForMe";
 
-import {
-  createClient,
-} from "@/lib/supabase/client";
+import { authClient } from "@/lib/auth/client";
 
 import type {
   LibraryItem,
@@ -498,9 +496,8 @@ export default function Home() {
     let mounted =
       true;
 
-    createClient()
-      .auth
-      .getUser()
+    authClient
+      .getSession()
       .then(
         ({
           data,
@@ -514,21 +511,13 @@ export default function Home() {
           }
 
           const current =
-            data.user;
+            data?.user;
 
           if (
             current
           ) {
             const name =
-              current
-                .user_metadata
-                ?.display_name ||
-              current
-                .user_metadata
-                ?.full_name ||
-              current
-                .user_metadata
-                ?.name ||
+              current.name ||
               current.email
                 ?.split(
                   "@"
