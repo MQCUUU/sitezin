@@ -1,0 +1,252 @@
+/*
+ * MyCatalog Premium UI V2 — design tokens.
+ *
+ * Every token here is prefixed `--mc-` on purpose: app/globals.css already
+ * defines its own scattered tokens (--space-4, --radius-md, --shadow-popover,
+ * --font-ui, ...) and legacy classes (.btn, .card, .badge). Reusing those
+ * names would silently restyle pages we are not allowed to touch in this
+ * phase. `--mc-*` is a clean namespace that can only affect markup that
+ * opts in (components/ui primitives).
+ *
+ * Colors are thin aliases over the EXISTING theme variables (--bg, --panel,
+ * --text, --accent, ...), which are still the ones flipped by
+ * AppearanceProvider / data-theme / data-density / data-radius / data-motion
+ * in app/globals.css. That means dark/light/oled and user preferences keep
+ * working with zero duplication of theme logic.
+ */
+
+:root {
+  /* ---------------------------------------------------------------- */
+  /* Color: surfaces                                                   */
+  /* ---------------------------------------------------------------- */
+  --mc-color-bg: var(--bg);
+  --mc-color-bg-elevated: var(--panel2);
+  --mc-color-surface: var(--panel);
+  --mc-color-surface-hover: color-mix(in srgb, var(--accent) 6%, var(--panel));
+  --mc-color-surface-active: color-mix(in srgb, var(--accent) 12%, var(--panel));
+  --mc-color-surface-muted: color-mix(in srgb, var(--text) 5%, var(--panel));
+
+  /* ---------------------------------------------------------------- */
+  /* Color: text                                                       */
+  /* ---------------------------------------------------------------- */
+  --mc-color-text: var(--text);
+  --mc-color-text-secondary: color-mix(in srgb, var(--text) 75%, var(--muted));
+  --mc-color-text-muted: var(--muted);
+  --mc-color-text-disabled: color-mix(in srgb, var(--muted) 55%, var(--bg));
+
+  /* ---------------------------------------------------------------- */
+  /* Color: borders                                                    */
+  /* ---------------------------------------------------------------- */
+  --mc-color-border: var(--border, var(--line));
+  --mc-color-border-subtle: color-mix(in srgb, var(--line) 50%, transparent);
+  --mc-color-border-strong: color-mix(in srgb, var(--text) 22%, var(--line));
+
+  /* ---------------------------------------------------------------- */
+  /* Color: accent & status                                            */
+  /* ---------------------------------------------------------------- */
+  --mc-color-accent: var(--accent);
+  --mc-color-accent-hover: color-mix(in srgb, var(--accent) 88%, white);
+  --mc-color-accent-active: color-mix(in srgb, var(--accent) 85%, black);
+  --mc-color-accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+  --mc-color-accent-contrast: #ffffff;
+
+  --mc-color-success: var(--good);
+  --mc-color-success-soft: color-mix(in srgb, var(--good) 16%, transparent);
+  --mc-color-warning: #d9a441;
+  --mc-color-warning-soft: color-mix(in srgb, #d9a441 16%, transparent);
+  --mc-color-danger: var(--danger);
+  --mc-color-danger-soft: color-mix(in srgb, var(--danger) 16%, transparent);
+  --mc-color-info: #4ea8de;
+  --mc-color-info-soft: color-mix(in srgb, #4ea8de 16%, transparent);
+
+  /* ---------------------------------------------------------------- */
+  /* Typography (Inter stays the only family — see PREMIUM-UI-V2.md)   */
+  /* ---------------------------------------------------------------- */
+  --mc-font-sans: var(--font-inter), var(--font-ui, Inter), ui-sans-serif,
+    system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --mc-text-display-size: 44px;
+  --mc-text-display-line: 1.08;
+  --mc-text-display-weight: 650;
+  --mc-text-display-tracking: -0.02em;
+
+  --mc-text-h1-size: 34px;
+  --mc-text-h1-line: 1.15;
+  --mc-text-h1-weight: 650;
+  --mc-text-h1-tracking: -0.015em;
+
+  --mc-text-h2-size: 27px;
+  --mc-text-h2-line: 1.2;
+  --mc-text-h2-weight: 600;
+  --mc-text-h2-tracking: -0.01em;
+
+  --mc-text-h3-size: 22px;
+  --mc-text-h3-line: 1.25;
+  --mc-text-h3-weight: 600;
+  --mc-text-h3-tracking: -0.005em;
+
+  --mc-text-h4-size: 18px;
+  --mc-text-h4-line: 1.3;
+  --mc-text-h4-weight: 600;
+  --mc-text-h4-tracking: 0em;
+
+  --mc-text-title-size: 16px;
+  --mc-text-title-line: 1.35;
+  --mc-text-title-weight: 600;
+  --mc-text-title-tracking: 0em;
+
+  --mc-text-body-size: 15px;
+  --mc-text-body-line: 1.55;
+  --mc-text-body-weight: 400;
+  --mc-text-body-tracking: 0em;
+
+  --mc-text-body-small-size: 13px;
+  --mc-text-body-small-line: 1.5;
+  --mc-text-body-small-weight: 400;
+  --mc-text-body-small-tracking: 0em;
+
+  --mc-text-label-size: 13px;
+  --mc-text-label-line: 1.3;
+  --mc-text-label-weight: 600;
+  --mc-text-label-tracking: 0.01em;
+
+  --mc-text-caption-size: 12px;
+  --mc-text-caption-line: 1.4;
+  --mc-text-caption-weight: 400;
+  --mc-text-caption-tracking: 0.01em;
+
+  --mc-text-overline-size: 11px;
+  --mc-text-overline-line: 1.3;
+  --mc-text-overline-weight: 600;
+  --mc-text-overline-tracking: 0.08em;
+
+  /* ---------------------------------------------------------------- */
+  /* Spacing                                                            */
+  /* ---------------------------------------------------------------- */
+  --mc-space-2: 2px;
+  --mc-space-4: 4px;
+  --mc-space-6: 6px;
+  --mc-space-8: 8px;
+  --mc-space-12: 12px;
+  --mc-space-16: 16px;
+  --mc-space-20: 20px;
+  --mc-space-24: 24px;
+  --mc-space-32: 32px;
+  --mc-space-40: 40px;
+  --mc-space-48: 48px;
+  --mc-space-64: 64px;
+  --mc-space-80: 80px;
+  --mc-space-96: 96px;
+
+  /* ---------------------------------------------------------------- */
+  /* Radius                                                             */
+  /* ---------------------------------------------------------------- */
+  --mc-radius-sm: 8px;
+  --mc-radius-md: 12px;
+  --mc-radius-lg: 18px;
+  --mc-radius-panel: var(--radius-panel, 16px);
+  --mc-radius-pill: 999px;
+
+  /* ---------------------------------------------------------------- */
+  /* Borders                                                            */
+  /* ---------------------------------------------------------------- */
+  --mc-border-subtle: 1px solid var(--mc-color-border-subtle);
+  --mc-border-default: 1px solid var(--mc-color-border);
+  --mc-border-strong: 1px solid var(--mc-color-border-strong);
+
+  /* ---------------------------------------------------------------- */
+  /* Shadows — discreet on purpose, never a glow effect                */
+  /* ---------------------------------------------------------------- */
+  --mc-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --mc-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.28);
+  --mc-shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.36);
+  --mc-shadow-popover: 0 22px 65px rgba(0, 0, 0, 0.48);
+  --mc-shadow-modal: 0 32px 90px rgba(0, 0, 0, 0.55);
+
+  /* ---------------------------------------------------------------- */
+  /* Motion — language only, no animation library yet                  */
+  /* ---------------------------------------------------------------- */
+  --mc-duration-instant: 60ms;
+  --mc-duration-fast: 120ms;
+  --mc-duration-normal: 200ms;
+  --mc-duration-slow: 320ms;
+
+  --mc-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --mc-ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --mc-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --mc-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ---------------------------------------------------------------- */
+  /* Z-index                                                            */
+  /* ---------------------------------------------------------------- */
+  --mc-z-content: 1;
+  --mc-z-sticky: 10;
+  --mc-z-navbar: 100;
+  --mc-z-dropdown: 200;
+  --mc-z-popover: 300;
+  --mc-z-overlay: 400;
+  --mc-z-modal: 500;
+  --mc-z-toast: 600;
+
+  /* ---------------------------------------------------------------- */
+  /* Containers / layout                                               */
+  /* ---------------------------------------------------------------- */
+  --mc-container-reading: 720px;
+  --mc-container-content: 1120px;
+  --mc-container-wide: 1440px;
+  --mc-gutter-desktop: 40px;
+  --mc-gutter-tablet: 24px;
+  --mc-gutter-mobile: 16px;
+
+  --mc-breakpoint-sm: 480px;
+  --mc-breakpoint-md: 768px;
+  --mc-breakpoint-lg: 1024px;
+  --mc-breakpoint-xl: 1280px;
+
+  --mc-focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/*
+ * OLED: keep elevated surfaces close to true black instead of reading as
+ * a washed-out grey plate, and darken shadows so they stay invisible on
+ * near-black backgrounds rather than looking like a dirty smudge.
+ */
+[data-theme="oled"] {
+  --mc-color-surface-muted: color-mix(in srgb, var(--text) 3%, var(--panel));
+  --mc-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.6);
+  --mc-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --mc-shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.65);
+}
+
+/*
+ * Density: compact trims the spacing SCALE consumed by primitives. It
+ * does not touch --bg/--panel/etc., so it composes with any theme.
+ */
+[data-density="compact"] {
+  --mc-space-12: 10px;
+  --mc-space-16: 13px;
+  --mc-space-24: 18px;
+  --mc-space-32: 26px;
+}
+
+/*
+ * Reduced motion: collapse durations to zero. Mirrors the existing
+ * [data-motion="reduced"] rule in globals.css so both systems agree, and
+ * also respects the OS-level media query for users who never opened
+ * settings.
+ */
+[data-motion="reduced"] {
+  --mc-duration-instant: 0ms;
+  --mc-duration-fast: 0ms;
+  --mc-duration-normal: 0ms;
+  --mc-duration-slow: 0ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --mc-duration-instant: 0ms;
+    --mc-duration-fast: 0ms;
+    --mc-duration-normal: 0ms;
+    --mc-duration-slow: 0ms;
+  }
+}

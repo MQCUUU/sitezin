@@ -1,0 +1,397 @@
+/*
+ * MyCatalog Premium UI V2 — primitives layer.
+ *
+ * Styles for components/ui/*. Every rule here is scoped to `.mc-*`
+ * classes and consumes only `--mc-*` tokens (styles/tokens.css) — never
+ * the legacy globals.css variables directly, and never a bare hex value.
+ */
+
+/* =====================================================================
+   Button
+   ===================================================================== */
+
+.mc-btn {
+  --mc-btn-height: 40px;
+  --mc-btn-padding-x: var(--mc-space-16);
+  --mc-btn-gap: var(--mc-space-8);
+  --mc-btn-font-size: var(--mc-text-body-size);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mc-btn-gap);
+  height: var(--mc-btn-height);
+  padding: 0 var(--mc-btn-padding-x);
+  border-radius: var(--mc-radius-md);
+  border: var(--mc-border-default);
+  background: var(--mc-color-surface);
+  color: var(--mc-color-text);
+  font-family: var(--mc-font-sans);
+  font-size: var(--mc-btn-font-size);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--mc-duration-fast) var(--mc-ease-standard),
+    border-color var(--mc-duration-fast) var(--mc-ease-standard),
+    color var(--mc-duration-fast) var(--mc-ease-standard),
+    transform var(--mc-duration-fast) var(--mc-ease-standard);
+}
+
+.mc-btn:hover {
+  background: var(--mc-color-surface-hover);
+}
+
+.mc-btn:active {
+  background: var(--mc-color-surface-active);
+  transform: translateY(0.5px);
+}
+
+.mc-btn:disabled,
+.mc-btn[data-mc-disabled="true"] {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.mc-btn[data-loading="true"] {
+  color: transparent;
+  pointer-events: none;
+}
+
+.mc-btn[data-loading="true"] .mc-spinner {
+  position: absolute;
+  color: var(--mc-color-text);
+}
+
+.mc-btn--sm {
+  --mc-btn-height: 32px;
+  --mc-btn-padding-x: var(--mc-space-12);
+  --mc-btn-gap: var(--mc-space-6);
+  --mc-btn-font-size: var(--mc-text-body-small-size);
+  border-radius: var(--mc-radius-sm);
+}
+
+.mc-btn--lg {
+  --mc-btn-height: 48px;
+  --mc-btn-padding-x: var(--mc-space-24);
+  --mc-btn-font-size: var(--mc-text-title-size);
+}
+
+.mc-btn--primary {
+  background: var(--mc-color-accent);
+  border-color: transparent;
+  color: var(--mc-color-accent-contrast);
+}
+
+.mc-btn--primary:hover {
+  background: var(--mc-color-accent-hover);
+}
+
+.mc-btn--primary:active {
+  background: var(--mc-color-accent-active);
+}
+
+.mc-btn--secondary {
+  background: var(--mc-color-surface-muted);
+  border-color: var(--mc-color-border);
+  color: var(--mc-color-text);
+}
+
+.mc-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--mc-color-text-secondary);
+}
+
+.mc-btn--ghost:hover {
+  background: var(--mc-color-surface-hover);
+  color: var(--mc-color-text);
+}
+
+.mc-btn--danger {
+  background: transparent;
+  border-color: var(--mc-color-danger);
+  color: var(--mc-color-danger);
+}
+
+.mc-btn--danger:hover {
+  background: var(--mc-color-danger-soft);
+}
+
+.mc-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: var(--mc-radius-md);
+  border: var(--mc-border-default);
+  background: var(--mc-color-surface);
+  color: var(--mc-color-text-secondary);
+  cursor: pointer;
+  transition: background var(--mc-duration-fast) var(--mc-ease-standard),
+    color var(--mc-duration-fast) var(--mc-ease-standard);
+}
+
+.mc-icon-btn:hover {
+  background: var(--mc-color-surface-hover);
+  color: var(--mc-color-text);
+}
+
+.mc-icon-btn--sm {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--mc-radius-sm);
+}
+
+.mc-icon-btn--lg {
+  width: 48px;
+  height: 48px;
+}
+
+.mc-icon-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.mc-icon-btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* =====================================================================
+   Surface / Card
+   ===================================================================== */
+
+.mc-surface {
+  background: var(--mc-color-surface);
+  border: var(--mc-border-subtle);
+  border-radius: var(--mc-radius-panel);
+  color: var(--mc-color-text);
+}
+
+.mc-surface--elevated {
+  background: var(--mc-color-bg-elevated);
+  box-shadow: var(--mc-shadow-md);
+}
+
+.mc-surface--subtle {
+  background: var(--mc-color-surface-muted);
+  border-color: transparent;
+}
+
+.mc-surface--interactive {
+  cursor: pointer;
+  transition: background var(--mc-duration-fast) var(--mc-ease-standard),
+    border-color var(--mc-duration-fast) var(--mc-ease-standard),
+    transform var(--mc-duration-fast) var(--mc-ease-standard);
+}
+
+.mc-surface--interactive:hover {
+  background: var(--mc-color-surface-hover);
+  border-color: var(--mc-color-border);
+}
+
+.mc-surface--interactive:active {
+  transform: translateY(0.5px);
+}
+
+.mc-card {
+  padding: var(--mc-space-20);
+}
+
+.mc-divider {
+  border: none;
+  height: 1px;
+  background: var(--mc-color-border-subtle);
+  margin: var(--mc-space-16) 0;
+}
+
+.mc-divider--strong {
+  background: var(--mc-color-border-strong);
+}
+
+.mc-divider--vertical {
+  width: 1px;
+  height: auto;
+  align-self: stretch;
+  margin: 0 var(--mc-space-16);
+}
+
+/* =====================================================================
+   Input / Textarea
+   ===================================================================== */
+
+.mc-field {
+  display: block;
+  width: 100%;
+  font-family: var(--mc-font-sans);
+  font-size: var(--mc-text-body-size);
+  color: var(--mc-color-text);
+  background: var(--mc-color-surface-muted);
+  border: var(--mc-border-default);
+  border-radius: var(--mc-radius-md);
+  padding: 0 var(--mc-space-12);
+  transition: border-color var(--mc-duration-fast) var(--mc-ease-standard),
+    background var(--mc-duration-fast) var(--mc-ease-standard);
+}
+
+.mc-field::placeholder {
+  color: var(--mc-color-text-muted);
+}
+
+.mc-field:hover {
+  border-color: var(--mc-color-border-strong);
+}
+
+.mc-field:focus-visible {
+  outline: none;
+  border-color: var(--mc-color-accent);
+  box-shadow: var(--mc-focus-ring);
+}
+
+.mc-field[data-invalid="true"] {
+  border-color: var(--mc-color-danger);
+}
+
+.mc-field[data-invalid="true"]:focus-visible {
+  box-shadow: 0 0 0 3px var(--mc-color-danger-soft);
+}
+
+.mc-field:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mc-input {
+  height: 40px;
+}
+
+.mc-input--sm {
+  height: 32px;
+  font-size: var(--mc-text-body-small-size);
+}
+
+.mc-input--lg {
+  height: 48px;
+}
+
+.mc-textarea {
+  padding: var(--mc-space-12);
+  min-height: 96px;
+  line-height: var(--mc-text-body-line);
+  resize: vertical;
+}
+
+/* =====================================================================
+   Badge
+   ===================================================================== */
+
+.mc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mc-space-6);
+  height: 22px;
+  padding: 0 var(--mc-space-8);
+  border-radius: var(--mc-radius-pill);
+  font-family: var(--mc-font-sans);
+  font-size: var(--mc-text-caption-size);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  background: var(--mc-color-surface-muted);
+  color: var(--mc-color-text-secondary);
+  border: 1px solid transparent;
+}
+
+.mc-badge--accent {
+  background: var(--mc-color-accent-soft);
+  color: var(--mc-color-accent);
+}
+
+.mc-badge--success {
+  background: var(--mc-color-success-soft);
+  color: var(--mc-color-success);
+}
+
+.mc-badge--warning {
+  background: var(--mc-color-warning-soft);
+  color: var(--mc-color-warning);
+}
+
+.mc-badge--danger {
+  background: var(--mc-color-danger-soft);
+  color: var(--mc-color-danger);
+}
+
+/* =====================================================================
+   Skeleton
+   ===================================================================== */
+
+.mc-skeleton {
+  display: block;
+  border-radius: var(--mc-radius-sm);
+  background: linear-gradient(
+    100deg,
+    var(--mc-color-surface-muted) 40%,
+    var(--mc-color-surface-hover) 50%,
+    var(--mc-color-surface-muted) 60%
+  );
+  background-size: 200% 100%;
+  animation: mc-skeleton-sweep 1.4s ease-in-out infinite;
+}
+
+@keyframes mc-skeleton-sweep {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+[data-motion="reduced"] .mc-skeleton {
+  animation: none;
+  background: var(--mc-color-surface-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mc-skeleton {
+    animation: none;
+    background: var(--mc-color-surface-muted);
+  }
+}
+
+/* =====================================================================
+   Spinner
+   ===================================================================== */
+
+.mc-spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: mc-spin 0.7s linear infinite;
+}
+
+@keyframes mc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+[data-motion="reduced"] .mc-spinner {
+  animation-duration: 1.4s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mc-spinner {
+    animation-duration: 1.4s;
+  }
+}

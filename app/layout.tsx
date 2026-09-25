@@ -1,4 +1,7 @@
 import "./globals.css";
+import "@/styles/tokens.css";
+import "@/styles/base.css";
+import "@/styles/primitives.css";
 
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";

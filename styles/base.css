@@ -1,0 +1,35 @@
+/*
+ * MyCatalog Premium UI V2 — base layer.
+ *
+ * Scoped to `.mc-*` classes only. This file must NEVER change how an
+ * existing legacy element renders (.btn, .card, .badge, .panel, ...) —
+ * that migration happens page by page in a later phase, not here.
+ */
+
+.mc-focusable {
+  outline: none;
+}
+
+.mc-focusable:focus-visible {
+  outline: none;
+  box-shadow: var(--mc-focus-ring);
+}
+
+.mc-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.mc-disabled,
+[data-mc-disabled="true"] {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed;
+}
