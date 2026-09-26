@@ -223,3 +223,201 @@ components/ui/
 `app/globals.css` continua sendo o entrypoint de estilos legados e não foi
 alterado. A migração de páginas/componentes existentes para os novos
 tokens/primitives é trabalho de fase futura (ver roadmap da A0).
+
+## 19. Fase B — Discover & Search
+
+**Objetivo:** transformar Discover e Search em experiências premium
+compartilhadas, com estado sincronizado pela URL, filtros ricos,
+Quick Peek/Preview integrado e acessibilidade de combobox/listbox real.
+Encerrada e aprovada no gate final (B4.9): 0 blocker/high/medium/low/polish
+em aberto, `npm run check` e `npm run build` limpos, working tree limpa.
+
+### Arquitetura final — Discover
+
+- **URL como fonte da verdade.** `lib/discover/useDiscoverParams.ts` lê
+  `useSearchParams()` a cada render (sem `useState` espelhado) e expõe um
+  único `setParams(patch)`; Back/Forward re-renderiza naturalmente porque
+  não há estado local para dessincronizar.
+- `lib/discover/params.ts` centraliza parse/serialize/defaults e
+  `countActiveFilters`; `setParams` reseta `page` para `1` em qualquer
+  patch que não seja explicitamente sobre página.
+- Componentes: `DiscoverToolbar` (tabs de tipo + sort + botão Filtros),
+  `DiscoverShortcuts` (atalhos rápidos, scroll horizontal interno em
+  telas estreitas), `DiscoverFilters` (genre/year/rating/country/provider
+  + toggles pessoais `hideWatched`/`onlyNew`), `DiscoverActiveFilters`
+  (chips removíveis + "Limpar tudo"), `DiscoverGrid`/`DiscoverCard`
+  (usa os primitivos de `components/media`), `DiscoverPagination`
+  (variante compacta em `<=480px`), `DiscoverGridSkeleton`,
+  `DiscoverEmptyState`, `DiscoverErrorState` (`role="alert"` + retry),
+  `DiscoverPreviewModal` (Quick Peek).
+- Confirmado por QA runtime (B4.5R–B4.9, Chromium/Playwright real):
+  genre/year atualizam URL e chips imediatamente, coexistem sem se
+  apagar, refresh e URL compartilhada reconstroem o estado, Back/Forward
+  mantém tudo sincronizado, page reset funciona, remove-chip/clear-all
+  funcionam, foco pós-remoção estabiliza (~1.2s) no chip restante (nunca
+  em `<body>`), loading mostra skeleton mantendo a toolbar montada, error
+  state é distinto de empty e o retry recupera resultados reais.
+
+### Arquitetura final — Search
+
+**Search global (dropdown, `components/Search.tsx` +
+`components/search/*`):**
+- Mínimo de 2 caracteres, debounce de 260ms, estado `pending` distinto de
+  `loading`/`results`.
+- Cache em memória (15min) + `sessionStorage` (15min) para reduzir
+  refetch entre navegações; `AbortController` cancela buscas obsoletas.
+- Resultados agrupados por tipo (mídia, pessoa, personagem, franquia,
+  usuário) com `visibleResults` filtrado pela tab ativa
+  (Todos/Filmes/Atores/Usuários).
+- Combobox/listbox ARIA real: `role="combobox"` no input,
+  `aria-expanded`/`aria-autocomplete="list"`/`aria-controls` (só quando
+  há `role="listbox"` de verdade — idle/Recent Searches não conta),
+  `aria-activedescendant` sincronizado a cada ArrowUp/ArrowDown/Home/End.
+  Um `@` no início da query força busca só de usuários.
+- Recent Searches em `localStorage`
+  (`lib/search/recentSearches.ts`, chave `mycatalog:recent-searches:v1`,
+  máx. 8 entradas), com remoção individual e "Limpar".
+- Estados idle/loading/results/no-results/error são visualmente
+  distintos; flash falso de "no-results" (B3.7) permanece corrigido —
+  revalidado com polling ~20ms em B4.7 e B4.9, 0ms detectado.
+
+**Search page (`app/search/page.tsx` +
+`components/search/page/*`):**
+- `q` na URL é a fonte da verdade (sem tab própria na URL — a
+  segmentação Filmes/Séries/Atores/Usuários é local ao dropdown, não à
+  página).
+- Busca avançada (`/api/search/advanced`), resolução de pessoa
+  (`/api/person/[id]/credits`), seções de usuários/franquias, e mesmo
+  sistema de MediaCard/Preview do Discover.
+- Estados idle/loading/error/no-results com `role="alert"` no erro,
+  distinto de "nenhum resultado".
+
+### Sistema compartilhado (`components/media/*`)
+
+- `MediaCard` + `MediaCardImage`/`MediaCardActions`/`MediaCardMeta`/
+  `MediaCardSkeleton` são os primitivos reais que `DiscoverCard` e
+  `SearchMediaCard` compõem — não há card "legado" incompatível em
+  nenhuma superfície da Fase B.
+- `WatchProviderList`/`WatchProviderRow` são reutilizados por
+  `DiscoverPreviewModal` e `SearchPagePreviewModal` para a lista de
+  onde assistir.
+
+### Acessibilidade — guarantees finais
+
+**Discover:** tabs de tipo com `role="tablist"`/`role="tab"` reais;
+shortcuts como `role="group"` + `aria-pressed`; filtros agrupados em
+`fieldset`/`legend` (`mc-visually-hidden` quando só o agrupamento visual
+já é suficiente); toggles pessoais com `aria-pressed`; paginação com
+`aria-current="page"`; foco restaurado após remover chip/limpar
+filtros/retry (nunca preso em `<body>` após estabilizar).
+
+**Search:** input `role="combobox"` com `aria-expanded`/
+`aria-autocomplete`/`aria-controls`/`aria-activedescendant`; opções
+`role="option"` com `id` estável (`search-option-<kind>-<key>`); tabs
+filtram `visibleResults` mantendo o item ativo sempre pertencente à tab
+atual; Recent Searches com foco coerente após remover um item; Preview
+(Discover e Search) fecha por botão/Escape/backdrop e devolve o foco ao
+elemento que abriu.
+
+### Responsive — breakpoints comprovados
+
+- **Discover:** 360, 390, 430, 480, 481, 700, 720, 740, 768, 800, 820,
+  900, 1024+. Overflow horizontal = 0px em todos; shortcuts com scroll
+  interno próprio (nunca a página); paginação compacta ativa em
+  `<=480px`.
+- **Search:** 360, 390, 430, 768, 1024, 1280, 1440. Dropdown sem
+  clipping mesmo aberto dentro do Discover; z-index correto sobre
+  filtros.
+
+### Temas e movimento
+
+- **Dark**, **Light** e **OLED**: aprovados em Discover, Search global,
+  Search page e Preview.
+- **Reduced motion** (`prefers-reduced-motion`/`data-motion="reduced"`):
+  aprovado — Search, filtros e Preview permanecem funcionais sem
+  depender de animação para revelar estado.
+
+### Componentização e duplicação residual
+
+Auditoria estática (B5) não encontrou arquivo órfão, export de barrel
+sem uso, nem CSS morto — `styles/discover.css` e `styles/search.css`
+estão de fato importados em `app/layout.tsx`. Duplicação intencional e
+já documentada em código, registrada aqui como dívida não-bloqueante:
+
+- `DiscoverPreviewModal` e `SearchPagePreviewModal` reaproveitam
+  `WatchProviderList`, mas reimplementam paralelamente backdrop, botão
+  de fechar, meta, chips de gênero e nota pessoal — cada um adaptado ao
+  formato de item da sua própria página.
+- `DiscoverCard` e `SearchMediaCard` compõem os mesmos primitivos de
+  `components/media`, mas o corpo do card (botões de ação, menu de
+  status, título, meta) é replicado quase linha a linha entre os dois
+  arquivos, por design, para não acoplar Discover e Search a uma única
+  variante de card.
+
+Nenhuma nova abstração foi criada para "resolver" isso — fica registrado
+como dívida a considerar só se voltar a doer.
+
+### Performance smoke
+
+Sem evidência de regressão introduzida pela Fase B: nenhum fetch
+duplicado, nenhum listener global duplicado, nenhuma request por hover
+ou por Recent Search encontrada nas passadas de QA runtime (B4.5R–B4.9),
+e os posters usam `next/image` com `sizes` responsivo
+(`DiscoverCard.tsx`).
+
+### Dívidas conhecidas (não bloqueiam o fechamento da Fase B)
+
+1. **`/discover?page=999999`** — seguro, cai em empty state, mas a
+   página não é clampada ao total real de páginas.
+2. **`release_date=""` do backend** — bug pré-existente (não introduzido
+   pela Fase B); um payload sintético pode gerar 500. Fora do escopo de
+   Discover/Search.
+3. **CSP** — warnings de `style-src 'self'`/inline style presentes em
+   todas as superfícies da Fase B; sem impacto funcional confirmado até
+   agora. Precisa de investigação própria (não é dívida só da Fase B).
+4. **Auth pre-hydration** — em `next dev` com compilação fria, um
+   submit de signup/login antes da hidratação completa pode cair em
+   submissão HTML nativa (`GET /signup?`), descartando os dados
+   digitados sem mensagem de erro. **Confirmado apenas em dev sob
+   compilação fria; não reproduzido em build de produção local**
+   (hidratação em produção é quase instantânea). Classificado como
+   dívida de dev tooling, não bug de produto.
+5. **Contas QA órfãs no ambiente TEST** — resíduo de higiene de
+   ambiente de fases anteriores de QA (nenhuma criada via SQL manual).
+   Não afeta produto; candidata a limpeza na Fase B5/futura, sem
+   prioridade de bloqueio.
+
+### Status final
+
+Fase B **encerrada e aprovada**. `CHECK = PASS`, `BUILD = PASS`,
+`working tree` limpa. Nenhuma alteração de código foi necessária nesta
+fase de fechamento (B5) — apenas esta documentação.
+
+## 20. Roadmap
+
+- **A — Foundation Premium** = DONE
+- **B — Discover & Search** = DONE
+- **C — Media Experience** = NEXT
+- **D — Library & Organization**
+- **E — Profile & Social**
+- **F — Premium Features**
+- **G — Motion & React Bits**
+- **H — Mobile/Accessibility/Performance**
+- **I — QA/Polish/Release**
+
+## 21. Fase C — Nota de handoff
+
+A Fase C deve **começar por uma auditoria** (sem alterar nada ainda) das
+seguintes superfícies, hoje fora do escopo revisado pela Fase B:
+
+- `title/movie` page
+- `title/tv` page
+- Quick Peek / Preview (o mesmo modal usado por Discover/Search, mas
+  auditado agora como página completa, não só popup)
+- Watch Providers (páginas de título, não só o preview)
+- Cast/crew
+- Seasons/episodes
+- Related content
+
+Nenhum desses sistemas foi alterado pela Fase B; o handoff é apenas
+apontar onde a Fase C deve olhar primeiro.
