@@ -150,6 +150,9 @@ export async function getTitleDetails(
   };
 }
 
+/** Formato devolvido por getTitleDetails / GET /api/tmdb/[type]/[id]. */
+export type TitleDetails = Awaited<ReturnType<typeof getTitleDetails>>;
+
 /** Valida os params da rota. Devolve null se forem inválidos. */
 export function parseTitleParams(type: string, id: string) {
   if (type !== "movie" && type !== "tv") return null;

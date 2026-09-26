@@ -1,31 +1,25 @@
 import { notFound } from "next/navigation";
 
-import { getTitleDetails, parseTitleParams } from "@/lib/title-details";
+import {
+  getTitleDetails,
+  parseTitleParams,
+  type TitleDetails,
+} from "@/lib/title-details";
 import TitleView from "./TitleView";
-import { TitleHeading } from "./TitleHeading";
-import { TitleAbout } from "./TitleAbout";
 
 /*
  * ============================================================
- * SUBSTITUI o page.tsx do Estágio 1
+ * C1.1 — fonte única de dados iniciais.
  *
- * A NOVIDADE DO ESTÁGIO 2
- *   Além de passar os dados prontos, este arquivo agora
- *   renderiza NO SERVIDOR dois pedaços da página e os entrega
- *   ao TitleView como props.
+ * Este Server Component busca os detalhes do título e os passa
+ * como prop para TitleView. O client não refaz esse fetch no
+ * mount (ver TitleView.tsx) — só busca dados do usuário
+ * (biblioteca), que não podem vir do servidor sem sessão.
  *
- *   Isso funciona porque, no App Router, um Server Component
- *   pode passar JSX já renderizado para um Client Component. O
- *   React entende os slots como conteúdo pronto — o cliente
- *   não re-executa esse código, só o encaixa no lugar.
- *
- *   Resultado: o <h1>, a sinopse e os gêneros passam a existir
- *   no HTML entregue pelo servidor, sem que o TitleView deixe
- *   de ser Client Component.
- *
- * COMO CONFERIR
- *   Ctrl+U na página e procure a sinopse do filme. Se aparecer
- *   no código-fonte, funcionou.
+ * `key` força TitleView a remontar ao navegar de um título para
+ * outro no client (Search/Discover/recomendações), garantindo
+ * que o estado inicial reflita sempre o `initialDetails` do
+ * título atual, e não o de um título visitado antes.
  * ============================================================
  */
 
@@ -40,7 +34,7 @@ export default async function TitlePage({
 
   if (!parsed) notFound();
 
-  let initialDetails: Record<string, unknown> | null = null;
+  let initialDetails: TitleDetails | null = null;
 
   try {
     initialDetails = await getTitleDetails(parsed.type, parsed.tmdbId);
@@ -48,22 +42,12 @@ export default async function TitlePage({
     console.error("[title] falha ao carregar do servidor:", erro);
   }
 
-  const titleViewProps = {
-    type: parsed.type,
-    id: String(parsed.tmdbId),
-    initialDetails,
-    /*
-     * Os slots só existem quando o servidor conseguiu os
-     * dados. Sem eles (TMDB fora do ar), o TitleView usa o
-     * markup próprio dele — o caminho antigo continua vivo.
-     */
-    slotCabecalho: initialDetails ? (
-      <TitleHeading details={initialDetails} type={parsed.type} />
-    ) : null,
-    slotSobre: initialDetails ? (
-      <TitleAbout details={initialDetails} type={parsed.type} />
-    ) : null,
-  } as any;
-
-  return <TitleView {...titleViewProps} />;
+  return (
+    <TitleView
+      key={`${parsed.type}-${parsed.tmdbId}`}
+      type={parsed.type}
+      id={String(parsed.tmdbId)}
+      initialDetails={initialDetails}
+    />
+  );
 }

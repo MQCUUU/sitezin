@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 import Link from "next/link";
 
 import { Search } from "@/components/Search";
 import { SmartBackButton } from "@/components/SmartBackButton";
 import { img } from "@/lib/tmdb";
+import type { TitleDetails, TitleType } from "@/lib/title-details";
 
 import {
   Heart,
@@ -57,16 +58,85 @@ interface SeasonProgressUpdate {
   [key: string]: any;
 }
 
-export default function TitlePage() {
+export type TitleViewProps = {
+  type: TitleType;
+  id: string;
+  initialDetails: TitleDetails | null;
+};
+
+const CONTENT_TABS = [
+  ["info", "Visão geral"],
+  ["cast", "Elenco e equipe"],
+  ["reviews", "Avaliações e resenhas"],
+  ["related", "Relacionados e mídia"],
+] as const;
+
+/*
+ * O conteúdo de cada aba ainda está espalhado em múltiplas seções
+ * top-level fisicamente intercaladas entre si (histórico da
+ * B2/B3 — ex. o painel de histórico de "reviews" fica, no JSX,
+ * entre dois painéis de "cast"). Reagrupar isso num único
+ * wrapper por aba exigiria mover blocos grandes, fora do escopo
+ * da C1.1.6.
+ *
+ * C1.1.6: em vez de uma lista estática de ids (alguns dos quais
+ * nunca chegam a existir no DOM, a depender de guest/auth/dados),
+ * `aria-controls` agora é computado a cada render com base nas
+ * mesmas condições que decidem o que é de fato renderizado —
+ * contém só ids que existem naquele momento. Nenhuma referência
+ * órfã.
+ */
+function getContentTabPanelIds(
+  value: (typeof CONTENT_TABS)[number][0],
+  ctx: {
+    hasDirectorsOrCreators: boolean;
+    hasCast: boolean;
+    hasCompanies: boolean;
+    hasLibraryItem: boolean;
+    hasRecommendations: boolean;
+  }
+): string {
+  switch (value) {
+    case "info":
+      return "title-tabpanel-info";
+    case "cast": {
+      const ids: string[] = [];
+      if (ctx.hasDirectorsOrCreators) ids.push("title-tabpanel-cast-1");
+      if (ctx.hasCast) ids.push("title-tabpanel-cast-2");
+      if (ctx.hasCompanies) ids.push("title-tabpanel-cast-3");
+      /*
+       * Espelha exatamente a condição do painel cast-4 no JSX:
+       * ele aparece quando não há elenco/diretores/criadores,
+       * independente de haver produtoras — os dois painéis
+       * podem coexistir.
+       */
+      if (!ctx.hasCast && !ctx.hasDirectorsOrCreators) {
+        ids.push("title-tabpanel-cast-4");
+      }
+      return ids.join(" ");
+    }
+    case "reviews":
+      return ctx.hasLibraryItem
+        ? "title-tabpanel-reviews-1 title-tabpanel-reviews-3"
+        : "title-tabpanel-reviews-2";
+    case "related":
+      return ctx.hasRecommendations
+        ? "title-tabpanel-related-2"
+        : "title-tabpanel-related-1";
+    default:
+      return "";
+  }
+}
+
+export default function TitlePage({
+  type,
+  id,
+  initialDetails,
+}: TitleViewProps) {
   const toast =
     useToast();
 
-  const params = useParams<{
-    type: string;
-    id: string;
-  }>();
-
-  const [details, setDetails] = useState<any>(null);
+  const [details, setDetails] = useState<any>(initialDetails);
   const [libraryItem, setLibraryItem] =
     useState<any>(null);
 
@@ -82,9 +152,13 @@ export default function TitlePage() {
   const [favorite, setFavorite] =
     useState(false);
   const [contentTab, setContentTab] = useState<"info" | "cast" | "reviews" | "related">("info");
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const [loading, setLoading] =
-    useState(true);
+    useState(() => !initialDetails);
+
+  const [error, setError] =
+    useState<string | null>(null);
 
   const [saving, setSaving] =
     useState(false);
@@ -97,138 +171,116 @@ export default function TitlePage() {
     }));
   }, []);
 
-  useEffect(() => {
-    async function load() {
-      if (!params.type || !params.id) {
-        return;
-      }
+  /*
+   * C1.1: `initialDetails` já veio pronto do Server Component
+   * (page.tsx) — não refazemos esse fetch aqui. `needsDetails`
+   * só é true no caminho de fallback (o servidor não conseguiu
+   * buscar, ex. TMDB fora do ar); nesse caso o client tenta de
+   * novo, e é o único cenário em que uma falha de fetch aqui é
+   * tratada como erro fatal da página (não há nada para
+   * renderizar sem `details`).
+   *
+   * O fetch de biblioteca é sempre client-side (dado do usuário,
+   * não pode vir de uma resposta cacheável do Server Component) e
+   * uma falha nele NUNCA bloqueia a página: cai para o estado de
+   * convidado (sem item na biblioteca), como já acontecia antes.
+   */
+  const needsDetails = !initialDetails;
 
-      try {
-        setLoading(true);
+  const load = useCallback(async () => {
+    setError(null);
 
-        const [
-          detailsResponse,
-          libraryResponse,
-        ] = await Promise.all([
-          fetch(
-            `/api/tmdb/${params.type}/${params.id}`
-          ),
-
-          fetch(
-            `/api/library?tmdb_id=${encodeURIComponent(
-              params.id
-            )}&type=${encodeURIComponent(
-              params.type
-            )}`,
-            {
-              cache:
-                "no-store",
-            }
-          ),
-        ]);
-
-        const [
-          detailsData,
-          libraryData,
-        ] = await Promise.all([
-          detailsResponse.json(),
-          libraryResponse.json(),
-        ]);
-
-        if (
-          !detailsResponse.ok ||
-          detailsData?.error
-        ) {
-          throw new Error(
-            detailsData?.error ||
-              "Não foi possível carregar o título."
-          );
-        }
-
-        if (
-          !libraryResponse.ok ||
-          libraryData?.error
-        ) {
-          throw new Error(
-            libraryData?.error ||
-              "Não foi possível carregar os dados da biblioteca."
-          );
-        }
-
-        setDetails(
-          detailsData
-        );
-
-        /*
-         * A API nova já retorna somente
-         * este título ou null.
-         *
-         * Não precisamos mais baixar a
-         * biblioteca inteira e fazer .find().
-         */
-
-        const found =
-          libraryData || null;
-
-        setLibraryItem(
-          found
-        );
-
-        if (found) {
-          setStatus(
-            found.status
-          );
-
-          setRating(
-            found.personal_rating !==
-              null &&
-            found.personal_rating !==
-              undefined
-              ? String(
-                  found.personal_rating
-                )
-              : ""
-          );
-
-          setReview(
-            found.review || ""
-          );
-
-          setFavorite(
-            !!found.favorite
-          );
-        } else {
-          /*
-           * Importante ao navegar diretamente
-           * de um título para outro sem remontar
-           * toda a aplicação.
-           */
-
-          setStatus(
-            "want"
-          );
-
-          setRating(
-            ""
-          );
-
-          setReview(
-            ""
-          );
-
-          setFavorite(
-            false
-          );
-        }
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
+    if (needsDetails) {
+      setLoading(true);
     }
 
+    try {
+      const [detailsResult, libraryResult] = await Promise.allSettled([
+        needsDetails
+          ? fetch(`/api/tmdb/${type}/${id}`).then(async (response) => {
+              const data = await response.json();
+              if (!response.ok || data?.error) {
+                throw new Error(
+                  data?.error || "Não foi possível carregar o título."
+                );
+              }
+              return data;
+            })
+          : Promise.resolve(null),
+
+        fetch(
+          `/api/library?tmdb_id=${encodeURIComponent(id)}&type=${encodeURIComponent(type)}`,
+          { cache: "no-store" }
+        ).then(async (response) => {
+          const data = await response.json();
+          if (!response.ok || data?.error) {
+            throw new Error(data?.error || "Biblioteca indisponível.");
+          }
+          return data;
+        }),
+      ]);
+
+      if (needsDetails) {
+        if (detailsResult.status === "rejected") {
+          throw detailsResult.reason;
+        }
+
+        setDetails(detailsResult.value);
+      }
+
+      /*
+       * Falha aqui é só logada — o usuário ainda vê o título
+       * inteiro, só sem saber se já está na biblioteca dele.
+       */
+      const found =
+        libraryResult.status === "fulfilled"
+          ? libraryResult.value || null
+          : null;
+
+      if (libraryResult.status === "rejected") {
+        console.error(libraryResult.reason);
+      }
+
+      setLibraryItem(found);
+
+      if (found) {
+        setStatus(found.status);
+
+        setRating(
+          found.personal_rating !== null &&
+            found.personal_rating !== undefined
+            ? String(found.personal_rating)
+            : ""
+        );
+
+        setReview(found.review || "");
+        setFavorite(!!found.favorite);
+      } else {
+        /*
+         * Importante ao navegar diretamente
+         * de um título para outro sem remontar
+         * toda a aplicação.
+         */
+        setStatus("want");
+        setRating("");
+        setReview("");
+        setFavorite(false);
+      }
+    } catch (err) {
+      console.error(err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Não foi possível carregar o título."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [type, id, needsDetails]);
+
+  useEffect(() => {
     load();
-  }, [params.type, params.id]);
+  }, [load]);
 
   async function addToLibrary() {
     if (
@@ -242,12 +294,6 @@ export default function TitlePage() {
       setSaving(
         true
       );
-
-      const type =
-        params.type ===
-          "tv"
-          ? "tv"
-          : "movie";
 
       const mediaTitle =
         details.title ||
@@ -513,11 +559,7 @@ export default function TitlePage() {
                   id:
                     details.id,
 
-                  media_type:
-                    params.type ===
-                      "tv"
-                      ? "tv"
-                      : "movie",
+                  media_type: type,
 
                   title:
                     mediaTitle,
@@ -609,8 +651,7 @@ export default function TitlePage() {
                */
               if (
                 restored?.id &&
-                params.type ===
-                  "tv"
+                type === "tv"
               ) {
                 const progressPatch:
                   Record<
@@ -1027,10 +1068,7 @@ export default function TitlePage() {
     }
   }
 
-  if (
-    loading ||
-    !details?.id
-  ) {
+  if (loading) {
     return (
       <>
         <div className="topbar">
@@ -1044,10 +1082,40 @@ export default function TitlePage() {
     );
   }
 
-  const type =
-    params.type === "tv"
-      ? "tv"
-      : "movie";
+  if (error) {
+    return (
+      <>
+        <div className="topbar">
+          <Search />
+        </div>
+
+        <div className="empty">
+          <p>{error}</p>
+          <button className="btn" onClick={load}>
+            Tentar novamente
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  if (!details?.id) {
+    /*
+     * Não deveria acontecer em uso normal — type/id inválidos já
+     * caem em notFound() no Server Component (page.tsx). Isto é
+     * só uma rede de segurança contra um payload inesperado, para
+     * nunca deixar a tela presa sem nenhuma indicação ao usuário.
+     */
+    return (
+      <>
+        <div className="topbar">
+          <Search />
+        </div>
+
+        <div className="empty">Título não encontrado.</div>
+      </>
+    );
+  }
 
   const title =
     details.title ||
@@ -1262,6 +1330,14 @@ export default function TitlePage() {
     buyProviders.length >
       0;
 
+  const tabPanelIdsCtx = {
+    hasDirectorsOrCreators: directors.length > 0 || creators.length > 0,
+    hasCast: cast.length > 0,
+    hasCompanies: companies.length > 0,
+    hasLibraryItem: !!libraryItem,
+    hasRecommendations: recommendations.length > 0,
+  };
+
   return (
     <>
       <div className="topbar title-topbar">
@@ -1272,9 +1348,53 @@ export default function TitlePage() {
         <SmartBackButton />
       </div>
 
-      <nav className="title-content-tabs" aria-label="Seções do título">{([['info','Visão geral'],['cast','Elenco e equipe'],['reviews','Avaliações e resenhas'],['related','Relacionados e mídia']] as const).map(([value,label])=><button key={value} className={contentTab===value?"active":""} onClick={()=>setContentTab(value)}>{label}</button>)}</nav>
+      <nav
+        className="title-content-tabs"
+        role="tablist"
+        aria-label="Seções do título"
+      >
+        {CONTENT_TABS.map(([value, label], index) => (
+          <button
+            key={value}
+            ref={(el) => {
+              tabRefs.current[index] = el;
+            }}
+            type="button"
+            role="tab"
+            id={`title-tab-${value}`}
+            aria-selected={contentTab === value}
+            aria-controls={getContentTabPanelIds(value, tabPanelIdsCtx)}
+            tabIndex={contentTab === value ? 0 : -1}
+            className={contentTab === value ? "active" : ""}
+            onClick={() => setContentTab(value)}
+            onKeyDown={(event: KeyboardEvent<HTMLButtonElement>) => {
+              let nextIndex: number | null = null;
 
-      {contentTab === "info" && <>
+              if (event.key === "ArrowRight") {
+                nextIndex = (index + 1) % CONTENT_TABS.length;
+              } else if (event.key === "ArrowLeft") {
+                nextIndex =
+                  (index - 1 + CONTENT_TABS.length) % CONTENT_TABS.length;
+              } else if (event.key === "Home") {
+                nextIndex = 0;
+              } else if (event.key === "End") {
+                nextIndex = CONTENT_TABS.length - 1;
+              }
+
+              if (nextIndex !== null) {
+                event.preventDefault();
+                setContentTab(CONTENT_TABS[nextIndex][0]);
+                tabRefs.current[nextIndex]?.focus();
+              }
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+
+      {contentTab === "info" && (
+      <div role="tabpanel" id="title-tabpanel-info" aria-labelledby="title-tab-info">
 
       {/* ============================
           HERO
@@ -2031,7 +2151,8 @@ export default function TitlePage() {
 
       </section>
 
-      </>}
+      </div>
+      )}
 
       {/* ============================
           DIRETOR / CRIADORES
@@ -2039,6 +2160,7 @@ export default function TitlePage() {
 
       {contentTab === "cast" && (directors.length > 0 ||
         creators.length > 0) && (
+        <div role="tabpanel" id="title-tabpanel-cast-1" aria-labelledby="title-tab-cast">
         <section className="section">
 
           <div className="title-section-heading">
@@ -2173,6 +2295,7 @@ export default function TitlePage() {
           </div>
 
         </section>
+        </div>
       )}
 
       {/* ============================
@@ -2180,6 +2303,7 @@ export default function TitlePage() {
           ============================ */}
 
       {contentTab === "cast" && cast.length > 0 && (
+        <div role="tabpanel" id="title-tabpanel-cast-2" aria-labelledby="title-tab-cast">
         <section className="section">
 
           <div className="title-section-heading">
@@ -2294,13 +2418,15 @@ export default function TitlePage() {
           </div>
 
         </section>
+        </div>
       )}
 
       {/* ============================
           PRODUTORAS
           ============================ */}
 
-      {companies.length > 0 && (
+      {contentTab === "cast" && companies.length > 0 && (
+        <div role="tabpanel" id="title-tabpanel-cast-3" aria-labelledby="title-tab-cast">
         <section className="section">
 
           <div className="title-section-heading">
@@ -2350,6 +2476,7 @@ export default function TitlePage() {
           </div>
 
         </section>
+        </div>
       )}
 
       {/* ============================
@@ -2357,6 +2484,7 @@ export default function TitlePage() {
           ============================ */}
 
       {contentTab === "reviews" && libraryItem && (
+        <div role="tabpanel" id="title-tabpanel-reviews-1" aria-labelledby="title-tab-reviews">
         <section className="section title-watch-history-section">
           <WatchHistory
             libraryId={
@@ -2413,17 +2541,27 @@ export default function TitlePage() {
             }}
           />
         </section>
+        </div>
       )}
 
       {/* ============================
           AVALIAÇÃO
           ============================ */}
 
-      {contentTab === "cast" && cast.length === 0 && directors.length === 0 && creators.length === 0 && <div className="empty">Nenhuma informação de elenco ou equipe disponível.</div>}
+      {contentTab === "cast" && cast.length === 0 && directors.length === 0 && creators.length === 0 && (
+        <div role="tabpanel" id="title-tabpanel-cast-4" aria-labelledby="title-tab-cast">
+          <div className="empty">Nenhuma informação de elenco ou equipe disponível.</div>
+        </div>
+      )}
 
-      {contentTab === "reviews" && !libraryItem && <div className="empty">Adicione este título à biblioteca para registrar sua avaliação e resenha.</div>}
+      {contentTab === "reviews" && !libraryItem && (
+        <div role="tabpanel" id="title-tabpanel-reviews-2" aria-labelledby="title-tab-reviews">
+          <div className="empty">Adicione este título à biblioteca para registrar sua avaliação e resenha.</div>
+        </div>
+      )}
 
-      {libraryItem && (
+      {contentTab === "reviews" && libraryItem && (
+        <div role="tabpanel" id="title-tabpanel-reviews-3" aria-labelledby="title-tab-reviews">
         <section className="section title-review-section">
 
           <div className="title-section-heading">
@@ -2476,15 +2614,21 @@ export default function TitlePage() {
           />
 
         </section>
+        </div>
       )}
 
       {/* ============================
           TÍTULOS SEMELHANTES
           ============================ */}
 
-      {contentTab === "related" && recommendations.length === 0 && <div className="empty">Nenhum título relacionado disponível.</div>}
+      {contentTab === "related" && recommendations.length === 0 && (
+        <div role="tabpanel" id="title-tabpanel-related-1" aria-labelledby="title-tab-related">
+          <div className="empty">Nenhum título relacionado disponível.</div>
+        </div>
+      )}
 
       {contentTab === "related" && recommendations.length > 0 && (
+        <div role="tabpanel" id="title-tabpanel-related-2" aria-labelledby="title-tab-related">
         <section className="section">
 
           <div className="title-section-heading">
@@ -2589,6 +2733,7 @@ export default function TitlePage() {
           </CarouselRail>
 
         </section>
+        </div>
       )}
 
     </>
