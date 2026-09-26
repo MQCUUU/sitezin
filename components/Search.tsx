@@ -1,14 +1,17 @@
 "use client";
 
 import { useId } from "react";
-import { Star, Film, Tv, UserRound, Drama, Layers3, ArrowRight, Users } from "lucide-react";
-import { img } from "@/lib/tmdb";
-import Link from "next/link";
+import { Drama, Film, Layers3, UserRound, Users } from "lucide-react";
 
 import { useSearchSuggestions } from "@/components/search/useSearchSuggestions";
 import { SearchInput } from "@/components/search/SearchInput";
 import { SearchEmptyState, SearchErrorState } from "@/components/search/SearchEmptyState";
 import { SearchSuggestionGroup } from "@/components/search/SearchSuggestionGroup";
+import { SearchMediaResult } from "@/components/search/SearchMediaResult";
+import { SearchPersonResult } from "@/components/search/SearchPersonResult";
+import { SearchUserResult } from "@/components/search/SearchUserResult";
+import { SearchFranchiseResult } from "@/components/search/SearchFranchiseResult";
+import { RecentSearches } from "@/components/search/RecentSearches";
 
 /**
  * Global search box (topbar). B1 split this into:
@@ -16,8 +19,10 @@ import { SearchSuggestionGroup } from "@/components/search/SearchSuggestionGroup
  *   components/search/SearchInput.tsx         — the <input> + combobox ARIA
  *   components/search/SearchEmptyState.tsx    — no-results / error prompts
  *   components/search/SearchSuggestionGroup.tsx — shared group header
- * This file is now composition + the per-kind result row markup, which
- * only renders once each and wasn't worth its own component.
+ * B3 adds the idle state (RecentSearches) and splits each result kind into
+ * its own row component (SearchMediaResult/SearchPersonResult/
+ * SearchUserResult/SearchFranchiseResult) — a person no longer risks
+ * looking like a MediaCard, a user no longer risks looking like a TMDB row.
  */
 export function Search() {
   const listboxId = useId();
@@ -37,6 +42,11 @@ export function Search() {
     getTitle,
     getYear,
     clearSearch,
+    recordSuggestion,
+    recentSearches,
+    removeRecent,
+    clearRecent,
+    openRecent,
     handleSubmit,
     handleKeyDown,
     resultClass,
@@ -47,11 +57,10 @@ export function Search() {
   } = useSearchSuggestions();
 
   const trimmedQuery = q.trim();
-  const dropdownOpen =
-    focused && (searchState === "results" || searchState === "no-results" || searchState === "error");
+  const dropdownOpen = focused && searchState !== "loading";
 
   return (
-    <form className="search" onSubmit={handleSubmit} onFocus={onFormFocus} onBlur={onFormBlur}>
+    <form className="search mc-search" onSubmit={handleSubmit} onFocus={onFormFocus} onBlur={onFormBlur}>
       <SearchInput
         q={q}
         onChange={setQ}
@@ -59,8 +68,20 @@ export function Search() {
         loading={loading}
         expanded={dropdownOpen}
         listboxId={listboxId}
+        hasListbox={searchState !== "idle"}
         activeDescendantId={activeDescendantId}
       />
+
+      {focused && searchState === "idle" && (
+        <div className="results mc-search-dropdown" id={listboxId}>
+          <RecentSearches
+            entries={recentSearches}
+            onOpen={openRecent}
+            onRemove={removeRecent}
+            onClear={clearRecent}
+          />
+        </div>
+      )}
 
       {focused && searchState === "no-results" && (
         <SearchEmptyState query={trimmedQuery} listboxId={listboxId} optionId={`${listboxId}-empty`} />
@@ -69,7 +90,7 @@ export function Search() {
       {focused && searchState === "error" && <SearchErrorState listboxId={listboxId} />}
 
       {focused && searchState === "results" && (
-        <div className="results universal-search-results" role="listbox" id={listboxId}>
+        <div className="results universal-search-results mc-search-dropdown" role="listbox" id={listboxId}>
           <div className="search-result-tabs" role="tablist">
             <button
               type="button"
@@ -108,30 +129,17 @@ export function Search() {
           {userResults.length > 0 && (
             <SearchSuggestionGroup icon={<Users size={12} />} label="Usuários">
               {userResults.map((item) => (
-                <Link
-                  className={resultClass(item)}
-                  href={item.href}
-                  onClick={clearSearch}
+                <SearchUserResult
                   key={`user-${item.id}`}
-                  role="option"
+                  item={item}
+                  className={resultClass(item)}
                   id={resultId(item)}
-                  aria-selected={resultId(item) === activeDescendantId}
-                >
-                  <div className="search-result-poster search-result-person">
-                    {item.avatar_url ? (
-                      <img src={item.avatar_url} alt={item.name} />
-                    ) : (
-                      <div className="search-result-poster-empty">
-                        <UserRound size={20} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="search-result-info">
-                    <b>{item.name}</b>
-                    <div className="muted">@{item.username} · Ver perfil</div>
-                  </div>
-                  <ArrowRight size={14} />
-                </Link>
+                  ariaSelected={resultId(item) === activeDescendantId}
+                  onOpen={() => {
+                    recordSuggestion(item);
+                    clearSearch();
+                  }}
+                />
               ))}
             </SearchSuggestionGroup>
           )}
@@ -139,32 +147,17 @@ export function Search() {
           {(searchTab === "all" || searchTab === "actors") && characterResults.length > 0 && (
             <SearchSuggestionGroup icon={<Drama size={12} />} label="Personagem">
               {characterResults.map((item) => (
-                <Link
-                  className={resultClass(item)}
-                  href={item.href}
-                  onClick={clearSearch}
+                <SearchPersonResult
                   key={`character-${item.name}-${item.matched}`}
-                  role="option"
+                  item={item}
+                  className={resultClass(item)}
                   id={resultId(item)}
-                  aria-selected={resultId(item) === activeDescendantId}
-                >
-                  <div className="search-result-poster search-result-person">
-                    {item.poster_path ? (
-                      <img loading="lazy" decoding="async" src={img(item.poster_path, "w92")} alt={item.name} />
-                    ) : (
-                      <div className="search-result-poster-empty">
-                        <Drama size={20} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="search-result-info">
-                    <b>{item.name}</b>
-                    <div className="muted">
-                      {item.count} {item.count === 1 ? "título encontrado" : "títulos encontrados"} · Personagem
-                    </div>
-                  </div>
-                  <ArrowRight size={14} />
-                </Link>
+                  ariaSelected={resultId(item) === activeDescendantId}
+                  onOpen={() => {
+                    recordSuggestion(item);
+                    clearSearch();
+                  }}
+                />
               ))}
             </SearchSuggestionGroup>
           )}
@@ -172,30 +165,17 @@ export function Search() {
           {(searchTab === "all" || searchTab === "actors") && personResults.length > 0 && (
             <SearchSuggestionGroup icon={<UserRound size={12} />} label="Pessoas">
               {personResults.map((item) => (
-                <Link
-                  className={resultClass(item)}
-                  href={item.href}
-                  onClick={clearSearch}
+                <SearchPersonResult
                   key={`person-${item.id}`}
-                  role="option"
+                  item={item}
+                  className={resultClass(item)}
                   id={resultId(item)}
-                  aria-selected={resultId(item) === activeDescendantId}
-                >
-                  <div className="search-result-poster search-result-person">
-                    {item.profile_path ? (
-                      <img loading="lazy" decoding="async" src={img(item.profile_path, "w92")} alt={item.name} />
-                    ) : (
-                      <div className="search-result-poster-empty">
-                        <UserRound size={20} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="search-result-info">
-                    <b>{item.name}</b>
-                    <div className="muted">{item.known_for_department || "Cinema e TV"} · Ver trabalhos</div>
-                  </div>
-                  <ArrowRight size={14} />
-                </Link>
+                  ariaSelected={resultId(item) === activeDescendantId}
+                  onOpen={() => {
+                    recordSuggestion(item);
+                    clearSearch();
+                  }}
+                />
               ))}
             </SearchSuggestionGroup>
           )}
@@ -203,82 +183,50 @@ export function Search() {
           {(searchTab === "all" || searchTab === "movies") && collectionResults.length > 0 && (
             <SearchSuggestionGroup icon={<Layers3 size={12} />} label="Franquias">
               {collectionResults.map((item) => (
-                <Link
-                  className={resultClass(item)}
-                  href={item.href}
-                  onClick={clearSearch}
+                <SearchFranchiseResult
                   key={`collection-${item.id}`}
-                  role="option"
+                  item={item}
+                  className={resultClass(item)}
                   id={resultId(item)}
-                  aria-selected={resultId(item) === activeDescendantId}
-                >
-                  <div className="search-result-poster">
-                    {item.poster_path ? (
-                      <img loading="lazy" decoding="async" src={img(item.poster_path, "w92")} alt={item.name} />
-                    ) : (
-                      <div className="search-result-poster-empty">
-                        <Layers3 size={20} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="search-result-info">
-                    <b>{item.name}</b>
-                    <div className="muted">Coleção / franquia</div>
-                  </div>
-                  <ArrowRight size={14} />
-                </Link>
+                  ariaSelected={resultId(item) === activeDescendantId}
+                  onOpen={() => {
+                    recordSuggestion(item);
+                    clearSearch();
+                  }}
+                />
               ))}
             </SearchSuggestionGroup>
           )}
 
           {(searchTab === "all" || searchTab === "movies") && mediaResults.length > 0 && (
             <SearchSuggestionGroup icon={<Film size={12} />} label="Títulos">
-              {mediaResults.map((item) => {
-                const title = getTitle(item);
-                const year = getYear(item);
-                const isMovie = item.media_type === "movie";
-
-                return (
-                  <Link
-                    className={resultClass(item)}
-                    href={`/title/${item.media_type}/${item.id}`}
-                    onClick={clearSearch}
-                    key={`${item.media_type}-${item.id}`}
-                    role="option"
-                    id={resultId(item)}
-                    aria-selected={resultId(item) === activeDescendantId}
-                  >
-                    <div className="search-result-poster">
-                      {item.poster_path ? (
-                        <img loading="lazy" decoding="async" src={img(item.poster_path, "w92")} alt={title} />
-                      ) : (
-                        <div className="search-result-poster-empty">
-                          {isMovie ? <Film size={20} /> : <Tv size={20} />}
-                        </div>
-                      )}
-                    </div>
-                    <div className="search-result-info">
-                      <b>{title}</b>
-                      <div className="muted">
-                        {year || "Ano desconhecido"} · {isMovie ? "Filme" : "Série"}
-                        {item.reason ? ` · ${item.reason}` : ""}
-                        {typeof item.vote_average === "number" && item.vote_average > 0 && (
-                          <>
-                            {" · "}
-                            <Star size={11} fill="currentColor" /> {item.vote_average.toFixed(1)}
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+              {mediaResults.map((item) => (
+                <SearchMediaResult
+                  key={`${item.media_type}-${item.id}`}
+                  item={item}
+                  title={getTitle(item)}
+                  year={getYear(item)}
+                  className={resultClass(item)}
+                  id={resultId(item)}
+                  ariaSelected={resultId(item) === activeDescendantId}
+                  onOpen={() => {
+                    recordSuggestion(item);
+                    clearSearch();
+                  }}
+                />
+              ))}
             </SearchSuggestionGroup>
           )}
 
-          <button type="submit" className="search-see-all">
-            Ver todos os resultados para “{trimmedQuery}”
-          </button>
+          <div className="mc-search-footer">
+            <button type="submit" className="search-see-all">
+              Ver todos os resultados para “{trimmedQuery}”
+            </button>
+
+            <span className="mc-search-kbd-hint" aria-hidden="true">
+              <kbd>↑</kbd><kbd>↓</kbd> navegar <kbd>↵</kbd> abrir <kbd>Esc</kbd> fechar
+            </span>
+          </div>
         </div>
       )}
     </form>

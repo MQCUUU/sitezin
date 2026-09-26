@@ -13,6 +13,33 @@ import type {
   UserResult,
 } from "./types";
 import { getResultKey } from "./types";
+import {
+  addRecentSearch,
+  readRecentSearches,
+  removeRecentSearch,
+  clearRecentSearches,
+  type RecentSearchEntry,
+} from "@/lib/search/recentSearches";
+
+function suggestionToRecentEntry(item: SearchSuggestion): Omit<RecentSearchEntry, "timestamp"> {
+  switch (item.kind) {
+    case "media":
+      return {
+        query: item.title || item.name || "",
+        label: item.title || item.name,
+        type: "media",
+        href: `/title/${item.media_type}/${item.id}`,
+      };
+    case "person":
+      return { query: item.name, label: item.name, type: "person", href: item.href };
+    case "character":
+      return { query: item.name, label: item.name, type: "character", href: item.href };
+    case "collection":
+      return { query: item.name, label: item.name, type: "collection", href: item.href };
+    case "user":
+      return { query: `@${item.username}`, label: item.name, type: "user", href: item.href };
+  }
+}
 
 /**
  * All the non-visual behavior behind the global search box: debounce,
@@ -32,6 +59,35 @@ export function useSearchSuggestions() {
   const [error, setError] = useState(false);
   const [focused, setFocused] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+
+  /*
+   * B3.7 (Candidato 1): true from the moment a query reaches 2+ chars
+   * until the 260ms debounce actually resolves (cache hit or fetch
+   * settled). Folded into `searchState` below so the UI shows a
+   * transitional/loading state through the whole debounce window instead
+   * of momentarily reading `results.length === 0` as "no results" before
+   * the timer has even fired.
+   */
+  const [pending, setPending] = useState(false);
+
+  /*
+   * Recent searches are read from localStorage only after mount (SSR has
+   * no `window`) — starting at `[]` means the server-rendered markup and
+   * the first client render match, so there's no hydration mismatch.
+   */
+  const [recentSearches, setRecentSearches] = useState<RecentSearchEntry[]>([]);
+
+  useEffect(() => {
+    setRecentSearches(readRecentSearches());
+  }, []);
+
+  function removeRecent(query: string) {
+    setRecentSearches(removeRecentSearch(query));
+  }
+
+  function clearRecent() {
+    setRecentSearches(clearRecentSearches());
+  }
 
   const requestRef = useRef<AbortController | null>(null);
   const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -65,6 +121,20 @@ export function useSearchSuggestions() {
    * apenas da página /search, se necessário.
    */
   useEffect(() => {
+    /*
+     * Marca "pending" SINCRONAMENTE, no mesmo tick da mudança de `q` —
+     * antes mesmo do timer de debounce abaixo ser agendado. É isso que
+     * fecha a janela do flash: sem isso, entre o keystroke e o timer
+     * disparar (260ms depois), `loading` continuava `false` e `results`
+     * continuava do estado anterior (geralmente vazio), então
+     * `searchState` calculava "no-results" incorretamente por ~260ms.
+     */
+    if (q.trim().length >= 2) {
+      setPending(true);
+    } else {
+      setPending(false);
+    }
+
     const timer = setTimeout(async () => {
       const query = q.trim();
 
@@ -73,9 +143,16 @@ export function useSearchSuggestions() {
         setResults([]);
         setLoading(false);
         setError(false);
+        setPending(false);
         setActiveIndex(-1);
         return;
       }
+
+      /*
+       * O debounce em si já terminou (estamos dentro do callback do
+       * timer) — a partir daqui é cache/fetch, não mais "pending".
+       */
+      setPending(false);
 
       /*
        * Cancela a busca anterior de verdade.
@@ -197,19 +274,63 @@ export function useSearchSuggestions() {
     [results]
   );
 
+  /*
+   * B3.7 (Candidato 2 — HIGH): single source of truth for "what's actually
+   * navigable right now". Concatenates the same groups, in the same
+   * order and under the same `searchTab` conditions, as the JSX in
+   * Search.tsx renders them (Usuários → Personagem/Pessoas →
+   * Franquias/Títulos). Keyboard nav, aria-activedescendant, aria-selected
+   * and Enter all read from THIS array instead of the raw `results` —
+   * previously they read `results` directly, so on a tab that hides most
+   * kinds (e.g. "Atores": only characters+people), ArrowDown/Home/End
+   * could set `aria-activedescendant` to an id that was never rendered in
+   * that tab, and Enter could navigate to an item the user never saw.
+   *
+   * If the two render conditions below ever drift from Search.tsx's own,
+   * this drifts back out of sync — they must be changed together.
+   */
+  const visibleResults = useMemo(() => {
+    const visible: SearchSuggestion[] = [];
+
+    if (!(searchTab === "movies" || searchTab === "actors")) {
+      visible.push(...userResults);
+    }
+
+    if (searchTab === "all" || searchTab === "actors") {
+      visible.push(...characterResults, ...personResults);
+    }
+
+    if (searchTab === "all" || searchTab === "movies") {
+      visible.push(...collectionResults, ...mediaResults);
+    }
+
+    return visible;
+  }, [searchTab, userResults, characterResults, personResults, collectionResults, mediaResults]);
+
+  /*
+   * Whenever the navigable set shrinks (tab switch, new results, query
+   * change) such that `activeIndex` no longer points at a real, visible
+   * option, drop it back to -1 instead of leaving it stale — this is what
+   * makes an invalid `aria-activedescendant` impossible by construction.
+   */
+  useEffect(() => {
+    setActiveIndex((current) => (current >= visibleResults.length ? -1 : current));
+  }, [visibleResults]);
+
   const searchState: SearchState = useMemo(() => {
     if (q.trim().length < 2) return "idle";
-    if (loading) return "loading";
+    if (pending || loading) return "loading";
     if (error) return "error";
     if (results.length > 0) return "results";
     return "no-results";
-  }, [q, loading, error, results.length]);
+  }, [q, pending, loading, error, results.length]);
 
   function clearSearch() {
     setSearchTab("all");
     setQ("");
     setResults([]);
     setError(false);
+    setPending(false);
     setFocused(false);
     setActiveIndex(-1);
   }
@@ -229,6 +350,23 @@ export function useSearchSuggestions() {
     return item.href;
   }
 
+  /**
+   * Recording strategy (B3 §5): a recent-search entry always represents
+   * something the user can click to land back exactly where they just
+   * went — either a specific suggestion they opened, or the full results
+   * page for a typed query. Never recorded per keystroke, only on a
+   * confirmed action (submit or picking a suggestion).
+   */
+  function recordSuggestion(item: SearchSuggestion) {
+    setRecentSearches(addRecentSearch(suggestionToRecentEntry(item)));
+  }
+
+  function recordQuery(query: string) {
+    setRecentSearches(
+      addRecentSearch({ query, type: "query", href: `/search?q=${encodeURIComponent(query)}` })
+    );
+  }
+
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
 
@@ -241,13 +379,15 @@ export function useSearchSuggestions() {
      * Se o usuário selecionou algo com
      * ↑ / ↓, Enter abre a sugestão.
      */
-    if (activeIndex >= 0 && results[activeIndex]) {
-      const item = results[activeIndex];
+    if (activeIndex >= 0 && visibleResults[activeIndex]) {
+      const item = visibleResults[activeIndex];
+      recordSuggestion(item);
       clearSearch();
       router.push(getHref(item));
       return;
     }
 
+    recordQuery(query);
     setResults([]);
     setFocused(false);
 
@@ -258,16 +398,40 @@ export function useSearchSuggestions() {
     router.push(`/search?q=${encodeURIComponent(query)}`);
   }
 
-  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "ArrowDown" && results.length > 0) {
-      event.preventDefault();
-      setActiveIndex((current) => Math.min(results.length - 1, current + 1));
+  function openRecent(entry: RecentSearchEntry) {
+    setFocused(false);
+    setQ("");
+
+    if (entry.href) {
+      router.push(entry.href);
       return;
     }
 
-    if (event.key === "ArrowUp" && results.length > 0) {
+    router.push(`/search?q=${encodeURIComponent(entry.query)}`);
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown" && visibleResults.length > 0) {
+      event.preventDefault();
+      setActiveIndex((current) => Math.min(visibleResults.length - 1, current + 1));
+      return;
+    }
+
+    if (event.key === "ArrowUp" && visibleResults.length > 0) {
       event.preventDefault();
       setActiveIndex((current) => Math.max(-1, current - 1));
+      return;
+    }
+
+    if (event.key === "Home" && visibleResults.length > 0) {
+      event.preventDefault();
+      setActiveIndex(0);
+      return;
+    }
+
+    if (event.key === "End" && visibleResults.length > 0) {
+      event.preventDefault();
+      setActiveIndex(visibleResults.length - 1);
       return;
     }
 
@@ -278,7 +442,7 @@ export function useSearchSuggestions() {
   }
 
   function resultClass(item: SearchSuggestion) {
-    const index = results.indexOf(item);
+    const index = visibleResults.indexOf(item);
     return ["result", index === activeIndex ? "active" : ""].filter(Boolean).join(" ");
   }
 
@@ -300,7 +464,9 @@ export function useSearchSuggestions() {
   }
 
   const activeDescendantId =
-    activeIndex >= 0 && results[activeIndex] ? resultId(results[activeIndex]) : undefined;
+    activeIndex >= 0 && visibleResults[activeIndex]
+      ? resultId(visibleResults[activeIndex])
+      : undefined;
 
   return {
     searchTab,
@@ -329,5 +495,10 @@ export function useSearchSuggestions() {
     activeDescendantId,
     onFormFocus,
     onFormBlur,
+    recentSearches,
+    recordSuggestion,
+    removeRecent,
+    clearRecent,
+    openRecent,
   };
 }

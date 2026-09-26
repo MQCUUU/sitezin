@@ -1,0 +1,323 @@
+/*
+ * MyCatalog Premium UI V2 — Search (B3).
+ *
+ * Scoped to `mc-search-*` classes rendered by components/Search.tsx and
+ * components/search/*.tsx. Additive over the legacy `.search`/`.results`/
+ * `.result`/`.search-result-*` rules already in globals.css (kept
+ * alongside for structural/behavioral compatibility — the combobox
+ * wiring, debounce, cache and AbortController from B1 are untouched).
+ */
+
+/* =====================================================================
+   Idle state (recent searches)
+   ===================================================================== */
+
+.mc-search-idle {
+  padding: var(--mc-space-8) 0;
+}
+
+.mc-search-idle > p {
+  margin: 0;
+  padding: var(--mc-space-16);
+  font-size: var(--mc-text-body-small-size);
+}
+
+.mc-search-idle-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mc-space-8);
+  padding: var(--mc-space-8) var(--mc-space-16);
+  font-size: var(--mc-text-caption-size);
+  font-weight: 600;
+  color: var(--mc-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.mc-search-idle-header > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mc-space-6);
+}
+
+.mc-search-idle-clear {
+  border: none;
+  background: transparent;
+  color: var(--mc-color-accent);
+  font-size: var(--mc-text-caption-size);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: pointer;
+  padding: var(--mc-space-2) var(--mc-space-4);
+}
+
+.mc-search-idle-clear:hover {
+  text-decoration: underline;
+}
+
+.mc-search-idle-clear:focus-visible {
+  outline: none;
+  box-shadow: var(--mc-focus-ring);
+  border-radius: var(--mc-radius-sm);
+}
+
+.mc-search-recent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mc-search-recent-item {
+  display: flex;
+  align-items: center;
+  gap: var(--mc-space-4);
+  padding: 0 var(--mc-space-8);
+}
+
+.mc-search-recent-open {
+  display: flex;
+  align-items: center;
+  gap: var(--mc-space-12);
+  flex: 1;
+  min-width: 0;
+  padding: var(--mc-space-8);
+  border: none;
+  border-radius: var(--mc-radius-md);
+  background: transparent;
+  color: var(--mc-color-text);
+  font-size: var(--mc-text-body-small-size);
+  text-align: left;
+  cursor: pointer;
+}
+
+.mc-search-recent-open span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mc-search-recent-open svg {
+  flex: none;
+  color: var(--mc-color-text-muted);
+}
+
+.mc-search-recent-open:hover,
+.mc-search-recent-open:focus-visible {
+  background: var(--mc-color-surface-hover);
+}
+
+.mc-search-recent-open:focus-visible {
+  outline: none;
+}
+
+.mc-search-recent-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: var(--mc-radius-sm);
+  background: transparent;
+  color: var(--mc-color-text-muted);
+  cursor: pointer;
+}
+
+.mc-search-recent-remove:hover {
+  background: var(--mc-color-danger-soft);
+  color: var(--mc-color-danger);
+}
+
+.mc-search-recent-remove:focus-visible {
+  outline: none;
+  box-shadow: var(--mc-focus-ring);
+}
+
+/* =====================================================================
+   Results footer (see all + keyboard hint)
+   ===================================================================== */
+
+.mc-search-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mc-space-12);
+  border-top: 1px solid var(--mc-color-border-subtle);
+}
+
+.mc-search-footer .search-see-all {
+  border-top: none;
+  flex: 1;
+  text-align: left;
+}
+
+.mc-search-kbd-hint {
+  display: none;
+  flex: none;
+  align-items: center;
+  gap: var(--mc-space-4);
+  padding-right: var(--mc-space-16);
+  color: var(--mc-color-text-muted);
+  font-size: var(--mc-text-caption-size);
+  white-space: nowrap;
+}
+
+.mc-search-kbd-hint kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 4px;
+  border: 1px solid var(--mc-color-border);
+  background: var(--mc-color-surface-muted);
+  font: inherit;
+  font-size: 10px;
+}
+
+/* Discreet — desktop pointer only, per B3 §7 ("não aumentar demais o
+   dropdown"); a touch/mobile user has no keyboard to hint at. */
+@media (min-width: 900px) and (hover: hover) and (pointer: fine) {
+  .mc-search-kbd-hint {
+    display: inline-flex;
+  }
+}
+
+/* =====================================================================
+   Search page — idle state
+   ===================================================================== */
+
+.mc-search-page-idle {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--mc-space-16);
+  padding: var(--mc-space-40) 0;
+  color: var(--mc-color-text-secondary);
+}
+
+.mc-search-page-idle > svg {
+  color: var(--mc-color-text-muted);
+}
+
+.mc-search-page-idle > p {
+  margin: 0;
+  font-size: var(--mc-text-body-size);
+}
+
+.mc-search-page-idle-recent {
+  width: 100%;
+  max-width: 640px;
+}
+
+.mc-search-page-idle-recent-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--mc-space-8);
+  font-size: var(--mc-text-caption-size);
+  font-weight: 600;
+  color: var(--mc-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.mc-search-page-idle-recent-head > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mc-space-6);
+}
+
+.mc-search-page-idle-recent-head button {
+  border: none;
+  background: transparent;
+  color: var(--mc-color-accent);
+  font-size: var(--mc-text-caption-size);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: pointer;
+}
+
+.mc-search-page-idle-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mc-space-8);
+}
+
+.mc-search-page-idle-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mc-space-6);
+  padding: var(--mc-space-6) var(--mc-space-6) var(--mc-space-6) var(--mc-space-12);
+  border-radius: var(--mc-radius-pill);
+  border: var(--mc-border-default);
+  background: var(--mc-color-surface-muted);
+  font-size: var(--mc-text-body-small-size);
+}
+
+.mc-search-page-idle-chip a {
+  color: var(--mc-color-text);
+  font-weight: 600;
+}
+
+.mc-search-page-idle-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--mc-color-text-muted);
+  cursor: pointer;
+}
+
+.mc-search-page-idle-chip button:hover {
+  background: var(--mc-color-danger-soft);
+  color: var(--mc-color-danger);
+}
+
+/* =====================================================================
+   Search page — loading skeleton (users row)
+   ===================================================================== */
+
+.mc-search-page-user-skeleton {
+  display: flex;
+  gap: var(--mc-space-12);
+  margin-bottom: var(--mc-space-24);
+}
+
+.mc-search-page-user-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: var(--mc-space-8);
+  flex: 1;
+}
+
+.mc-search-page-user-skeleton-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.mc-search-page-user-skeleton-line {
+  height: 12px;
+  flex: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mc-search-recent-open,
+  .mc-search-idle-clear,
+  .mc-search-recent-remove,
+  .mc-search-page-idle-chip button,
+  .mc-search-page-idle-recent-head button {
+    transition: none;
+  }
+}

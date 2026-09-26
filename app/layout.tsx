@@ -8,6 +8,7 @@ import "@/styles/topbar.css";
 import "@/styles/media-card.css";
 import "@/styles/home.css";
 import "@/styles/discover.css";
+import "@/styles/search.css";
 
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
