@@ -36,6 +36,9 @@ import {
 
 import { Search } from "@/components/Search";
 import { PickForMe } from "@/components/PickForMe";
+import { WatchProviderList } from "@/components/media/preview/WatchProviderList";
+import { MediaCard, MediaCardImage, MediaCardMeta, MediaCardActions } from "@/components/media";
+import { Poster } from "@/components/Poster";
 import { img } from "@/lib/tmdb";
 import { useToast } from "@/components/ToastProvider";
 
@@ -940,6 +943,16 @@ function DiscoverContent() {
     let cancelled =
       false;
 
+    /*
+     * B1: as trocas de filtro disparavam requests que continuavam
+     * rodando até o fim mesmo depois de um filtro novo já ter sido
+     * escolhido (só o `cancelled` acima impedia sobrescrever o estado,
+     * a request em si seguia consumindo rede/servidor à toa). O
+     * AbortController cancela de verdade as requests obsoletas.
+     */
+    const controller =
+      new AbortController();
+
     async function load() {
       try {
         setLoading(
@@ -1011,7 +1024,7 @@ function DiscoverContent() {
         const responses = await Promise.all(requestTypes.map((mediaType) => {
           const requestParams = new URLSearchParams(params);
           requestParams.set("type", mediaType);
-          return fetch(`/api/discover?${requestParams.toString()}`, { cache: "no-store" });
+          return fetch(`/api/discover?${requestParams.toString()}`, { cache: "no-store", signal: controller.signal });
         }));
         const payloads = await Promise.all(responses.map((response) => response.json()));
 
@@ -1047,6 +1060,13 @@ function DiscoverContent() {
       } catch (
         error
       ) {
+        if (
+          error instanceof DOMException &&
+          error.name === "AbortError"
+        ) {
+          return;
+        }
+
         console.error(
           error
         );
@@ -1074,6 +1094,8 @@ function DiscoverContent() {
     return () => {
       cancelled =
         true;
+
+      controller.abort();
     };
   }, [
     type,
@@ -2475,26 +2497,23 @@ function DiscoverContent() {
                   }
 
                   return (
-                    <article
+                    <MediaCard
                       key={
                         key
                       }
-                      className="card discover-card"
+                      className="discover-card"
                     >
 
-                      <div className="poster">
+                      <MediaCardImage>
 
                         <Link
                           href={`/title/${item.media_type}/${item.id}`}
+                          className="poster-link"
                         >
-                          <img
-                            src={img(
-                              item.poster_path
-                            )}
-                            alt={
-                              title
-                            }
-                            loading="lazy"
+                          <Poster
+                            path={item.poster_path}
+                            alt={title}
+                            sizes="(max-width:700px) 46vw, (max-width:1100px) 24vw, 170px"
                           />
                         </Link>
 
@@ -2505,7 +2524,7 @@ function DiscoverContent() {
                             : "FILME"}
                         </span>
 
-                        <div className="card-actions">
+                        <MediaCardActions>
 
                           <button
                             type="button"
@@ -2641,7 +2660,7 @@ function DiscoverContent() {
                             </button>
                           )}
 
-                        </div>
+                        </MediaCardActions>
 
                         {item.in_library && (
                           <span className="discover-status-badge">
@@ -2651,7 +2670,7 @@ function DiscoverContent() {
                           </span>
                         )}
 
-                      </div>
+                      </MediaCardImage>
 
                       {item.in_library &&
                         openLibraryMenu ===
@@ -2752,7 +2771,7 @@ function DiscoverContent() {
                         {title}
                       </Link>
 
-                      <div className="card-meta">
+                      <MediaCardMeta>
 
                         <span>
                           {itemYear ||
@@ -2787,9 +2806,9 @@ function DiscoverContent() {
                           </span>
                         )}
 
-                      </div>
+                      </MediaCardMeta>
 
-                    </article>
+                    </MediaCard>
                   );
                 }
               )}
@@ -3060,7 +3079,7 @@ function DiscoverContent() {
                   </div>
                 )}
 
-                <PreviewWatchProviders
+                <WatchProviderList
                   details={previewDetails}
                   loading={previewDetailsLoading}
                 />
@@ -3318,169 +3337,5 @@ function DiscoverContent() {
       )}
 
     </>
-  );
-}
-
-function PreviewWatchProviders({
-  details,
-  loading,
-}: {
-  details: any;
-  loading: boolean;
-}) {
-  if (loading) {
-    return (
-      <div className="preview-watch-box">
-        <span className="muted">
-          Carregando onde assistir...
-        </span>
-      </div>
-    );
-  }
-
-  const brazilWatch =
-    details?.watch_providers
-      ?.results?.BR ||
-    null;
-
-  if (!brazilWatch) {
-    return null;
-  }
-
-  const subscription =
-    [
-      ...(Array.isArray(
-        brazilWatch.flatrate
-      )
-        ? brazilWatch.flatrate
-        : []),
-
-      ...(Array.isArray(
-        brazilWatch.free
-      )
-        ? brazilWatch.free
-        : []),
-
-      ...(Array.isArray(
-        brazilWatch.ads
-      )
-        ? brazilWatch.ads
-        : []),
-    ].filter(
-      (
-        provider: any,
-        index: number,
-        all: any[]
-      ) =>
-        all.findIndex(
-          (item) =>
-            item.provider_id ===
-            provider.provider_id
-        ) === index
-    );
-
-  const rent =
-    Array.isArray(
-      brazilWatch.rent
-    )
-      ? brazilWatch.rent
-      : [];
-
-  const buy =
-    Array.isArray(
-      brazilWatch.buy
-    )
-      ? brazilWatch.buy
-      : [];
-
-  if (
-    subscription.length === 0 &&
-    rent.length === 0 &&
-    buy.length === 0
-  ) {
-    return null;
-  }
-
-  return (
-    <div className="preview-watch-box">
-      <div className="preview-watch-head">
-        Onde assistir no Brasil
-      </div>
-
-      {subscription.length > 0 && (
-        <PreviewWatchRow
-          label="Streaming"
-          providers={
-            subscription
-          }
-        />
-      )}
-
-      {rent.length > 0 && (
-        <PreviewWatchRow
-          label="Aluguel"
-          providers={rent}
-        />
-      )}
-
-      {buy.length > 0 && (
-        <PreviewWatchRow
-          label="Compra"
-          providers={buy}
-        />
-      )}
-    </div>
-  );
-}
-
-function PreviewWatchRow({
-  label,
-  providers,
-}: {
-  label: string;
-  providers: any[];
-}) {
-  return (
-    <div className="preview-watch-row">
-      <strong>
-        {label}
-      </strong>
-
-      <div className="preview-watch-provider-list">
-        {providers.map(
-          (provider: any) => (
-            <div
-              key={
-                provider.provider_id
-              }
-              className="preview-watch-provider"
-              title={
-                provider.provider_name
-              }
-            >
-              {provider.logo_path ? (
-                <img
-                  src={img(
-                    provider.logo_path,
-                    "w92"
-                  )}
-                  alt={
-                    provider.provider_name
-                  }
-                  loading="lazy"
-                />
-              ) : (
-                <span>
-                  {String(
-                    provider.provider_name ||
-                      "?"
-                  ).slice(0, 1)}
-                </span>
-              )}
-            </div>
-          )
-        )}
-      </div>
-    </div>
   );
 }

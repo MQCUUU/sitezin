@@ -14,6 +14,8 @@ import {
   Search,
 } from "@/components/Search";
 
+import { WatchProviderList } from "@/components/media/preview/WatchProviderList";
+
 import {
   Check,
   ChevronDown,
@@ -2768,7 +2770,7 @@ function SearchPreview({
           )}
 
           {/* STREAMING */}
-          <PreviewWatchProviders
+          <WatchProviderList
             details={
               details
             }
@@ -2895,199 +2897,6 @@ function SearchPreview({
           </div>
         </div>
       </section>
-    </div>
-  );
-}
-
-function PreviewWatchProviders({
-  details,
-  loading,
-}: {
-  details:
-    any;
-  loading:
-    boolean;
-}) {
-  if (
-    loading
-  ) {
-    return (
-      <div className="preview-watch-box">
-        <span className="muted">
-          Carregando onde assistir...
-        </span>
-      </div>
-    );
-  }
-
-  const brazil =
-    details?.watch_providers
-      ?.results?.BR ||
-    null;
-
-  if (
-    !brazil
-  ) {
-    return null;
-  }
-
-  const subscription =
-    [
-      ...(Array.isArray(
-        brazil.flatrate
-      )
-        ? brazil.flatrate
-        : []),
-      ...(Array.isArray(
-        brazil.free
-      )
-        ? brazil.free
-        : []),
-      ...(Array.isArray(
-        brazil.ads
-      )
-        ? brazil.ads
-        : []),
-    ].filter(
-      (
-        provider:
-          any,
-        index:
-          number,
-        all:
-          any[]
-      ) =>
-        all.findIndex(
-          (
-            current
-          ) =>
-            current.provider_id ===
-            provider.provider_id
-        ) ===
-        index
-    );
-
-  const rent =
-    Array.isArray(
-      brazil.rent
-    )
-      ? brazil.rent
-      : [];
-
-  const buy =
-    Array.isArray(
-      brazil.buy
-    )
-      ? brazil.buy
-      : [];
-
-  if (
-    subscription.length ===
-      0 &&
-    rent.length ===
-      0 &&
-    buy.length ===
-      0
-  ) {
-    return null;
-  }
-
-  return (
-    <div className="preview-watch-box">
-      <div className="preview-watch-head">
-        Onde assistir no Brasil
-      </div>
-
-      {subscription.length >
-        0 && (
-        <PreviewWatchRow
-          label="Streaming"
-          providers={
-            subscription
-          }
-        />
-      )}
-
-      {rent.length >
-        0 && (
-        <PreviewWatchRow
-          label="Aluguel"
-          providers={
-            rent
-          }
-        />
-      )}
-
-      {buy.length >
-        0 && (
-        <PreviewWatchRow
-          label="Compra"
-          providers={
-            buy
-          }
-        />
-      )}
-    </div>
-  );
-}
-
-function PreviewWatchRow({
-  label,
-  providers,
-}: {
-  label:
-    string;
-  providers:
-    any[];
-}) {
-  return (
-    <div className="preview-watch-row">
-      <strong>
-        {
-          label
-        }
-      </strong>
-
-      <div className="preview-watch-provider-list">
-        {providers.map(
-          (
-            provider
-          ) => (
-            <div
-              key={
-                provider.provider_id
-              }
-              className="preview-watch-provider"
-              title={
-                provider.provider_name
-              }
-            >
-              {provider.logo_path ? (
-                <img
-                  src={img(
-                    provider.logo_path,
-                    "w92"
-                  )}
-                  alt={
-                    provider.provider_name
-                  }
-                  loading="lazy"
-                />
-              ) : (
-                <span>
-                  {String(
-                    provider.provider_name ||
-                      "?"
-                  ).slice(
-                    0,
-                    1
-                  )}
-                </span>
-              )}
-            </div>
-          )
-        )}
-      </div>
     </div>
   );
 }
