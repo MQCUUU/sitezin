@@ -88,13 +88,21 @@ export const COUNTRIES = [
   ["AU", "Austrália"],
 ] as const;
 
+/**
+ * `siblingCount` controls how many page numbers show on each side of the
+ * current page (desktop default: 2, matching the original layout). Mobile
+ * passes 1 — "previous/current/next" — to keep the pagination strip on one
+ * line at narrow widths without shrinking button size or hiding first/last.
+ */
 export function buildPages(
   current: number,
-  total: number
+  total: number,
+  siblingCount = 2
 ): (number | "ellipsis-left" | "ellipsis-right")[] {
   const values: (number | "ellipsis-left" | "ellipsis-right")[] = [];
+  const maxSingleRow = siblingCount * 2 + 5;
 
-  if (total <= 9) {
+  if (total <= maxSingleRow) {
     for (let page = 1; page <= total; page++) {
       values.push(page);
     }
@@ -103,18 +111,18 @@ export function buildPages(
 
   values.push(1);
 
-  if (current > 4) {
+  if (current > siblingCount + 2) {
     values.push("ellipsis-left");
   }
 
-  const start = Math.max(2, current - 2);
-  const end = Math.min(total - 1, current + 2);
+  const start = Math.max(2, current - siblingCount);
+  const end = Math.min(total - 1, current + siblingCount);
 
   for (let page = start; page <= end; page++) {
     values.push(page);
   }
 
-  if (current < total - 3) {
+  if (current < total - siblingCount - 1) {
     values.push("ellipsis-right");
   }
 

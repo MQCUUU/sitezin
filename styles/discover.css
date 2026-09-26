@@ -167,9 +167,25 @@
    Shortcuts
    ===================================================================== */
 
+/*
+ * BUG-B4.1-02 fix: same flex min-width:auto trap as BUG-B2.5-01 above.
+ * `.mc-discover-toolbar` is a column flex container, so this row's cross
+ * size (width) is meant to stretch to its parent's box — but a flex item's
+ * default `min-width: auto` floors it at its content's min-content width
+ * instead, letting it overflow the parent (and the page) at ~700-820px
+ * where the toolbar box is narrower than the shortcuts' combined pill
+ * width. `overflow-x: auto` here never got a chance to engage because the
+ * box itself was oversized rather than clipped. As with that fix,
+ * `min-width: 0` alone was not enough (verified empirically) — an explicit
+ * `width: 100%` is needed too so the row actually takes the parent's real
+ * width instead of floating at its stretch-fit content size, letting its
+ * own scroll strip take over instead of pushing the page wider.
+ */
 .mc-discover-shortcuts {
   display: flex;
   gap: var(--mc-space-8);
+  width: 100%;
+  min-width: 0;
   overflow-x: auto;
   padding-bottom: var(--mc-space-2);
   scrollbar-width: thin;

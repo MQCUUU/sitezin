@@ -1,6 +1,29 @@
+import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { buildPages } from "./types";
+
+const COMPACT_QUERY = "(max-width: 480px)";
+
+/**
+ * At narrow widths the desktop sibling count (2) can render up to 11
+ * buttons (BUG-B4.1-03: e.g. page 50 of 741 wrapped to 3 rows at 390px).
+ * Dropping to 1 sibling keeps first/last + prev/current/next visible on a
+ * single line without shrinking touch targets or hiding the current page.
+ */
+function useIsCompactPagination() {
+  const [isCompact, setIsCompact] = useState(false);
+
+  useEffect(() => {
+    const mql = window.matchMedia(COMPACT_QUERY);
+    setIsCompact(mql.matches);
+    const listener = (event: MediaQueryListEvent) => setIsCompact(event.matches);
+    mql.addEventListener("change", listener);
+    return () => mql.removeEventListener("change", listener);
+  }, []);
+
+  return isCompact;
+}
 
 export type DiscoverPaginationProps = {
   page: number;
@@ -13,7 +36,8 @@ export function DiscoverPagination({
   totalPages,
   onGoToPage,
 }: DiscoverPaginationProps) {
-  const pagination = buildPages(page, totalPages);
+  const isCompact = useIsCompactPagination();
+  const pagination = buildPages(page, totalPages, isCompact ? 0 : 2);
 
   return (
     <section className="section discover-pagination-wrap mc-discover-pagination-wrap">
