@@ -23,6 +23,12 @@ import { useToast } from "@/components/ToastProvider";
 
 import { Poster } from "@/components/Poster";
 import { CarouselRail } from "@/components/CarouselRail";
+import {
+  MediaCard,
+  MediaCardImage,
+  MediaCardMeta,
+  MediaCardActions,
+} from "@/components/media";
 
 import { useEffect, useState } from "react";
 
@@ -1142,7 +1148,7 @@ useEffect(() => {
 
     return (
       <>
-        <div className="card-actions">
+        <MediaCardActions>
 
           <button
             type="button"
@@ -1222,7 +1228,7 @@ useEffect(() => {
             )}
           </button>
 
-        </div>
+        </MediaCardActions>
 
         {menuOpen && (
           <div
@@ -1317,8 +1323,8 @@ useEffect(() => {
       : null;
 
     return (
-      <div className="card">
-        <div className="poster">
+      <MediaCard>
+        <MediaCardImage>
           <Link
             href={`/title/${item.media_type}/${item.tmdb_id}`}
             className="poster-link"
@@ -1333,7 +1339,7 @@ useEffect(() => {
           </span>
 
           <span
-            className={`card-status ${status.className}`}
+            className={`card-status mc-media-card-status ${status.className}`}
           >
             {status.icon}
             {status.label}
@@ -1342,7 +1348,7 @@ useEffect(() => {
           <ActionButtons
             item={item}
           />
-        </div>
+        </MediaCardImage>
 
         <Link
           href={`/title/${item.media_type}/${item.tmdb_id}`}
@@ -1351,7 +1357,7 @@ useEffect(() => {
           {item.title}
         </Link>
 
-        <div className="card-meta">
+        <MediaCardMeta>
           {item.personal_rating !==
             null &&
           item.personal_rating !==
@@ -1386,8 +1392,8 @@ useEffect(() => {
               Curtido
             </span>
           )}
-        </div>
-      </div>
+        </MediaCardMeta>
+      </MediaCard>
     );
   }
 
@@ -1606,8 +1612,8 @@ useEffect(() => {
         <div
           className={
             viewMode === "compact"
-              ? "grid compact"
-              : "grid"
+              ? "grid compact mc-media-grid"
+              : "grid mc-media-grid"
           }
         >
           {localItems.map((item) => (

@@ -5,6 +5,8 @@ import "@/styles/primitives.css";
 import "@/styles/overlays.css";
 import "@/styles/shell.css";
 import "@/styles/topbar.css";
+import "@/styles/media-card.css";
+import "@/styles/home.css";
 
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";

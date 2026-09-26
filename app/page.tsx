@@ -32,6 +32,8 @@ import {
   Search,
 } from "@/components/Search";
 
+import { Poster } from "@/components/Poster";
+
 import {
   PosterGrid,
 } from "@/components/PosterGrid";
@@ -1316,6 +1318,24 @@ export default function Home() {
 
   /*
    * ==========================================
+   * BACKDROP DO HERO
+   * ==========================================
+   *
+   * Reaproveita o backdrop_path que já vem de dentro dos mesmos
+   * dados que alimentam o smartAction — nenhum fetch novo.
+   */
+
+  const heroBackdropPath =
+    smartAction.kind === "calendar"
+      ? nextEvent?.backdrop_path || null
+      : smartAction.kind === "watching"
+        ? (primaryWatching as any)?.backdrop_path || null
+        : smartAction.kind === "queue"
+          ? (primaryWant as any)?.backdrop_path || null
+          : null;
+
+  /*
+   * ==========================================
    * VISITANTE
    * ==========================================
    */
@@ -1475,10 +1495,22 @@ export default function Home() {
       <section className="section">
         <div
           className={
-            `home-focus-card panel home-focus-${smartAction.kind}`
+            `home-focus-card mc-home-hero ${heroBackdropPath ? "mc-home-hero--photo" : ""} panel home-focus-${smartAction.kind}`
           }
         >
-          <div className="home-focus-icon">
+          {heroBackdropPath && (
+            <div className="mc-home-hero-backdrop">
+              <Poster
+                path={heroBackdropPath}
+                alt=""
+                sizes="(max-width:760px) 100vw, 1100px"
+                tmdbSize="w1280"
+              />
+              <div className="mc-home-hero-scrim" />
+            </div>
+          )}
+
+          <div className="home-focus-icon mc-home-hero-layer">
             {smartAction.kind ===
             "calendar" ? (
               <CalendarDays
@@ -1501,7 +1533,7 @@ export default function Home() {
             )}
           </div>
 
-          <div className="home-focus-copy">
+          <div className="home-focus-copy mc-home-hero-layer">
             <div className="eyebrow">
               {
                 smartAction.eyebrow
@@ -1559,7 +1591,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="home-focus-side">
+          <div className="home-focus-side mc-home-hero-layer">
             {calendarLoading ||
             loading ? (
               <Loader2

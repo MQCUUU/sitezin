@@ -58,6 +58,18 @@
   --mc-color-danger-soft: color-mix(in srgb, var(--danger) 16%, transparent);
   --mc-color-info: #4ea8de;
   --mc-color-info-soft: color-mix(in srgb, #4ea8de 16%, transparent);
+  --mc-color-favorite: #ff5c83;
+  --mc-color-rating: #f6c65b;
+
+  /*
+   * Scrim for text sitting on top of a photographic image (hero
+   * backdrops, media cards). Deliberately NOT theme-dependent: a photo
+   * needs a dark caption scrim to stay legible in dark, light AND oled —
+   * matching it to the light theme's near-white surface color (as the
+   * A3.1 hero originally did) produces a washed-out, hazy look instead
+   * of a clean gradient.
+   */
+  --mc-color-scrim: 6, 8, 16;
 
   /* ---------------------------------------------------------------- */
   /* Typography (Inter stays the only family — see PREMIUM-UI-V2.md)   */

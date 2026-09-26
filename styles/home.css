@@ -1,0 +1,141 @@
+/*
+ * MyCatalog Premium UI V2 — Home (A3.1).
+ *
+ * Scoped to `.home-*` classes, which app/page.tsx is the sole owner of
+ * (verified: no other file renders them). Additive over the existing
+ * `.home-focus-card`/`.home-discovery-card`/... rules in globals.css —
+ * nothing here changes app/page.tsx's data, fetches or state, only the
+ * markup's visual treatment.
+ */
+
+/* =====================================================================
+   Hero ("O que importa agora")
+   ===================================================================== */
+
+.mc-home-hero {
+  isolation: isolate;
+}
+
+.mc-home-hero-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.mc-home-hero-backdrop img {
+  filter: saturate(1.05);
+}
+
+/*
+ * Deliberately uses --mc-color-scrim (a fixed dark tone), NOT
+ * --mc-color-surface: a photographic backdrop needs a dark caption
+ * scrim to read as cinematic in dark, light AND oled alike. Tying it to
+ * the theme's own (near-white, in light) surface color — the original
+ * A3.1 version — produced a washed-out, hazy blend instead (BUG-A3.2-04).
+ */
+.mc-home-hero-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+      100deg,
+      rgba(var(--mc-color-scrim), 0.92) 12%,
+      rgba(var(--mc-color-scrim), 0.55) 48%,
+      rgba(var(--mc-color-scrim), 0.16) 80%
+    ),
+    linear-gradient(
+      0deg,
+      rgba(var(--mc-color-scrim), 0.6),
+      transparent 60%
+    );
+}
+
+.mc-home-hero-layer {
+  position: relative;
+  z-index: 1;
+}
+
+/*
+ * The scrim above is always dark, so text sitting directly on it (the
+ * copy column) must stay light-on-dark regardless of theme — same
+ * reasoning a video player's caption stays light-on-dark in a light-mode
+ * OS. `.home-focus-side`'s own stat box already has its own contrasting
+ * background (globals.css `.home-focus-side`) and doesn't need this.
+ */
+.mc-home-hero--photo .home-focus-icon,
+.mc-home-hero--photo .home-focus-copy .eyebrow,
+.mc-home-hero--photo .home-focus-copy h2,
+.mc-home-hero--photo .home-focus-copy p {
+  color: #f3f4f8;
+}
+
+.mc-home-hero--photo .home-focus-copy .eyebrow {
+  color: color-mix(in srgb, var(--mc-color-accent) 55%, #f3f4f8);
+}
+
+@media (max-width: 760px) {
+  .mc-home-hero-scrim {
+    background: linear-gradient(
+      0deg,
+      rgba(var(--mc-color-scrim), 0.9) 25%,
+      rgba(var(--mc-color-scrim), 0.55) 65%,
+      rgba(var(--mc-color-scrim), 0.18) 100%
+    );
+  }
+}
+
+/* =====================================================================
+   Section rhythm
+   ===================================================================== */
+
+.home-smart .section {
+  margin-top: var(--mc-space-40);
+}
+
+.home-smart .section:first-of-type {
+  margin-top: var(--mc-space-24);
+}
+
+/* =====================================================================
+   Cards: discovery, agenda, quick links — consistent hover language
+   ===================================================================== */
+
+.home-discovery-card,
+.home-agenda-card,
+.home-quick-link {
+  transition: transform var(--mc-duration-fast) var(--mc-ease-standard),
+    border-color var(--mc-duration-fast) var(--mc-ease-standard),
+    box-shadow var(--mc-duration-fast) var(--mc-ease-standard);
+}
+
+@media (hover: hover) {
+  .home-discovery-card:hover,
+  .home-agenda-card:hover,
+  .home-quick-link:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--mc-color-accent) 35%, var(--mc-color-border));
+    box-shadow: var(--mc-shadow-md);
+  }
+}
+
+.home-discovery-card:focus-visible,
+.home-agenda-card:focus-visible,
+.home-quick-link:focus-visible {
+  outline: none;
+  box-shadow: var(--mc-focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-discovery-card,
+  .home-agenda-card,
+  .home-quick-link {
+    transition: border-color var(--mc-duration-fast) var(--mc-ease-standard);
+  }
+
+  .home-discovery-card:hover,
+  .home-agenda-card:hover,
+  .home-quick-link:hover {
+    transform: none;
+  }
+}

@@ -1,0 +1,160 @@
+/*
+ * MyCatalog Premium UI V2 — media card layer (A3.1).
+ *
+ * Scoped entirely to `.mc-media-card*` classes added by
+ * components/media/*.tsx. PosterGrid.tsx's own classes (`.card`,
+ * `.poster`, `.card-actions`, `.card-meta`, `.card-status`, `.badge`,
+ * `.rating`, `.favorite-label`, `.card-title`) and every handler/effect
+ * that drives them are UNTOUCHED — this file only adds the extra hook
+ * classes render alongside those, so nothing here can regress existing
+ * behavior on Discover/Search/Library/Home, which all render this same
+ * PosterGrid.
+ */
+
+/* =====================================================================
+   Card shell
+   ===================================================================== */
+
+.mc-media-card {
+  border-radius: var(--mc-radius-lg);
+}
+
+.mc-media-card:focus-within {
+  outline: none;
+}
+
+.mc-media-card:has(a:focus-visible) .mc-media-card-image,
+.mc-media-card:has(button:focus-visible) .mc-media-card-image {
+  box-shadow: var(--mc-focus-ring);
+}
+
+/* =====================================================================
+   Poster / image
+   ===================================================================== */
+
+.mc-media-card-image {
+  border-radius: var(--mc-radius-lg);
+  border-color: var(--mc-color-border-subtle);
+  transition: transform var(--mc-duration-normal) var(--mc-ease-standard),
+    border-color var(--mc-duration-normal) var(--mc-ease-standard),
+    box-shadow var(--mc-duration-normal) var(--mc-ease-standard);
+}
+
+/*
+ * Overrides the existing `.card:hover .poster` rule in globals.css,
+ * which hardcodes a fixed violet border (rgba(139,92,246,.55)) instead
+ * of following the user's chosen accent (AppearanceProvider / --accent).
+ * Same lift, now accent-aware, plus a small optional scale.
+ */
+.card:hover .mc-media-card-image,
+.card:focus-within .mc-media-card-image {
+  transform: translateY(-3px) scale(1.015);
+  border-color: color-mix(in srgb, var(--mc-color-accent) 55%, transparent);
+  box-shadow: var(--mc-shadow-lg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mc-media-card-image {
+    transition: border-color var(--mc-duration-fast) var(--mc-ease-standard),
+      box-shadow var(--mc-duration-fast) var(--mc-ease-standard);
+  }
+
+  .card:hover .mc-media-card-image,
+  .card:focus-within .mc-media-card-image {
+    transform: none;
+  }
+}
+
+/* Status pill: follow the actual accent/success tokens instead of a
+   fixed hardcoded hex, so it respects the user's accent color choice. */
+.mc-media-card-status.status-watching,
+.mc-media-card-status.status-rewatching {
+  background: color-mix(in srgb, var(--mc-color-accent) 82%, black);
+  border-color: color-mix(in srgb, var(--mc-color-accent) 50%, transparent);
+}
+
+.mc-media-card-status.status-watched,
+.mc-media-card-status.status-rewatched {
+  background: color-mix(in srgb, var(--mc-color-success) 82%, black);
+  border-color: color-mix(in srgb, var(--mc-color-success) 50%, transparent);
+}
+
+/* =====================================================================
+   Actions
+   ===================================================================== */
+
+.mc-media-card-actions .card-action {
+  transition: transform var(--mc-duration-fast) var(--mc-ease-standard),
+    background var(--mc-duration-fast) var(--mc-ease-standard),
+    color var(--mc-duration-fast) var(--mc-ease-standard);
+}
+
+.mc-media-card-actions .card-action:focus-visible {
+  outline: none;
+  box-shadow: var(--mc-focus-ring);
+}
+
+/* =====================================================================
+   Meta row
+   ===================================================================== */
+
+.mc-media-card-meta .rating {
+  color: var(--mc-color-rating);
+}
+
+.mc-media-card-meta .favorite-label {
+  color: var(--mc-color-favorite);
+}
+
+/* =====================================================================
+   Title
+   ===================================================================== */
+
+.mc-media-card .card-title {
+  transition: color var(--mc-duration-fast) var(--mc-ease-standard);
+}
+
+.mc-media-card .card-title:hover,
+.mc-media-card .card-title:focus-visible {
+  color: var(--mc-color-accent);
+}
+
+.mc-media-card .card-title:focus-visible {
+  outline: none;
+}
+
+/* =====================================================================
+   Grid
+   ===================================================================== */
+
+.mc-media-grid {
+  gap: var(--mc-space-16);
+}
+
+@media (max-width: 700px) {
+  .mc-media-grid {
+    gap: var(--mc-space-12);
+  }
+}
+
+/* =====================================================================
+   Skeleton (components/media/MediaCardSkeleton.tsx)
+   ===================================================================== */
+
+.mc-media-card-skeleton-poster {
+  aspect-ratio: 2 / 3;
+  width: 100%;
+  border-radius: var(--mc-radius-lg);
+}
+
+.mc-media-card-skeleton-title {
+  width: 82%;
+  height: 14px;
+  margin-top: var(--mc-space-8);
+}
+
+.mc-media-card-skeleton-meta {
+  width: 48%;
+  height: 11px;
+  margin-top: var(--mc-space-6);
+}

@@ -26,7 +26,19 @@ export function CarouselRail({ children, className = "" }: { children: ReactNode
     if (!rail) return;
     const observer = new ResizeObserver(updateEdges);
     observer.observe(rail);
-    return () => observer.disconnect();
+    /*
+     * ResizeObserver only reacts to the rail's own box changing, not to
+     * its content settling (e.g. a single-item rail whose scrollWidth is
+     * already final on mount but got measured before the browser's first
+     * paint). One extra post-paint check keeps the arrows correctly
+     * disabled/hidden for content that doesn't overflow (LOW finding,
+     * A3.2).
+     */
+    const raf = requestAnimationFrame(updateEdges);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(raf);
+    };
   }, [children, updateEdges]);
 
   return <div className="media-carousel">

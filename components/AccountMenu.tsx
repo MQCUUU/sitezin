@@ -124,7 +124,21 @@ export function AccountMenu(): React.ReactElement {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
 
-  const ready = !isPending;
+  /*
+   * authClient.useSession() pode já ter a sessão resolvida no primeiro
+   * render do cliente (isPending=false) enquanto o SSR — sem acesso
+   * síncrono ao mesmo estado — só produz o placeholder de loading. Isso
+   * causa hydration mismatch em toda navegação. `mounted` força o
+   * primeiro render do cliente a bater com o do servidor (sempre
+   * loading); só depois do efeito (pós-hidratação) é que a sessão real
+   * pode substituir o placeholder.
+   */
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const ready = mounted && !isPending;
 
   useEffect(() => {
     if (!session?.user?.id) {
