@@ -421,7 +421,9 @@ fase de fechamento (B5) — apenas esta documentação.
     Personalizadas completas — CRUD, detalhe, privacidade, perfil —,
     sincronização da nota detalhada com `personal_rating`, remoção de
     código morto de Tags/Listas legadas).
-- **E — Profile & Social** = NEXT
+- **E — Profile & Social** = IN PROGRESS (E0 — auditoria em
+  [`docs/E-PROFILE-SOCIAL-AUDIT.md`](./E-PROFILE-SOCIAL-AUDIT.md) —
+  DONE; E1 — implementação consolidada = NEXT).
 - **F — Premium Features**
 - **G — Motion & React Bits**
 - **H — Mobile/Accessibility/Performance**
