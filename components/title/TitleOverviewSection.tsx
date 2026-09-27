@@ -40,7 +40,7 @@ export function TitleOverviewSection({
     .join(" · ");
 
   return (
-    <section className="title-info section">
+    <section className="title-info section mc-title-overview-section">
       <div className="title-info-main">
         <div className="title-section-heading">
           <span>Sobre</span>

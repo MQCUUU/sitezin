@@ -27,7 +27,9 @@ export interface ContentTabPanelIdsCtx {
  * nunca chegam a existir no DOM, a depender de guest/auth/dados),
  * `aria-controls` é computado a cada render com base nas mesmas
  * condições que decidem o que é de fato renderizado — contém só
- * ids que existem naquele momento. Nenhuma referência órfã.
+ * ids que existem quando a aba está ativa (só a aba ativa monta
+ * seu(s) painel(is); ver TitleContentTabs, que só aplica este
+ * valor a `aria-controls` quando `contentTab === value`).
  */
 export function getContentTabPanelIds(
   value: ContentTabValue,

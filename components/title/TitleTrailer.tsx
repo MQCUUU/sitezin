@@ -24,7 +24,7 @@ export function TitleTrailer({ details }: TitleTrailerProps) {
   if (!trailer) return null;
 
   return (
-    <section className="section">
+    <section className="section mc-title-section">
       <div className="title-section-heading">
         <span>Vídeo</span>
 
@@ -33,7 +33,11 @@ export function TitleTrailer({ details }: TitleTrailerProps) {
 
       <div
         className="panel"
-        style={{ overflow: "hidden", padding: 0, borderRadius: "16px" }}
+        style={{
+          overflow: "hidden",
+          padding: 0,
+          borderRadius: "var(--mc-radius-lg)",
+        }}
       >
         <div
           style={{ position: "relative", width: "100%", aspectRatio: "16 / 9" }}

@@ -1,6 +1,6 @@
 import { ExternalLink } from "lucide-react";
 
-import { img } from "@/lib/tmdb";
+import { Poster } from "@/components/Poster";
 import type { LooseTitleDetails } from "./types";
 
 export type TitleWatchProvidersProps = {
@@ -51,7 +51,7 @@ export function TitleWatchProviders({ details }: TitleWatchProvidersProps) {
   if (!hasWatchProviders) return null;
 
   return (
-    <section className="section title-watch-section">
+    <section className="section mc-title-section title-watch-section">
       <div className="title-section-heading">
         <span>Disponibilidade</span>
 
@@ -134,11 +134,14 @@ function WatchProviderGroup({
             title={provider.provider_name}
           >
             {provider.logo_path ? (
-              <img
-                src={img(provider.logo_path, "w92")}
-                alt={provider.provider_name}
-                loading="lazy"
-              />
+              <div className="mc-title-provider-logo">
+                <Poster
+                  path={provider.logo_path}
+                  alt={provider.provider_name}
+                  sizes="40px"
+                  tmdbSize="w92"
+                />
+              </div>
             ) : (
               <div className="title-watch-provider-fallback">
                 {String(provider.provider_name || "?").slice(0, 1)}

@@ -26,11 +26,11 @@ export function TitleTvSections({
 }: TitleTvSectionsProps) {
   return (
     <>
-      <section className="section title-series-schedule-section">
+      <section className="section mc-title-section title-series-schedule-section">
         <SeriesSchedule tvId={details.id} libraryItem={libraryItem} />
       </section>
 
-      <section className="section">
+      <section className="section mc-title-section">
         <EpisodeBrowser
           tvId={Number(details.id)}
           libraryItem={libraryItem}

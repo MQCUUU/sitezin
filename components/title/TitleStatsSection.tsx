@@ -15,7 +15,7 @@ export function TitleStatsSection({ details }: TitleStatsSectionProps) {
   const countries = details.production_countries || [];
 
   return (
-    <section className="section">
+    <section className="section mc-title-section">
       <div className="title-section-heading">
         <span>Detalhes</span>
 

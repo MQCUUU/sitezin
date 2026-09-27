@@ -32,7 +32,7 @@ export function TitleReviewsSection({
           id="title-tabpanel-reviews-1"
           aria-labelledby="title-tab-reviews"
         >
-          <section className="section title-watch-history-section">
+          <section className="section mc-title-section title-watch-history-section">
             <WatchHistory
               libraryId={libraryItem.id}
               mediaType={type === "tv" ? "tv" : "movie"}
@@ -54,9 +54,11 @@ export function TitleReviewsSection({
           id="title-tabpanel-reviews-2"
           aria-labelledby="title-tab-reviews"
         >
-          <div className="empty">
-            Adicione este título à biblioteca para registrar sua avaliação e
-            resenha.
+          <div className="mc-title-section">
+            <div className="mc-title-empty-state">
+              Adicione este título à biblioteca para registrar sua avaliação e
+              resenha.
+            </div>
           </div>
         </div>
       )}
@@ -67,7 +69,7 @@ export function TitleReviewsSection({
           id="title-tabpanel-reviews-3"
           aria-labelledby="title-tab-reviews"
         >
-          <section className="section title-review-section">
+          <section className="section mc-title-section title-review-section">
             <div className="title-section-heading">
               <span>Sua experiência</span>
 

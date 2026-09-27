@@ -1,0 +1,639 @@
+/*
+ * MyCatalog Premium UI V2 — Title Page (C1.3).
+ *
+ * Scoped to `.mc-title-*`. Additive over the existing `.title-*` rules in
+ * app/globals.css (a single ~90KB minified line from an earlier phase —
+ * not something to hand-edit safely). Imported last in app/layout.tsx, so
+ * these rules win the cascade at equal specificity without !important and
+ * without deleting the legacy declarations wholesale. Where a legacy
+ * `.title-*` class is still the element's only class (kept for the tests
+ * and QA scripts written against it across C1.1/C1.1.6/C1.2 — see the ids
+ * `title-tab-*` / `title-tabpanel-*`), this file re-declares what changes
+ * and leaves the rest to inherit from the legacy rule.
+ *
+ * Same scrim reasoning as .mc-home-hero-scrim (styles/home.css): a
+ * photographic backdrop needs a dark caption scrim to stay legible in
+ * dark, light AND oled alike, so it intentionally does not use
+ * --mc-color-surface.
+ */
+
+/* =====================================================================
+   Layout shell
+   ===================================================================== */
+
+.mc-title-topbar-wrap {
+  position: relative;
+  z-index: var(--mc-z-navbar);
+}
+
+.mc-title-back-wrap {
+  max-width: var(--mc-container-wide);
+  margin: 0 auto;
+  padding: 0 var(--mc-gutter-desktop);
+}
+
+@media (max-width: 1024px) {
+  .mc-title-back-wrap {
+    padding: 0 var(--mc-gutter-tablet);
+  }
+}
+
+@media (max-width: 700px) {
+  .mc-title-back-wrap {
+    padding: 0 var(--mc-gutter-mobile);
+  }
+}
+
+/* =====================================================================
+   Hero
+   ===================================================================== */
+
+.mc-title-hero {
+  isolation: isolate;
+  max-width: var(--mc-container-wide);
+  margin: var(--mc-space-16) auto 0;
+  padding: 0 var(--mc-gutter-desktop);
+}
+
+@media (max-width: 1024px) {
+  .mc-title-hero {
+    padding: 0 var(--mc-gutter-tablet);
+  }
+}
+
+@media (max-width: 700px) {
+  .mc-title-hero {
+    padding: 0 var(--mc-gutter-mobile);
+  }
+}
+
+.mc-title-hero-frame {
+  position: relative;
+  border-radius: var(--mc-radius-lg);
+  overflow: hidden;
+  border: var(--mc-border-subtle);
+  background: var(--mc-color-bg-elevated);
+  box-shadow: var(--mc-shadow-lg);
+}
+
+.mc-title-hero-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.mc-title-hero-backdrop img {
+  filter: saturate(1.05);
+}
+
+.mc-title-hero-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+      100deg,
+      rgba(var(--mc-color-scrim), 0.94) 8%,
+      rgba(var(--mc-color-scrim), 0.72) 42%,
+      rgba(var(--mc-color-scrim), 0.32) 78%,
+      rgba(var(--mc-color-scrim), 0.12) 100%
+    ),
+    linear-gradient(0deg, rgba(var(--mc-color-scrim), 0.55), transparent 45%);
+}
+
+/*
+ * <=860px the layer becomes a column (poster, then text, then actions), so
+ * the frame's height is now however tall that STACK is — routinely 500px+
+ * with a long title/tagline — not a fixed short hero. An earlier version
+ * of this gradient faded to ~0.2 opacity by "100%" (tuned against the
+ * ~470px hero, before stacking), which left the backdrop showing through
+ * almost unobscured behind the poster and badges at the top of the taller
+ * stack. Kept uniformly dark instead — the poster and text always need to
+ * read clearly more than the photo needs to show through on mobile.
+ *
+ * The breakpoint is 860px, not the usual ~700px "phone" cutoff: this app's
+ * sidebar nav (app/globals.css `.sidebar`, fixed 240px) only collapses at
+ * <=760px, so up to that point AND a bit past it the hero's actual content
+ * column is viewport-width MINUS the sidebar — at a 768px tablet portrait
+ * viewport that leaves under 150px for the text column next to a
+ * fixed-width poster, not the ~700px of a phone at that same CSS width.
+ */
+@media (max-width: 860px) {
+  .mc-title-hero-scrim {
+    background: linear-gradient(
+      0deg,
+      rgba(var(--mc-color-scrim), 0.94) 0%,
+      rgba(var(--mc-color-scrim), 0.86) 60%,
+      rgba(var(--mc-color-scrim), 0.7) 100%
+    );
+  }
+}
+
+.mc-title-hero-layer {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--mc-space-32);
+  min-height: 440px;
+  padding: var(--mc-space-40);
+}
+
+@media (max-width: 1024px) {
+  .mc-title-hero-layer {
+    min-height: 380px;
+    padding: var(--mc-space-32);
+  }
+}
+
+@media (max-width: 860px) {
+  .mc-title-hero-layer {
+    min-height: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--mc-space-20);
+    padding: var(--mc-space-24) var(--mc-space-16) var(--mc-space-20);
+  }
+}
+
+/* Text sitting on the scrim is always light-on-dark, regardless of theme —
+   same reasoning as .mc-home-hero--photo in styles/home.css. */
+.mc-title-hero-layer,
+.mc-title-hero-layer .title-type,
+.mc-title-hero-layer .title-main h1,
+.mc-title-hero-layer .title-original-name,
+.mc-title-hero-layer .title-tagline {
+  color: #f3f4f8;
+}
+
+.mc-title-hero-layer .title-type {
+  color: color-mix(in srgb, var(--mc-color-accent) 45%, #f3f4f8);
+}
+
+.mc-title-hero-layer .title-original-name {
+  color: color-mix(in srgb, #f3f4f8 65%, transparent);
+}
+
+.mc-title-hero-layer .title-tagline {
+  color: color-mix(in srgb, #f3f4f8 82%, transparent);
+}
+
+/* =====================================================================
+   Poster
+   ===================================================================== */
+
+.mc-title-poster-wrap {
+  position: relative;
+  isolation: isolate;
+  width: 200px;
+  aspect-ratio: 2 / 3;
+  flex: 0 0 200px;
+  border-radius: var(--mc-radius-md);
+  box-shadow: var(--mc-shadow-lg);
+}
+
+@media (max-width: 1024px) {
+  .mc-title-poster-wrap {
+    width: 170px;
+    flex-basis: 170px;
+  }
+}
+
+@media (max-width: 860px) {
+  .mc-title-poster-wrap {
+    width: 128px;
+    flex-basis: auto;
+    align-self: flex-start;
+  }
+}
+
+.mc-title-poster-wrap .title-poster {
+  border-radius: var(--mc-radius-md);
+  transition: transform var(--mc-duration-normal) var(--mc-ease-standard);
+}
+
+.mc-title-poster-wrap:hover .title-poster {
+  transform: translateY(-3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mc-title-poster-wrap .title-poster {
+    transition: none;
+  }
+
+  .mc-title-poster-wrap:hover .title-poster {
+    transform: none;
+  }
+}
+
+/* =====================================================================
+   Main column: type badge, title, meta, ratings, actions
+   ===================================================================== */
+
+.mc-title-main {
+  min-width: 0;
+  flex: 1 1 auto;
+  max-width: 760px;
+}
+
+.mc-title-main h1 {
+  /*
+   * Fluid, not the flat --mc-text-display-size: the hero's text column
+   * shares its row with a fixed-width poster, so the space actually
+   * available to h1 shrinks continuously as the viewport narrows (not in
+   * neat steps). A static size left a gap around 768-1024px where 44px
+   * text plus the poster no longer fit the row, wrapping mid-word.
+   */
+  font-size: clamp(30px, 4vw + 14px, var(--mc-text-display-size));
+  line-height: var(--mc-text-display-line);
+  font-weight: var(--mc-text-display-weight);
+  letter-spacing: var(--mc-text-display-tracking);
+  /*
+   * break-word (not anywhere): only splits a single word that truly
+   * cannot fit its own line. `anywhere` also influences normal wrapping
+   * and was observed picking a mid-word break ("Breaki" / "ng Bad") at
+   * 768px even though breaking at the existing space also fit.
+   */
+  overflow-wrap: break-word;
+}
+
+@media (max-width: 860px) {
+  .mc-title-main h1 {
+    font-size: 30px;
+    letter-spacing: -0.01em;
+  }
+}
+
+.mc-title-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mc-space-8);
+  margin-top: var(--mc-space-16);
+}
+
+.mc-title-meta-row .title-rating {
+  background: rgba(var(--mc-color-scrim), 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+}
+
+.mc-title-actions {
+  margin-top: var(--mc-space-24);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mc-space-8);
+}
+
+@media (max-width: 700px) {
+  .mc-title-actions {
+    margin-top: var(--mc-space-20);
+  }
+
+  .mc-title-actions .mc-btn {
+    flex: 1 1 auto;
+  }
+}
+
+/*
+ * The legacy `.btn`/`.favorite-btn` rules (app/globals.css) never define
+ * :focus-visible — keyboard focus fell back to the browser default ring.
+ * Scoped here (not globally) to avoid restyling every other `.btn` in the
+ * app outside this page.
+ */
+.mc-title-actions .btn:focus-visible {
+  outline: none;
+  box-shadow: var(--mc-focus-ring);
+}
+
+/* =====================================================================
+   Content tabs
+   ===================================================================== */
+
+.mc-title-tabs {
+  position: sticky;
+  top: var(--mc-space-8);
+  z-index: var(--mc-z-sticky);
+  max-width: var(--mc-container-wide);
+  margin: var(--mc-space-24) auto;
+  padding: 0 var(--mc-gutter-desktop);
+}
+
+@media (max-width: 1024px) {
+  .mc-title-tabs {
+    padding: 0 var(--mc-gutter-tablet);
+  }
+}
+
+@media (max-width: 700px) {
+  .mc-title-tabs {
+    padding: 0 var(--mc-gutter-mobile);
+  }
+}
+
+/*
+ * The nav keeps the legacy `.title-content-tabs` class (QA scripts across
+ * C1.1.5-C1.2.5 select tabs by id, not by class, but this class predates
+ * that and other code may still reference it) — its sticky/margin from
+ * app/globals.css now belongs to the `.mc-title-tabs` wrapper instead, so
+ * reset it here at higher specificity rather than editing the legacy line.
+ */
+.mc-title-tabs .title-content-tabs.mc-title-tabs-track {
+  position: static;
+  top: auto;
+  margin: 0;
+}
+
+.mc-title-tabs-track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: var(--mc-space-4);
+  padding: var(--mc-space-4);
+  border-radius: var(--mc-radius-pill);
+  border: var(--mc-border-subtle);
+  background: color-mix(in srgb, var(--mc-color-surface) 92%, transparent);
+  backdrop-filter: blur(14px);
+  overflow-x: auto;
+}
+
+@media (max-width: 600px) {
+  .mc-title-tabs-track {
+    grid-auto-columns: minmax(120px, 1fr);
+  }
+}
+
+.mc-title-tab {
+  min-width: 0;
+  padding: var(--mc-space-12) var(--mc-space-8);
+  border: none;
+  border-radius: var(--mc-radius-pill);
+  background: transparent;
+  color: var(--mc-color-text-secondary);
+  font-size: var(--mc-text-caption-size);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  position: relative;
+  transition: background var(--mc-duration-fast) var(--mc-ease-standard),
+    color var(--mc-duration-fast) var(--mc-ease-standard);
+}
+
+.mc-title-tab:hover {
+  color: var(--mc-color-text);
+}
+
+.mc-title-tab.active {
+  background: var(--mc-color-accent);
+  color: var(--mc-color-accent-contrast);
+  font-weight: 800;
+  box-shadow: var(--mc-shadow-sm);
+}
+
+.mc-title-tab:focus-visible {
+  outline: none;
+  box-shadow: var(--mc-focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mc-title-tab {
+    transition: none;
+  }
+}
+
+/* =====================================================================
+   Overview section: editorial content vs. operational sidebar
+   ===================================================================== */
+
+.mc-title-overview-section {
+  max-width: var(--mc-container-wide);
+  margin: 0 auto var(--mc-space-40);
+  padding: 0 var(--mc-gutter-desktop);
+}
+
+@media (max-width: 1024px) {
+  .mc-title-overview-section {
+    padding: 0 var(--mc-gutter-tablet);
+  }
+}
+
+@media (max-width: 700px) {
+  .mc-title-overview-section {
+    padding: 0 var(--mc-gutter-mobile);
+    margin-bottom: var(--mc-space-32);
+  }
+}
+
+.mc-title-overview-section .title-overview {
+  max-width: var(--mc-container-reading);
+  font-size: var(--mc-text-body-size);
+  line-height: var(--mc-text-body-line);
+  color: var(--mc-color-text-secondary);
+}
+
+.mc-title-overview-section .title-section-heading span {
+  color: var(--mc-color-accent);
+  font-size: var(--mc-text-overline-size);
+  font-weight: var(--mc-text-overline-weight);
+  letter-spacing: var(--mc-text-overline-tracking);
+}
+
+.mc-title-overview-section .title-section-heading h2,
+.mc-title-overview-section .title-section-heading h3 {
+  font-size: var(--mc-text-h2-size);
+  line-height: var(--mc-text-h2-line);
+  font-weight: var(--mc-text-h2-weight);
+  letter-spacing: var(--mc-text-h2-tracking);
+}
+
+.mc-title-overview-section .title-sidebar {
+  top: calc(var(--mc-space-8) + 56px);
+}
+
+.mc-title-overview-section .title-status-card {
+  border-radius: var(--mc-radius-lg);
+  box-shadow: var(--mc-shadow-md);
+}
+
+/*
+ * The legacy `.title-status-select` (app/globals.css) hardcodes a dark
+ * background + white text, so in light theme it rendered as a near-black
+ * box instead of a normal control — light theme not treated as
+ * first-class. Themed via tokens instead.
+ */
+.mc-title-overview-section .title-status-select {
+  background: var(--mc-color-surface-muted);
+  color: var(--mc-color-text);
+  border-color: var(--mc-color-border);
+}
+
+.mc-title-overview-section .title-status-select:focus {
+  border-color: var(--mc-color-accent);
+  outline: none;
+  box-shadow: var(--mc-focus-ring);
+}
+
+/* =====================================================================
+   Info-tab sections below the fold: TV, providers, trailer, stats
+   ===================================================================== */
+
+.mc-title-section {
+  max-width: var(--mc-container-wide);
+  margin: 0 auto var(--mc-space-40);
+  padding: 0 var(--mc-gutter-desktop);
+}
+
+@media (max-width: 1024px) {
+  .mc-title-section {
+    padding: 0 var(--mc-gutter-tablet);
+  }
+}
+
+@media (max-width: 700px) {
+  .mc-title-section {
+    padding: 0 var(--mc-gutter-mobile);
+    margin-bottom: var(--mc-space-32);
+  }
+}
+
+/* =====================================================================
+   Cast tab
+   ===================================================================== */
+
+.mc-title-cast-avatar {
+  position: relative;
+  isolation: isolate;
+  width: 58px;
+  height: 58px;
+  flex: 0 0 58px;
+  border-radius: var(--mc-radius-md);
+  overflow: hidden;
+  background: var(--mc-color-surface-muted);
+}
+
+.mc-title-cast-card-media {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  background: var(--mc-color-surface-muted);
+}
+
+/* =====================================================================
+   Watch providers
+   ===================================================================== */
+
+.mc-title-provider-logo {
+  position: relative;
+  isolation: isolate;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: var(--mc-radius-sm);
+  overflow: hidden;
+}
+
+.mc-title-section .title-person-link:focus-visible,
+.mc-title-section .title-cast-card:focus-visible,
+.mc-title-section .title-recommendation-card:focus-visible {
+  outline: none;
+  box-shadow: var(--mc-focus-ring);
+}
+
+/* =====================================================================
+   Related
+   ===================================================================== */
+
+.mc-title-recommendation-media {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  background: var(--mc-color-surface-muted);
+}
+
+/* =====================================================================
+   Loading / error / missing states
+   ===================================================================== */
+
+.mc-title-status-page {
+  max-width: var(--mc-container-wide);
+  margin: 0 auto;
+  padding: var(--mc-space-24) var(--mc-gutter-desktop) var(--mc-space-64);
+}
+
+@media (max-width: 700px) {
+  .mc-title-status-page {
+    padding: var(--mc-space-16) var(--mc-gutter-mobile) var(--mc-space-48);
+  }
+}
+
+.mc-title-skeleton-hero {
+  border-radius: var(--mc-radius-lg);
+  border: var(--mc-border-subtle);
+  background: var(--mc-color-surface);
+  min-height: 440px;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--mc-space-32);
+  padding: var(--mc-space-40);
+}
+
+@media (max-width: 700px) {
+  .mc-title-skeleton-hero {
+    min-height: 0;
+    flex-direction: column;
+    padding: var(--mc-space-24) var(--mc-space-16);
+  }
+}
+
+.mc-title-skeleton-poster {
+  flex: 0 0 200px;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--mc-radius-md);
+}
+
+@media (max-width: 700px) {
+  .mc-title-skeleton-poster {
+    flex-basis: 128px;
+    width: 128px;
+  }
+}
+
+.mc-title-skeleton-lines {
+  flex: 1 1 auto;
+  display: grid;
+  gap: var(--mc-space-12);
+  max-width: 520px;
+}
+
+.mc-title-empty-state {
+  padding: var(--mc-space-32);
+  border-radius: var(--mc-radius-lg);
+  border: var(--mc-border-subtle);
+  background: var(--mc-color-surface-muted);
+  color: var(--mc-color-text-secondary);
+  font-size: var(--mc-text-body-small-size);
+  text-align: center;
+}
+
+.mc-title-error-card {
+  max-width: 480px;
+  margin: var(--mc-space-96) auto;
+  padding: var(--mc-space-32);
+  border-radius: var(--mc-radius-lg);
+  border: var(--mc-border-subtle);
+  background: var(--mc-color-surface);
+  box-shadow: var(--mc-shadow-md);
+  text-align: center;
+  display: grid;
+  gap: var(--mc-space-16);
+  justify-items: center;
+}
+
+.mc-title-error-card p {
+  color: var(--mc-color-text-secondary);
+  font-size: var(--mc-text-body-size);
+  line-height: var(--mc-text-body-line);
+  margin: 0;
+}

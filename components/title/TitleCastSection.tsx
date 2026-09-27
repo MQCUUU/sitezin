@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Building2, UserRound, Users } from "lucide-react";
 
-import { img } from "@/lib/tmdb";
+import { Poster } from "@/components/Poster";
 
 export type TitleCastSectionProps = {
   directors: any[];
@@ -32,7 +32,7 @@ export function TitleCastSection({
           id="title-tabpanel-cast-1"
           aria-labelledby="title-tab-cast"
         >
-          <section className="section">
+          <section className="section mc-title-section">
             <div className="title-section-heading">
               <span>Produção</span>
 
@@ -59,18 +59,14 @@ export function TitleCastSection({
                   }}
                 >
                   {person.profile_path ? (
-                    <img
-                      loading="lazy"
-                      decoding="async"
-                      src={img(person.profile_path, "w185")}
-                      alt={person.name}
-                      style={{
-                        width: "58px",
-                        height: "58px",
-                        objectFit: "cover",
-                        borderRadius: "12px",
-                      }}
-                    />
+                    <div className="mc-title-cast-avatar">
+                      <Poster
+                        path={person.profile_path}
+                        alt={person.name}
+                        sizes="58px"
+                        tmdbSize="w185"
+                      />
+                    </div>
                   ) : (
                     <UserRound size={28} />
                   )}
@@ -98,18 +94,14 @@ export function TitleCastSection({
                   }}
                 >
                   {person.profile_path ? (
-                    <img
-                      loading="lazy"
-                      decoding="async"
-                      src={img(person.profile_path, "w185")}
-                      alt={person.name}
-                      style={{
-                        width: "58px",
-                        height: "58px",
-                        objectFit: "cover",
-                        borderRadius: "12px",
-                      }}
-                    />
+                    <div className="mc-title-cast-avatar">
+                      <Poster
+                        path={person.profile_path}
+                        alt={person.name}
+                        sizes="58px"
+                        tmdbSize="w185"
+                      />
+                    </div>
                   ) : (
                     <UserRound size={28} />
                   )}
@@ -134,7 +126,7 @@ export function TitleCastSection({
           id="title-tabpanel-cast-2"
           aria-labelledby="title-tab-cast"
         >
-          <section className="section">
+          <section className="section mc-title-section">
             <div className="title-section-heading">
               <span>Elenco</span>
 
@@ -156,18 +148,14 @@ export function TitleCastSection({
                   style={{ overflow: "hidden", padding: 0 }}
                 >
                   {person.profile_path ? (
-                    <img
-                      loading="lazy"
-                      decoding="async"
-                      src={img(person.profile_path, "w185")}
-                      alt={person.name}
-                      style={{
-                        width: "100%",
-                        aspectRatio: "2 / 3",
-                        objectFit: "cover",
-                        display: "block",
-                      }}
-                    />
+                    <div className="mc-title-cast-card-media">
+                      <Poster
+                        path={person.profile_path}
+                        alt={person.name}
+                        sizes="(max-width: 700px) 45vw, 150px"
+                        tmdbSize="w185"
+                      />
+                    </div>
                   ) : (
                     <div
                       style={{
@@ -215,7 +203,7 @@ export function TitleCastSection({
           id="title-tabpanel-cast-3"
           aria-labelledby="title-tab-cast"
         >
-          <section className="section">
+          <section className="section mc-title-section">
             <div className="title-section-heading">
               <span>Produção</span>
 
@@ -250,8 +238,10 @@ export function TitleCastSection({
           id="title-tabpanel-cast-4"
           aria-labelledby="title-tab-cast"
         >
-          <div className="empty">
-            Nenhuma informação de elenco ou equipe disponível.
+          <div className="mc-title-section">
+            <div className="mc-title-empty-state">
+              Nenhuma informação de elenco ou equipe disponível.
+            </div>
           </div>
         </div>
       )}

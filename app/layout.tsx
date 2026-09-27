@@ -9,6 +9,7 @@ import "@/styles/media-card.css";
 import "@/styles/home.css";
 import "@/styles/discover.css";
 import "@/styles/search.css";
+import "@/styles/title.css";
 
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";

@@ -24,11 +24,12 @@ export function TitleContentTabs({
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   return (
-    <nav
-      className="title-content-tabs"
-      role="tablist"
-      aria-label="Seções do título"
-    >
+    <div className="mc-title-tabs">
+      <nav
+        className="title-content-tabs mc-title-tabs-track"
+        role="tablist"
+        aria-label="Seções do título"
+      >
       {CONTENT_TABS.map(([value, label], index) => (
         <button
           key={value}
@@ -39,9 +40,15 @@ export function TitleContentTabs({
           role="tab"
           id={`title-tab-${value}`}
           aria-selected={contentTab === value}
-          aria-controls={getContentTabPanelIds(value, panelIdsCtx)}
+          aria-controls={
+            contentTab === value
+              ? getContentTabPanelIds(value, panelIdsCtx)
+              : undefined
+          }
           tabIndex={contentTab === value ? 0 : -1}
-          className={contentTab === value ? "active" : ""}
+          className={
+            contentTab === value ? "active mc-title-tab" : "mc-title-tab"
+          }
           onClick={() => onContentTabChange(value)}
           onKeyDown={(event: KeyboardEvent<HTMLButtonElement>) => {
             let nextIndex: number | null = null;
@@ -67,6 +74,7 @@ export function TitleContentTabs({
           {label}
         </button>
       ))}
-    </nav>
+      </nav>
+    </div>
   );
 }

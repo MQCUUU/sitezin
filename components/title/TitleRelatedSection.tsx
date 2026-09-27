@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Star } from "lucide-react";
 
 import { CarouselRail } from "@/components/CarouselRail";
-import { img } from "@/lib/tmdb";
+import { Poster } from "@/components/Poster";
 import type { TitleType } from "./types";
 
 export type TitleRelatedSectionProps = {
@@ -28,7 +28,11 @@ export function TitleRelatedSection({
         id="title-tabpanel-related-1"
         aria-labelledby="title-tab-related"
       >
-        <div className="empty">Nenhum título relacionado disponível.</div>
+        <div className="mc-title-section">
+          <div className="mc-title-empty-state">
+            Nenhum título relacionado disponível.
+          </div>
+        </div>
       </div>
     );
   }
@@ -39,7 +43,7 @@ export function TitleRelatedSection({
       id="title-tabpanel-related-2"
       aria-labelledby="title-tab-related"
     >
-      <section className="section">
+      <section className="section mc-title-section">
         <div className="title-section-heading">
           <span>Recomendações</span>
 
@@ -54,18 +58,13 @@ export function TitleRelatedSection({
               className="panel title-recommendation-card"
               style={{ overflow: "hidden", padding: 0, textDecoration: "none" }}
             >
-              <img
-                loading="lazy"
-                decoding="async"
-                src={img(item.poster_path)}
-                alt={item.title || item.name}
-                style={{
-                  width: "100%",
-                  aspectRatio: "2 / 3",
-                  objectFit: "cover",
-                  display: "block",
-                }}
-              />
+              <div className="mc-title-recommendation-media">
+                <Poster
+                  path={item.poster_path}
+                  alt={item.title || item.name}
+                  sizes="(max-width: 700px) 45vw, 210px"
+                />
+              </div>
 
               <div style={{ padding: "11px" }}>
                 <strong style={{ display: "block", fontSize: "14px" }}>

@@ -1,5 +1,13 @@
-import { Search } from "@/components/Search";
+import { AlertTriangle, SearchX } from "lucide-react";
 
+import { Search } from "@/components/Search";
+import { Button, Skeleton } from "@/components/ui";
+
+/**
+ * Skeleton com a MESMA forma do hero real (backdrop/poster/linhas de
+ * texto/ações), em vez de um spinner genérico — evita o "salto" visual
+ * entre o loading e o conteúdo real assim que `initialDetails` chega.
+ */
 export function TitleLoadingState() {
   return (
     <>
@@ -7,8 +15,22 @@ export function TitleLoadingState() {
         <Search />
       </div>
 
-      <div className="empty">
-        Carregando título...
+      <div className="mc-title-status-page">
+        <div className="mc-title-skeleton-hero">
+          <Skeleton className="mc-title-skeleton-poster" />
+
+          <div className="mc-title-skeleton-lines">
+            <Skeleton width="35%" height={12} />
+            <Skeleton width="70%" height={34} />
+            <Skeleton width="90%" height={14} />
+            <Skeleton width="55%" height={14} />
+
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <Skeleton width={120} height={40} radius="var(--mc-radius-pill)" />
+              <Skeleton width={100} height={40} radius="var(--mc-radius-pill)" />
+            </div>
+          </div>
+        </div>
       </div>
     </>
   );
@@ -26,11 +48,16 @@ export function TitleErrorState({ message, onRetry }: TitleErrorStateProps) {
         <Search />
       </div>
 
-      <div className="empty">
-        <p>{message}</p>
-        <button className="btn" onClick={onRetry}>
-          Tentar novamente
-        </button>
+      <div className="mc-title-status-page">
+        <div className="mc-title-error-card" role="alert">
+          <AlertTriangle size={28} color="var(--mc-color-danger)" />
+
+          <p>{message}</p>
+
+          <Button variant="primary" onClick={onRetry}>
+            Tentar novamente
+          </Button>
+        </div>
       </div>
     </>
   );
@@ -49,7 +76,13 @@ export function TitleMissingState() {
         <Search />
       </div>
 
-      <div className="empty">Título não encontrado.</div>
+      <div className="mc-title-status-page">
+        <div className="mc-title-error-card">
+          <SearchX size={28} color="var(--mc-color-text-muted)" />
+
+          <p>Título não encontrado.</p>
+        </div>
+      </div>
     </>
   );
 }
