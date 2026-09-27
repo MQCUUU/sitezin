@@ -49,6 +49,14 @@ export type MediaPreviewData = {
  * exposed from inside any of the four audited preview modals today, so
  * they're intentionally left out here rather than invented (C2.1 spec §11).
  *
+ * Favorite is deliberately NOT part of this contract — it's a real action,
+ * but only one surface (PosterGrid: Home/Library/Favorites) has it. Rather
+ * than teach the shared core a "favorite" domain concept for one consumer,
+ * PosterGrid renders its own favorite button and passes it through
+ * `MediaPreviewDialog`'s generic `extraActions` slot (C2.4.6) — the core
+ * only knows "the surface supplied some extra action content", never what
+ * that content means.
+ *
  * `disabled` is a single flat boolean by design: Discover/Search already
  * pass a flat `isProcessing` boolean, while For You/Collection derive one
  * locally from a page-wide `processing: string | null` key
@@ -64,3 +72,6 @@ export type MediaPreviewActionsConfig = {
 };
 
 export type MediaPreviewProvidersSlot = ReactNode;
+
+/** Generic, opaque extension point for a surface-owned action the core doesn't need to understand (C2.4.6). */
+export type MediaPreviewExtraActionsSlot = ReactNode;

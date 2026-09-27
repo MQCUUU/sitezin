@@ -6,6 +6,7 @@ import { MediaPreviewActions } from "./MediaPreviewActions";
 import type {
   MediaPreviewActionsConfig,
   MediaPreviewData,
+  MediaPreviewExtraActionsSlot,
   MediaPreviewProvidersSlot,
 } from "./types";
 
@@ -13,6 +14,7 @@ export type MediaPreviewContentProps = {
   data: MediaPreviewData;
   actions?: MediaPreviewActionsConfig;
   providers?: MediaPreviewProvidersSlot;
+  extraActions?: MediaPreviewExtraActionsSlot;
   titleId: string;
 };
 
@@ -27,7 +29,7 @@ function formatRuntime(minutes: number) {
  * Purely presentational: it renders exactly the MediaPreviewData contract
  * it's given and never knows which of the four surfaces produced it.
  */
-export function MediaPreviewContent({ data, actions, providers, titleId }: MediaPreviewContentProps) {
+export function MediaPreviewContent({ data, actions, providers, extraActions, titleId }: MediaPreviewContentProps) {
   const year = (data.releaseDate || "").slice(0, 4);
   const rating = data.voteAverage && data.voteAverage > 0 ? data.voteAverage.toFixed(1) : null;
   const titleHref = `/title/${data.mediaType}/${data.id}`;
@@ -98,6 +100,8 @@ export function MediaPreviewContent({ data, actions, providers, titleId }: Media
 
           <div className="mc-preview-footer">
             <MediaPreviewActions data={data} actions={actions} />
+
+            {extraActions}
 
             <Link href={titleHref} className="btn mc-preview-full-link">
               Ver página completa

@@ -2,6 +2,8 @@ import type { DiscoverItem, Genre } from "@/components/discover/types";
 import { getStatusLabel as getDiscoverStatusLabel } from "@/components/discover/types";
 import type { LibraryState, SearchItem } from "@/components/search/page/types";
 import { getStatusLabel as getSearchStatusLabel } from "@/components/search/page/types";
+import type { LibraryItem } from "@/lib/types";
+import { STATUS_LABELS } from "@/lib/types";
 
 import type { MediaPreviewData } from "./types";
 
@@ -156,6 +158,56 @@ export function fromLooseMediaItem(
       libraryItem?.library_id ?? null,
       libraryItem ? getSearchStatusLabel(libraryItem.status) : null,
       libraryItem?.personal_rating
+    ),
+  };
+}
+
+function genreName(genre: { id: number; name: string } | string): string | null {
+  if (typeof genre === "string") {
+    // PosterGrid's legacy preview defends against genres stored as a raw JSON string — preserved here.
+    try {
+      const parsed = JSON.parse(genre);
+      return parsed?.name || genre;
+    } catch {
+      return genre;
+    }
+  }
+  return genre?.name || null;
+}
+
+/**
+ * PosterGrid (Home/Library/Favorites) is the richest of the five sources —
+ * `LibraryItem` (lib/types.ts) already carries poster/backdrop/genres/
+ * runtime/overview directly, with no separate `details` fetch merged in for
+ * any of those fields (the old preview only ever fetched `details` for
+ * watch providers). No details param here by design — preserving that
+ * exactly, not inventing a merge the legacy preview never had (C2.4 §14).
+ *
+ * `item.favorite` is deliberately NOT carried into the normalized model —
+ * favorite is PosterGrid-only behavior, not a shared preview concept (see
+ * MediaPreviewExtraActionsSlot in ./types, C2.4.6).
+ */
+export function fromLibraryItem(item: LibraryItem): MediaPreviewData {
+  const genres = (item.genres || [])
+    .map((genre) => genreName(genre as { id: number; name: string } | string))
+    .filter((name): name is string => Boolean(name));
+
+  return {
+    id: item.tmdb_id,
+    mediaType: item.media_type,
+    title: item.title,
+    originalTitle: item.original_title || null,
+    overview: item.overview || null,
+    posterPath: item.poster_path || null,
+    backdropPath: item.backdrop_path || null,
+    releaseDate: item.release_date || item.first_air_date || null,
+    runtime: item.runtime ?? null,
+    genres,
+    voteAverage: item.tmdb_rating ?? null,
+    libraryState: libraryStateFrom(
+      item.library_id,
+      STATUS_LABELS[item.status] || null,
+      item.personal_rating
     ),
   };
 }

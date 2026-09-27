@@ -5,7 +5,12 @@ import { X } from "lucide-react";
 
 import { Dialog } from "@/components/ui/Dialog";
 import { MediaPreviewContent } from "./MediaPreviewContent";
-import type { MediaPreviewActionsConfig, MediaPreviewData, MediaPreviewProvidersSlot } from "./types";
+import type {
+  MediaPreviewActionsConfig,
+  MediaPreviewData,
+  MediaPreviewExtraActionsSlot,
+  MediaPreviewProvidersSlot,
+} from "./types";
 
 export type MediaPreviewDialogProps = {
   open: boolean;
@@ -18,6 +23,12 @@ export type MediaPreviewDialogProps = {
    * the core never fetches or knows about providers itself (C2.1 spec §10, §28).
    */
   providers?: MediaPreviewProvidersSlot;
+  /**
+   * Opaque extension point for a surface-owned action the core doesn't need
+   * to understand (e.g. PosterGrid's favorite toggle — C2.4.6). The core
+   * only renders whatever's passed; it never knows what it does.
+   */
+  extraActions?: MediaPreviewExtraActionsSlot;
 };
 
 /**
@@ -29,7 +40,7 @@ export type MediaPreviewDialogProps = {
  *
  * No surface has been migrated onto this yet — it's the foundation only.
  */
-export function MediaPreviewDialog({ open, onClose, data, actions, providers }: MediaPreviewDialogProps) {
+export function MediaPreviewDialog({ open, onClose, data, actions, providers, extraActions }: MediaPreviewDialogProps) {
   const titleId = useId();
 
   if (!data) return null;
@@ -40,7 +51,7 @@ export function MediaPreviewDialog({ open, onClose, data, actions, providers }: 
         <X size={18} />
       </button>
 
-      <MediaPreviewContent data={data} actions={actions} providers={providers} titleId={titleId} />
+      <MediaPreviewContent data={data} actions={actions} providers={providers} extraActions={extraActions} titleId={titleId} />
     </Dialog>
   );
 }

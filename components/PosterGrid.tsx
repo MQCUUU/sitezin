@@ -32,6 +32,9 @@ import {
 
 import { useEffect, useState } from "react";
 
+import { MediaPreviewDialog } from "@/components/media/preview/MediaPreviewDialog";
+import { fromLibraryItem } from "@/components/media/preview/adapters";
+
 type ViewMode =
   | "grid"
   | "compact"
@@ -76,11 +79,12 @@ export function PosterGrid({
   const [removeTarget, setRemoveTarget] =
     useState<LibraryItem | null>(null);
 
+/*
+ * Escape/scroll-lock for previewItem now come from MediaPreviewDialog's
+ * underlying Dialog (C2.4) — this effect covers removeTarget only.
+ */
 useEffect(() => {
-  if (
-    !previewItem &&
-    !removeTarget
-  ) {
+  if (!removeTarget) {
     return;
   }
 
@@ -94,7 +98,6 @@ useEffect(() => {
       return;
     }
 
-    setPreviewItem(null);
     setRemoveTarget(null);
   }
 
@@ -115,7 +118,7 @@ useEffect(() => {
       handleModalKeyDown,
     );
   };
-}, [previewItem, removeTarget]);
+}, [removeTarget]);
 
   const [
   skipRemoveConfirm,
@@ -1038,86 +1041,6 @@ useEffect(() => {
   }
 
 
-  function getStatus(
-    item: LibraryItem
-  ) {
-    switch (item.status) {
-      case "watching":
-        return {
-          label: "ASSISTINDO",
-          icon: (
-            <Play
-              size={11}
-              fill="currentColor"
-            />
-          ),
-          className:
-            "status-watching",
-        };
-
-      case "watched":
-        return {
-          label: "ASSISTIDO",
-          icon: <Check size={11} />,
-          className:
-            "status-watched",
-        };
-
-      case "want":
-        return {
-          label: "QUERO ASSISTIR",
-          icon: <Clock size={11} />,
-          className:
-            "status-want",
-        };
-
-      case "dropped":
-        return {
-          label: "ABANDONEI",
-          icon: (
-            <Trash2 size={11} />
-          ),
-          className:
-            "status-dropped",
-        };
-
-      case "rewatching":
-        return {
-          label: "REASSISTINDO",
-          icon: (
-            <Play
-              size={11}
-              fill="currentColor"
-            />
-          ),
-          className:
-            "status-rewatching",
-        };
-
-      case "rewatched":
-        return {
-          label: "REASSISTIDO",
-          icon: <Check size={11} />,
-          className:
-            "status-rewatched",
-        };
-
-      default:
-        return {
-          label:
-            STATUS_LABELS[
-              item.status as keyof typeof STATUS_LABELS
-            ] ||
-            String(
-              item.status || ""
-            ).toUpperCase(),
-          icon: null,
-          className:
-            "status-default",
-        };
-    }
-  }
-
 
   function toggleStatusMenuWithoutScroll(
     key: string | number
@@ -1132,401 +1055,25 @@ useEffect(() => {
     );
   }
 
-
-  function ActionButtons({
-    item,
-  }: {
-    item: LibraryItem;
-  }) {
-    const busy =
-      processing ===
-      item.library_id;
-
-    const menuOpen =
-      openStatusMenu ===
-      item.library_id;
-
-    return (
-      <>
-        <MediaCardActions>
-
-          <button
-            type="button"
-            className="card-action"
-            title="Preview rápido"
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-
-              setPreviewItem(
-                item
-              );
-            }}
-          >
-            <Eye size={17} />
-          </button>
-
-          <button
-            type="button"
-            className={
-              item.favorite
-                ? "card-action active"
-                : "card-action"
-            }
-            title={
-              item.favorite
-                ? "Remover dos curtidos"
-                : "Curtir"
-            }
-            disabled={busy}
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-
-              toggleFavorite(
-                item
-              );
-            }}
-          >
-            <Heart
-              size={17}
-              fill={
-                item.favorite
-                  ? "currentColor"
-                  : "none"
-              }
-            />
-          </button>
-
-          <button
-            type="button"
-            className="card-action active library-status-action"
-            title="Alterar status"
-            disabled={busy}
-            onMouseDown={(event) => {
-              event.preventDefault();
-            }}
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-
-              toggleStatusMenuWithoutScroll(
-                item.library_id
-              );
-            }}
-          >
-            {busy ? (
-              <Loader2
-                size={16}
-                className="spin"
-              />
-            ) : (
-              <>
-                <Check size={15} />
-                <ChevronDown size={11} />
-              </>
-            )}
-          </button>
-
-        </MediaCardActions>
-
-        {menuOpen && (
-          <div
-            className="library-card-status-menu"
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-            }}
-          >
-            <div className="library-card-status-menu-title">
-              Alterar status
-            </div>
-
-            {Object.entries(
-              STATUS_LABELS
-            ).map(
-              ([value, label]) => (
-                <button
-                  type="button"
-                  key={value}
-                  className={
-                    item.status ===
-                    value
-                      ? "active"
-                      : ""
-                  }
-                  disabled={busy}
-                  onMouseDown={(
-                    event
-                  ) => {
-                    event.preventDefault();
-                  }}
-                  onClick={() =>
-                    changeStatus(
-                      item,
-                      value
-                    )
-                  }
-                >
-                  <span>
-                    {label}
-                  </span>
-
-                  {item.status ===
-                    value && (
-                    <Check
-                      size={14}
-                    />
-                  )}
-                </button>
-              )
-            )}
-
-            <div className="library-card-status-divider" />
-
-            <button
-              type="button"
-              className="remove"
-              disabled={busy}
-              onMouseDown={(
-                event
-              ) => {
-                event.preventDefault();
-              }}
-              onClick={() =>
-                requestRemove(item)
-              }
-            >
-              <Trash2 size={14} />
-              Remover da biblioteca
-            </button>
-          </div>
-        )}
-      </>
-    );
-  }
-
-  function Card({
-    item,
-  }: {
-    item: LibraryItem;
-  }) {
-    const status = getStatus(item);
-
-    const date =
-      item.media_type === "tv"
-        ? item.first_air_date
-        : item.release_date;
-
-    const year = date
-      ? new Date(date).getFullYear()
-      : null;
-
-    return (
-      <MediaCard>
-        <MediaCardImage>
-          <Link
-            href={`/title/${item.media_type}/${item.tmdb_id}`}
-            className="poster-link"
-          >
-            <Poster path={item.poster_path} alt={item.title} sizes="(max-width:700px) 46vw, (max-width:1100px) 24vw, 170px" />
-          </Link>
-
-          <span className="badge">
-            {item.media_type === "tv"
-              ? "SÉRIE"
-              : "FILME"}
-          </span>
-
-          <span
-            className={`card-status mc-media-card-status ${status.className}`}
-          >
-            {status.icon}
-            {status.label}
-          </span>
-
-          <ActionButtons
-            item={item}
-          />
-        </MediaCardImage>
-
-        <Link
-          href={`/title/${item.media_type}/${item.tmdb_id}`}
-          className="card-title"
-        >
-          {item.title}
-        </Link>
-
-        <MediaCardMeta>
-          {item.personal_rating !==
-            null &&
-          item.personal_rating !==
-            undefined ? (
-            <span className="rating">
-              <Star
-                size={12}
-                fill="currentColor"
-              />
-              {Number(
-                item.personal_rating
-              ).toFixed(1)}
-            </span>
-          ) : (
-            <span className="no-rating">
-              Sem nota
-            </span>
-          )}
-
-          {year && (
-            <span className="muted">
-              {year}
-            </span>
-          )}
-
-          {item.favorite && (
-            <span className="favorite-label">
-              <Heart
-                size={11}
-                fill="currentColor"
-              />
-              Curtido
-            </span>
-          )}
-        </MediaCardMeta>
-      </MediaCard>
-    );
-  }
-
-  function ListItem({
-    item,
-  }: {
-    item: LibraryItem;
-  }) {
-    const status = getStatus(item);
-
-    const date =
-      item.media_type === "tv"
-        ? item.first_air_date
-        : item.release_date;
-
-    const year = date
-      ? new Date(date).getFullYear()
-      : null;
-
-    return (
-      <div className="library-list-item">
-        <Link
-          href={`/title/${item.media_type}/${item.tmdb_id}`}
-          className="library-list-poster"
-        >
-          <Poster
-  path={item.poster_path}
-  alt={item.title}
-  sizes="80px"
-  tmdbSize="w342"
-/>
-        </Link>
-
-        <div className="library-list-info">
-          <div className="library-list-top">
-            <div>
-              <div className="library-list-type">
-                {item.media_type ===
-                "tv"
-                  ? "SÉRIE"
-                  : "FILME"}
-              </div>
-
-              <Link
-                href={`/title/${item.media_type}/${item.tmdb_id}`}
-                className="library-list-title"
-              >
-                {item.title}
-              </Link>
-            </div>
-
-            <ActionButtons
-              item={item}
-            />
-          </div>
-
-          <div className="library-list-meta">
-            <span
-              className={`card-status ${status.className}`}
-            >
-              {status.icon}
-              {status.label}
-            </span>
-
-            {year && (
-              <span>
-                {year}
-              </span>
-            )}
-
-            {item.personal_rating !==
-              null &&
-              item.personal_rating !==
-                undefined && (
-                <span className="rating">
-                  <Star
-                    size={12}
-                    fill="currentColor"
-                  />
-                  {Number(
-                    item.personal_rating
-                  ).toFixed(1)}
-                </span>
-              )}
-
-            {item.tmdb_rating !==
-              undefined &&
-              item.tmdb_rating !==
-                null && (
-                <span className="muted">
-                  TMDB{" "}
-                  {Number(
-                    item.tmdb_rating
-                  ).toFixed(1)}
-                </span>
-              )}
-
-            {item.favorite && (
-              <span className="favorite-label">
-                <Heart
-                  size={11}
-                  fill="currentColor"
-                />
-                Curtido
-              </span>
-            )}
-          </div>
-
-          {item.overview && (
-            <p className="library-list-overview">
-              {item.overview}
-            </p>
-          )}
-
-          {item.genres &&
-            item.genres.length > 0 && (
-              <div className="library-list-genres">
-                {item.genres
-                  .slice(0, 4)
-                  .map((itemGenre) => (
-                    <span
-                      key={itemGenre.id}
-                      className="chip"
-                    >
-                      {itemGenre.name}
-                    </span>
-                  ))}
-              </div>
-            )}
-        </div>
-      </div>
-    );
-  }
+  /*
+   * Card/ActionButtons/ListItem are module-level components (below) so
+   * their DOM nodes survive PosterGrid re-renders — a nested function
+   * component gets a new identity every render, forcing React to unmount
+   * and remount it (and its focused trigger button) even though its `key`
+   * doesn't change. That silently broke MediaPreviewDialog's focus-restore
+   * on close, since the button it needed to refocus no longer existed by
+   * the time the dialog closed. Bundling the action callbacks here keeps
+   * the three render call sites below simple.
+   */
+  const cardActionProps = {
+    processing,
+    openStatusMenu,
+    onPreview: setPreviewItem,
+    onToggleFavorite: toggleFavorite,
+    onToggleStatusMenu: toggleStatusMenuWithoutScroll,
+    onChangeStatus: changeStatus,
+    onRequestRemove: requestRemove,
+  };
 
   return (
     <div>
@@ -1596,7 +1143,7 @@ useEffect(() => {
       {carousel && viewMode !== "list" ? (
         <CarouselRail className="library-carousel">
           {localItems.map((item) => (
-            <Card key={item.library_id} item={item} />
+            <Card key={item.library_id} item={item} {...cardActionProps} />
           ))}
         </CarouselRail>
       ) : viewMode === "list" ? (
@@ -1605,6 +1152,7 @@ useEffect(() => {
             <ListItem
               key={item.library_id}
               item={item}
+              {...cardActionProps}
             />
           ))}
         </div>
@@ -1620,286 +1168,39 @@ useEffect(() => {
             <Card
               key={item.library_id}
               item={item}
+              {...cardActionProps}
             />
           ))}
         </div>
       )}
 
-      {previewItem && (
-        <div
-          className="library-preview-backdrop"
-          onClick={() =>
-            setPreviewItem(
-              null
-            )
-          }
-        >
-          <div
-  className="library-preview-modal"
-  role="dialog"
-  aria-modal="true"
-  aria-labelledby="library-preview-title"
-  onClick={(event) =>
-              event.stopPropagation()
-            }
-          >
+      <MediaPreviewDialog
+        open={Boolean(previewItem)}
+        onClose={() => setPreviewItem(null)}
+        data={previewItem ? fromLibraryItem(previewItem) : null}
+        actions={{
+          onRating: (_, rating) => previewItem && updatePersonalRating(previewItem, rating),
+          disabled: previewItem ? processing === previewItem.library_id : false,
+        }}
+        providers={<PreviewWatchProviders details={previewDetails} loading={previewDetailsLoading} />}
+        extraActions={
+          previewItem && (
             <button
               type="button"
-              className="library-preview-close"
-              onClick={() =>
-                setPreviewItem(
-                  null
-                )
+              className={
+                previewItem.favorite
+                  ? "btn primary mc-preview-favorite-btn"
+                  : "btn mc-preview-favorite-btn"
               }
-              title="Fechar"
-            
-              aria-label="Fechar prévia"
-
+              onClick={() => toggleFavorite(previewItem)}
+              disabled={processing === previewItem.library_id}
             >
-              ×
+              <Heart size={16} fill={previewItem.favorite ? "currentColor" : "none"} />
+              {previewItem.favorite ? "Curtido" : "Curtir"}
             </button>
-
-            <div className="library-preview-poster">
-              <img
-  src={img(
-    previewItem.poster_path
-  )}
-  alt={
-    previewItem.title
-  }
-  loading="lazy"
-/>
-            </div>
-
-            <div className="library-preview-content">
-              <div className="eyebrow">
-                {previewItem.media_type ===
-                "tv"
-                  ? "Série"
-                  : "Filme"}
-              </div>
-
-              <h2 id="library-preview-title">
-                {previewItem.title}
-              </h2>
-
-              <div className="library-preview-meta">
-                {(
-                  previewItem.media_type ===
-                    "tv"
-                    ? previewItem.first_air_date
-                    : previewItem.release_date
-                ) && (
-                  <span>
-                    {new Date(
-                      previewItem.media_type ===
-                        "tv"
-                        ? previewItem.first_air_date!
-                        : previewItem.release_date!
-                    ).getFullYear()}
-                  </span>
-                )}
-
-                {previewItem.tmdb_rating !==
-                  null &&
-                  previewItem.tmdb_rating !==
-                    undefined && (
-                  <span className="rating">
-                    <Star
-                      size={13}
-                      fill="currentColor"
-                    />
-                    {Number(
-                      previewItem.tmdb_rating
-                    ).toFixed(1)}
-                  </span>
-                )}
-
-                <span
-                  className={`card-status ${
-                    getStatus(
-                      previewItem
-                    ).className
-                  }`}
-                >
-                  {
-                    getStatus(
-                      previewItem
-                    ).icon
-                  }
-                  {
-                    getStatus(
-                      previewItem
-                    ).label
-                  }
-                </span>
-              </div>
-
-              {previewItem.genres &&
-                previewItem.genres.length >
-                  0 && (
-                <div className="library-preview-genres">
-                  {previewItem.genres
-                    .slice(0, 5)
-                    .map(
-                      (
-                        itemGenre: any
-                      ) => (
-                        <span
-                          key={
-                            typeof itemGenre ===
-                            "string"
-                              ? itemGenre
-                              : itemGenre.id ??
-                                itemGenre.name
-                          }
-                        >
-                          {typeof itemGenre === "string"
-  ? (() => {
-      try {
-        const parsed =
-          JSON.parse(itemGenre);
-
-        return (
-          parsed?.name ||
-          itemGenre
-        );
-      } catch {
-        return itemGenre;
-      }
-    })()
-  : itemGenre.name}
-                        </span>
-                      )
-                    )}
-                </div>
-              )}
-
-              <PreviewWatchProviders
-                details={previewDetails}
-                loading={previewDetailsLoading}
-              />
-
-              <div className="preview-personal-rating">
-                <div className="preview-personal-rating-head">
-                  <span>
-                    Minha nota
-                  </span>
-
-                  <strong>
-                    {previewItem.personal_rating !==
-                      null &&
-                    previewItem.personal_rating !==
-                      undefined
-                      ? Number(
-                          previewItem.personal_rating
-                        ).toFixed(1)
-                      : "Sem nota"}
-                  </strong>
-                </div>
-
-                <div className="preview-rating-options">
-                  {[1,2,3,4,5,6,7,8,9,10].map(
-                    (
-                      value
-                    ) => (
-                      <button
-                        type="button"
-                        key={
-                          value
-                        }
-                        className={
-                          Number(
-                            previewItem.personal_rating
-                          ) === value
-                            ? "active"
-                            : ""
-                        }
-                        disabled={
-                          processing ===
-                          previewItem.library_id
-                        }
-                        onClick={() =>
-                          updatePersonalRating(
-                            previewItem,
-                            value
-                          )
-                        }
-                      >
-                        {
-                          value
-                        }
-                      </button>
-                    )
-                  )}
-
-                  <button
-                    type="button"
-                    className="clear"
-                    disabled={
-                      processing ===
-                      previewItem.library_id
-                    }
-                    onClick={() =>
-                      updatePersonalRating(
-                        previewItem,
-                        null
-                      )
-                    }
-                  >
-                    Limpar
-                  </button>
-                </div>
-              </div>
-
-              <p className="library-preview-overview">
-                {previewItem.overview ||
-                  "Sinopse não disponível."}
-              </p>
-
-              <div className="library-preview-actions">
-                <Link
-                  href={`/title/${previewItem.media_type}/${previewItem.tmdb_id}`}
-                  className="btn primary"
-                >
-                  Ver página completa
-                </Link>
-
-                <button
-                  type="button"
-                  className={
-                    previewItem.favorite
-                      ? "btn primary"
-                      : "btn"
-                  }
-                  disabled={
-                    processing ===
-                    previewItem.library_id
-                  }
-                  onClick={() =>
-                    toggleFavorite(
-                      previewItem
-                    )
-                  }
-                >
-                  <Heart
-                    size={16}
-                    fill={
-                      previewItem.favorite
-                        ? "currentColor"
-                        : "none"
-                    }
-                  />
-
-                  {previewItem.favorite
-                    ? "Curtido"
-                    : "Curtir"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+          )
+        }
+      />
 
       {removeTarget && (
         <div
@@ -2014,6 +1315,301 @@ useEffect(() => {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function getStatus(item: LibraryItem) {
+  switch (item.status) {
+    case "watching":
+      return {
+        label: "ASSISTINDO",
+        icon: <Play size={11} fill="currentColor" />,
+        className: "status-watching",
+      };
+
+    case "watched":
+      return {
+        label: "ASSISTIDO",
+        icon: <Check size={11} />,
+        className: "status-watched",
+      };
+
+    case "want":
+      return {
+        label: "QUERO ASSISTIR",
+        icon: <Clock size={11} />,
+        className: "status-want",
+      };
+
+    case "dropped":
+      return {
+        label: "ABANDONEI",
+        icon: <Trash2 size={11} />,
+        className: "status-dropped",
+      };
+
+    case "rewatching":
+      return {
+        label: "REASSISTINDO",
+        icon: <Play size={11} fill="currentColor" />,
+        className: "status-rewatching",
+      };
+
+    case "rewatched":
+      return {
+        label: "REASSISTIDO",
+        icon: <Check size={11} />,
+        className: "status-rewatched",
+      };
+
+    default:
+      return {
+        label:
+          STATUS_LABELS[item.status as keyof typeof STATUS_LABELS] ||
+          String(item.status || "").toUpperCase(),
+        icon: null,
+        className: "status-default",
+      };
+  }
+}
+
+type CardActionProps = {
+  processing: string | number | null;
+  openStatusMenu: string | number | null;
+  onPreview: (item: LibraryItem) => void;
+  onToggleFavorite: (item: LibraryItem) => void;
+  onToggleStatusMenu: (key: string | number) => void;
+  onChangeStatus: (item: LibraryItem, status: string) => void;
+  onRequestRemove: (item: LibraryItem) => void;
+};
+
+function ActionButtons({
+  item,
+  processing,
+  openStatusMenu,
+  onPreview,
+  onToggleFavorite,
+  onToggleStatusMenu,
+  onChangeStatus,
+  onRequestRemove,
+}: CardActionProps & { item: LibraryItem }) {
+  const busy = processing === item.library_id;
+  const menuOpen = openStatusMenu === item.library_id;
+
+  return (
+    <>
+      <MediaCardActions>
+        <button
+          type="button"
+          className="card-action"
+          title="Preview rápido"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onPreview(item);
+          }}
+        >
+          <Eye size={17} />
+        </button>
+
+        <button
+          type="button"
+          className={item.favorite ? "card-action active" : "card-action"}
+          title={item.favorite ? "Remover dos curtidos" : "Curtir"}
+          disabled={busy}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onToggleFavorite(item);
+          }}
+        >
+          <Heart size={17} fill={item.favorite ? "currentColor" : "none"} />
+        </button>
+
+        <button
+          type="button"
+          className="card-action active library-status-action"
+          title="Alterar status"
+          disabled={busy}
+          onMouseDown={(event) => {
+            event.preventDefault();
+          }}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onToggleStatusMenu(item.library_id);
+          }}
+        >
+          {busy ? (
+            <Loader2 size={16} className="spin" />
+          ) : (
+            <>
+              <Check size={15} />
+              <ChevronDown size={11} />
+            </>
+          )}
+        </button>
+      </MediaCardActions>
+
+      {menuOpen && (
+        <div
+          className="library-card-status-menu"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+        >
+          <div className="library-card-status-menu-title">Alterar status</div>
+
+          {Object.entries(STATUS_LABELS).map(([value, label]) => (
+            <button
+              type="button"
+              key={value}
+              className={item.status === value ? "active" : ""}
+              disabled={busy}
+              onMouseDown={(event) => {
+                event.preventDefault();
+              }}
+              onClick={() => onChangeStatus(item, value)}
+            >
+              <span>{label}</span>
+              {item.status === value && <Check size={14} />}
+            </button>
+          ))}
+
+          <div className="library-card-status-divider" />
+
+          <button
+            type="button"
+            className="remove"
+            disabled={busy}
+            onMouseDown={(event) => {
+              event.preventDefault();
+            }}
+            onClick={() => onRequestRemove(item)}
+          >
+            <Trash2 size={14} />
+            Remover da biblioteca
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
+function Card({ item, ...actionProps }: CardActionProps & { item: LibraryItem }) {
+  const status = getStatus(item);
+  const date = item.media_type === "tv" ? item.first_air_date : item.release_date;
+  const year = date ? new Date(date).getFullYear() : null;
+
+  return (
+    <MediaCard>
+      <MediaCardImage>
+        <Link href={`/title/${item.media_type}/${item.tmdb_id}`} className="poster-link">
+          <Poster path={item.poster_path} alt={item.title} sizes="(max-width:700px) 46vw, (max-width:1100px) 24vw, 170px" />
+        </Link>
+
+        <span className="badge">{item.media_type === "tv" ? "SÉRIE" : "FILME"}</span>
+
+        <span className={`card-status mc-media-card-status ${status.className}`}>
+          {status.icon}
+          {status.label}
+        </span>
+
+        <ActionButtons item={item} {...actionProps} />
+      </MediaCardImage>
+
+      <Link href={`/title/${item.media_type}/${item.tmdb_id}`} className="card-title">
+        {item.title}
+      </Link>
+
+      <MediaCardMeta>
+        {item.personal_rating !== null && item.personal_rating !== undefined ? (
+          <span className="rating">
+            <Star size={12} fill="currentColor" />
+            {Number(item.personal_rating).toFixed(1)}
+          </span>
+        ) : (
+          <span className="no-rating">Sem nota</span>
+        )}
+
+        {year && <span className="muted">{year}</span>}
+
+        {item.favorite && (
+          <span className="favorite-label">
+            <Heart size={11} fill="currentColor" />
+            Curtido
+          </span>
+        )}
+      </MediaCardMeta>
+    </MediaCard>
+  );
+}
+
+function ListItem({ item, ...actionProps }: CardActionProps & { item: LibraryItem }) {
+  const status = getStatus(item);
+  const date = item.media_type === "tv" ? item.first_air_date : item.release_date;
+  const year = date ? new Date(date).getFullYear() : null;
+
+  return (
+    <div className="library-list-item">
+      <Link href={`/title/${item.media_type}/${item.tmdb_id}`} className="library-list-poster">
+        <Poster path={item.poster_path} alt={item.title} sizes="80px" tmdbSize="w342" />
+      </Link>
+
+      <div className="library-list-info">
+        <div className="library-list-top">
+          <div>
+            <div className="library-list-type">{item.media_type === "tv" ? "SÉRIE" : "FILME"}</div>
+
+            <Link href={`/title/${item.media_type}/${item.tmdb_id}`} className="library-list-title">
+              {item.title}
+            </Link>
+          </div>
+
+          <ActionButtons item={item} {...actionProps} />
+        </div>
+
+        <div className="library-list-meta">
+          <span className={`card-status ${status.className}`}>
+            {status.icon}
+            {status.label}
+          </span>
+
+          {year && <span>{year}</span>}
+
+          {item.personal_rating !== null && item.personal_rating !== undefined && (
+            <span className="rating">
+              <Star size={12} fill="currentColor" />
+              {Number(item.personal_rating).toFixed(1)}
+            </span>
+          )}
+
+          {item.tmdb_rating !== undefined && item.tmdb_rating !== null && (
+            <span className="muted">TMDB {Number(item.tmdb_rating).toFixed(1)}</span>
+          )}
+
+          {item.favorite && (
+            <span className="favorite-label">
+              <Heart size={11} fill="currentColor" />
+              Curtido
+            </span>
+          )}
+        </div>
+
+        {item.overview && <p className="library-list-overview">{item.overview}</p>}
+
+        {item.genres && item.genres.length > 0 && (
+          <div className="library-list-genres">
+            {item.genres.slice(0, 4).map((itemGenre) => (
+              <span key={itemGenre.id} className="chip">
+                {itemGenre.name}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
