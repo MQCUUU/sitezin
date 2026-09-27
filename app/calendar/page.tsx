@@ -486,11 +486,13 @@ export default function CalendarPage() {
         <div className="calendar-filters">
 
           <button
+            type="button"
             className={
               filter === "all"
                 ? "btn active"
                 : "btn"
             }
+            aria-pressed={filter === "all"}
             onClick={() =>
               setFilter(
                 "all"
@@ -501,11 +503,13 @@ export default function CalendarPage() {
           </button>
 
           <button
+            type="button"
             className={
               filter === "library"
                 ? "btn active"
                 : "btn"
             }
+            aria-pressed={filter === "library"}
             onClick={() =>
               setFilter(
                 "library"
@@ -516,11 +520,13 @@ export default function CalendarPage() {
           </button>
 
           <button
+            type="button"
             className={
               filter === "movie"
                 ? "btn active"
                 : "btn"
             }
+            aria-pressed={filter === "movie"}
             onClick={() =>
               setFilter(
                 "movie"
@@ -535,11 +541,13 @@ export default function CalendarPage() {
           </button>
 
           <button
+            type="button"
             className={
               filter === "tv"
                 ? "btn active"
                 : "btn"
             }
+            aria-pressed={filter === "tv"}
             onClick={() =>
               setFilter(
                 "tv"

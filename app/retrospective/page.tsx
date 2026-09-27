@@ -99,6 +99,9 @@ export default function RetrospectivePage() {
   const [error, setError] =
     useState("");
 
+  const [retryTick, setRetryTick] =
+    useState(0);
+
   /*
    * ==========================================
    * CARREGAR RETROSPECTIVA
@@ -154,7 +157,7 @@ export default function RetrospectivePage() {
     }
 
     load();
-  }, [year]);
+  }, [year, retryTick]);
 
   /*
    * ==========================================
@@ -605,7 +608,7 @@ export default function RetrospectivePage() {
 
       {loading && (
 
-        <div className="empty">
+        <div className="empty" role="status" aria-live="polite">
           Montando sua
           retrospectiva...
         </div>
@@ -615,8 +618,15 @@ export default function RetrospectivePage() {
       {!loading &&
         error && (
 
-        <div className="empty">
-          {error}
+        <div className="empty" role="alert">
+          <strong>{error}</strong>
+          <button
+            type="button"
+            className="btn primary"
+            onClick={() => setRetryTick((tick) => tick + 1)}
+          >
+            Tentar de novo
+          </button>
         </div>
 
       )}

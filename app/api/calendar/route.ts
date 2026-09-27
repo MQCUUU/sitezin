@@ -212,6 +212,25 @@ export async function GET(req: NextRequest) {
           return false;
         }
 
+        /*
+         * F1 — um filme já assistido nunca tem um evento de
+         * lançamento futuro: `calendarTMDB` faz DUAS chamadas TMDB
+         * (lightweightDetailsTMDB + movieReleaseDatesTMDB) só para
+         * devolver uma data que já passou. Pular esse fan-out é
+         * seguro e reduz o N+1 externo sem mudar nenhum resultado —
+         * essa combinação nunca produziria um evento "upcoming".
+         * Séries continuam sempre elegíveis: novos episódios/
+         * temporadas podem surgir mesmo com status "watched".
+         */
+        if (
+          media.media_type === "movie" &&
+          (item.status === "watched" ||
+            item.status === "rewatching" ||
+            item.status === "rewatched")
+        ) {
+          return false;
+        }
+
         return (
           media.media_type ===
             "movie" ||

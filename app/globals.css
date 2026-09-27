@@ -11845,3 +11845,8 @@ svg{vertical-align:middle}.btn>svg,button>svg,a>svg,.section-head svg,.title-sec
 .profile-activity-row strong{display:block;font-size:12px}
 .profile-activity-row small{color:var(--muted);font-size:10px}
 .profile-activity-more{width:100%;justify-content:center;margin-top:10px}
+
+/* Stats — barras de gêneros/anos (F1, substituindo estilos inline duplicados) */
+.stats-bar-row{width:55%;display:flex;align-items:center;gap:8px}
+.stats-bar-track{flex:1;height:8px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden}
+.stats-bar-fill{height:100%;border-radius:999px;background:var(--accent)}

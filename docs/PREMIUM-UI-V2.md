@@ -430,10 +430,18 @@ fase de fechamento (B5) — apenas esta documentação.
     fonte canônica da aba Atividade pública, regex de username
     unificada, drift de `username_changes` corrigido no schema
     versionado).
-- **F — Premium Features** = IN PROGRESS (F0 — auditoria em
-  [`docs/F-PREMIUM-FEATURES-AUDIT.md`](./F-PREMIUM-FEATURES-AUDIT.md) —
-  DONE; F1 — implementação consolidada = NEXT).
-- **G — Motion & React Bits**
+- **F — Premium Features** = DONE (F0 auditoria + F1 implementação
+  consolidada — ver [`docs/F-PREMIUM-FEATURES-AUDIT.md`](./F-PREMIUM-FEATURES-AUDIT.md)
+  para o detalhe completo de ambas as subfases).
+  - **F0 — Auditoria** = DONE.
+  - **F1 — Consolidação** = DONE (Stats com agregação SQL server-side +
+    bug de gêneros corrigido, Calendar com fan-out TMDB reduzido para
+    filmes já assistidos, Notifications sem preferências órfãs visíveis,
+    STATUS_LABELS unificado no Diário, Export/Backup confirmado seguro
+    sem alteração).
+- **G — Motion & React Bits** = próxima na ordem do roadmap, escopo
+  ainda não detalhado (mesma situação que F tinha antes do F0 — precisa
+  de um G0 de auditoria antes de qualquer implementação).
 - **H — Mobile/Accessibility/Performance**
 - **I — QA/Polish/Release**
 
@@ -1258,3 +1266,94 @@ migration nova). `DB SCHEMA DIFF` = só a adição documentada acima.
 
 **Resultado da fase: E1 DONE. FASE E — PROFILE & SOCIAL ENCERRADA.
 Próxima fase: F — Premium Features.**
+
+## 29. Fase F1 — Premium Features Consolidation (DONE)
+
+**Escopo:** implementação consolidada da Fase F a partir do diagnóstico do
+F0 (ver [`docs/F-PREMIUM-FEATURES-AUDIT.md`](./F-PREMIUM-FEATURES-AUDIT.md)).
+
+### O que mudou
+
+- **`app/api/stats/route.ts` (novo)** — Stats parou de buscar a
+  biblioteca inteira via `/api/library` e agregar tudo em `useMemo` no
+  browser (F0, HIGH). Agora `GET /api/stats` faz toda a agregação em
+  SQL — `COUNT`/`AVG`/`SUM`/`GROUP BY` — e devolve um `StatsSummary` já
+  pronto (contagens, médias, distribuição de notas, gêneros, anos,
+  tempo assistido, maior nota). A página só renderiza o resumo; nunca
+  vê as linhas da biblioteca. Confirmado em runtime contra dados reais
+  seedados no `TEST_DATABASE_URL`: zero chamadas a `/api/library` a
+  partir de `/stats`.
+- **Bug real encontrado e corrigido**: o painel "Gêneros mais
+  presentes" em `app/stats/page.tsx` renderizava `years.map(...)` em
+  vez de `genres.map(...)` (cópia-e-cola) — mostrava anos duas vezes e
+  a lista de gêneros nunca aparecia. `genres` era uma variável
+  calculada e nunca usada. Corrigido junto da reescrita.
+- **`app/api/calendar/route.ts`** — reduzido o fan-out de chamadas TMDB:
+  filmes já com status `watched`/`rewatching`/`rewatched` são excluídos
+  do fan-out (`eligible`) porque nunca podem ter um evento de
+  lançamento futuro — `calendarTMDB` fazia duas chamadas TMDB por
+  título (detalhes + datas de lançamento) só para devolver uma data que
+  já passou. Séries continuam sempre elegíveis (podem sempre ganhar
+  novo episódio/temporada). Resto do Calendar preservado — mesmo
+  `Promise.allSettled` (resiliente a falha parcial), mesmo `scope=all`/
+  `scope=library`, mesmo cache de 30s.
+- **`components/NotificationSettings.tsx`** — preferências sem produtor
+  real (`new_follower_*`, `follow_request_*`, `review_like_*`) e
+  toggles de e-mail (incluindo `product_updates_email`) removidos da UI
+  ativa — nenhum sender de e-mail existe, e o follow system (E1) nunca
+  escreve em `notifications` (a tabela só aceita `type IN
+  ('new_season','new_episode')` por CHECK constraint). Só os dois
+  toggles com produtor real confirmado continuam visíveis. Colunas do
+  banco preservadas — nenhuma migration, os valores continuam sendo
+  lidos/gravados pela API, só não aparecem mais como se funcionassem.
+- **`app/diary/page.tsx`** — `STATUS_LABELS` local duplicado (idêntico
+  ao de `lib/types.ts`, a fonte única estabelecida na D1) substituído
+  pelo import compartilhado.
+- **A11y**: `role="status"`/`aria-live` nos estados de carregamento e
+  `role="alert"` + botão "Tentar de novo" nos estados de erro de Diário
+  e Retrospectiva (antes só mostravam a mensagem, sem ação de retry);
+  `aria-pressed` nos filtros de tipo do Calendar.
+- **Notifications API** (`/api/notifications`, `/api/profile/notifications`)
+  — auditados, já corretos: `LIMIT 30` + contagem de não lidos via SQL
+  (não `.length`), sem mudança necessária.
+- **Export/Backup** — auditado, confirmado seguro (aditivo/upsert, sem
+  `DELETE`/`TRUNCATE`, limite de 10 MB já aplicado) — nenhuma mudança de
+  código, decisão de produto foi preservar como está.
+- **Pick for Me / For You** — algoritmos preservados integralmente
+  (nenhuma linha de lógica de recomendação alterada), confirmado que
+  cada um consulta `library_items` uma única vez por requisição (sem
+  fetch duplicado). O fetch client-side de `/api/library` completo que
+  `app/for-you/page.tsx` faz para estado local dos cards (favorito/
+  status) é o MESMO padrão já usado por Discover (Fase B, já encerrada)
+  — não é uma duplicação introduzida por Premium Features, é um padrão
+  cross-page preexistente fora do escopo desta consolidação.
+
+### Fora do escopo, por decisão de produto (F1)
+
+Sharing e Achievements — nenhum implementado. Nenhuma IA/motor de
+recomendação novo criado. Pick for Me e For You continuam features
+distintas, não fundidas. Nenhum sender de e-mail implementado.
+
+### QA em runtime
+
+Conta descartável criada via `/signup` no `TEST_NEON_AUTH_BASE_URL` +
+`TEST_DATABASE_URL` (nenhuma credencial de produção usada). Estados
+vazios verificados nas 5 páginas (Stats/Calendar/Diary/Retrospective/
+For You) sem erros de console. Dados de biblioteca controlados
+inseridos diretamente no TEST DB (2 filmes + 1 série, com notas/status/
+gêneros/eventos de atividade) para verificar agregação real: números do
+`/api/stats` conferidos linha a linha contra o que foi seedado (nota
+média 8.5, TMDB 7.27, 16h de tempo estimado, gêneros deduplicados
+corretamente). Sem overflow horizontal em 360/390/430/768/1440 nas 5
+páginas + aba de notificações em Settings. Dados de fixture e conta
+removidos do TEST DB ao final.
+
+### Banco de dados
+
+Nenhuma tabela apagada, nenhuma migration. `MIGRATIONS = 0`, `DB SCHEMA
+DIFF = 0` — as colunas de `notification_preferences` sem produtor real
+foram preservadas, só escondidas da UI ativa.
+
+**Resultado da fase: F1 DONE. FASE F — PREMIUM FEATURES ENCERRADA.
+Próxima fase: G — Motion & React Bits (nome definido no roadmap, escopo
+ainda não detalhado).**

@@ -10,6 +10,7 @@ import Link from "next/link";
 
 import { Search } from "@/components/Search";
 import { img } from "@/lib/tmdb";
+import { STATUS_LABELS } from "@/lib/types";
 
 import {
   CalendarDays,
@@ -62,29 +63,6 @@ type ActivityEvent = {
           }
       )[] | null;
   } | null;
-};
-
-const STATUS_LABELS: Record<
-  string,
-  string
-> = {
-  want:
-    "Quero assistir",
-
-  watching:
-    "Assistindo",
-
-  watched:
-    "Assistido",
-
-  dropped:
-    "Abandonei",
-
-  rewatching:
-    "Reassistindo",
-
-  rewatched:
-    "Reassistido",
 };
 
 function formatDate(
@@ -189,14 +167,14 @@ function eventDescription(
     case "status_changed": {
       const from =
         STATUS_LABELS[
-          meta.from
+          meta.from as keyof typeof STATUS_LABELS
         ] ||
         meta.from ||
         "—";
 
       const to =
         STATUS_LABELS[
-          meta.to
+          meta.to as keyof typeof STATUS_LABELS
         ] ||
         meta.to ||
         "—";
@@ -313,6 +291,12 @@ export default function DiaryPage() {
   ] =
     useState("");
 
+  const [
+    retryTick,
+    setRetryTick,
+  ] =
+    useState(0);
+
   useEffect(() => {
     async function load() {
       try {
@@ -369,7 +353,7 @@ export default function DiaryPage() {
     }
 
     load();
-  }, []);
+  }, [retryTick]);
 
   const groupedEvents =
     useMemo(() => {
@@ -441,15 +425,22 @@ export default function DiaryPage() {
       </section>
 
       {loading && (
-        <div className="empty">
+        <div className="empty" role="status" aria-live="polite">
           Carregando Diário...
         </div>
       )}
 
       {!loading &&
         error && (
-        <div className="empty">
-          {error}
+        <div className="empty" role="alert">
+          <strong>{error}</strong>
+          <button
+            type="button"
+            className="btn primary"
+            onClick={() => setRetryTick((tick) => tick + 1)}
+          >
+            Tentar de novo
+          </button>
         </div>
       )}
 

@@ -6,8 +6,11 @@ produto, banco, rota ou comportamento foi alterado. Fase E encerrada em
 `7426af1 feat(profile): complete profile and social`; checkpoint inicial
 estava limpo.
 
-> **Status: F0 = DONE.** Proposta de implementação em § 30 (F1). Decisões
-> de produto necessárias em § 29.
+> **Status: F0 = DONE, F1 = DONE. Fase F encerrada.** A implementação de
+> F1 (consolidação a partir da proposta da seção 30) está documentada em
+> [`docs/PREMIUM-UI-V2.md` § 29](./PREMIUM-UI-V2.md#29-fase-f1--premium-features-consolidation-done).
+> As seções abaixo permanecem como registro fiel do estado encontrado
+> **antes** de F1.
 
 ## 1. Definição real da Fase F no roadmap
 
