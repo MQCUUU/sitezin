@@ -4,10 +4,10 @@ import {
 } from "next/server";
 
 import { detailsTMDB } from "@/lib/tmdb";
-import { sanitizeTitleDetails } from "@/lib/title-details";
-
-const TMDB_BASE =
-  "https://api.themoviedb.org/3";
+import {
+  getTitleWatchProviders,
+  sanitizeTitleDetails,
+} from "@/lib/title-details";
 
 type MediaType = "movie" | "tv";
 
@@ -66,33 +66,12 @@ export async function GET(
   }
 
   try {
-    const apiKey =
-      process.env.TMDB_API_KEY;
-
-    const providersPromise = apiKey
-      ? fetch(
-          `${TMDB_BASE}/${type}/${tmdbId}/watch/providers?api_key=${encodeURIComponent(
-            apiKey,
-          )}`,
-          {
-            headers: {
-              accept: "application/json",
-            },
-            next: {
-              revalidate: 21600,
-            },
-            signal:
-              AbortSignal.timeout(8000),
-          },
-        )
-      : null;
-
     const [
       details,
-      providersResponse,
+      watchProviders,
     ] = await Promise.all([
       detailsTMDB(type, tmdbId),
-      providersPromise,
+      getTitleWatchProviders(type, tmdbId),
     ]);
 
     after(async () => {
@@ -108,18 +87,6 @@ export async function GET(
         );
       }
     });
-
-    let watchProviders: unknown = null;
-
-    if (providersResponse?.ok) {
-      watchProviders =
-        await providersResponse.json();
-    } else if (providersResponse) {
-      console.error(
-        "[TMDB watch providers]",
-        providersResponse.status,
-      );
-    }
 
     return NextResponse.json({
       ...sanitizeTitleDetails(details, type),

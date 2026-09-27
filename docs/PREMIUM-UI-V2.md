@@ -397,7 +397,9 @@ fase de fechamento (B5) — apenas esta documentação.
 
 - **A — Foundation Premium** = DONE
 - **B — Discover & Search** = DONE
-- **C — Media Experience**
+- **C — Media Experience** = DONE (C1–C7 completas; ver seções dedicadas
+  abaixo e [`docs/C5-SEASONS-EPISODES-AUDIT.md`](./C5-SEASONS-EPISODES-AUDIT.md)
+  para C5).
   - **C1 — Premium Title Page** = DONE
   - **C2 — Quick Peek / Preview Unification** = DONE
   - **C3 — Watch Providers Consolidation** = DONE
@@ -408,9 +410,9 @@ fase de fechamento (B5) — apenas esta documentação.
     ver [`docs/C5-SEASONS-EPISODES-AUDIT.md`](./C5-SEASONS-EPISODES-AUDIT.md)
     para o detalhe completo de cada subfase).
   - **C6 — Related/Collections** = DONE (ver seção dedicada abaixo).
-  - **C7 — QA/Polish** = NEXT (QA/Polish final da Media Experience —
-    escopo ainda não iniciado).
-- **D — Library & Organization**
+  - **C7 — QA/Polish** = DONE (gate final de runtime da Media Experience —
+    ver seção dedicada abaixo).
+- **D — Library & Organization** = NEXT
 - **E — Profile & Social**
 - **F — Premium Features**
 - **G — Motion & React Bits**
@@ -903,5 +905,113 @@ pré-existente, sem relação com C6).
 - Ordem/paginação de `parts` na página de coleção não foi alterada
   (já usava `release_date` com fallback seguro, mantido).
 
-**Resultado da fase: C6 DONE. Próxima fase: C7 — QA/Polish final da Media
-Experience (não iniciada).**
+**Resultado da fase: C6 DONE.**
+
+## 26. Fase C7 — QA/Polish final da Media Experience (DONE)
+
+Gate final de runtime de toda a Fase C (C1–C6). Auditoria estática já
+tinha encontrado e corrigido 1 bug real antes desta execução: a rota
+`/api/tmdb/[type]/[id]` (fallback client de title details) tinha sua
+própria lógica de fetch de watch providers, sem o mesmo tratamento
+defensivo que o SSR (`getTitleDetails`) já tinha — uma falha do TMDB em
+`/watch/providers` podia derrubar o endpoint inteiro (título + tudo) em
+vez de só degradar para "sem provedores". Corrigido extraindo
+`getTitleWatchProviders(type, tmdbId)` (`lib/title-details.ts`) como
+função única compartilhada pelos dois caminhos — nunca lança: chave
+ausente, falha de rede, status não-ok e JSON malformado todos caem em
+`null`, nunca em exceção.
+
+### Runtime executado
+
+Chromium real (Playwright já presente no projeto), guest, servidor
+próprio isolado (porta 4220, PID 18748, nunca o do usuário — offline no
+início desta fase).
+
+**Matriz de dados reais:** `O Senhor dos Anéis: A Sociedade do Anel`
+(movie 120 — collection + related + providers + Direção/Roteiro),
+`Clube da Luta` (movie 550 — sem collection), `Breaking Bad` (tv 1396 —
+5 temporadas regulares + Especiais/season 0), `Lei & Ordem: SVU` (tv 2734
+— episódio real futuro S28E01), coleção 119 (`O Senhor dos Anéis:
+Coleção`), navegação Title → Person (`Peter Jackson`, `/person/108`).
+
+**Provider failure (validação específica do bug corrigido):** 5 provas
+puras reimplementando `getTitleWatchProviders` com `fetch` mockado
+(chave ausente, rede rejeitada, HTTP não-ok, JSON malformado, sucesso) —
+todos os 4 cenários de falha resolvem para `null` sem lançar exceção;
+sucesso passa os dados adiante inalterados. SSR e API fallback chamam
+literalmente a mesma função — semântica idêntica por construção, não só
+por teste. Confirmado também end-to-end: `/api/tmdb/movie/120` devolve
+`watch_providers` real com resultados BR.
+
+**Quick Peek:** aberto a partir de um card real da página de coleção —
+abre, `Escape` fecha, foco retorna exatamente ao botão "Ver rápido" que
+abriu (focus trap + restore confirmados), providers renderizados dentro
+do dialog.
+
+**Seasons/Episodes:** seletor gera opções a partir dos summaries reais
+(`1,2,3,4,5,0`), Especiais aparece por último e navega corretamente;
+trocar de temporada atualiza a URL, dispara exatamente 1 request de
+season e 0 refetch de title details; Back/Forward restauram URL e
+seleção; refresh com `?season=3` reabre a temporada certa; `?season=9999`
+cai no fallback seguro (temporada 1) sem erro de página. Episódio futuro
+real (SVU S28E01, 2026-10-08) mostra badge "Futuro" e sinopse oculta
+tanto na lista quanto na página de episódio, com revelação funcional;
+episódio lançado (Breaking Bad "Piloto") mostra still real, metadata e
+crédito de direção/roteiro do episódio.
+
+**Error/empty distintos:** fixture real via interceptação client-side
+(`page.route`) confirma `role="alert"` visível no estado de erro do
+`EpisodeBrowser`.
+
+**Rotas inválidas:** `/title/movie/abc` → 404 nativo do Next
+(`notFound()`); `/collection/abc` → "ID de coleção inválido" (erro
+client, sem crash); `/title/tv/.../season/abc/episode/1` e
+`.../episode/abc` → tratados sem request absurdo. Nenhum loop, nenhum
+crash, todos HTTP 200 com estado apropriado renderizado no client (SPA),
+exceto o 404 nativo de `/title/movie/abc`.
+
+**Viewports (5 casos distribuídos):** 360×800 (TV), 390×844 (movie),
+430×932 (collection), 768×1024 (episode detail), 1440×900 (movie) — todos
+com overflow horizontal = 0.
+
+**Temas:** dark, light e **oled** confirmados na Title page completa
+(background, texto e CTA de coleção com cor correta e distinta em cada
+tema — OLED não ficou `NOT RUN`).
+
+**Reduced motion:** troca de temporada funciona normalmente sob
+`prefers-reduced-motion: reduce`, sem depender de animação.
+
+**Keyboard/Focus/A11y:** CTA de coleção focável via teclado; tabs da
+Title com `role="tab"`/`aria-selected` corretos; seletor de temporada com
+`aria-label`; foco permanece no `<select>` depois de trocar de temporada
+(nunca cai para `<body>`); estado de erro com `role="alert"` confirmado.
+Touch target de um botão de ação da página de coleção mediu 31×44px
+(levemente abaixo de ~40px de largura) — página pré-existente, não
+tocada por C6/C7, registrado como observação, não como bug novo.
+
+**Network:** confirmado `DUPLICATE TITLE FETCH = NÃO`,
+`DUPLICATE SEASON FETCH = NÃO` (exatamente 1 por troca),
+`RECOMMENDATIONS EXTRA CLIENT REQUEST = NÃO` (recomendações vêm do SSR).
+
+**Console:** únicos erros observados em todas as páginas testadas foram
+CSP de inline style (pré-existente, documentado desde C2) e 401 guest em
+rotas autenticadas (esperado, sem sessão). `CONSOLE ERRORS NEW = 0`,
+nenhum `pageerror` novo em nenhuma página testada.
+
+### Bugs
+
+Encontrados nesta execução (além do já corrigido na auditoria estática
+prévia): **0**. Todo resultado inicialmente suspeito (ex.: badge/spoiler
+"ausente" ou still "ausente" em alguns runs de script combinado) foi
+re-verificado isoladamente e confirmado como artefato do próprio script
+de teste (reuso de `page`/timing entre passos), não do produto — mesmo
+padrão já registrado em C4.2–C5.2.
+
+### Fora do escopo (não bloqueiam DONE)
+
+- Touch target de 31px de largura na página de coleção (pré-existente).
+- Todas as dívidas já documentadas em C4/C5/C6 permanecem como estavam —
+  C7 não reabriu nenhuma.
+
+**Resultado da fase: C7 DONE. FASE C — MEDIA EXPERIENCE ENCERRADA.
+Próxima fase: D — Library & Organization.**

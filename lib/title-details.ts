@@ -45,6 +45,41 @@ const TMDB_BASE = "https://api.themoviedb.org/3";
 
 export type TitleType = "movie" | "tv";
 
+/**
+ * Watch-provider lookup is optional enrichment: a TMDB provider outage must
+ * not turn an otherwise valid title response into a page-level failure.
+ * Shared by the Server Component path and the client fallback Route Handler.
+ */
+export async function getTitleWatchProviders(
+  type: TitleType,
+  tmdbId: number
+): Promise<unknown | null> {
+  const apiKey = process.env.TMDB_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const response = await fetch(
+      `${TMDB_BASE}/${type}/${tmdbId}/watch/providers?api_key=${encodeURIComponent(
+        apiKey
+      )}`,
+      {
+        headers: { accept: "application/json" },
+        next: { revalidate: 21600 },
+        signal: AbortSignal.timeout(8000),
+      }
+    );
+
+    if (!response.ok) {
+      console.error("[watch providers]", response.status);
+      return null;
+    }
+
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
 type TmdbRecord = Record<string, unknown>;
 
 /*
@@ -223,44 +258,14 @@ export async function getTitleDetails(
   type: TitleType,
   tmdbId: number
 ) {
-  const apiKey = process.env.TMDB_API_KEY;
-
-  /*
-   * Sem chave, a página ainda funciona — só não mostra onde
-   * assistir. Melhor que derrubar tudo.
-   */
-  const providersPromise = apiKey
-    ? fetch(
-        `${TMDB_BASE}/${type}/${tmdbId}/watch/providers?api_key=${encodeURIComponent(
-          apiKey
-        )}`,
-        {
-          headers: { accept: "application/json" },
-          next: { revalidate: 21600 },
-          signal: AbortSignal.timeout(8000),
-        }
-      ).catch(() => null)
-    : null;
-
   const [details, providersResponse] = await Promise.all([
     detailsTMDB(type, tmdbId),
-    providersPromise,
+    getTitleWatchProviders(type, tmdbId),
   ]);
-
-  let watchProviders: unknown = null;
-
-  if (providersResponse?.ok) {
-    watchProviders = await providersResponse.json();
-  } else if (providersResponse) {
-    console.error(
-      "[watch providers]",
-      providersResponse.status
-    );
-  }
 
   return {
     ...sanitizeTitleDetails(details, type),
-    watch_providers: watchProviders,
+    watch_providers: providersResponse,
   };
 }
 
