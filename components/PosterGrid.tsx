@@ -13,6 +13,7 @@ import {
   Grid3X3,
   LayoutGrid,
   List,
+  ListPlus,
   Star,
 } from "lucide-react";
 
@@ -48,6 +49,7 @@ export function PosterGrid({
   viewMode = "grid",
   onViewModeChange,
   carousel = false,
+  onAddToList,
 }: {
   items: LibraryItem[];
   onChanged?: () => void;
@@ -56,6 +58,13 @@ export function PosterGrid({
     mode: ViewMode
   ) => void;
   carousel?: boolean;
+  /**
+   * Opcional: quando presente, o menu de status ganha "Adicionar à
+   * lista...". Sem ele (Discover/Favorites/Ranking/Search), o item de
+   * menu simplesmente não aparece — nenhuma dessas páginas precisa
+   * saber que listas existem.
+   */
+  onAddToList?: (item: LibraryItem) => void;
 }) {
   const toast =
     useToast();
@@ -1075,6 +1084,7 @@ useEffect(() => {
     onToggleStatusMenu: toggleStatusMenuWithoutScroll,
     onChangeStatus: changeStatus,
     onRequestRemove: requestRemove,
+    onAddToList,
   };
 
   return (
@@ -1088,14 +1098,17 @@ useEffect(() => {
             marginBottom: "14px",
           }}
         >
-          <div className="view-switcher">
+          <div className="view-switcher" role="group" aria-label="Modo de visualização">
             <button
+              type="button"
               className={
                 viewMode === "grid"
                   ? "active"
                   : ""
               }
               title="Grade"
+              aria-label="Grade"
+              aria-pressed={viewMode === "grid"}
               onClick={() =>
                 onViewModeChange(
                   "grid"
@@ -1106,12 +1119,15 @@ useEffect(() => {
             </button>
 
             <button
+              type="button"
               className={
                 viewMode === "compact"
                   ? "active"
                   : ""
               }
               title="Grade compacta"
+              aria-label="Grade compacta"
+              aria-pressed={viewMode === "compact"}
               onClick={() =>
                 onViewModeChange(
                   "compact"
@@ -1124,12 +1140,15 @@ useEffect(() => {
             </button>
 
             <button
+              type="button"
               className={
                 viewMode === "list"
                   ? "active"
                   : ""
               }
               title="Lista"
+              aria-label="Lista"
+              aria-pressed={viewMode === "list"}
               onClick={() =>
                 onViewModeChange(
                   "list"
@@ -1321,55 +1340,65 @@ useEffect(() => {
   );
 }
 
+/*
+ * D1 — STATUS_LABELS (lib/types.ts) é a ÚNICA fonte do texto dos
+ * status. Antes, este badge tinha seu próprio texto hardcoded em
+ * maiúsculas ("ASSISTINDO" etc.), duplicado e independente de
+ * STATUS_LABELS — mudar um não mudava o outro.
+ */
+function statusLabel(status: LibraryItem["status"]) {
+  const label =
+    STATUS_LABELS[status as keyof typeof STATUS_LABELS] || String(status || "");
+  return label.toUpperCase();
+}
+
 function getStatus(item: LibraryItem) {
   switch (item.status) {
     case "watching":
       return {
-        label: "ASSISTINDO",
+        label: statusLabel(item.status),
         icon: <Play size={11} fill="currentColor" />,
         className: "status-watching",
       };
 
     case "watched":
       return {
-        label: "ASSISTIDO",
+        label: statusLabel(item.status),
         icon: <Check size={11} />,
         className: "status-watched",
       };
 
     case "want":
       return {
-        label: "QUERO ASSISTIR",
+        label: statusLabel(item.status),
         icon: <Clock size={11} />,
         className: "status-want",
       };
 
     case "dropped":
       return {
-        label: "ABANDONEI",
+        label: statusLabel(item.status),
         icon: <Trash2 size={11} />,
         className: "status-dropped",
       };
 
     case "rewatching":
       return {
-        label: "REASSISTINDO",
+        label: statusLabel(item.status),
         icon: <Play size={11} fill="currentColor" />,
         className: "status-rewatching",
       };
 
     case "rewatched":
       return {
-        label: "REASSISTIDO",
+        label: statusLabel(item.status),
         icon: <Check size={11} />,
         className: "status-rewatched",
       };
 
     default:
       return {
-        label:
-          STATUS_LABELS[item.status as keyof typeof STATUS_LABELS] ||
-          String(item.status || "").toUpperCase(),
+        label: statusLabel(item.status),
         icon: null,
         className: "status-default",
       };
@@ -1384,6 +1413,7 @@ type CardActionProps = {
   onToggleStatusMenu: (key: string | number) => void;
   onChangeStatus: (item: LibraryItem, status: string) => void;
   onRequestRemove: (item: LibraryItem) => void;
+  onAddToList?: (item: LibraryItem) => void;
 };
 
 function ActionButtons({
@@ -1395,6 +1425,7 @@ function ActionButtons({
   onToggleStatusMenu,
   onChangeStatus,
   onRequestRemove,
+  onAddToList,
 }: CardActionProps & { item: LibraryItem }) {
   const busy = processing === item.library_id;
   const menuOpen = openStatusMenu === item.library_id;
@@ -1406,6 +1437,7 @@ function ActionButtons({
           type="button"
           className="card-action"
           title="Preview rápido"
+          aria-label="Preview rápido"
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
@@ -1419,6 +1451,8 @@ function ActionButtons({
           type="button"
           className={item.favorite ? "card-action active" : "card-action"}
           title={item.favorite ? "Remover dos curtidos" : "Curtir"}
+          aria-label={item.favorite ? "Remover dos curtidos" : "Curtir"}
+          aria-pressed={item.favorite}
           disabled={busy}
           onClick={(event) => {
             event.preventDefault();
@@ -1433,6 +1467,9 @@ function ActionButtons({
           type="button"
           className="card-action active library-status-action"
           title="Alterar status"
+          aria-label="Alterar status"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
           disabled={busy}
           onMouseDown={(event) => {
             event.preventDefault();
@@ -1457,9 +1494,17 @@ function ActionButtons({
       {menuOpen && (
         <div
           className="library-card-status-menu"
+          role="menu"
+          aria-label="Alterar status"
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.stopPropagation();
+              onToggleStatusMenu(item.library_id);
+            }
           }}
         >
           <div className="library-card-status-menu-title">Alterar status</div>
@@ -1468,6 +1513,7 @@ function ActionButtons({
             <button
               type="button"
               key={value}
+              role="menuitem"
               className={item.status === value ? "active" : ""}
               disabled={busy}
               onMouseDown={(event) => {
@@ -1482,8 +1528,25 @@ function ActionButtons({
 
           <div className="library-card-status-divider" />
 
+          {onAddToList && (
+            <button
+              type="button"
+              role="menuitem"
+              onMouseDown={(event) => {
+                event.preventDefault();
+              }}
+              onClick={() => onAddToList(item)}
+            >
+              <span>
+                <ListPlus size={14} style={{ marginRight: 6, verticalAlign: "-2px" }} />
+                Adicionar à lista...
+              </span>
+            </button>
+          )}
+
           <button
             type="button"
+            role="menuitem"
             className="remove"
             disabled={busy}
             onMouseDown={(event) => {

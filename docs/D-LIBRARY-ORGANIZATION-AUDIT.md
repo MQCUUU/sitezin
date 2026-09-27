@@ -6,6 +6,14 @@ produto, banco, rota ou comportamento foi alterado. Fase C encerrada em
 `cb3985a fix(title): close final media experience QA`; checkpoint inicial
 estava limpo.
 
+> **Status: D0 = DONE, D1 = DONE. Fase D encerrada.** A implementação de
+> D1 (consolidação completa a partir da proposta da seção 35) está
+> documentada em
+> [`docs/PREMIUM-UI-V2.md` § 27](./PREMIUM-UI-V2.md#27-fase-d1--library--organization-consolidation-done).
+> As seções abaixo permanecem como registro fiel do estado encontrado
+> **antes** de D1 — não foram reescritas para refletir o pós-D1, exceto
+> onde indicado.
+
 ## 1. Executive Summary
 
 A Library não parte do zero — é uma experiência já bem desenvolvida:

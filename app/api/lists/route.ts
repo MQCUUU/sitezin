@@ -11,6 +11,8 @@ export async function GET(request: NextRequest) {
       return naoAutenticado();
     }
 
+    const libraryItemId = request.nextUrl.searchParams.get("library_item_id");
+
     const sql = getDb();
     const customLists = await sql`
       SELECT
@@ -18,24 +20,20 @@ export async function GET(request: NextRequest) {
         cl.name,
         cl.description,
         cl.created_at,
-        json_build_array(json_build_object('count', (
-          SELECT count(*)::int FROM public.custom_list_items cli WHERE cli.list_id = cl.id
-        ))) as items
+        COALESCE(l.is_public, false) as is_public,
+        (SELECT count(*)::int FROM public.custom_list_items cli WHERE cli.list_id = cl.id) as item_count,
+        ${libraryItemId ? sql`EXISTS (
+          SELECT 1 FROM public.custom_list_items cli
+          WHERE cli.list_id = cl.id AND cli.library_item_id = ${libraryItemId}
+        )` : sql`false`} as in_list
       FROM public.custom_lists cl
+      LEFT JOIN public.lists l ON l.id = cl.id
       WHERE cl.user_id = ${user.id}
       ORDER BY cl.created_at DESC
     `;
 
-    const standardLists = await sql`
-      SELECT id, name, description, is_public, created_at, updated_at
-      FROM public.lists
-      WHERE user_id = ${user.id}
-      ORDER BY created_at DESC
-    `;
-
     return NextResponse.json({
       custom_lists: customLists || [],
-      lists: standardLists || [],
     });
   } catch (error) {
     return respostaDeErro(error, "GET /api/lists");

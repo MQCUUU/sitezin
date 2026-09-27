@@ -1,10 +1,18 @@
 "use client";
 
 import {
+  Suspense,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
+
+import {
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 
 import {
   ArrowDownUp,
@@ -25,6 +33,7 @@ import {
 } from "lucide-react";
 
 import { PosterGrid } from "@/components/PosterGrid";
+import { AddToListDialog } from "@/components/lists/AddToListDialog";
 
 import type {
   LibraryItem,
@@ -160,6 +169,25 @@ function buildPages(
 }
 
 export default function Library() {
+  return (
+    <Suspense
+      fallback={
+        <div className="empty library-page-loading" role="status" aria-live="polite">
+          <Loader2 size={25} className="spin" />
+          <span>Carregando biblioteca...</span>
+        </div>
+      }
+    >
+      <LibraryContent />
+    </Suspense>
+  );
+}
+
+function LibraryContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [
     data,
     setData,
@@ -167,6 +195,31 @@ export default function Library() {
     useState<
       LibraryItem[]
     >([]);
+
+  /*
+   * ==========================================
+   * ESTADO DE FILTROS — INICIALIZADO DA URL (D1)
+   * ==========================================
+   *
+   * `useSearchParams()` já está disponível no primeiro render (dentro
+   * do <Suspense> acima), então os filtros nascem com o valor certo
+   * sem precisar de um useEffect de "inicialização" rodando depois do
+   * primeiro paint. Isso corrige back/forward/refresh/compartilhar
+   * link: a URL é a fonte da verdade, não um efeito colateral dela.
+   *
+   * `view mode` é a ÚNICA exceção — fica fora da URL, só em
+   * localStorage (decisão de produto fechada do D1).
+   */
+  const urlTypeParam = searchParams.get("type");
+  const urlStatusParam = searchParams.get("status");
+  const urlSortParam = searchParams.get("sort");
+  const urlSearchParam = searchParams.get("search") || "";
+  const urlGenreParam = searchParams.get("genre") || "all";
+  const urlYearParam = searchParams.get("year") || "all";
+  const urlFavoriteParam = searchParams.get("favorite") === "true";
+  const urlMinRatingParam = searchParams.get("min_rating") || "all";
+  const urlMinTmdbRatingParam = searchParams.get("min_tmdb_rating") || "all";
+  const urlPageParam = Number(searchParams.get("page") || "1");
 
   const [
     type,
@@ -177,7 +230,7 @@ export default function Library() {
       "movie" |
       "tv"
     >(
-      "all"
+      urlTypeParam === "movie" || urlTypeParam === "tv" ? urlTypeParam : "all"
     );
 
   const [
@@ -188,7 +241,7 @@ export default function Library() {
       "all" |
       Status
     >(
-      "all"
+      (urlStatusParam as Status) || "all"
     );
 
   const [
@@ -199,6 +252,8 @@ export default function Library() {
       SortOption
     >(
       () => {
+        if (urlSortParam) return urlSortParam as SortOption;
+
         if (
           typeof window ===
           "undefined"
@@ -219,7 +274,7 @@ export default function Library() {
     setSearch,
   ] =
     useState(
-      ""
+      urlSearchParam
     );
 
   const [
@@ -227,7 +282,7 @@ export default function Library() {
     setDebouncedSearch,
   ] =
     useState(
-      ""
+      urlSearchParam
     );
 
   const [
@@ -235,7 +290,7 @@ export default function Library() {
     setGenre,
   ] =
     useState(
-      "all"
+      urlGenreParam
     );
 
   const [
@@ -243,7 +298,7 @@ export default function Library() {
     setYear,
   ] =
     useState(
-      "all"
+      urlYearParam
     );
 
   const [
@@ -251,7 +306,7 @@ export default function Library() {
     setFavoriteOnly,
   ] =
     useState(
-      false
+      urlFavoriteParam
     );
 
   const [
@@ -259,7 +314,7 @@ export default function Library() {
     setMinRating,
   ] =
     useState(
-      "all"
+      urlMinRatingParam
     );
 
   const [
@@ -267,7 +322,7 @@ export default function Library() {
     setMinTmdbRating,
   ] =
     useState(
-      "all"
+      urlMinTmdbRatingParam
     );
 
   const [
@@ -285,15 +340,36 @@ export default function Library() {
     useState<
       ViewMode
     >(
-      "grid"
+      () => {
+        if (typeof window === "undefined") return "grid";
+
+        try {
+          const stored = window.localStorage.getItem("mycatalog_library_view_mode");
+          if (stored === "grid" || stored === "compact" || stored === "list") {
+            return stored;
+          }
+        } catch {
+          // localStorage indisponível — usa o padrão.
+        }
+
+        return "grid";
+      }
     );
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("mycatalog_library_view_mode", viewMode);
+    } catch {
+      // localStorage indisponível — a preferência só não persiste.
+    }
+  }, [viewMode]);
 
   const [
     page,
     setPage,
   ] =
     useState(
-      1
+      Number.isFinite(urlPageParam) && urlPageParam > 0 ? Math.floor(urlPageParam) : 1
     );
 
   const [
@@ -366,88 +442,91 @@ export default function Library() {
     );
 
   const [
-    initializedFromUrl,
-    setInitializedFromUrl,
+    authRequired,
+    setAuthRequired,
   ] =
     useState(
       false
     );
 
+  const [
+    loadError,
+    setLoadError,
+  ] =
+    useState(
+      false
+    );
+
+  const [
+    retryTick,
+    setRetryTick,
+  ] =
+    useState(
+      0
+    );
+
+  function retryLoad() {
+    setLoadError(false);
+    setRetryTick((tick) => tick + 1);
+  }
+
+  const [addToListTarget, setAddToListTarget] = useState<LibraryItem | null>(null);
+
   /*
    * ==========================================
-   * FILTROS VINDOS DA URL
+   * URL <- ESTADO (D1)
    * ==========================================
    *
-   * Exemplos:
+   * Direção inversa do efeito de inicialização: sempre que um filtro
+   * muda, a URL é atualizada via router.replace (sem empilhar
+   * histórico a cada tecla digitada — só a navegação real do usuário,
+   * como voltar para a Home, deve empilhar). Isso é o que permite
+   * back/forward/refresh/compartilhar link funcionarem de verdade.
    *
-   * /library?status=watching
-   * /library?status=want
-   * /library?favorite=true
-   * /library?type=movie
-   *
-   * Isso faz os links "Ver todos" da Home
-   * abrirem exatamente no filtro correto.
+   * `viewMode` fica de fora de propósito (decisão de produto: só
+   * localStorage).
    */
+  useEffect(() => {
+    const params = new URLSearchParams();
+
+    if (page > 1) params.set("page", String(page));
+    if (type !== "all") params.set("type", type);
+    if (status !== "all") params.set("status", status);
+    if (favoriteOnly) params.set("favorite", "true");
+    if (genre !== "all") params.set("genre", genre);
+    if (year !== "all") params.set("year", year);
+    if (minRating !== "all") params.set("min_rating", minRating);
+    if (minTmdbRating !== "all") params.set("min_tmdb_rating", minTmdbRating);
+    if (sort !== "added") params.set("sort", sort);
+    if (debouncedSearch) params.set("search", debouncedSearch);
+
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, type, status, favoriteOnly, genre, year, minRating, minTmdbRating, sort, debouncedSearch]);
+
+  /*
+   * ==========================================
+   * RESET DE PÁGINA CENTRALIZADO (D1)
+   * ==========================================
+   *
+   * Antes, cada onChange de filtro chamava resetPage() manualmente —
+   * fácil de esquecer em um novo filtro. Agora existe uma única regra:
+   * qualquer mudança nos filtros abaixo (não a página em si) volta
+   * para a página 1. Os resetPage() que já existiam nos handlers viram
+   * no-ops redundantes (ainda seguros de manter) em vez de serem a
+   * única linha de defesa.
+   */
+  const filtersFingerprint = JSON.stringify([
+    type, status, favoriteOnly, genre, year, minRating, minTmdbRating, sort, debouncedSearch,
+  ]);
+  const previousFiltersFingerprint = useRef(filtersFingerprint);
 
   useEffect(() => {
-    const params =
-      new URLSearchParams(
-        window.location.search
-      );
-
-    const urlStatus =
-      params.get(
-        "status"
-      );
-
-    const urlFavorite =
-      params.get(
-        "favorite"
-      );
-
-    const urlType =
-      params.get(
-        "type"
-      );
-
-    if (
-      urlStatus &&
-      urlStatus !== "all"
-    ) {
-      setStatus(
-        urlStatus as Status
-      );
-    }
-
-    if (
-      urlFavorite === "true"
-    ) {
-      setFavoriteOnly(
-        true
-      );
-
-      setStatus(
-        "all"
-      );
-    }
-
-    if (
-      urlType === "movie" ||
-      urlType === "tv"
-    ) {
-      setType(
-        urlType
-      );
-    }
-
-    setPage(
-      1
-    );
-
-    setInitializedFromUrl(
-      true
-    );
-  }, []);
+    if (previousFiltersFingerprint.current === filtersFingerprint) return;
+    previousFiltersFingerprint.current = filtersFingerprint;
+    setPage(1);
+  }, [filtersFingerprint]);
 
   /*
    * ==========================================
@@ -592,6 +671,13 @@ export default function Library() {
           }
         );
 
+      if (response.status === 401) {
+        setAuthRequired(true);
+        setData([]);
+        setTotalResults(0);
+        return;
+      }
+
       const result:
         PaginatedResponse |
         {
@@ -612,6 +698,9 @@ export default function Library() {
             : "Erro ao carregar biblioteca."
         );
       }
+
+      setAuthRequired(false);
+      setLoadError(false);
 
       const library =
         Array.isArray(
@@ -696,6 +785,8 @@ export default function Library() {
         error
       );
 
+      setLoadError(true);
+
       setData(
         []
       );
@@ -711,15 +802,9 @@ export default function Library() {
   }
 
   useEffect(() => {
-    if (
-      !initializedFromUrl
-    ) {
-      return;
-    }
-
     loadLibrary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    initializedFromUrl,
     page,
     debouncedSearch,
     type,
@@ -730,6 +815,7 @@ export default function Library() {
     minRating,
     minTmdbRating,
     sort,
+    retryTick,
   ]);
 
   /*
@@ -868,14 +954,10 @@ export default function Library() {
     );
 
     /*
-     * Remove filtros que vieram da URL,
-     * sem recarregar a página.
+     * Não precisa mais de window.history.replaceState manual — o
+     * efeito de sincronização URL<-estado detecta os filtros voltando
+     * ao padrão e já limpa a query string sozinho.
      */
-    window.history.replaceState(
-      {},
-      "",
-      "/library"
-    );
   }
 
   function goToPage(
@@ -951,6 +1033,7 @@ export default function Library() {
                 )
               }
               title="Limpar busca"
+              aria-label="Limpar busca"
             >
               <X
                 size={15}
@@ -995,12 +1078,14 @@ export default function Library() {
         <div className="library-head-actions">
 
           <button
+            type="button"
             className={
               "btn " +
               (favoriteOnly
                 ? "primary"
                 : "")
             }
+            aria-pressed={favoriteOnly}
             onClick={() => {
               setFavoriteOnly(
                 (
@@ -1025,12 +1110,15 @@ export default function Library() {
           </button>
 
           <button
+            type="button"
             className={
               "btn " +
               (showFilters
                 ? "primary"
                 : "")
             }
+            aria-expanded={showFilters}
+            aria-controls="library-filters-panel"
             onClick={() =>
               setShowFilters(
                 (
@@ -1090,6 +1178,7 @@ export default function Library() {
                       ? "active"
                       : "")
                   }
+                  aria-pressed={active}
                   onClick={() => {
                     setStatus(
                       value ===
@@ -1105,28 +1194,6 @@ export default function Library() {
                     );
 
                     resetPage();
-
-                    const params =
-                      new URLSearchParams();
-
-                    if (
-                      value !== "all"
-                    ) {
-                      params.set(
-                        "status",
-                        String(
-                          value
-                        )
-                      );
-                    }
-
-                    window.history.replaceState(
-                      {},
-                      "",
-                      params.toString()
-                        ? `/library?${params.toString()}`
-                        : "/library"
-                    );
                   }}
                 >
                   <span>
@@ -1155,6 +1222,7 @@ export default function Library() {
                 ? "active"
                 : "")
             }
+            aria-pressed={favoriteOnly}
             onClick={() => {
               setFavoriteOnly(
                 true
@@ -1165,12 +1233,6 @@ export default function Library() {
               );
 
               resetPage();
-
-              window.history.replaceState(
-                {},
-                "",
-                "/library?favorite=true"
-              );
             }}
           >
             <Heart
@@ -1265,7 +1327,7 @@ export default function Library() {
       {/* FILTROS AVANÇADOS */}
 
       {showFilters && (
-        <div className="library-filter-panel">
+        <div className="library-filter-panel" id="library-filters-panel">
 
           <div className="library-filter-header">
 
@@ -1301,6 +1363,7 @@ export default function Library() {
                   )
                 }
                 title="Fechar filtros"
+                aria-label="Fechar filtros"
               >
                 <X
                   size={17}
@@ -1858,7 +1921,7 @@ export default function Library() {
       {/* GRID */}
 
       {loading ? (
-        <div className="empty library-page-loading">
+        <div className="empty library-page-loading" role="status" aria-live="polite">
 
           <Loader2
             size={25}
@@ -1869,6 +1932,35 @@ export default function Library() {
             Carregando biblioteca...
           </span>
 
+        </div>
+      ) : authRequired ? (
+        <div className="empty" role="alert">
+          <strong>Sua sessão expirou.</strong>
+          <p className="muted">
+            Entre novamente para ver sua biblioteca.
+          </p>
+          <a
+            className="btn primary"
+            href={`/login?reason=session&next=${encodeURIComponent(
+              pathname + (searchParams.toString() ? `?${searchParams.toString()}` : "")
+            )}`}
+          >
+            Entrar
+          </a>
+        </div>
+      ) : loadError ? (
+        <div className="empty" role="alert">
+          <strong>Não foi possível carregar sua biblioteca.</strong>
+          <p className="muted">
+            Verifique sua conexão e tente novamente.
+          </p>
+          <button
+            type="button"
+            className="btn primary"
+            onClick={retryLoad}
+          >
+            Tentar de novo
+          </button>
         </div>
       ) : (
         <PosterGrid
@@ -1884,6 +1976,15 @@ export default function Library() {
           onViewModeChange={
             setViewMode
           }
+          onAddToList={setAddToListTarget}
+        />
+      )}
+
+      {addToListTarget && (
+        <AddToListDialog
+          libraryItemId={addToListTarget.library_id}
+          title={addToListTarget.title}
+          onClose={() => setAddToListTarget(null)}
         />
       )}
 
@@ -1934,6 +2035,7 @@ export default function Library() {
                 )
               }
               title="Página anterior"
+              aria-label="Página anterior"
             >
               <ChevronLeft
                 size={17}
@@ -1993,6 +2095,7 @@ export default function Library() {
                 )
               }
               title="Próxima página"
+              aria-label="Próxima página"
             >
               <ChevronRight
                 size={17}

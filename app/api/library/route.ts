@@ -191,9 +191,104 @@ export async function GET(
     }
 
     /*
-     * Consulta da biblioteca completa ou paginada
+     * ==========================================
+     * FILTROS DINÂMICOS — compartilhados pelos
+     * modos paginado e não-paginado (D1)
+     * ==========================================
+     *
+     * D0 encontrou: mesmo no modo `paginated=true`, a query antiga
+     * buscava TODAS as linhas do usuário e filtrava/ordenava/paginava
+     * inteiramente em memória no Node — HIGH performance risk. Agora os
+     * filtros viram WHERE real, o sort vira ORDER BY real, e a
+     * paginação vira LIMIT/OFFSET real. `sql.query(text, params)` é
+     * necessário aqui (em vez do template `sql\`...\``) porque o
+     * WHERE é montado dinamicamente conforme os filtros presentes.
      */
-    const allRows = await sql`
+    const params: unknown[] = [userId];
+    const conditions: string[] = ["li.user_id = $1"];
+
+    function addParam(value: unknown): string {
+      params.push(value);
+      return `$${params.length}`;
+    }
+
+    const search = (url.searchParams.get("search") || "").trim();
+    const mediaType = url.searchParams.get("media_type");
+    const status = url.searchParams.get("status");
+    const genre = (url.searchParams.get("genre") || "").trim();
+    const year = (url.searchParams.get("year") || "").trim();
+    const favoriteOnly = url.searchParams.get("favorite") === "true";
+    const minRating = Number(url.searchParams.get("min_rating") || "");
+    const minTmdbRating = Number(url.searchParams.get("min_tmdb_rating") || "");
+    const sort = (url.searchParams.get("sort") || "added").trim();
+
+    if (search) {
+      // Escapa curingas do LIKE para preservar o match por substring literal de antes.
+      const escaped = search.replace(/[%_\\]/g, (char) => `\\${char}`);
+      const term = `%${escaped}%`;
+      conditions.push(
+        `(m.title ILIKE ${addParam(term)} OR m.original_title ILIKE ${addParam(term)})`
+      );
+    }
+
+    if (mediaType === "movie" || mediaType === "tv") {
+      conditions.push(`m.media_type = ${addParam(mediaType)}`);
+    }
+
+    if (status && status !== "all") {
+      conditions.push(`li.status = ${addParam(status)}`);
+    }
+
+    if (genre) {
+      conditions.push(
+        `EXISTS (SELECT 1 FROM unnest(m.genres) AS g WHERE lower(g) = lower(${addParam(genre)}))`
+      );
+    }
+
+    if (year && /^\d{4}$/.test(year)) {
+      conditions.push(
+        `EXTRACT(YEAR FROM (CASE WHEN m.media_type = 'tv' THEN m.first_air_date ELSE m.release_date END))::text = ${addParam(year)}`
+      );
+    }
+
+    if (favoriteOnly) {
+      conditions.push("li.favorite = true");
+    }
+
+    if (Number.isFinite(minRating) && minRating > 0) {
+      conditions.push(`li.personal_rating >= ${addParam(minRating)}`);
+    }
+
+    if (Number.isFinite(minTmdbRating) && minTmdbRating > 0) {
+      conditions.push(`m.tmdb_rating >= ${addParam(minTmdbRating)}`);
+    }
+
+    const whereClause = conditions.join(" AND ");
+
+    /*
+     * `az`/`za` usavam `localeCompare(..., "pt-BR")` em memória; aqui
+     * viram `lower(m.title)` — equivalente na prática (mesma ordem
+     * alfabética geral), sem depender de uma collation ICU específica
+     * estar disponível no Postgres do Neon.
+     */
+    const SORT_COLUMNS: Record<string, string> = {
+      rating: "li.personal_rating DESC NULLS LAST, li.added_at DESC",
+      "rating-low": "li.personal_rating ASC NULLS LAST, li.added_at DESC",
+      tmdb: "m.tmdb_rating DESC NULLS LAST, li.added_at DESC",
+      az: "lower(m.title) ASC",
+      za: "lower(m.title) DESC",
+      newest:
+        "(CASE WHEN m.media_type = 'tv' THEN m.first_air_date ELSE m.release_date END) DESC NULLS LAST",
+      oldest:
+        "(CASE WHEN m.media_type = 'tv' THEN m.first_air_date ELSE m.release_date END) ASC NULLS LAST",
+      updated: "li.updated_at DESC",
+      added: "li.added_at DESC",
+    };
+    const orderByClause = SORT_COLUMNS[sort] || SORT_COLUMNS.added;
+
+    const paginated = url.searchParams.get("paginated") === "true";
+
+    const baseSelect = `
       SELECT
         li.id,
         li.status,
@@ -210,17 +305,22 @@ export async function GET(
         to_jsonb(m.*) as media
       FROM public.library_items li
       JOIN public.media m ON m.id = li.media_id
-      WHERE li.user_id = ${userId}
-      ORDER BY li.added_at DESC;
+      WHERE ${whereClause}
     `;
 
-    const paginated = url.searchParams.get("paginated") === "true";
-
     /*
-     * Modo normal (não-paginado) para Home, Ranking, Stats, etc.
+     * Modo normal (não-paginado) — Home/Discover continuam recebendo a
+     * biblioteca inteira (sem filtro nenhum passado, comportamento
+     * idêntico ao anterior — precisam de múltiplos recortes de status
+     * simultâneos, não dá para filtrar num único parâmetro sem
+     * redesenhar essas páginas, fora do escopo D1 §10). Favorites e
+     * Ranking agora passam filtro real (`favorite=true` /
+     * `min_rating`) e recebem só o subconjunto que precisam, em vez da
+     * biblioteca inteira sendo filtrada no cliente.
      */
     if (!paginated) {
-      return NextResponse.json(allRows as unknown as LibraryItem[]);
+      const rows = await sql.query(`${baseSelect} ORDER BY ${orderByClause}`, params);
+      return NextResponse.json(rows as unknown as LibraryItem[]);
     }
 
     /*
@@ -237,175 +337,68 @@ export async function GET(
       ? Math.min(100, Math.max(1, Math.floor(requestedLimit)))
       : 27;
 
-    const search = (url.searchParams.get("search") || "").trim().toLowerCase();
-    const mediaType = url.searchParams.get("media_type");
-    const status = url.searchParams.get("status");
-    const genre = (url.searchParams.get("genre") || "").trim().toLowerCase();
-    const year = (url.searchParams.get("year") || "").trim();
-    const favoriteOnly = url.searchParams.get("favorite") === "true";
-    const minRating = Number(url.searchParams.get("min_rating") || "");
-    const minTmdbRating = Number(url.searchParams.get("min_tmdb_rating") || "");
-    const sort = (url.searchParams.get("sort") || "added").trim();
+    // 1. Contagem total FILTRADA — decide totalPages/clamping antes de buscar a página.
+    const countRows = await sql.query(
+      `SELECT count(*)::int AS total FROM public.library_items li JOIN public.media m ON m.id = li.media_id WHERE ${whereClause}`,
+      params
+    );
+    const totalResults = Number((countRows[0] as { total: number } | undefined)?.total || 0);
+    const totalPages = Math.max(1, Math.ceil(totalResults / limit));
+    const safePage = Math.min(page, totalPages);
+    const offset = (safePage - 1) * limit;
 
-    const counts: Record<string, number> = {
-      all: allRows.length,
-      want: 0,
-      watching: 0,
-      watched: 0,
-      paused: 0,
-      dropped: 0,
-      rewatching: 0,
-      rewatched: 0,
-      favorites: 0,
+    // 2. Página de dados FILTRADA — LIMIT/OFFSET reais, sem trazer o resto da biblioteca.
+    const limitPlaceholder = addParam(limit);
+    const offsetPlaceholder = addParam(offset);
+    const pageRows = await sql.query(
+      `${baseSelect} ORDER BY ${orderByClause} LIMIT ${limitPlaceholder} OFFSET ${offsetPlaceholder}`,
+      params
+    );
+
+    // 3. Contagens por status + favoritos — agregado, sem filtro (mesmo significado de antes: conta a biblioteca inteira do usuário, não a página filtrada).
+    const countsRows = await sql`
+      SELECT
+        count(*)::int AS all,
+        count(*) FILTER (WHERE status = 'want')::int AS want,
+        count(*) FILTER (WHERE status = 'watching')::int AS watching,
+        count(*) FILTER (WHERE status = 'watched')::int AS watched,
+        count(*) FILTER (WHERE status = 'paused')::int AS paused,
+        count(*) FILTER (WHERE status = 'dropped')::int AS dropped,
+        count(*) FILTER (WHERE status = 'rewatching')::int AS rewatching,
+        count(*) FILTER (WHERE status = 'rewatched')::int AS rewatched,
+        count(*) FILTER (WHERE favorite)::int AS favorites
+      FROM public.library_items
+      WHERE user_id = ${userId}
+    `;
+    const counts = (countsRows[0] as Record<string, number> | undefined) || {
+      all: 0, want: 0, watching: 0, watched: 0, paused: 0, dropped: 0, rewatching: 0, rewatched: 0, favorites: 0,
     };
 
+    // 4. Opções de filtro (gêneros/anos) — projeção leve (só 2 colunas), biblioteca inteira do usuário, sem o payload completo de `media`.
+    const genreYearRows = await sql`
+      SELECT
+        m.genres,
+        (CASE WHEN m.media_type = 'tv' THEN m.first_air_date ELSE m.release_date END) as date
+      FROM public.library_items li
+      JOIN public.media m ON m.id = li.media_id
+      WHERE li.user_id = ${userId}
+    `;
     const genreSet = new Set<string>();
     const yearSet = new Set<string>();
-
-    for (const row of allRows as any[]) {
-      if (row.status) {
-        counts[row.status] = (counts[row.status] || 0) + 1;
-      }
-      if (row.favorite) {
-        counts.favorites += 1;
-      }
-
-      const media = row.media;
-      const genres = Array.isArray(media?.genres) ? media.genres : [];
+    for (const row of genreYearRows as { genres: unknown; date: string | null }[]) {
+      const genres = Array.isArray(row.genres) ? row.genres : [];
       for (const itemGenre of genres) {
         if (typeof itemGenre === "string" && itemGenre.trim()) {
           genreSet.add(itemGenre.trim());
-        } else if (
-          itemGenre &&
-          typeof itemGenre === "object" &&
-          typeof itemGenre.name === "string"
-        ) {
-          genreSet.add(itemGenre.name.trim());
         }
       }
-
-      const date =
-        media?.media_type === "tv"
-          ? media?.first_air_date
-          : media?.release_date;
-
-      if (date) {
-        const parsedYear = new Date(date).getFullYear();
+      if (row.date) {
+        const parsedYear = new Date(row.date).getFullYear();
         if (Number.isFinite(parsedYear)) {
           yearSet.add(String(parsedYear));
         }
       }
     }
-
-    const filteredRows = (allRows as any[]).filter((row: any) => {
-      const media = row.media;
-      if (!media) return false;
-
-      if (search) {
-        const title = String(media.title || "").toLowerCase();
-        const originalTitle = String(media.original_title || "").toLowerCase();
-        if (!title.includes(search) && !originalTitle.includes(search)) {
-          return false;
-        }
-      }
-
-      if (mediaType === "movie" || mediaType === "tv") {
-        if (media.media_type !== mediaType) {
-          return false;
-        }
-      }
-
-      if (status && status !== "all" && row.status !== status) {
-        return false;
-      }
-
-      if (genre) {
-        const genres = Array.isArray(media.genres) ? media.genres : [];
-        const matchesGenre = genres.some((itemGenre: any) => {
-          const name =
-            typeof itemGenre === "string" ? itemGenre : itemGenre?.name;
-          return typeof name === "string" && name.trim().toLowerCase() === genre;
-        });
-        if (!matchesGenre) return false;
-      }
-
-      if (year && /^\d{4}$/.test(year)) {
-        const date =
-          media.media_type === "tv"
-            ? media.first_air_date
-            : media.release_date;
-        const itemYear = date ? String(new Date(date).getFullYear()) : "";
-        if (itemYear !== year) return false;
-      }
-
-      if (favoriteOnly && !row.favorite) {
-        return false;
-      }
-
-      if (
-        Number.isFinite(minRating) &&
-        minRating > 0 &&
-        Number(row.personal_rating || 0) < minRating
-      ) {
-        return false;
-      }
-
-      if (
-        Number.isFinite(minTmdbRating) &&
-        minTmdbRating > 0 &&
-        Number(media.tmdb_rating || 0) < minTmdbRating
-      ) {
-        return false;
-      }
-
-      return true;
-    });
-
-    filteredRows.sort((a: any, b: any) => {
-      if (sort === "rating") {
-        return Number(b.personal_rating ?? -1) - Number(a.personal_rating ?? -1);
-      }
-      if (sort === "rating-low") {
-        return Number(a.personal_rating ?? 999) - Number(b.personal_rating ?? 999);
-      }
-      if (sort === "tmdb") {
-        return Number(b.media?.tmdb_rating ?? -1) - Number(a.media?.tmdb_rating ?? -1);
-      }
-      if (sort === "az") {
-        return String(a.media?.title || "").localeCompare(
-          String(b.media?.title || ""),
-          "pt-BR"
-        );
-      }
-      if (sort === "za") {
-        return String(b.media?.title || "").localeCompare(
-          String(a.media?.title || ""),
-          "pt-BR"
-        );
-      }
-      if (sort === "newest" || sort === "oldest") {
-        const getDate = (row: any) => {
-          const date =
-            row.media?.media_type === "tv"
-              ? row.media?.first_air_date
-              : row.media?.release_date;
-          return date ? new Date(date).getTime() : 0;
-        };
-        return sort === "newest" ? getDate(b) - getDate(a) : getDate(a) - getDate(b);
-      }
-      if (sort === "updated") {
-        return (
-          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-        );
-      }
-      return new Date(b.added_at).getTime() - new Date(a.added_at).getTime();
-    });
-
-    const totalResults = filteredRows.length;
-    const totalPages = Math.max(1, Math.ceil(totalResults / limit));
-    const safePage = Math.min(page, totalPages);
-    const start = (safePage - 1) * limit;
-    const pageRows = filteredRows.slice(start, start + limit);
 
     return NextResponse.json(
       {
@@ -414,7 +407,7 @@ export async function GET(
         per_page: limit,
         total_pages: totalPages,
         total_results: totalResults,
-        total_library: (allRows as any[]).length,
+        total_library: Number(counts.all || 0),
         counts,
         genres: Array.from(genreSet).sort((a, b) => a.localeCompare(b, "pt-BR")),
         years: Array.from(yearSet).sort((a, b) => Number(b) - Number(a)),

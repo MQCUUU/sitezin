@@ -33,6 +33,48 @@ type ReviewPanelProps = {
   onReviewChange?: (review: string) => void;
 };
 
+/*
+ * Mesma fórmula usada pelo `calculatedRating` (useMemo abaixo): média
+ * ponderada pelo peso da categoria, ou média simples quando a soma dos
+ * pesos é zero. Extraída para função pura porque `saveScore` e
+ * `removeCategory` precisam recalcular com um snapshot de `scores` que
+ * ainda não passou pelo `setState` (React não garante o valor
+ * atualizado de `scores` no mesmo tick).
+ */
+function computeWeightedRating(
+  categories: Category[],
+  scores: Record<string, number | "">
+): number | null {
+  const ratedCategories = categories.filter(
+    (category) => scores[category.id] !== "" && scores[category.id] !== undefined
+  );
+
+  if (!ratedCategories.length) return null;
+
+  const totalWeight = ratedCategories.reduce(
+    (sum, category) => sum + Number(category.weight || 0),
+    0
+  );
+
+  if (totalWeight <= 0) {
+    const average =
+      ratedCategories.reduce(
+        (sum, category) => sum + Number(scores[category.id] || 0),
+        0
+      ) / ratedCategories.length;
+
+    return Number(average.toFixed(1));
+  }
+
+  const weighted = ratedCategories.reduce(
+    (sum, category) =>
+      sum + Number(scores[category.id] || 0) * Number(category.weight || 0),
+    0
+  );
+
+  return Number((weighted / totalWeight).toFixed(1));
+}
+
 export function ReviewPanel({
   libraryId,
   initialRating,
@@ -237,10 +279,12 @@ export function ReviewPanel({
     categoryId: string,
     value: number | ""
   ) {
-    setScores((current) => ({
-      ...current,
+    const nextScores = {
+      ...scores,
       [categoryId]: value,
-    }));
+    };
+
+    setScores(nextScores);
 
     if (value === "") return;
 
@@ -256,6 +300,8 @@ export function ReviewPanel({
           score: value,
         }),
       });
+
+      await syncPersonalRating(categories, nextScores);
     } catch (error) {
       console.error(error);
     }
@@ -339,67 +385,49 @@ export function ReviewPanel({
         }
       );
 
-      setCategories((current) =>
-        current.filter(
-          (category) => category.id !== id
-        )
+      const nextCategories = categories.filter(
+        (category) => category.id !== id
       );
+      const nextScores = { ...scores };
+      delete nextScores[id];
 
-      setScores((current) => {
-        const next = { ...current };
-        delete next[id];
-        return next;
-      });
+      setCategories(nextCategories);
+      setScores(nextScores);
+
+      await syncPersonalRating(nextCategories, nextScores);
     } catch (error) {
       console.error(error);
     }
   }
 
-  const calculatedRating = useMemo(() => {
-    const ratedCategories = categories.filter(
-      (category) =>
-        scores[category.id] !== "" &&
-        scores[category.id] !== undefined
-    );
+  const calculatedRating = useMemo(
+    () => computeWeightedRating(categories, scores),
+    [categories, scores]
+  );
 
-    if (!ratedCategories.length) {
-      return null;
+  /*
+   * D1 — sincroniza a nota calculada do modo detalhado com
+   * library_items.personal_rating (a ÚNICA nota pessoal canônica:
+   * Ranking, Stats, badges, Pick for Me e Quick Peek leem esse campo,
+   * não o cálculo local). Antes disso, o modo detalhado calculava a
+   * nota só para exibição e o banco nunca via esse valor.
+   */
+  async function syncPersonalRating(nextCategories: Category[], nextScores: Record<string, number | "">) {
+    const computed = computeWeightedRating(nextCategories, nextScores);
+    if (computed === null || !libraryId) return;
+
+    onRatingChange?.(computed);
+
+    try {
+      await fetch(`/api/library/${libraryId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ personal_rating: computed }),
+      });
+    } catch (error) {
+      console.error(error);
     }
-
-    const totalWeight = ratedCategories.reduce(
-      (sum, category) =>
-        sum + Number(category.weight || 0),
-      0
-    );
-
-    if (totalWeight <= 0) {
-      const average =
-        ratedCategories.reduce(
-          (sum, category) =>
-            sum +
-            Number(
-              scores[category.id] || 0
-            ),
-          0
-        ) / ratedCategories.length;
-
-      return Number(average.toFixed(1));
-    }
-
-    const weighted = ratedCategories.reduce(
-      (sum, category) =>
-        sum +
-        Number(
-          scores[category.id] || 0
-        ) *
-          Number(category.weight || 0),
-      0
-    );
-
-    return Number(
-      (weighted / totalWeight).toFixed(1)
-    );
-  }, [categories, scores]);
+  }
 
   const currentRating =
     mode === "detailed" &&

@@ -412,10 +412,16 @@ fase de fechamento (B5) — apenas esta documentação.
   - **C6 — Related/Collections** = DONE (ver seção dedicada abaixo).
   - **C7 — QA/Polish** = DONE (gate final de runtime da Media Experience —
     ver seção dedicada abaixo).
-- **D — Library & Organization** = IN PROGRESS (D0 — auditoria em
-  [`docs/D-LIBRARY-ORGANIZATION-AUDIT.md`](./D-LIBRARY-ORGANIZATION-AUDIT.md)
-  — DONE; D1 — implementação consolidada = NEXT).
-- **E — Profile & Social**
+- **D — Library & Organization** = DONE (D0 auditoria + D1 implementação
+  consolidada — ver [`docs/D-LIBRARY-ORGANIZATION-AUDIT.md`](./D-LIBRARY-ORGANIZATION-AUDIT.md)
+  para o detalhe completo de ambas as subfases).
+  - **D0 — Auditoria** = DONE.
+  - **D1 — Consolidação** = DONE (paginação/filtro/busca/ordenação real em
+    SQL, URL state na Biblioteca, guest/erro/vazio explícitos, Listas
+    Personalizadas completas — CRUD, detalhe, privacidade, perfil —,
+    sincronização da nota detalhada com `personal_rating`, remoção de
+    código morto de Tags/Listas legadas).
+- **E — Profile & Social** = NEXT
 - **F — Premium Features**
 - **G — Motion & React Bits**
 - **H — Mobile/Accessibility/Performance**
@@ -1017,3 +1023,114 @@ padrão já registrado em C4.2–C5.2.
 
 **Resultado da fase: C7 DONE. FASE C — MEDIA EXPERIENCE ENCERRADA.
 Próxima fase: D — Library & Organization.**
+
+## 27. Fase D1 — Library & Organization Consolidation (DONE)
+
+**Escopo:** implementação consolidada da Fase D a partir do diagnóstico do
+D0 (ver [`docs/D-LIBRARY-ORGANIZATION-AUDIT.md`](./D-LIBRARY-ORGANIZATION-AUDIT.md)).
+
+### O que mudou
+
+- **`app/api/library/route.ts` (GET)** — reescrito para filtro/ordenação/
+  busca/paginação reais em SQL (WHERE dinâmico via `sql.query()` com
+  parâmetros, `ORDER BY` mapeado por opção de sort, `LIMIT`/`OFFSET` real).
+  Antes, o modo `paginated=true` buscava a biblioteca inteira do usuário e
+  filtrava/ordenava/paginava inteiramente em memória no Node — o maior
+  risco de performance apontado pelo D0. Contagens por status e opções de
+  gênero/ano agora vêm de duas queries leves e específicas, não de um
+  scan completo em JS.
+- **`app/favorites/page.tsx`** — passou a chamar `/api/library?favorite=true`
+  e confiar no filtro do servidor, em vez de buscar a biblioteca inteira e
+  filtrar no cliente.
+- **`app/ranking/page.tsx`** — mantido de propósito como busca completa: a
+  regra de elegibilidade (`personal_rating !== null AND status !== "want"`)
+  não mapeia em um filtro de igualdade único sem mudar comportamento (nota
+  0 seria descartada por um `min_rating` de limiar). Documentado como
+  exceção deliberada, não como pendência.
+- **`components/ReviewPanel.tsx`** — a nota calculada do modo detalhado
+  (`computeWeightedRating`, mesma fórmula de antes — média ponderada por
+  peso, ou média simples se a soma dos pesos for zero) agora sincroniza com
+  `library_items.personal_rating` a cada edição de nota por categoria e a
+  cada remoção de categoria. Antes, o cálculo só existia para exibição —
+  o banco nunca via essa nota, então Ranking/Stats/badges/Pick for Me/Quick
+  Peek liam um `personal_rating` desatualizado sempre que o modo detalhado
+  era usado.
+- **`app/library/page.tsx`** — migrado para `useSearchParams`/`useRouter`
+  (padrão App Router, dentro de `<Suspense>`): os filtros (`page`, `type`,
+  `status`, `favorite`, `genre`, `year`, `min_rating`, `min_tmdb_rating`,
+  `sort`, `search`) agora vivem na URL nos dois sentidos — nascem dela no
+  primeiro render e voltam a ela via `router.replace` a cada mudança, sem
+  empilhar histórico. `view mode` continua fora da URL, só em
+  `localStorage` (`mycatalog_library_view_mode`), por decisão de produto.
+  Reset de página ao mudar filtro foi centralizado em um único efeito
+  (fingerprint dos filtros), substituindo `resetPage()` espalhado em cada
+  handler. Adicionados estados explícitos de sessão expirada (401 →
+  "Entrar", reaproveitando o padrão `/login?reason=session&next=`) e de
+  erro de rede com retry, distintos do estado vazio.
+- **A11y** — `aria-label`/`aria-pressed`/`aria-expanded` nos botões
+  icon-only da Biblioteca e do `PosterGrid` (modo de visualização,
+  curtir, alterar status, filtros, paginação); menu de status ganhou
+  `role="menu"`/`role="menuitem"`, `aria-haspopup`/`aria-expanded` no
+  gatilho e fechamento por Escape.
+- **Rótulo de status único** — `PosterGrid`'s `getStatus()` parava de
+  hardcodar texto próprio em maiúsculas e passou a derivar de
+  `STATUS_LABELS` (`lib/types.ts`), a única fonte do texto dos status.
+- **Listas Personalizadas** — implementadas por completo nesta fase:
+  - Geração canônica confirmada em runtime (não redesenhada, apenas
+    identificada): `custom_lists`/`custom_list_items` é a única geração
+    que um consumidor real já lia (`/api/public-profile/[username]`).
+    `public.lists` sobrevive só como espelho de `is_public` (criado junto
+    em POST/PATCH `/api/lists`); `public.list_items` (a segunda geração,
+    por `movie_id`) não tinha nenhum leitor ou escritor real — os dois
+    branches mortos que existiam em `POST/DELETE /api/lists/items` foram
+    removidos (a tabela em si não foi apagada).
+  - `app/lists/page.tsx` — lista as listas do usuário, cria (nome +
+    descrição + público/privado), exclui com confirmação; estados de
+    carregando/sessão expirada/erro/vazio.
+  - `app/lists/[id]/page.tsx` — detalhe de uma lista: visualização pública
+    (se `is_public`) ou privada (403 → estado dedicado); dono pode editar
+    metadados, excluir a lista, adicionar títulos da própria biblioteca
+    (busca + clique) e remover itens. Grade de itens é própria, não
+    reaproveita `PosterGrid` — o botão de remover do `PosterGrid` apaga o
+    título da biblioteca inteira via `DELETE /api/library/[id]`, o que
+    seria um bug perigoso se reusado num contexto de lista.
+  - `PosterGrid` ganhou uma prop opcional `onAddToList` — quando presente
+    (só a Biblioteca passa), o menu de status ganha "Adicionar à
+    lista..."; sem ela, o item de menu não aparece (zero risco de
+    regressão para Discover/Favorites/Ranking/Search).
+  - `components/lists/AddToListDialog.tsx` — diálogo reaproveitado entre
+    o gatilho da Biblioteca, listando as listas do usuário com estado de
+    pertencimento (`GET /api/lists?library_item_id=`) e alternando
+    adicionar/remover por lista.
+  - Prevenção de duplicata já era garantida pela chave primária composta
+    `(list_id, library_item_id)` em `custom_list_items` — nenhum código
+    novo foi necessário para isso, só UI que reflete o estado real.
+  - Perfil público (`/u/[username]`) — cada card de lista agora linka
+    para `/lists/[id]`.
+  - Navegação principal (`components/Nav.tsx`) — item "Listas" adicionado
+    ao final do array (para não deslocar os índices fixos usados pelo
+    menu "Mais" do mobile).
+- **`hooks/useLists.ts`, `hooks/useTags.ts`** — removidos (0 chamadores
+  reais confirmados; ambos chamavam um padrão de rota
+  `PUT/DELETE /api/{lists,tags}/[id]` que nunca existiu — as rotas reais
+  são `PATCH /api/lists`/`PATCH /api/tags` com `id` no corpo). As páginas
+  novas de Listas usam fetch direto, no mesmo padrão do resto do app.
+- **Código morto confirmado e removido** (0 chamadores, verificado por
+  busca completa no repositório antes de cada remoção):
+  `components/ListForm.tsx`, `components/ListList.tsx`,
+  `components/TagForm.tsx`, `components/TagList.tsx`, `types/index.ts`
+  (só continha as interfaces `Tag`/`List` da geração abandonada,
+  consumidas exclusivamente pelos arquivos acima),
+  `app/api/reviews/route.ts` (duplicata exata de
+  `app/api/reviews/scores/route.ts` — até as mensagens de erro internas
+  ainda diziam "GET /api/reviews/scores").
+- **Fora do escopo, por decisão de produto (D1):** ações em massa, badge
+  de progresso de temporada/episódio na Biblioteca (C5 continua dona
+  dessa UX) e UI de Tags — nada disso foi implementado ou removido.
+- **Banco de dados:** nenhuma migração, nenhuma tabela apagada. `MIGRATIONS
+  = 0`, `DB SCHEMA DIFF = 0`. `public.list_items` ficou sem nenhum
+  leitor/escritor no código (candidata a uma decisão futura de remoção de
+  tabela, não tomada nesta fase).
+
+**Resultado da fase: D1 DONE. FASE D — LIBRARY & ORGANIZATION ENCERRADA.
+Próxima fase: E — Profile & Social.**

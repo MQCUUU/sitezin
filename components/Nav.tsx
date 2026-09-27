@@ -15,6 +15,7 @@ import {
   CalendarDays,
   Compass,
   Bot,
+  List,
   MoreHorizontal,
   X,
 } from "lucide-react";
@@ -44,6 +45,7 @@ const items = [
   ["/stats", "Estatísticas", ChartNoAxesCombined],
   ["/retrospective", "Retrospectiva", Sparkles],
   ["/favorites", "Curtidos", Eye],
+  ["/lists", "Listas", List],
 ] as const;
 
 /*
@@ -228,7 +230,7 @@ export function Nav() {
       {moreOpen && <div className="mobile-more-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setMoreOpen(false)}>
         <section className="mobile-more-sheet" aria-label="Mais páginas" role="dialog" aria-modal="true">
           <header><strong>Todas as páginas</strong><button className="mc-focusable" onClick={() => setMoreOpen(false)} aria-label="Fechar"><X size={20} /></button></header>
-          <div>{[items[2], items[3], items[5], items[6], items[7], items[8], items[9]].map(([href, label, Icon]) => <Link key={href} href={href} className={`mc-focusable ${isActive(href) ? "active" : ""}`}><Icon size={20} /><span>{label}</span></Link>)}</div>
+          <div>{[items[2], items[3], items[5], items[6], items[7], items[8], items[9], items[11]].map(([href, label, Icon]) => <Link key={href} href={href} className={`mc-focusable ${isActive(href) ? "active" : ""}`}><Icon size={20} /><span>{label}</span></Link>)}</div>
         </section>
       </div>}
     </>

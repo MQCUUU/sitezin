@@ -8,26 +8,12 @@ import type { LibraryItem } from "@/lib/types";
 /*
  * SUBSTITUI app/favorites/page.tsx
  *
- * CORREÇÃO DA PRIMEIRA VERSÃO DO LOTE 5
- *   A versão anterior chamava /api/library?favorite=true e
- *   confiava que a API filtraria. Ela NÃO filtra: o parâmetro
- *   `favorite` só é lido dentro do bloco `if (paginated)`, na
- *   linha ~495 de app/api/library/route.ts. Sem
- *   `paginated=true` todos os filtros são ignorados e a rota
- *   devolve a biblioteca inteira — por isso apareciam títulos
- *   que não são favoritos.
- *
- *   Não troquei para paginated=true porque não resolveria de
- *   verdade: nesse caminho a API também carrega todas as
- *   linhas e filtra em memória, no JavaScript do servidor. Não
- *   existe WHERE favorite = true no banco. Trocar de rota
- *   traria formato de resposta diferente e paginação, sem
- *   ganho real.
- *
- *   A correção de verdade, se a biblioteca crescer muito, é na
- *   API: aplicar .eq("favorite", true) na consulta ao Supabase,
- *   fora do bloco paginated. Aí sim o índice
- *   library_items_user_favorite_idx entra em ação.
+ * D1 — FILTRO AGORA É REAL NO SERVIDOR
+ *   /api/library?favorite=true agora aplica `li.favorite = true`
+ *   como WHERE de verdade (mesmo fora de paginated=true — o
+ *   modo não-paginado passou a aceitar os mesmos filtros
+ *   dinâmicos). Não é mais necessário buscar a biblioteca
+ *   inteira e filtrar no cliente.
  *
  * O QUE MUDOU EM RELAÇÃO AO ARQUIVO ORIGINAL
  *
@@ -55,7 +41,7 @@ export default function Favorites() {
   useEffect(() => {
     let vivo = true;
 
-    fetch("/api/library")
+    fetch("/api/library?favorite=true")
       .then((r) => {
         if (!r.ok) throw new Error(String(r.status));
         return r.json();
@@ -71,12 +57,7 @@ export default function Favorites() {
             }))
           : [];
 
-        /*
-         * O filtro fica AQUI, como no arquivo original. Tem que
-         * vir depois do map: `favorite` está no registro da
-         * biblioteca, não no media espalhado por cima.
-         */
-        setItens(lista.filter((i) => i.favorite === true));
+        setItens(lista);
 
         setEstado("pronto");
       })
