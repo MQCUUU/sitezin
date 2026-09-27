@@ -73,7 +73,7 @@ export default function EpisodePage() {
       const found = episodesList.find((item) => item.episode_number === episodeNumber) || null;
 
       setReleasedCount(
-        episodesList.filter((item) => !item.air_date || new Date(`${item.air_date}T23:59:59`) <= new Date()).length
+        episodesList.filter((item) => getEpisodeReleaseStatus(item.air_date) === "released").length
       );
 
       if (cancelled) return;

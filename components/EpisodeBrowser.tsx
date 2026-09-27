@@ -296,16 +296,16 @@ export function EpisodeBrowser({
   );
 
   /*
-   * Definição de "released" preservada EXATAMENTE como antes da C5.1 —
-   * alimenta released_episode_count/total_seasons enviados a /api/episodes
-   * e a ação "Marcar episódios lançados como assistidos". C5.1 não altera
-   * integridade de progresso (fica para C5.2); a semântica nova de
-   * released/future/unknown (getEpisodeReleaseStatus) só gate a ação
-   * INDIVIDUAL de assistido por episódio, abaixo.
+   * "released" agora usa a mesma getEpisodeReleaseStatus do gating
+   * individual (C5.2 §28/§29/§30) — alimenta released_episode_count
+   * enviado a /api/episodes e a lista de episode_numbers de "Marcar
+   * episódios lançados como assistidos". Antes da C5.2, essa definição
+   * tratava air_date ausente como lançado, então o botão em lote podia
+   * marcar episódios com data desconhecida mesmo com o toggle individual
+   * já bloqueado para o mesmo episódio — agora as duas ações usam a
+   * mesma regra.
    */
-  const released = episodes.filter(
-    (episode) => !episode.air_date || new Date(`${episode.air_date}T23:59:59`) <= new Date()
-  );
+  const released = episodes.filter((episode) => getEpisodeReleaseStatus(episode.air_date) === "released");
   const watchedReleased = released.filter((episode) => watched.has(episode.episode_number)).length;
 
   useEffect(() => {

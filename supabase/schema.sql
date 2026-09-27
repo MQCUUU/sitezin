@@ -315,7 +315,7 @@ create table if not exists public.review_scores (
 create table if not exists public.episodes_progress (
   id             uuid primary key default gen_random_uuid(),
   user_id        uuid not null references auth.users(id),
-  media_id       uuid not null,   -- ver NOTA 2 no fim do arquivo
+  media_id       integer not null references public.media(id),   -- ver NOTA 2 no fim do arquivo
   season_number  integer not null,
   episode_number integer not null,
   watched        boolean not null default false,
@@ -340,7 +340,7 @@ create table if not exists public.watch_entries (
   id              uuid primary key default gen_random_uuid(),
   user_id         uuid not null references auth.users(id),
   library_item_id uuid not null references public.library_items(id),
-  media_id        uuid not null,   -- ver NOTA 2
+  media_id        integer not null references public.media(id),   -- ver NOTA 2
   watched_at      timestamptz not null default now(),
   rating          numeric check (rating is null or rating between 0 and 10),
   comment         text check (comment is null or char_length(comment) <= 4000),
@@ -363,7 +363,7 @@ create table if not exists public.activity_events (
   id              uuid primary key default gen_random_uuid(),
   user_id         uuid not null references auth.users(id),
   library_item_id uuid references public.library_items(id),
-  media_id        uuid,            -- ver NOTA 2
+  media_id        integer,            -- ver NOTA 2
   event_type      text not null
                     check (event_type in ('library_added', 'status_changed',
                                           'season_completed',
@@ -957,17 +957,19 @@ create policy "cache server only" on public.tmdb_cache
 --   00-diagnostico.sql e confirme que ninguém as lê.
 --
 --
--- NOTA 2 — media_id COM TIPO INCOMPATÍVEL
---   media.id é INTEGER. Mas as colunas media_id de
---   episodes_progress, watch_entries e activity_events são
---   UUID, e nenhuma tem foreign key para media.
+-- NOTA 2 — media_id: CORRIGIDA (C5.2)
+--   Esta nota descrevia media_id de episodes_progress/watch_entries/
+--   activity_events como UUID sem foreign key para media.id (INTEGER),
+--   incompatibilidade que impediria essas colunas de referenciar media
+--   de verdade.
 --
---   Do jeito que está, essas colunas não conseguem apontar
---   para media. Todas as três tabelas estão com 0 linhas
---   (activity_events tem 248, mas via library_item_id).
---
---   Precisa ser investigado antes de essas funcionalidades
---   entrarem em uso de verdade.
+--   Confirmado por inspeção direta do banco TEST (information_schema,
+--   somente leitura, sem produção consultada) durante a C5.2: o banco
+--   real já tem media_id como INTEGER com foreign key para public.media
+--   em episodes_progress e watch_entries (activity_events também é
+--   INTEGER, FK não conferida). Este schema.sql estava desatualizado
+--   nesse ponto — só o arquivo foi corrigido aqui, nenhuma migration
+--   foi criada nem executada, porque o banco já refletia o tipo certo.
 --
 --
 -- NOTA 3 — profiles NUNCA É PREENCHIDA
@@ -989,5 +991,23 @@ create policy "cache server only" on public.tmdb_cache
 --
 --   NÃO rode isso sem antes verificar como a página /profile
 --   lê os dados hoje — ela pode estar usando auth.users direto.
+--
+--
+-- NOTA 4 — stopped_episode NÃO EXISTE (C5.2)
+--   app/api/library/sync-seasons/route.ts referenciava
+--   library_items.stopped_episode (SET stopped_episode = null ao
+--   reabrir uma série finalizada). Essa coluna nunca existiu neste
+--   schema.sql nem em nenhum outro .sql versionado do repositório, e
+--   foi confirmada ausente também no banco TEST real (information_schema,
+--   somente leitura) durante a C5.2 — só stopped_season existe.
+--
+--   Classificação: B (código incorreto referenciando coluna
+--   inexistente), não A (schema.sql desatualizado) nem C (código morto
+--   isolado — esse UPDATE tinha efeito real nos outros campos). O
+--   UPDATE inteiro falhava silenciosamente (engolido pelo catch por-item
+--   da rota) sempre que essa linha rodava, então a reabertura de série
+--   nunca acontecia de fato. Corrigido removendo a referência da query
+--   (nenhuma migration criada — a coluna nunca teve um consumer real
+--   que justificasse adicioná-la).
 -- ============================================================
  

@@ -651,7 +651,7 @@ episódios) sem focus trap.
 schema/banco, `stopped_episode` (dívida já catalogada em C5.0, não
 tocada).
 
-## C5.2 — Handoff (o que ainda falta auditar/hardenizar)
+## C5.2 — Handoff original (histórico — resolvido, ver seção seguinte)
 
 C5.2 é a única fase seguinte planejada para C5 antes de C6 (herda a
 sequência original C5.1→C5.6 da auditoria; as subfases de UI/polish
@@ -683,3 +683,220 @@ Itens explicitamente NÃO tocados por C5.1 e que C5.2 precisa auditar:
 8. **Regressão final e closeout de C5** — depois de C5.2, rodar
    regressão independente cobrindo C5.1+C5.2 juntas antes de fechar C5
    inteira e abrir C6.
+
+## C5.2 — Progress Integrity + Final Regression + Closeout (DONE)
+
+Última subfase de C5. Auditou os 8 itens do handoff acima, corrigiu as
+inconsistências reais encontradas, preservou integralmente os contratos
+e a UX da C5.1, e fechou C5.
+
+### Mapa de estado (source of truth)
+
+| Estado | Nível | Fonte |
+|---|---|---|
+| `watched`, `watched_at`, `comment`, `is_rewatch` | Episode | `episodes_progress` (chave única `user_id, media_id, season_number, episode_number`) |
+| `current_season`, `completed_seasons`, `stopped_season` | Title (série) | `library_items` — **progresso**, nunca a temporada aberta na UI (essa é `?season=` da C5.1) |
+| `status`, `rewatch_count`, `favorite` | Title | `library_items` |
+
+### Achados reais e correções aplicadas
+
+1. **`stopped_episode` — classificação B confirmada.** Busca em todo o
+   repo (`.sql` e código) e inspeção direta do banco **TEST** real
+   (`information_schema.columns`, só leitura) confirmam: a coluna nunca
+   existiu em nenhum DDL versionado nem no banco de verdade. Único uso
+   era `app/api/library/sync-seasons/route.ts` fazendo
+   `SET stopped_episode = null` dentro do `UPDATE` que reabre uma série
+   finalizada quando o TMDB anuncia temporada nova — isso fazia o
+   `UPDATE` inteiro **lançar exceção**, engolida pelo `catch` por-item da
+   rota (tratada como "falha isolada do TMDB"), então a reabertura nunca
+   acontecia de verdade. **Corrigido**: referência removida da query.
+   Nenhuma migration criada — a coluna nunca teve consumer real. Nota
+   dedicada adicionada em `supabase/schema.sql` (NOTA 4).
+
+2. **Season 0 (Especiais) corrompia agregados da série regular.**
+   `POST /api/episodes` (marcar episódio individual) e
+   `PUT /api/episodes` (completar/resetar temporada em lote) recalculavam
+   `current_season`/`completed_seasons` de `library_items` **sem checar
+   `season_number >= 1`** — a cascata de "marcar anteriores" já tinha
+   essa guarda, mas o bloco de sincronização de agregados, não. Antes da
+   C5.1, Season 0 nunca era alcançável pela UI (o seletor só gerava
+   `1..totalSeasons`), então o bug existia mas estava inerte. A C5.1
+   tornou Season 0 navegável e acionável — o que reabriu esse bug latente
+   como um problema real: marcar/desmarcar qualquer episódio de
+   Especiais resetava `current_season` para 1 e, ao desmarcar, zerava
+   `completed_seasons`. **Corrigido** em ambos os handlers: o bloco de
+   agregados só roda com `season_number >= 1`; o upsert individual em
+   `episodes_progress` continua rodando normalmente para Season 0 (§27 —
+   progresso individual permitido, só não conta pra conclusão regular).
+   Validado por: EXPLAIN (só leitura) contra o schema real do banco TEST
+   confirmando que os `UPDATE`s corrigidos parseiam e tipavam certo, e
+   19 provas puras das fórmulas exatas do código (idempotência incluída).
+   `PUT` também ganhou a validação `seasonNumber < 0` que faltava
+   (`POST` já tinha; agora os dois são consistentes).
+
+3. **Cascata "marcar anteriores como assistidos" não excluía
+   future/unknown.** `POST /api/episodes` marcava episódios de temporadas
+   anteriores sem checar `air_date` — um episódio anterior com data
+   futura/ausente (caso raro, mas possível com dados TMDB incompletos)
+   podia entrar na cascata. **Corrigido**: mesmo `getEpisodeReleaseStatus`
+   da C5.1 (`lib/title-seasons.ts`, server-safe, sem duplicar algoritmo)
+   filtra a cascata agora.
+
+4. **`released_episode_count`/lote usava a definição antiga (LOW da
+   C5.1, resolvido aqui).** `EpisodeBrowser`, `SeasonProgress` e a página
+   de episódio calculavam "released" localmente com `!air_date ||
+   air_date<=hoje` (data ausente = lançado) — divergente do gating
+   individual novo da C5.1. **Unificado**: os três agora chamam
+   `getEpisodeReleaseStatus(...) === "released"`, a mesma função. Efeito
+   real: "Marcar episódios lançados como assistidos" não inclui mais
+   episódios com `air_date` desconhecida.
+
+5. **Comentário/reassistida apagados silenciosamente pelo toggle
+   rápido.** `POST /api/episodes` sempre gravava `comment`/`is_rewatch`
+   a partir do body — como o toggle do `EpisodeBrowser` nunca envia
+   esses campos, cada marcar/desmarcar rápido **sobrescrevia com
+   `null`/`false`** qualquer comentário/reassistida salvos antes pela
+   página de episódio (diário). **Corrigido**: `ON CONFLICT DO UPDATE`
+   agora usa `CASE WHEN <provided> THEN EXCLUDED.<campo> ELSE
+   episodes_progress.<campo> END` — só sobrescreve quando o campo é
+   enviado explicitamente. Uma string vazia explícita (usuário limpa o
+   comentário no diário) continua zerando o campo; a ausência do campo
+   (toggle rápido) preserva o valor salvo. Validado por EXPLAIN (só
+   leitura) contra o banco TEST real + provas puras da lógica de
+   "provided vs. não provided".
+
+6. **`lib/complete-series-progress.ts` — código morto, removido.**
+   `completeSeriesProgress`/`resetSeriesProgress`/`restoreSeriesProgress`
+   não tinham **nenhum caller** em todo o repositório (confirmado por
+   busca exaustiva) — nenhuma rota, nenhuma UI os invoca. O arquivo
+   também continha exatamente o bug do item 3 (cascata sem filtro de
+   release status) e do item 2 (Season 0 sem exclusão explícita, embora
+   o loop `1..seasonsCount` já a excluísse estruturalmente). Como é
+   código inalcançável, corrigir os bugs nele não teria efeito real;
+   removê-lo elimina o risco por completo sem afetar nenhuma feature
+   existente. `DEAD CODE REMOVED`.
+
+7. **`media_id` — drift de schema não relacionado a season/episode, mas
+   encontrado durante a auditoria de `episodes_progress`.**
+   `supabase/schema.sql` documentava `episodes_progress.media_id` (e o
+   de `watch_entries`/`activity_events`) como `uuid` sem foreign key —
+   e uma nota (NOTA 2) dizia que isso impedia essas tabelas de
+   referenciar `media` de verdade. Inspeção direta do banco **TEST**
+   (só leitura) mostrou que a coluna real já é `integer` **com** foreign
+   key para `public.media(id)` em `episodes_progress` e `watch_entries`
+   (`activity_events` confirmado `integer`, FK não conferida). O arquivo
+   versionado estava desatualizado nesse ponto — **corrigido apenas o
+   arquivo** (tipo + FK + NOTA 2 reescrita), nenhuma migration criada
+   nem executada, porque o banco já refletia o tipo certo.
+
+### O que NÃO foi alterado (confirmado, preservado)
+
+Contratos/UX da C5.1 intactos: `SeasonSummary`/`EpisodeSummary`/
+`SeasonDetails`, normalizers, `GET /api/tv/[id]/season/[season]`
+normalizado, `?season=` como fonte de verdade, ordem/rótulo de
+Especiais, loading/erro/vazio, proteção contra resposta obsoleta,
+gating individual de assistido, comportamento de spoiler, deep links,
+lazy fetch por temporada selecionada. Nenhuma mudança em
+`current_season`/`completed_seasons` como conceito de progresso (só a
+guarda de quando eles são tocados). `SeasonProgress.changeCurrentSeason`
+(mecanismo manual de correção "voltar temporada = reduzir concluídas",
+documentado no próprio código como intencional) não foi tocado — não é
+bug, é o próprio design. Nenhuma mudança de arquitetura de auth. Nenhum
+DB remoto consultado ou alterado; toda inspeção de schema foi só leitura
+contra o banco **TEST**.
+
+### Regressão final (C5.1 + C5.2)
+
+Chromium real, guest, servidor próprio isolado (porta 4199, nunca o do
+usuário): navegação por URL (`?season=`, Back/Forward) confirmada
+correta em teste isolado após um falso negativo inicial num script
+combinado (artefato de teste, não produto — mesmo padrão já visto em
+fases anteriores C4.2–C4.4); estados de episódio futuro (badge "Futuro"
++ sinopse oculta) confirmados tanto no `EpisodeBrowser` quanto na página
+de episódio via inspeção do texto renderizado real; deep-link com
+params inválidos cai em "Episódio não encontrado." sem fetch; guest
+navega normalmente e não vê nenhum botão de assistido (`checkButtons:
+0`); mobile 390 sem overflow horizontal; tema light aplica corretamente;
+rede confirma exatamente 1 request de season por troca e 0 refetch de
+title details.
+
+### Auth test
+
+`AUTH TEST = PARTIAL`, deliberadamente: as correções de `/api/episodes`
+(POST/PUT) e `sync-seasons` foram validadas por (a) 19 provas puras das
+fórmulas exatas extraídas do código real (idempotência de completar/
+resetar, guarda de Season 0, filtro de cascata, preservação de
+comment/is_rewatch) e (b) `EXPLAIN` só-leitura de cada `UPDATE`/`INSERT`
+corrigido contra o schema **real** do banco TEST, confirmando sintaxe e
+tipos corretos (foi assim que o drift de `media_id` foi descoberto). Não
+foi feito round-trip HTTP autenticado completo (signup + várias ações
+reais) por custo/tempo — §38 do prompt permite explicitamente esse
+caminho intermediário quando o ambiente TEST está disponível mas o
+fluxo completo não é executado. Nenhuma credencial, valor de env ou URL
+de banco foi impresso; nenhuma escrita foi feita no banco TEST (só
+`information_schema` e `EXPLAIN`); produção nunca foi tocada.
+
+### Dívidas que permanecem (fora do escopo desta fase, não bloqueiam DONE)
+
+- `activity_events.media_id` — tipo confirmado `integer`, FK não
+  conferida (baixo risco, tabela auxiliar de histórico, fora do domínio
+  season/episode).
+- `SeasonProgress`/`library_items` ainda dependem de `current_season`/
+  `completed_seasons` como campos escalares simples (não um array por
+  temporada) — suficiente para o produto atual, não redesenhado aqui.
+- `auth.users` vs. tabela `user` real (Neon Auth) — `schema.sql`
+  referencia `auth.users(id)` em várias tabelas; o FK real de
+  `episodes_progress.user_id` aponta para uma tabela chamada `user`.
+  Descoberto durante esta auditoria mas é uma inconsistência
+  pré-existente e pervasiva no arquivo inteiro (não específica de
+  season/episode) — fora do escopo de C5, registrado aqui só como
+  achado, não corrigido (evitar "mexer em unrelated systems").
+- ~~Endpoint individual `POST /api/episodes` sem validação server-side~~
+  **Resolvido no patch final C5.2:** ao criar uma transição para
+  `watched=true`, o servidor busca apenas a temporada requisitada por
+  `seasonTMDB`, normaliza com `normalizeSeasonDetails` via
+  `inspectEpisodeWatchTarget`, exige episódio correspondente e aplica
+  `getEpisodeReleaseStatus`. `future`/`unknown` retornam 409;
+  resposta malformada/falha TMDB retorna 502; season ou episódio
+  inexistente retorna 404. Unwatch não faz lookup; edição de comentário/reassistida
+  em registro já assistido é metadata-only e não fica bloqueada se a data
+  TMDB mudar. Nenhum valor de data/status enviado pelo cliente é lido.
+  O bulk `PUT` também valida todos os números solicitados contra uma única
+  season normalizada antes de qualquer write; `watched=false` segue sem
+  lookup. A cascata continua usando o helper de release compartilhado;
+  algoritmo não foi duplicado.
+
+### C5.2 — Patch final: autorização server-side de release
+
+`POST /api/episodes` e bulk `PUT /api/episodes` agora são autoridade
+server-side para toda nova gravação `watched=true`: usam `seasonTMDB`
+(cache existente), `normalizeSeasonDetails` e o helper compartilhado de
+status. O POST consulta uma season/episódio; o PUT consulta uma season e
+valida todos os números antes do primeiro write. Futuro/desconhecido não
+escrevem no banco; episódio inexistente não pode ser criado arbitrariamente.
+Unwatch preserva a capacidade de corrigir estado inconsistente e não faz
+fetch TMDB. Edição de comentário/flag em episódio já marcado como assistido
+continua possível sem novo fetch; os `CASE WHEN` existentes preservam
+campos de diário que o quick toggle omite.
+
+Os testes dirigidos executaram 26 assertions sobre as funções reais:
+released/future/unknown, data civil inválida, season/episódio inexistente,
+bulk com episódio inelegível, gate de unwatch/metadata-only e valores/flags
+de comentário e reassistida usados pelo upsert. Não foi feito round-trip
+HTTP autenticado com banco; esse limite é registrado no relatório da sessão.
+
+Validação final deste patch: `npm run check` PASS (exit 0),
+`npm run build` PASS (exit 0), `git diff --check` PASS (exit 0).
+Nenhuma migration/alteração de banco foi executada; sem artifacts QA
+temporários ou processos próprios ao encerrar. Commit/push não realizados.
+
+## C5 — Fechamento Final (DONE)
+
+C5.0 (auditoria) → C5.1 (contratos/URL/Especiais/estados) → C5.2
+(integridade de progresso, release authority + regressão final) completas. `npm run check`,
+`npm run build` e `git diff --check` limpos nas três subfases. Nenhuma
+migration executada em nenhum momento; nenhuma produção consultada ou
+alterada. Nenhum commit/push automático — cada subfase fica para
+aprovação e commit manual do usuário.
+
+**Próxima fase do roadmap: C6 — Related/Collections.**

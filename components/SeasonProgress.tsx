@@ -14,7 +14,7 @@ import {
   Trophy,
 } from "lucide-react";
 
-import type { EpisodeSummary } from "@/lib/title-seasons";
+import { getEpisodeReleaseStatus, type EpisodeSummary } from "@/lib/title-seasons";
 
 type SeasonProgressProps = {
   libraryItem: any;
@@ -490,7 +490,7 @@ export function SeasonProgress({
         const response = await fetch(`/api/tv/${tvId}/season/${seasonToComplete}`);
         const data = await response.json();
         const episodeNumbers = (Array.isArray(data?.episodes) ? data.episodes : [])
-          .filter((episode: EpisodeSummary) => !episode.air_date || new Date(`${episode.air_date}T23:59:59`) <= new Date())
+          .filter((episode: EpisodeSummary) => getEpisodeReleaseStatus(episode.air_date) === "released")
           .map((episode: EpisodeSummary) => Number(episode.episode_number))
           .filter((number: number) => Number.isInteger(number) && number > 0);
 

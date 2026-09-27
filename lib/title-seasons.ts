@@ -207,9 +207,88 @@ export function getEpisodeReleaseStatus(
 ): EpisodeReleaseStatus {
   if (!airDate) return "unknown";
 
-  const dateOnly = String(airDate).slice(0, 10);
+  const dateOnly = String(airDate);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateOnly)) return "unknown";
+
+  const [year, month, day] = dateOnly.split("-").map(Number);
+  const isLeapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysPerMonth = [31, isLeapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (month < 1 || month > 12 || day < 1 || day > daysPerMonth[month - 1]) {
+    return "unknown";
+  }
 
   const today = new Date().toISOString().slice(0, 10);
   return dateOnly <= today ? "released" : "future";
+}
+
+export type EpisodeWatchTargetResult =
+  | { kind: "invalid-season" }
+  | { kind: "episode-not-found"; episodeNumber: number }
+  | {
+      kind: "not-released";
+      episode: EpisodeSummary;
+      releaseStatus: Exclude<EpisodeReleaseStatus, "released">;
+    }
+  | {
+      kind: "released";
+      episodes: EpisodeSummary[];
+    };
+
+/**
+ * Resolve um episódio a partir do payload real de uma temporada e calcula
+ * seu release status pelo helper compartilhado. Usado pelo servidor antes
+ * de criar uma transição para watched=true; payload enviado pelo cliente
+ * não participa da decisão.
+ */
+export function inspectEpisodeWatchTargets(
+  rawSeason: unknown,
+  seasonNumber: number,
+  episodeNumbers: number[]
+): EpisodeWatchTargetResult {
+  const season = normalizeSeasonDetails(rawSeason);
+  if (!season || season.season_number !== seasonNumber) {
+    return { kind: "invalid-season" };
+  }
+
+  const episodesByNumber = new Map(
+    season.episodes
+      .filter((episode) => episode.season_number === seasonNumber)
+      .map((episode) => [episode.episode_number, episode] as const)
+  );
+  const episodes: EpisodeSummary[] = [];
+  for (const episodeNumber of episodeNumbers) {
+    const episode = episodesByNumber.get(episodeNumber);
+
+    if (!episode) return { kind: "episode-not-found", episodeNumber };
+
+    const releaseStatus = getEpisodeReleaseStatus(episode.air_date);
+    if (releaseStatus !== "released") {
+      return { kind: "not-released", episode, releaseStatus };
+    }
+    episodes.push(episode);
+  }
+
+  return { kind: "released", episodes };
+}
+
+/** Conveniência para a mutation individual POST; usa o mesmo caminho bulk. */
+export function inspectEpisodeWatchTarget(
+  rawSeason: unknown,
+  seasonNumber: number,
+  episodeNumber: number
+): EpisodeWatchTargetResult {
+  return inspectEpisodeWatchTargets(rawSeason, seasonNumber, [episodeNumber]);
+}
+
+/**
+ * RELEASE validation is needed only when a request can create a new watched
+ * state. A journal edit on an already-watched row is metadata-only and must
+ * remain possible if TMDB later changes/removes its date.
+ */
+export function requiresEpisodeReleaseValidation(
+  targetWatched: boolean,
+  existingWatched: boolean,
+  journalEdit: boolean
+): boolean {
+  return targetWatched && !(existingWatched && journalEdit);
 }

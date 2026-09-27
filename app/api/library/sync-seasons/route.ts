@@ -60,9 +60,20 @@ export async function POST() {
           const completed = Number(item.completed_seasons || knownSeasons || 0);
 
           if (["watched", "rewatched"].includes(item.status) && seasons > completed) {
+            /*
+             * `stopped_episode` não existe em nenhum DDL versionado
+             * (supabase/schema.sql nem os demais .sql do repo) — só
+             * `stopped_season`. Referenciá-la aqui fazia esse UPDATE
+             * inteiro lançar (coluna inexistente), engolido pelo catch
+             * por-item como se fosse falha do TMDB: a reabertura de série
+             * finalizada nunca executava de fato. Nenhum outro ponto do
+             * código lê ou escreve `stopped_episode` (C5.2 §6 — dívida
+             * documentada, sem migration: a coluna nunca teve um
+             * consumer real).
+             */
             await sql`
               UPDATE public.library_items
-              SET status = 'watching', current_season = ${completed + 1}, stopped_season = null, stopped_episode = null, updated_at = now()
+              SET status = 'watching', current_season = ${completed + 1}, stopped_season = null, updated_at = now()
               WHERE id = ${item.id} AND user_id = ${user.id}
             `;
             reopened.push(item.id);
