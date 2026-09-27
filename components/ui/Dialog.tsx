@@ -88,7 +88,16 @@ export function Dialog({
       className="mc-dialog-backdrop"
       role="presentation"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target !== event.currentTarget) return;
+        /*
+         * Without this, the browser's own default mousedown behavior (move
+         * focus to <body> because the backdrop itself isn't focusable) runs
+         * *after* our onClose() -> effect-cleanup -> previousActive.focus()
+         * restore below, silently overwriting it back to <body>. Suppressing
+         * only the default action (not the click) keeps the restore intact.
+         */
+        event.preventDefault();
+        onClose();
       }}
     >
       <div

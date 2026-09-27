@@ -9,7 +9,16 @@
 .mc-dialog.mc-preview-dialog {
   width: min(680px, 100%);
   padding: 0;
-  overflow: hidden;
+  /*
+   * x hidden clips the full-bleed backdrop image's square corners to the
+   * panel's rounded radius; y auto lets the panel itself scroll when the
+   * content (poster + meta + overview + providers + actions) is taller
+   * than max-height. Both must live on this selector — a lower-specificity
+   * `.mc-preview-dialog { overflow-y: auto }` here previously lost to this
+   * rule's `overflow: hidden` shorthand and silently disabled all scrolling.
+   */
+  overflow-x: hidden;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
@@ -17,10 +26,6 @@
 .mc-preview-dialog .mc-preview-backdrop,
 .mc-preview-dialog .mc-preview-body {
   flex-shrink: 0;
-}
-
-.mc-preview-dialog {
-  overflow-y: auto;
 }
 
 .mc-preview-close {

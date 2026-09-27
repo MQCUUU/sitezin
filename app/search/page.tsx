@@ -13,7 +13,6 @@ import {
   SearchPageErrorState,
   SearchPageHeader,
   SearchPageIdleState,
-  SearchPagePreviewModal,
   SearchPersonPanel,
   SearchRemoveDialog,
   SearchResultsSkeleton,
@@ -24,6 +23,10 @@ import {
   type SearchItem,
   type UserSearchResult,
 } from "@/components/search/page";
+
+import { MediaPreviewDialog } from "@/components/media/preview/MediaPreviewDialog";
+import { WatchProviderList } from "@/components/media/preview/WatchProviderList";
+import { fromSearchItem } from "@/components/media/preview/adapters";
 
 function normalizeText(value: string) {
   return value
@@ -166,33 +169,17 @@ function SearchPageContent() {
   }, [loading]);
 
   /*
-   * B3.7 (LOW — continuidade de foco): ao abrir o Quick Peek, guarda o
-   * elemento que disparou a abertura ("Ver rápido") para devolver o foco
-   * a ele ao fechar (botão, Escape ou clique no backdrop — os três
-   * convergem para `closePreview`). Se o gatilho não existir mais no DOM
-   * (o card sumiu por algum motivo), cai no heading de resultados.
+   * Focus restore on close (B3.7) now comes for free from
+   * `MediaPreviewDialog`'s underlying `Dialog`, which captures
+   * `document.activeElement` on open and restores it on close (C2.2) —
+   * no manual trigger ref needed anymore.
    */
-  const previewTriggerRef = useRef<HTMLElement | null>(null);
-
   function openPreview(item: SearchItem) {
-    previewTriggerRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setPreviewItem(item);
   }
 
   function closePreview() {
     setPreviewItem(null);
-
-    const trigger = previewTriggerRef.current;
-    previewTriggerRef.current = null;
-
-    requestAnimationFrame(() => {
-      if (trigger && document.contains(trigger)) {
-        trigger.focus();
-      } else {
-        resultsSummaryRef.current?.focus();
-      }
-    });
   }
 
   const [personLoading, setPersonLoading] = useState(false);
@@ -251,18 +238,17 @@ function SearchPageContent() {
   }, [openLibraryMenu]);
 
   /*
-   * Preview:
-   * fecha ESC e trava scroll do body.
+   * Remove confirm dialog only — the Quick Peek's Escape/scroll lock now
+   * comes from `MediaPreviewDialog`'s underlying `Dialog` (C2.2).
    */
   useEffect(() => {
-    if (!previewItem && !removeTarget) return;
+    if (!removeTarget) return;
 
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        if (previewItem) closePreview();
         setRemoveTarget(null);
       }
     }
@@ -273,7 +259,7 @@ function SearchPageContent() {
       document.body.style.overflow = previous;
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [previewItem, removeTarget]);
+  }, [removeTarget]);
 
   /*
    * Streaming, gêneros e detalhes
@@ -859,18 +845,18 @@ function SearchPageContent() {
         )}
       </div>
 
-      {previewItem && (
-        <SearchPagePreviewModal
-          item={previewItem}
-          details={previewDetails}
-          detailsLoading={previewDetailsLoading}
-          libraryItem={getLibraryItem(previewItem)}
-          isProcessing={processing === `${previewItem.media_type}-${previewItem.id}`}
-          onClose={closePreview}
-          onAdd={addToLibrary}
-          onRating={updateRating}
-        />
-      )}
+      <MediaPreviewDialog
+        open={Boolean(previewItem)}
+        onClose={closePreview}
+        data={previewItem ? fromSearchItem(previewItem, previewDetails, getLibraryItem(previewItem) || null) : null}
+        actions={{
+          onAdd: () => previewItem && addToLibrary(previewItem),
+          addLabel: "Quero assistir",
+          onRating: (_, rating) => previewItem && updateRating(previewItem, rating),
+          disabled: previewItem ? processing === `${previewItem.media_type}-${previewItem.id}` : false,
+        }}
+        providers={<WatchProviderList details={previewDetails} loading={previewDetailsLoading} />}
+      />
 
       {removeTarget && (
         <SearchRemoveDialog

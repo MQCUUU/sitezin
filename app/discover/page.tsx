@@ -23,13 +23,16 @@ import {
   DiscoverGridSkeleton,
   DiscoverHeader,
   DiscoverPagination,
-  DiscoverPreviewModal,
   DiscoverRemoveDialog,
   DiscoverToolbar,
   type DiscoverItem,
   type DiscoverResponse,
   type FilterResponse,
 } from "@/components/discover";
+
+import { MediaPreviewDialog } from "@/components/media/preview/MediaPreviewDialog";
+import { WatchProviderList } from "@/components/media/preview/WatchProviderList";
+import { fromDiscoverItem } from "@/components/media/preview/adapters";
 
 export default function DiscoverPage() {
   return (
@@ -127,12 +130,15 @@ function DiscoverContent() {
   const [previewDetails, setPreviewDetails] = useState<any>(null);
   const [previewDetailsLoading, setPreviewDetailsLoading] = useState(false);
 
+  /*
+   * Only `removeTarget` needs this anymore — the Quick Peek's Escape/scroll
+   * lock now comes from `MediaPreviewDialog`'s underlying `Dialog` (C2.2).
+   */
   useEffect(() => {
-    if (!previewItem && !removeTarget) return;
+    if (!removeTarget) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setPreviewItem(null);
         setRemoveTarget(null);
       }
     };
@@ -145,7 +151,7 @@ function DiscoverContent() {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [previewItem, removeTarget]);
+  }, [removeTarget]);
 
   useEffect(() => {
     let cancelled = false;
@@ -829,18 +835,18 @@ function DiscoverContent() {
         </>
       )}
 
-      {previewItem && (
-        <DiscoverPreviewModal
-          item={previewItem}
-          details={previewDetails}
-          detailsLoading={previewDetailsLoading}
-          genres={filters.genres}
-          isProcessing={processing === `${previewItem.media_type}-${previewItem.id}`}
-          onClose={() => setPreviewItem(null)}
-          onAdd={addToLibrary}
-          onUpdateRating={updatePersonalRating}
-        />
-      )}
+      <MediaPreviewDialog
+        open={Boolean(previewItem)}
+        onClose={() => setPreviewItem(null)}
+        data={previewItem ? fromDiscoverItem(previewItem, filters.genres) : null}
+        actions={{
+          onAdd: () => previewItem && addToLibrary(previewItem),
+          addLabel: "Quero assistir",
+          onRating: (_, rating) => previewItem && updatePersonalRating(previewItem, rating),
+          disabled: previewItem ? processing === `${previewItem.media_type}-${previewItem.id}` : false,
+        }}
+        providers={<WatchProviderList details={previewDetails} loading={previewDetailsLoading} />}
+      />
 
       {removeTarget && (
         <DiscoverRemoveDialog

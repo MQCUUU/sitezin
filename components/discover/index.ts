@@ -10,7 +10,6 @@ export { DiscoverCard } from "./DiscoverCard";
 export { DiscoverPagination } from "./DiscoverPagination";
 export { DiscoverEmptyState } from "./DiscoverEmptyState";
 export { DiscoverErrorState } from "./DiscoverErrorState";
-export { DiscoverPreviewModal } from "./DiscoverPreviewModal";
 export { DiscoverRemoveDialog } from "./DiscoverRemoveDialog";
 
 export * from "./types";
