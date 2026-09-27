@@ -122,7 +122,7 @@ export async function GET(
     }
 
     return NextResponse.json({
-      ...sanitizeTitleDetails(details),
+      ...sanitizeTitleDetails(details, type),
       watch_providers: watchProviders,
     });
   } catch (error) {

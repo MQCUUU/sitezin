@@ -3,19 +3,19 @@ import { Star } from "lucide-react";
 
 import { CarouselRail } from "@/components/CarouselRail";
 import { Poster } from "@/components/Poster";
-import type { TitleType } from "./types";
+import type { RelatedItem, TitleType } from "./types";
 
 export type TitleRelatedSectionProps = {
   type: TitleType;
-  recommendations: any[];
+  recommendations: RelatedItem[];
 };
 
 /**
  * Conteúdo da aba "related": estado vazio (title-tabpanel-related-1) ou o
  * carrossel de recomendações (related-2) — mutuamente exclusivos, como
- * antes da C1.2. `recommendations` continua com a dívida conhecida de não
- * ser populado hoje (C6 resolve isso); esta seção só preserva o
- * comportamento atual.
+ * antes da C1.2. `recommendations` agora vem normalizado e populado de
+ * verdade pelo `sanitizeTitleDetails` (C6) — mesma fonte TMDB, mesmo fetch
+ * de details, self-filter/dedupe/limite já aplicados lá.
  */
 export function TitleRelatedSection({
   type,
@@ -51,40 +51,45 @@ export function TitleRelatedSection({
         </div>
 
         <CarouselRail className="title-recommendation-carousel">
-          {recommendations.map((item: any) => (
+          {recommendations.map((item) => (
             <Link
               key={`${item.media_type}-${item.id}`}
-              href={`/title/${item.media_type || type}/${item.id}`}
+              href={`/title/${item.media_type}/${item.id}`}
               className="panel title-recommendation-card"
               style={{ overflow: "hidden", padding: 0, textDecoration: "none" }}
             >
               <div className="mc-title-recommendation-media">
+                {/* Nome já é texto visível logo abaixo, dentro do mesmo
+                    link — a foto é decorativa para não duplicar o nome
+                    no accessible name do card (mesmo padrão do elenco). */}
                 <Poster
                   path={item.poster_path}
-                  alt={item.title || item.name}
+                  alt=""
                   sizes="(max-width: 700px) 45vw, 210px"
                 />
               </div>
 
               <div style={{ padding: "11px" }}>
                 <strong style={{ display: "block", fontSize: "14px" }}>
-                  {item.title || item.name}
+                  {item.title}
                 </strong>
 
-                <div
-                  className="muted"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    marginTop: "5px",
-                    fontSize: "12px",
-                  }}
-                >
-                  <Star size={12} fill="currentColor" />
+                {item.vote_average ? (
+                  <div
+                    className="muted"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      marginTop: "5px",
+                      fontSize: "12px",
+                    }}
+                  >
+                    <Star size={12} fill="currentColor" />
 
-                  {Number(item.vote_average || 0).toFixed(1)}
-                </div>
+                    {item.vote_average.toFixed(1)}
+                  </div>
+                ) : null}
               </div>
             </Link>
           ))}

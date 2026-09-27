@@ -11,6 +11,11 @@ import {
   normalizeEpisodeSummary,
   normalizeSeasonSummaries,
 } from "@/lib/title-seasons";
+import type { CollectionRef, RelatedItem } from "@/lib/title-related";
+import {
+  normalizeCollectionRef,
+  normalizeRelatedItems,
+} from "@/lib/title-related";
 
 /*
  * ============================================================
@@ -90,14 +95,24 @@ export type SanitizedTitleDetails = Record<string, unknown> & {
   seasons: SeasonSummary[];
   last_episode_to_air: EpisodeSummary | null;
   next_episode_to_air: EpisodeSummary | null;
+  recommendations: RelatedItem[];
+  belongs_to_collection: CollectionRef | null;
 };
 
 /**
  * Reduz a resposta pública do TMDB aos dados realmente usados pela interface.
  * Além de diminuir o RSC/JSON, remove credit_id e números financeiros que
  * scanners confundem com cartões ou timestamps.
+ *
+ * `type` só alimenta `media_type` das recomendações — a resposta
+ * `/movie|tv/{id}/recommendations` embutida via `append_to_response` nunca
+ * marca esse campo nos itens (são sempre do mesmo tipo do título
+ * consultado).
  */
-export function sanitizeTitleDetails(value: unknown): SanitizedTitleDetails {
+export function sanitizeTitleDetails(
+  value: unknown,
+  type: TitleType
+): SanitizedTitleDetails {
   if (!value || typeof value !== "object") {
     return {
       credits: { cast: [], crew: [] },
@@ -105,6 +120,8 @@ export function sanitizeTitleDetails(value: unknown): SanitizedTitleDetails {
       seasons: [],
       last_episode_to_air: null,
       next_episode_to_air: null,
+      recommendations: [],
+      belongs_to_collection: null,
     };
   }
 
@@ -151,6 +168,22 @@ export function sanitizeTitleDetails(value: unknown): SanitizedTitleDetails {
     details.next_episode_to_air
   );
 
+  const selfId = Number(details.id);
+  const recommendations: RelatedItem[] = normalizeRelatedItems(
+    details.recommendations,
+    type,
+    Number.isFinite(selfId) ? selfId : -1
+  );
+  /*
+   * `belongs_to_collection` só existe no detalhe de filme (o TMDB nunca
+   * inclui esse campo em `/tv/{id}`) — para TV, normalizeCollectionRef
+   * recebe `undefined` e devolve `null` defensivamente, então nunca
+   * "inventa" coleção para série.
+   */
+  const belongsToCollection: CollectionRef | null = normalizeCollectionRef(
+    details.belongs_to_collection
+  );
+
   const {
     budget: _budget,
     revenue: _revenue,
@@ -161,6 +194,8 @@ export function sanitizeTitleDetails(value: unknown): SanitizedTitleDetails {
     seasons: _seasons,
     last_episode_to_air: _lastEpisodeToAir,
     next_episode_to_air: _nextEpisodeToAir,
+    recommendations: _recommendations,
+    belongs_to_collection: _belongsToCollection,
     ...safeDetails
   } = details;
 
@@ -171,6 +206,8 @@ export function sanitizeTitleDetails(value: unknown): SanitizedTitleDetails {
     seasons,
     last_episode_to_air: lastEpisodeToAir,
     next_episode_to_air: nextEpisodeToAir,
+    recommendations,
+    belongs_to_collection: belongsToCollection,
   };
 }
 
@@ -222,7 +259,7 @@ export async function getTitleDetails(
   }
 
   return {
-    ...sanitizeTitleDetails(details),
+    ...sanitizeTitleDetails(details, type),
     watch_providers: watchProviders,
   };
 }

@@ -1,4 +1,5 @@
-import { CalendarDays, Clock3, Play } from "lucide-react";
+import Link from "next/link";
+import { CalendarDays, Clock3, Layers3, Play } from "lucide-react";
 
 import { SeasonProgress } from "@/components/SeasonProgress";
 import type { Status } from "@/lib/types";
@@ -109,6 +110,21 @@ export function TitleOverviewSection({
                 </strong>
               </div>
             </div>
+          )}
+
+          {type === "movie" && details.belongs_to_collection && (
+            <Link
+              href={`/collection/${details.belongs_to_collection.id}`}
+              className="title-fact title-fact-link"
+            >
+              <Layers3 size={18} />
+
+              <div>
+                <span>Franquia</span>
+
+                <strong>{details.belongs_to_collection.name}</strong>
+              </div>
+            </Link>
           )}
         </div>
       </div>

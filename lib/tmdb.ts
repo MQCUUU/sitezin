@@ -375,7 +375,7 @@ export async function detailsTMDB(
   id: number | string
 ) {
   return tmdb(
-    `/${type}/${id}?language=${getLanguage()}&append_to_response=credits,videos,images`,
+    `/${type}/${id}?language=${getLanguage()}&append_to_response=credits,videos,images,recommendations`,
     {
       revalidate:
         TMDB_CACHE.DETAILS,

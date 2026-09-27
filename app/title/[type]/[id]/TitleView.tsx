@@ -29,6 +29,7 @@ import {
   type LibraryItem,
   type LibraryItemUpdate,
   type PersonCredit,
+  type RelatedItem,
 } from "@/components/title";
 
 export type TitleViewProps = {
@@ -1088,16 +1089,12 @@ export default function TitlePage({
    * ============================
    * RECOMENDAÇÕES
    * ============================
+   *
+   * C6: já normalizado por sanitizeTitleDetails (RelatedItem[]) — self
+   * filter/dedupe/limite acontecem lá. Sem foto NÃO exclui o item (mesma
+   * política do elenco desde a C4.2); MediaCard/Poster já tratam fallback.
    */
-
-  const recommendations =
-    details.recommendations
-      ?.results
-      ?.filter(
-        (item: any) =>
-          item.poster_path
-      )
-      ?.slice(0, 6) || [];
+  const recommendations: RelatedItem[] = details.recommendations || [];
 
   const tabPanelIdsCtx = {
     hasDirectorsOrCreators: directors.length > 0 || writers.length > 0 || creators.length > 0,

@@ -407,8 +407,9 @@ fase de fechamento (B5) — apenas esta documentação.
     Especiais/estados, C5.2 integridade de progresso + regressão final —
     ver [`docs/C5-SEASONS-EPISODES-AUDIT.md`](./C5-SEASONS-EPISODES-AUDIT.md)
     para o detalhe completo de cada subfase).
-  - **C6 — Related/Collections** = NEXT
-  - **C7 — QA/Polish**
+  - **C6 — Related/Collections** = DONE (ver seção dedicada abaixo).
+  - **C7 — QA/Polish** = NEXT (QA/Polish final da Media Experience —
+    escopo ainda não iniciado).
 - **D — Library & Organization**
 - **E — Profile & Social**
 - **F — Premium Features**
@@ -784,3 +785,123 @@ devem ser registrados no relatório da sessão; não inferir aprovação de
 runtime a partir dos testes estáticos.
 
 **Resultado da fase: C4 DONE. Próxima fase: C5 — Seasons/Episodes.**
+
+## 25. Fase C6 — Related/Collections (DONE)
+
+C5 (Seasons/Episodes) está fechada — ver
+[`docs/C5-SEASONS-EPISODES-AUDIT.md`](./C5-SEASONS-EPISODES-AUDIT.md) para
+o detalhe completo de C5.0–C5.2. C6 transformou "Relacionados" e
+"Coleção" de UI morta/desconectada em experiência funcional, 100% TMDB,
+sem introduzir recommendation engine próprio.
+
+### Estado encontrado (antes)
+
+A aba "Relacionados" da Title page já existia inteira (`TitleRelatedSection`,
+empty state, `CarouselRail`) mas nunca recebia dados: `details.recommendations`
+nunca era populado porque `detailsTMDB()` não pedia `recommendations` via
+`append_to_response`, e `TitleView` lia `details.recommendations?.results`
+de um campo que nunca existia — a aba sempre caía no empty state. O mesmo
+filtro por `poster_path` do elenco pré-C4.2 existia aqui (`item.poster_path`
+como critério de elegibilidade), nunca corrigido por não ter dado real para
+expor o bug.
+
+`belongs_to_collection` (nativo do detalhe de filme, sem precisar de
+`append_to_response`) sobrevivia ao spread do sanitizer, mas nunca era lido
+por nenhum componente — 0 ocorrências no código antes da C6. A página de
+coleção (`app/collection/[id]/page.tsx`) e a API (`/api/collection/[id]`)
+já estavam maduras e completas (hero, progresso, filtros, Quick Peek
+reaproveitando `MediaPreviewDialog`/`WatchProviderList`, concorrência
+limitada e cache na API) — só não havia nenhum caminho de navegação
+Title → Collection.
+
+### Fonte e fetch strategy
+
+Recomendações vêm de `recommendations` embutido na MESMA chamada de
+`detailsTMDB()` via `append_to_response=credits,videos,images,recommendations`
+— nenhum fetch novo, cliente ou servidor. `belongs_to_collection` já vinha
+de graça no detalhe de filme (nativo, sem append). **NEW UNNECESSARY
+FETCHES = 0**, confirmado por inspeção de rede real (trocar para a aba
+Relacionados não gera nenhuma request de API nova).
+
+### Contrato (`lib/title-related.ts`, novo)
+
+- `RelatedItem` — `id, media_type ("movie"|"tv"), title, poster_path,
+  backdrop_path, date, vote_average`. `media_type` é carimbado pelo
+  chamador (`sanitizeTitleDetails` agora recebe `type` como segundo
+  parâmetro) porque a resposta de recomendações por-tipo do TMDB nunca
+  inclui esse campo nos itens.
+- `CollectionRef` — `id, name, poster_path, backdrop_path`.
+- `normalizeRelatedItems(raw, mediaType, excludeId)` — filtra inválidos
+  (sem id/título), remove o próprio título (`excludeId`), deduplica por
+  `media_type+id` mantendo a primeira ocorrência, limita a 12 itens.
+  **Sem foto NÃO é critério de descarte** — mesma política do elenco
+  desde a C4.2, corrigindo o bug antigo de usar imagem como elegibilidade.
+- `normalizeCollectionRef(raw)` — objeto único ou `null`; nunca fabrica
+  coleção para TV (o campo simplesmente não existe no detalhe de série).
+
+`sanitizeTitleDetails` (SSR + `/api/tmdb/[type]/[id]`, compartilhados)
+normaliza os dois campos no lugar de espalhar os raws — mesmo padrão de
+`seasons`/`last_episode_to_air` da C5.1.
+
+### Related — comportamento
+
+Movie e TV funcionam. Card decorativo (`alt=""`, nome já é texto visível
+no card — mesma política de a11y do elenco/crew); nota só aparece se
+`vote_average` for válido (não mostra "0.0" fantasma). `CarouselRail`
+reaproveitado sem alteração — nenhum sexto tipo de card criado. Sem Quick
+Peek novo: os cards continuam link direto para `/title/[type]/[id]`
+(infra de preview não era trivial de estender aqui sem inflar o escopo,
+§22 do prompt permite explicitamente esse caminho). Empty state
+(`Nenhum título relacionado disponível.`) preservado sem alteração —
+verificado estruturalmente (Title é SSR puro, sem como fixturar
+`recommendations=[]` em runtime, mesma limitação já registrada na C3.3/C5.1).
+
+### Collection — comportamento
+
+Movie pertencente a coleção ganha um novo "fact" na aba Visão Geral
+("Franquia" + nome da coleção, ícone `Layers3`, link para
+`/collection/[id]`) — rótulo deliberadamente diferente de "Minha coleção"
+(card de status pessoal já existente na mesma página) para não confundir
+os dois conceitos. TV nunca mostra esse CTA (`type === "movie"` explícito).
+Página e API de coleção não foram redesenhadas — já maduras; só a conexão
+Title → Collection foi adicionada. Collection → Title já existia (cards
+da coleção já linkavam para `/title/movie/[id]`).
+
+### Dados reais confirmados
+
+`O Senhor dos Anéis: A Sociedade do Anel` (movie 120) — `belongs_to_collection`
+aponta para a coleção 119; CTA renderiza com href/texto corretos; 12
+recomendações normalizadas, self-filtro e dedupe confirmados sobre o
+payload real (nenhum id duplicado, id 120 nunca aparece nas próprias
+recomendações). `Clube da Luta` (movie 550) — sem coleção, CTA ausente,
+recomendações funcionam normalmente. `Breaking Bad` (tv 1396) — sem CTA de
+coleção (TV), 12 recomendações com `media_type: "tv"` corretas. Página da
+coleção 119 renderiza hero/progresso/filmografia com os 3 filmes reais da
+trilogia.
+
+### QA runtime
+
+Chromium real, guest, servidor próprio isolado (porta 4210, nunca o do
+usuário): CTA de coleção com href/texto corretos e foco por teclado
+(`Tab` chega num `<a>` real); Related renderiza 12 cards para movie e TV,
+0 para título sem coleção; página de coleção carrega hero e lista de
+filmes; mobile 390 (Related) e tablet 768 (Collection) sem overflow
+horizontal; tema light aplica cor/fundo corretos no CTA; rede confirma 0
+fetch novo de API ao trocar para a aba Relacionados (a única "request"
+nova observada foi um beacon de analytics do player de trailer embutido,
+pré-existente, sem relação com C6).
+
+### Fora do escopo / dívidas (não bloqueiam DONE)
+
+- Nenhum Quick Peek novo nos cards de Related (link direto é suficiente,
+  decisão deliberada do prompt).
+- `activity_events`/outras dívidas de schema da C5.2 permanecem como
+  estavam — C6 não tocou banco (`DB DIFF = 0`, `MIGRATIONS = 0`).
+- Empty state de Related não foi provado via fixture de runtime (Title é
+  SSR puro); prova ficou estrutural + dado real (nenhum título testado
+  tinha 0 recomendações — TMDB quase sempre devolve algo).
+- Ordem/paginação de `parts` na página de coleção não foi alterada
+  (já usava `release_date` com fallback seguro, mantido).
+
+**Resultado da fase: C6 DONE. Próxima fase: C7 — QA/Polish final da Media
+Experience (não iniciada).**
