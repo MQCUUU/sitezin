@@ -430,7 +430,9 @@ fase de fechamento (B5) — apenas esta documentação.
     fonte canônica da aba Atividade pública, regex de username
     unificada, drift de `username_changes` corrigido no schema
     versionado).
-- **F — Premium Features** = NEXT
+- **F — Premium Features** = IN PROGRESS (F0 — auditoria em
+  [`docs/F-PREMIUM-FEATURES-AUDIT.md`](./F-PREMIUM-FEATURES-AUDIT.md) —
+  DONE; F1 — implementação consolidada = NEXT).
 - **G — Motion & React Bits**
 - **H — Mobile/Accessibility/Performance**
 - **I — QA/Polish/Release**
