@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Search } from "@/components/Search";
 import { SmartBackButton } from "@/components/SmartBackButton";
 import type { TitleDetails, TitleType } from "@/lib/title-details";
+import { groupEditorialCrew } from "@/lib/title-credits";
 import type { Status } from "@/lib/types";
 import { useToast } from "@/components/ToastProvider";
 
@@ -1055,20 +1056,20 @@ export default function TitlePage({
 
   /*
    * ============================
-   * DIRETOR / CRIADORES
+   * DIREÇÃO / ROTEIRO / CRIADORES
    * ============================
+   *
+   * TV deliberadamente não ganha grupos de Direção/Roteiro nesta fase
+   * (C4.3) — direção em TV é frequentemente episódica, e uma lista
+   * agregada sem contexto seria ruidosa. TV continua só com creators.
    */
-
-  const directors: CrewCredit[] =
+  const editorialCrew =
     type === "movie"
-      ? details.credits?.crew
-          ?.filter(
-            (person: CrewCredit) =>
-              person.job ===
-              "Director"
-          )
-          ?.slice(0, 5) || []
-      : [];
+      ? groupEditorialCrew(details.credits?.crew || [])
+      : { direction: [], writing: [] };
+
+  const directors: CrewCredit[] = editorialCrew.direction.slice(0, 5);
+  const writers: CrewCredit[] = editorialCrew.writing.slice(0, 5);
 
   const creators: PersonCredit[] =
     details.created_by || [];
@@ -1099,7 +1100,7 @@ export default function TitlePage({
       ?.slice(0, 6) || [];
 
   const tabPanelIdsCtx = {
-    hasDirectorsOrCreators: directors.length > 0 || creators.length > 0,
+    hasDirectorsOrCreators: directors.length > 0 || writers.length > 0 || creators.length > 0,
     hasCast: cast.length > 0,
     hasCompanies: companies.length > 0,
     hasLibraryItem: !!libraryItem,
@@ -1169,6 +1170,7 @@ export default function TitlePage({
       {contentTab === "cast" && (
         <TitleCastSection
           directors={directors}
+          writers={writers}
           creators={creators}
           cast={cast}
           companies={companies}

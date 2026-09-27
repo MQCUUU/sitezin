@@ -6,10 +6,75 @@ import type { CastCredit, CrewCredit, PersonCredit } from "./types";
 
 export type TitleCastSectionProps = {
   directors: CrewCredit[];
+  writers: CrewCredit[];
   creators: PersonCredit[];
   cast: CastCredit[];
   companies: any[];
 };
+
+/**
+ * Card de pessoa da área de produção (Direção/Roteiro/Criador) —
+ * reaproveitado pelos três grupos, que só diferem em label e na lista de
+ * pessoas (C4.3). Não é usado pelo card de elenco (title-cast-card),
+ * que tem composição própria e não é alterado aqui.
+ */
+function ProductionPersonLink({ person, keyPrefix }: { person: PersonCredit; keyPrefix: string }) {
+  return (
+    <Link
+      key={`${keyPrefix}-${person.id}`}
+      href={`/person/${person.id}`}
+      className="panel title-person-link"
+      style={{
+        padding: "14px",
+        display: "flex",
+        alignItems: "center",
+        gap: "12px",
+      }}
+    >
+      {person.profile_path ? (
+        <div className="mc-title-cast-avatar">
+          {/* Nome é texto visível ao lado, dentro do mesmo link — a foto
+              é decorativa para não duplicar o nome no accessible name. */}
+          <Poster path={person.profile_path} alt="" sizes="58px" tmdbSize="w185" />
+        </div>
+      ) : (
+        <UserRound size={28} aria-hidden="true" />
+      )}
+
+      <strong>{person.name}</strong>
+    </Link>
+  );
+}
+
+function ProductionCreditGroup({
+  label,
+  people,
+  keyPrefix,
+}: {
+  label: string;
+  people: PersonCredit[];
+  keyPrefix: string;
+}) {
+  if (people.length === 0) return null;
+
+  return (
+    <div className="title-crew-group">
+      <span className="title-crew-group-label">{label}</span>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: "12px",
+        }}
+      >
+        {people.map((person) => (
+          <ProductionPersonLink key={`${keyPrefix}-${person.id}`} person={person} keyPrefix={keyPrefix} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /**
  * Conteúdo inteiro da aba "cast": diretor/criadores, elenco principal e
@@ -21,13 +86,14 @@ export type TitleCastSectionProps = {
  */
 export function TitleCastSection({
   directors,
+  writers,
   creators,
   cast,
   companies,
 }: TitleCastSectionProps) {
   return (
     <>
-      {(directors.length > 0 || creators.length > 0) && (
+      {(directors.length > 0 || writers.length > 0 || creators.length > 0) && (
         <div
           role="tabpanel"
           id="title-tabpanel-cast-1"
@@ -40,83 +106,15 @@ export function TitleCastSection({
               <h2>Quem está por trás</h2>
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                gap: "12px",
-              }}
-            >
-              {directors.map((person) => (
-                <Link
-                  key={`director-${person.id}`}
-                  href={`/person/${person.id}`}
-                  className="panel title-person-link"
-                  style={{
-                    padding: "14px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                  }}
-                >
-                  {person.profile_path ? (
-                    <div className="mc-title-cast-avatar">
-                      <Poster
-                        path={person.profile_path}
-                        alt={person.name}
-                        sizes="58px"
-                        tmdbSize="w185"
-                      />
-                    </div>
-                  ) : (
-                    <UserRound size={28} />
-                  )}
+            <ProductionCreditGroup label="Direção" people={directors} keyPrefix="director" />
 
-                  <div>
-                    <span className="muted">Diretor</span>
+            <ProductionCreditGroup label="Roteiro" people={writers} keyPrefix="writer" />
 
-                    <strong style={{ display: "block", marginTop: "3px" }}>
-                      {person.name}
-                    </strong>
-                  </div>
-                </Link>
-              ))}
-
-              {creators.map((person) => (
-                <Link
-                  key={`creator-${person.id}`}
-                  href={`/person/${person.id}`}
-                  className="panel title-person-link"
-                  style={{
-                    padding: "14px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                  }}
-                >
-                  {person.profile_path ? (
-                    <div className="mc-title-cast-avatar">
-                      <Poster
-                        path={person.profile_path}
-                        alt={person.name}
-                        sizes="58px"
-                        tmdbSize="w185"
-                      />
-                    </div>
-                  ) : (
-                    <UserRound size={28} />
-                  )}
-
-                  <div>
-                    <span className="muted">Criador</span>
-
-                    <strong style={{ display: "block", marginTop: "3px" }}>
-                      {person.name}
-                    </strong>
-                  </div>
-                </Link>
-              ))}
-            </div>
+            <ProductionCreditGroup
+              label={creators.length > 1 ? "Criadores" : "Criador"}
+              people={creators}
+              keyPrefix="creator"
+            />
           </section>
         </div>
       )}
@@ -228,7 +226,7 @@ export function TitleCastSection({
         </div>
       )}
 
-      {cast.length === 0 && directors.length === 0 && creators.length === 0 && (
+      {cast.length === 0 && directors.length === 0 && writers.length === 0 && creators.length === 0 && (
         <div
           role="tabpanel"
           id="title-tabpanel-cast-4"

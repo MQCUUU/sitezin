@@ -5,6 +5,7 @@ import type {
   PersonCredit,
   TitleCreditsData,
 } from "@/lib/title-credits";
+import { groupEditorialCrew } from "@/lib/title-credits";
 
 /*
  * ============================================================
@@ -35,6 +36,18 @@ const TMDB_BASE = "https://api.themoviedb.org/3";
 export type TitleType = "movie" | "tv";
 
 type TmdbRecord = Record<string, unknown>;
+
+/*
+ * Créditos editoriais suportados (C4.3) — Title page não é ficha técnica
+ * exaustiva. Producer/Executive Producer/Camera/Editing/Sound/Art/
+ * Costume/Makeup/demais crew são descartados aqui, na sanitização, e
+ * nunca chegam à UI nem à API.
+ */
+const SUPPORTED_CREW_JOBS = new Set(["Director", "Writer", "Screenplay", "Story"]);
+
+/* Cada grupo editorial do payload respeita diretamente seu teto visual. */
+const DIRECTION_PAYLOAD_LIMIT = 5;
+const WRITING_PAYLOAD_LIMIT = 5;
 
 function compactPerson(value: unknown, crew: true): CrewCredit | null;
 function compactPerson(value: unknown, crew?: false): CastCredit | null;
@@ -91,13 +104,24 @@ export function sanitizeTitleDetails(value: unknown): SanitizedTitleDetails {
         .filter((person): person is CastCredit => person !== null)
         .slice(0, 24)
     : [];
-  const crew: CrewCredit[] = Array.isArray(credits.crew)
-    ? credits.crew
-        .filter((person) => person && typeof person === "object" && (person as TmdbRecord).job === "Director")
-        .map((person) => compactPerson(person, true))
-        .filter((person): person is CrewCredit => person !== null)
-        .slice(0, 5)
+  const supportedCrew = Array.isArray(credits.crew)
+    ? credits.crew.filter((person): person is TmdbRecord => {
+        if (!person || typeof person !== "object" || !("job" in person)) {
+          return false;
+        }
+
+        const job = person.job;
+        return typeof job === "string" && SUPPORTED_CREW_JOBS.has(job);
+      })
     : [];
+  const compactedCrew: CrewCredit[] = supportedCrew
+    .map((person) => compactPerson(person, true))
+    .filter((person): person is CrewCredit => person !== null);
+  const editorialCrew = groupEditorialCrew(compactedCrew);
+  const crew: CrewCredit[] = [
+    ...editorialCrew.direction.slice(0, DIRECTION_PAYLOAD_LIMIT),
+    ...editorialCrew.writing.slice(0, WRITING_PAYLOAD_LIMIT),
+  ];
   const createdBy: PersonCredit[] = Array.isArray(details.created_by)
     ? details.created_by
         .map((person) => compactPerson(person))

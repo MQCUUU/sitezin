@@ -404,7 +404,12 @@ fase de fechamento (B5) — apenas esta documentação.
   - **C4 — Cast/Crew** = IN PROGRESS (C4.1 — contrato tipado de
     cast/crew/created_by, `lib/title-credits.ts` — DONE; C4.2 — elenco
     completo (foto deixou de determinar quem aparece no elenco; só
-    decide foto vs. fallback dentro do card) — DONE; C4.3 = NEXT.
+    decide foto vs. fallback dentro do card) — DONE; C4.3 — crew
+    editorial (Movie: até 5 pessoas únicas em Direção = Director e até 5
+    em Roteiro = Writer/Screenplay/Story; dedupe por pessoa dentro de
+    cada grupo, sem dedupe entre grupos; TV: só Criador(es) via
+    `created_by`, sem Direção/Roteiro — `aggregate_credits`
+    deliberadamente não adotado) — DONE; C4.4 = NEXT.
     Seção dedicada de fase fica para o closeout de C4.)
   - **C5 — Seasons/Episodes**
   - **C6 — Related/Collections**
