@@ -412,7 +412,9 @@ fase de fechamento (B5) — apenas esta documentação.
   - **C6 — Related/Collections** = DONE (ver seção dedicada abaixo).
   - **C7 — QA/Polish** = DONE (gate final de runtime da Media Experience —
     ver seção dedicada abaixo).
-- **D — Library & Organization** = NEXT
+- **D — Library & Organization** = IN PROGRESS (D0 — auditoria em
+  [`docs/D-LIBRARY-ORGANIZATION-AUDIT.md`](./D-LIBRARY-ORGANIZATION-AUDIT.md)
+  — DONE; D1 — implementação consolidada = NEXT).
 - **E — Profile & Social**
 - **F — Premium Features**
 - **G — Motion & React Bits**
