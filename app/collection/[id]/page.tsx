@@ -40,6 +40,9 @@ import {
   img,
 } from "@/lib/tmdb";
 
+import { MediaPreviewDialog } from "@/components/media/preview/MediaPreviewDialog";
+import { fromLooseMediaItem } from "@/components/media/preview/adapters";
+
 const STATUS_OPTIONS = [
   ["want", "Quero assistir"],
   ["watching", "Assistindo"],
@@ -368,55 +371,9 @@ export default function CollectionPage() {
   ]);
 
   /*
-   * Preview fecha com ESC e bloqueia scroll.
+   * Escape/scroll-lock for previewItem now come from MediaPreviewDialog's
+   * underlying Dialog (C2.3) — this effect used to duplicate that.
    */
-  useEffect(() => {
-    if (
-      !previewItem
-    ) {
-      return;
-    }
-
-    const old =
-      document.body
-        .style.overflow;
-
-    document.body
-      .style.overflow =
-      "hidden";
-
-    function keydown(
-      event:
-        KeyboardEvent
-    ) {
-      if (
-        event.key ===
-        "Escape"
-      ) {
-        setPreviewItem(
-          null
-        );
-      }
-    }
-
-    window.addEventListener(
-      "keydown",
-      keydown
-    );
-
-    return () => {
-      document.body
-        .style.overflow =
-        old;
-
-      window.removeEventListener(
-        "keydown",
-        keydown
-      );
-    };
-  }, [
-    previewItem,
-  ]);
 
   /*
    * Streaming/detalhes do olhinho.
@@ -1901,38 +1858,22 @@ export default function CollectionPage() {
 
       {/* PREVIEW */}
 
-      {previewItem && (
-        <CollectionPreview
-          movie={
-            previewItem
-          }
-          details={
-            previewDetails
-          }
-          loading={
-            previewLoading
-          }
-          libraryItem={
-            getLibraryItem(
-              previewItem
-            )
-          }
-          processing={
-            processing
-          }
-          onClose={() =>
-            setPreviewItem(
-              null
-            )
-          }
-          onAdd={
-            addToLibrary
-          }
-          onRating={
-            updateRating
-          }
-        />
-      )}
+      <MediaPreviewDialog
+        open={Boolean(previewItem)}
+        onClose={() => setPreviewItem(null)}
+        data={
+          previewItem
+            ? fromLooseMediaItem(previewItem, previewDetails, getLibraryItem(previewItem) || null, "movie", true)
+            : null
+        }
+        actions={{
+          onAdd: () => previewItem && addToLibrary(previewItem),
+          addLabel: "Quero assistir",
+          onRating: (_, rating) => previewItem && updateRating(previewItem, rating),
+          disabled: previewItem ? processing === `movie-${previewItem.id}` : false,
+        }}
+        providers={<CollectionProviders details={previewDetails} loading={previewLoading} />}
+      />
 
       {/* CONFIRMAÇÃO REMOVER */}
 
@@ -2367,274 +2308,6 @@ function CollectionCard({
         </div>
       </Link>
     </article>
-  );
-}
-
-function CollectionPreview({
-  movie,
-  details,
-  loading,
-  libraryItem,
-  processing,
-  onClose,
-  onAdd,
-  onRating,
-}: any) {
-  const source =
-    details ||
-    movie;
-
-  const busy =
-    processing ===
-    `movie-${movie.id}`;
-
-  const genres =
-    Array.isArray(
-      source?.genres
-    )
-      ? source.genres
-      : [];
-
-  return (
-    <div
-      className="discover-preview-backdrop"
-      onMouseDown={(
-        event
-      ) => {
-        if (
-          event.target ===
-          event.currentTarget
-        ) {
-          onClose();
-        }
-      }}
-    >
-      <section className="panel discover-preview-modal">
-        <button
-          type="button"
-          className="discover-preview-close"
-          onClick={
-            onClose
-          }
-        >
-          <X
-            size={18}
-          />
-        </button>
-
-        <div className="discover-preview-poster">
-          <img loading="lazy" decoding="async"
-            src={img(
-              source.poster_path
-            )}
-            alt={
-              source.title
-            }
-          />
-        </div>
-
-        <div className="discover-preview-content">
-          <div className="eyebrow">
-            FILME
-          </div>
-
-          <h2>
-            {
-              source.title
-            }
-          </h2>
-
-          <div className="discover-preview-meta">
-            <span>
-              {(
-                source.release_date ||
-                ""
-              ).slice(
-                0,
-                4
-              ) ||
-                "Ano não informado"}
-            </span>
-
-            {source.runtime && (
-              <span>
-                {formatRuntime(
-                  Number(
-                    source.runtime
-                  )
-                )}
-              </span>
-            )}
-
-            {Number(
-              source.vote_average ||
-                0
-            ) >
-              0 && (
-              <span className="rating">
-                <Star
-                  size={14}
-                  fill="currentColor"
-                />
-                {Number(
-                  source.vote_average
-                ).toFixed(
-                  1
-                )}
-              </span>
-            )}
-
-            {libraryItem && (
-              <span className="in-library">
-                <Check
-                  size={13}
-                />
-                {statusLabel(
-                  libraryItem.status
-                )}
-              </span>
-            )}
-          </div>
-
-          {genres.length >
-            0 && (
-            <div className="discover-preview-genres">
-              {genres.map(
-                (
-                  genre:
-                    any
-                ) => (
-                  <span
-                    key={
-                      genre.id ||
-                      genre.name
-                    }
-                  >
-                    {
-                      genre.name
-                    }
-                  </span>
-                )
-              )}
-            </div>
-          )}
-
-          <CollectionProviders
-            details={
-              details
-            }
-            loading={
-              loading
-            }
-          />
-
-          {libraryItem && (
-            <div className="preview-personal-rating">
-              <div className="preview-personal-rating-head">
-                <span>
-                  Minha nota
-                </span>
-
-                <strong>
-                  {libraryItem.personal_rating !==
-                    null
-                    ? Number(
-                        libraryItem.personal_rating
-                      ).toFixed(
-                        1
-                      )
-                    : "Sem nota"}
-                </strong>
-              </div>
-
-              <div className="preview-rating-options">
-                {[1,2,3,4,5,6,7,8,9,10].map(
-                  (
-                    value
-                  ) => (
-                    <button
-                      type="button"
-                      key={
-                        value
-                      }
-                      className={
-                        Number(
-                          libraryItem.personal_rating
-                        ) ===
-                        value
-                          ? "active"
-                          : ""
-                      }
-                      disabled={
-                        busy
-                      }
-                      onClick={() =>
-                        onRating(
-                          movie,
-                          value
-                        )
-                      }
-                    >
-                      {
-                        value
-                      }
-                    </button>
-                  )
-                )}
-
-                <button
-                  type="button"
-                  className="clear"
-                  onClick={() =>
-                    onRating(
-                      movie,
-                      null
-                    )
-                  }
-                >
-                  Limpar
-                </button>
-              </div>
-            </div>
-          )}
-
-          <p className="discover-preview-overview">
-            {source.overview?.trim() ||
-              "Ainda não há sinopse disponível para este filme."}
-          </p>
-
-          <div className="discover-preview-actions">
-            <Link
-              href={`/title/movie/${movie.id}`}
-              className="btn primary"
-            >
-              Ver página completa
-            </Link>
-
-            {!libraryItem && (
-              <button
-                type="button"
-                className="btn"
-                disabled={
-                  busy
-                }
-                onClick={() =>
-                  onAdd(
-                    movie,
-                    "want"
-                  )
-                }
-              >
-                <Plus
-                  size={16}
-                />
-                Quero assistir
-              </button>
-            )}
-          </div>
-        </div>
-      </section>
-    </div>
   );
 }
 

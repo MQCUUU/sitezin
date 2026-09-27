@@ -44,6 +44,9 @@ export type LooseMediaItem = {
   first_air_date?: string;
   vote_average?: number;
   overview?: string;
+  /** Collection's list items carry these directly (unlike Discover/Search/For You), so the details fetch isn't the only source. */
+  runtime?: number | null;
+  genres?: { id: number; name: string }[];
 };
 
 export type LooseLibraryItem = {
@@ -121,8 +124,22 @@ export function fromLooseMediaItem(
   item: LooseMediaItem,
   details: TmdbDetailsLike | null | undefined,
   libraryItem: LooseLibraryItem | null | undefined,
-  fallbackMediaType: "movie" | "tv" = "movie"
+  fallbackMediaType: "movie" | "tv" = "movie",
+  fallbackToListWhenDetailsUnavailable = false
 ): MediaPreviewData {
+  // Collection's legacy preview selected `details || movie` for this block.
+  // For You used details-only genres, so list fallbacks are opt-in there.
+  const runtime = details
+    ? details.runtime
+    : fallbackToListWhenDetailsUnavailable
+      ? item.runtime
+      : undefined;
+  const sourceGenres = details
+    ? details.genres
+    : fallbackToListWhenDetailsUnavailable
+      ? item.genres
+      : undefined;
+
   return {
     id: item.id,
     mediaType: item.media_type || fallbackMediaType,
@@ -132,8 +149,8 @@ export function fromLooseMediaItem(
     posterPath: item.poster_path || details?.poster_path || null,
     backdropPath: item.backdrop_path || details?.backdrop_path || null,
     releaseDate: item.release_date || item.first_air_date || details?.release_date || details?.first_air_date || null,
-    runtime: details?.runtime ?? null,
-    genres: (details?.genres || []).map((genre) => genre.name),
+    runtime: runtime ?? null,
+    genres: (Array.isArray(sourceGenres) ? sourceGenres : []).map((genre) => genre.name),
     voteAverage: item.vote_average || details?.vote_average || null,
     libraryState: libraryStateFrom(
       libraryItem?.library_id ?? null,
