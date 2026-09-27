@@ -124,6 +124,8 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
       FROM public.follows f
       JOIN public.profiles p ON p.id = f.follower_id
       WHERE f.following_id = ${profile.id} AND f.status = 'accepted'
+      ORDER BY f.created_at DESC
+      LIMIT 200
     `,
     sql`
       SELECT
@@ -137,6 +139,8 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
       FROM public.follows f
       JOIN public.profiles p ON p.id = f.following_id
       WHERE f.follower_id = ${profile.id} AND f.status = 'accepted'
+      ORDER BY f.created_at DESC
+      LIMIT 200
     `,
     sql`
       SELECT
@@ -217,7 +221,6 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
       profile,
       favorites: favorites || [],
       stats,
-      activity: activityVisible ? rows.slice().sort((a: any, b: any) => new Date(b.updated_at || b.added_at).getTime() - new Date(a.updated_at || a.added_at).getTime()).slice(0, 12) : [],
       reviews,
       recent_reviews: recentReviews,
       liked_titles: likesVisible ? rows.filter((item: any) => item.favorite).slice(0, 20) : [],

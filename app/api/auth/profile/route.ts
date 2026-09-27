@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
+import { isValidUsername, normalizeUsername } from "@/lib/username";
 
 export async function POST(request: Request) {
   try {
@@ -24,8 +25,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const cleanUsername = rawUsername.trim().toLowerCase();
-    if (!/^[a-z0-9_]{3,24}$/.test(cleanUsername)) {
+    const cleanUsername = normalizeUsername(rawUsername);
+    if (!isValidUsername(cleanUsername)) {
       return NextResponse.json(
         { error: "Username deve ter de 3 a 24 caracteres (letras, números ou _)." },
         { status: 400 }

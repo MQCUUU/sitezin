@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
+import { isValidUsername, normalizeUsername, USERNAME_RULE_MESSAGE } from "@/lib/username";
 
 export async function GET() {
   try {
@@ -59,10 +60,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const username = rawUsername.trim().toLowerCase();
-    if (!/^[a-z0-9_]{3,24}$/.test(username)) {
+    const username = normalizeUsername(rawUsername);
+    if (!isValidUsername(username)) {
       return NextResponse.json(
-        { error: "Use de 3 a 24 letras, números ou _." },
+        { error: USERNAME_RULE_MESSAGE },
         { status: 400, headers: { "X-Username-Backend": "neon-direct-v1" } }
       );
     }

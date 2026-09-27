@@ -421,10 +421,16 @@ fase de fechamento (B5) — apenas esta documentação.
     Personalizadas completas — CRUD, detalhe, privacidade, perfil —,
     sincronização da nota detalhada com `personal_rating`, remoção de
     código morto de Tags/Listas legadas).
-- **E — Profile & Social** = IN PROGRESS (E0 — auditoria em
-  [`docs/E-PROFILE-SOCIAL-AUDIT.md`](./E-PROFILE-SOCIAL-AUDIT.md) —
-  DONE; E1 — implementação consolidada = NEXT).
-- **F — Premium Features**
+- **E — Profile & Social** = DONE (E0 auditoria + E1 implementação
+  consolidada — ver [`docs/E-PROFILE-SOCIAL-AUDIT.md`](./E-PROFILE-SOCIAL-AUDIT.md)
+  para o detalhe completo de ambas as subfases).
+  - **E0 — Auditoria** = DONE.
+  - **E1 — Consolidação** = DONE (follow UI única no perfil, paginação
+    real de followers/following/solicitações, activity_events como
+    fonte canônica da aba Atividade pública, regex de username
+    unificada, drift de `username_changes` corrigido no schema
+    versionado).
+- **F — Premium Features** = NEXT
 - **G — Motion & React Bits**
 - **H — Mobile/Accessibility/Performance**
 - **I — QA/Polish/Release**
@@ -1136,3 +1142,117 @@ D0 (ver [`docs/D-LIBRARY-ORGANIZATION-AUDIT.md`](./D-LIBRARY-ORGANIZATION-AUDIT.
 
 **Resultado da fase: D1 DONE. FASE D — LIBRARY & ORGANIZATION ENCERRADA.
 Próxima fase: E — Profile & Social.**
+
+## 28. Fase E1 — Profile & Social Consolidation (DONE)
+
+**Escopo:** implementação consolidada da Fase E a partir do diagnóstico do
+E0 (ver [`docs/E-PROFILE-SOCIAL-AUDIT.md`](./E-PROFILE-SOCIAL-AUDIT.md)).
+
+### O que mudou
+
+- **`lib/username.ts` (novo)** — fonte única da regra de username
+  (`^[a-z0-9_]{3,24}$`, normalização minúscula). Antes triplicada em
+  `app/api/profile/username/route.ts`, `app/api/auth/profile/route.ts` e
+  `app/api/auth/username/route.ts`; os três agora importam daqui. O
+  trigger SQL `handle_new_user_profile()` continua com sua própria cópia
+  (não dá para importar TS no Postgres) — documentado como exceção
+  necessária, não esquecimento.
+- **`supabase/schema.sql`** — `public.username_changes` estava em uso real
+  (INSERT/SELECT confirmados em `/api/profile/username`) mas ausente do
+  schema versionado. Confirmado via introspecção read-only do
+  `TEST_DATABASE_URL` (`information_schema`, sem tocar produção):
+  classificação A (tabela existia, schema.sql incompleto). Adicionada a
+  definição real (colunas, PK, índice) — `MIGRATIONS = 0`, documentação
+  apenas.
+- **`app/api/follows/route.ts` (GET reescrito)** — antes devolvia o grafo
+  inteiro de follows do usuário numa query sem `LIMIT`, filtrado em JS
+  em 4 arrays (E0, HIGH). Agora: `GET /api/follows?type=followers|
+  following|incoming|outgoing&page=&limit=` pagina de verdade
+  (COUNT dedicado + `LIMIT`/`OFFSET`, página padrão 24, máx. 50).
+  `GET /api/follows` sem `type` vira modo resumo — contagens via
+  `count(*) FILTER` e só o item mais recente de incoming/accepted — o
+  único formato que o polling de 30s do `FollowRequestNotifier`
+  precisa.
+- **`components/FollowRequestNotifier.tsx`** — trocou o diff de sets
+  sobre o grafo inteiro pelo modo resumo acima; compara apenas o ID do
+  item mais recente de incoming/accepted a cada poll.
+- **`components/SocialSettings.tsx` (reescrito)** — parou de reimplementar
+  a lista de followers/following/solicitações (a segunda UI de follow
+  que o E0 encontrou). Ficou só com: visibilidade do perfil, política de
+  quem pode seguir, as 8 visibilidades por seção, e um link para
+  gerenciar conexões no perfil (`/u/[username]?tab=connections`).
+- **`app/u/[username]/page.tsx`** — a aba "Conexões" do dono virou a
+  única superfície real de gerenciar follow: sub-abas (Solicitações/
+  Enviadas/Seguidores/Seguindo), cada uma paginada com "carregar mais"
+  contra o novo contrato de `/api/follows`. O modal de followers/
+  following para quem não é dono continua existindo (leitura rápida,
+  com busca local) mas a query que o alimenta
+  (`/api/public-profile/[username]/route.ts`) ganhou um `LIMIT 200` —
+  não é cursor completo como a aba do dono, é um teto documentado,
+  suficiente para o caso de uso (navegar/pesquisar uma lista, não
+  paginar infinitamente a rede social de outra pessoa).
+- **`app/api/public-profile/[username]/activity/route.ts` (novo)** —
+  `activity_events` (a mesma tabela real que já alimenta Home/Diário/
+  Retrospectiva via `/api/activity`, intocado) virou a fonte canônica
+  da aba "Atividade" do perfil público, paginada (`LIMIT`/`OFFSET`,
+  página padrão 10), com a mesma checagem de privacidade server-side
+  (`activity_visibility` + relação de follow) que o resto da rota de
+  perfil público já usa. Antes, essa aba reconstruía um feed ad-hoc a
+  partir de `library_items` ordenado por `updated_at`, sem paginação —
+  uma segunda noção de "atividade" desconectada do log real.
+- **`app/u/[username]/page.tsx` — aba Atividade** — trocou o carrossel de
+  pôsteres recém-atualizados por um feed de eventos de verdade (ícone +
+  texto por `event_type`, com fallback neutro para qualquer tipo fora
+  do mapa conhecido — nunca quebra em um tipo desconhecido), com
+  "carregar mais".
+  - **Bug real encontrado e corrigido durante o QA desta mesma
+    implementação**: o efeito de carregamento inicial e o clique de
+    "carregar mais" tinham uma corrida de closure — em React 18 Strict
+    Mode (dev), o efeito de montagem roda duas vezes, e um segundo
+    efeito (reset ao trocar de `username`) também rodava no mount
+    inicial e podia resetar a guarda de "já carregado" bem depois do
+    primeiro efeito tê-la marcado, disparando uma segunda carga real da
+    página 1. Corrigido com refs (`activityPageRef`/`activityLoadedRef`)
+    em vez de ler o estado React diretamente dentro do closure
+    assíncrono, e o reset por troca de usuário passou a comparar com o
+    último username visto (só reseta em navegação real entre perfis,
+    não no mount). Verificado em runtime contra dados reais do
+    `TEST_DATABASE_URL` (perfil fixture com 361 eventos) até confirmar
+    20 linhas renderizadas após dois cliques em "carregar mais".
+- **A11y** — `role="tablist"`/`role="tab"`/`aria-selected` nas abas
+  principais do perfil e nas sub-abas de conexões; `aria-haspopup`/
+  `aria-expanded` e fechamento por Escape no modal de followers/
+  following; `aria-label` nos botões icon-only restantes.
+
+### Decisões já resolvidas, sem mudança de código
+
+- **Bio**: limite de 280 já era aplicado no client (`maxLength`) E no
+  servidor (`.slice(0, 280)`) em `app/api/profile/showcase/route.ts` —
+  já PASS, nada para espelhar.
+- **Avatar replace/failure**: cleanup do blob anterior já só acontecia
+  para blobs Vercel próprios (preservando avatares legados de outro
+  storage), e falha de upload já não perdia o avatar atual (rollback do
+  blob novo se o banco falhasse) — ambos já PASS.
+- **`/api/search/users`**: já retornava só `id, username, display_name,
+  avatar_url` (nenhum campo privado) e já limitava a 20 resultados —
+  decisão de produto #4 confirmou que perfis privados continuam
+  pesquisáveis por design; nada para mudar.
+- **Profile vs. Settings**: `/u/[username]` já era o único lugar de
+  edição de perfil; Settings "Geral" já só linkava para lá. `Account
+  Privacy` ainda toca `/api/auth/profile` (fronteira Account/Profile
+  ligeiramente borrada) — não mexido nesta fase, fora do escopo
+  MUST/SHOULD fechado.
+
+### Fora do escopo, por decisão de produto (E1)
+
+Feed social (atividade de quem se segue), friends, block/mute/report —
+nenhum implementado ou removido, conforme decisões #49–51.
+
+### Banco de dados
+
+Nenhuma tabela apagada. `MIGRATIONS = 0` (a correção de
+`username_changes` foi documentação de uma tabela já existente, não uma
+migration nova). `DB SCHEMA DIFF` = só a adição documentada acima.
+
+**Resultado da fase: E1 DONE. FASE E — PROFILE & SOCIAL ENCERRADA.
+Próxima fase: F — Premium Features.**

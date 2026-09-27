@@ -6,8 +6,11 @@ produto, banco, rota ou comportamento foi alterado. Fase D encerrada em
 `224e2a8 feat(library): complete library and organization`; checkpoint
 inicial estava limpo.
 
-> **Status: E0 = DONE.** Proposta de implementação em § 36 (E1). Decisões
-> de produto necessárias em § 37.
+> **Status: E0 = DONE, E1 = DONE. Fase E encerrada.** A implementação de
+> E1 (consolidação a partir da proposta da seção 36) está documentada em
+> [`docs/PREMIUM-UI-V2.md` § 28](./PREMIUM-UI-V2.md#28-fase-e1--profile--social-consolidation-done).
+> As seções abaixo permanecem como registro fiel do estado encontrado
+> **antes** de E1.
 
 ## 1. Executive Summary
 

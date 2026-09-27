@@ -10,40 +10,43 @@ export function FollowRequestNotifier() {
   useEffect(() => {
     let cancelled = false;
     let profileUsername = "";
-    const incomingSeen = new Set<string>();
-    const acceptedSeen = new Set<string>();
+    /*
+     * E1 — antes baixava o grafo INTEIRO de follows a cada 30s só para
+     * fazer diff de sets em memória (E0 §22/§27/§29, HIGH). Agora usa o
+     * modo resumo de `GET /api/follows` (sem `type`): contagens via
+     * COUNT + só o item mais recente de incoming/accepted — nunca o
+     * grafo completo. A detecção de "é novo" passa a comparar o ID do
+     * item mais recente (não um Set de todos os IDs já vistos), o que
+     * é suficiente para notificar sobre o pedido/aceite mais recente.
+     */
+    let lastIncomingId: string | null = null;
+    let lastAcceptedId: string | null = null;
 
     const refresh = async (notify: boolean) => {
       try {
         const response = await fetch("/api/follows", { cache: "no-store" });
         if (cancelled || !response.ok) return;
 
-        const connections = await response.json();
-        const incoming = Array.isArray(connections.incoming)
-          ? connections.incoming
-          : [];
-        const accepted = Array.isArray(connections.following)
-          ? connections.following
-          : [];
+        const summary = await response.json();
+        const latestIncoming = summary.latest_incoming;
+        const latestAccepted = summary.latest_accepted;
 
-        const freshIncoming = incoming.filter(
-          (row: any) => !incomingSeen.has(row.follower_id)
-        );
-        const freshAccepted = accepted.filter(
-          (row: any) => !acceptedSeen.has(row.following_id)
-        );
+        const isNewIncoming =
+          latestIncoming && latestIncoming.follower_id !== lastIncomingId;
+        const isNewAccepted =
+          latestAccepted && latestAccepted.following_id !== lastAcceptedId;
 
-        incoming.forEach((row: any) => incomingSeen.add(row.follower_id));
-        accepted.forEach((row: any) => acceptedSeen.add(row.following_id));
+        if (latestIncoming) lastIncomingId = latestIncoming.follower_id;
+        if (latestAccepted) lastAcceptedId = latestAccepted.following_id;
 
         window.dispatchEvent(
-          new CustomEvent("mycatalog:follows-updated", { detail: connections })
+          new CustomEvent("mycatalog:follows-updated", { detail: summary })
         );
 
-        if (notify && freshIncoming.length && profileUsername) {
+        if (notify && isNewIncoming && profileUsername) {
           toast.info("Nova solicitação para seguir você", {
             description: `@${
-              freshIncoming[0]?.profile?.username || "alguém"
+              latestIncoming?.profile?.username || "alguém"
             } quer seguir seu perfil.`,
             duration: 12000,
             actionLabel: "Ver solicitação",
@@ -51,10 +54,10 @@ export function FollowRequestNotifier() {
           });
         }
 
-        if (notify && freshAccepted.length) {
+        if (notify && isNewAccepted) {
           toast.success("Solicitação aceita", {
             description: `Agora você segue @${
-              freshAccepted[0]?.profile?.username || "este perfil"
+              latestAccepted?.profile?.username || "este perfil"
             }.`,
           });
         }

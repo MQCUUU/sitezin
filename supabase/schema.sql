@@ -122,6 +122,23 @@ alter table public.profiles drop constraint if exists profiles_likes_visibility_
 alter table public.profiles add constraint profiles_likes_visibility_check check (likes_visibility in ('profile', 'followers', 'private'));
 create unique index if not exists profiles_username_unique on public.profiles (lower(username)) where username is not null;
 
+-- E1 — tabela já existia em produção/TEST (usada por
+-- app/api/profile/username/route.ts para o rate limit de 2 trocas/30
+-- dias) mas faltava aqui. Classificação A do audit E0/E1: schema.sql
+-- estava incompleto, não a tabela ausente. Sem migration nova — só
+-- documentando a estrutura real (confirmada via introspecção read-only
+-- do TEST_DATABASE_URL).
+create table if not exists public.username_changes (
+  id           bigint generated always as identity primary key,
+  user_id      uuid not null references auth.users(id),
+  old_username text not null,
+  new_username text not null,
+  changed_at   timestamptz not null default now()
+);
+
+create index if not exists username_changes_user_date_idx
+  on public.username_changes (user_id, changed_at desc);
+
 create or replace function public.handle_new_user_profile()
 returns trigger language plpgsql security definer set search_path = public as $$
 declare requested_username text := lower(trim(new.raw_user_meta_data ->> 'username'));

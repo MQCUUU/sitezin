@@ -11822,3 +11822,26 @@ svg{vertical-align:middle}.btn>svg,button>svg,a>svg,.section-head svg,.title-sec
 .library-add-to-list-options button{display:flex;align-items:center;justify-content:space-between;width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:9px;background:transparent;color:var(--text);cursor:pointer;font-size:13px}
 .library-add-to-list-options button.active{border-color:var(--accent);color:var(--accent)}
 .library-add-to-list-empty{display:grid;gap:10px;justify-items:center;padding:20px 0;text-align:center}
+
+/* Settings -> link para conexões no perfil (E1) */
+.social-connections-link{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px}
+.social-connections-link p{margin:4px 0 0}
+@media(max-width:600px){.social-connections-link{flex-direction:column;align-items:stretch;text-align:center}}
+
+/* Sub-tabs de conexões paginadas no perfil (E1) */
+.profile-own-connections-tabs{display:flex;gap:6px;flex-wrap:wrap;padding:4px;border:1px solid var(--border);border-radius:12px;background:var(--bg)}
+.profile-own-connections-tabs button{display:flex;align-items:center;gap:6px;padding:8px 12px;border:0;border-radius:9px;background:transparent;color:var(--muted);font-size:11px;font-weight:800;cursor:pointer}
+.profile-own-connections-tabs button.active{background:var(--accent);color:#07110d}
+.profile-own-connections-tabs button span{min-width:20px;height:20px;padding:0 6px;display:grid;place-items:center;border-radius:999px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent);font-size:9px}
+.profile-own-connections-tabs button.active span{background:rgba(7,17,13,.25);color:#07110d}
+.profile-own-connections-list{margin-top:14px;padding:15px;border:1px solid var(--border);border-radius:14px;background:color-mix(in srgb,var(--panel) 94%,var(--bg))}
+.profile-own-connections-more{width:100%;justify-content:center;margin-top:10px}
+
+/* Feed de atividade real (activity_events) no perfil público (E1) */
+.profile-activity-feed{display:grid;gap:2px}
+.profile-activity-row{display:flex;align-items:center;gap:12px;padding:10px 4px;color:inherit;text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--border) 70%,transparent)}
+.profile-activity-row:last-child{border-bottom:0}
+.profile-activity-icon{flex:0 0 32px;width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
+.profile-activity-row strong{display:block;font-size:12px}
+.profile-activity-row small{color:var(--muted);font-size:10px}
+.profile-activity-more{width:100%;justify-content:center;margin-top:10px}
