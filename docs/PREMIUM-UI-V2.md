@@ -401,20 +401,9 @@ fase de fechamento (B5) — apenas esta documentação.
   - **C1 — Premium Title Page** = DONE
   - **C2 — Quick Peek / Preview Unification** = DONE
   - **C3 — Watch Providers Consolidation** = DONE
-  - **C4 — Cast/Crew** = IN PROGRESS (C4.1 — contrato tipado de
-    cast/crew/created_by, `lib/title-credits.ts` — DONE; C4.2 — elenco
-    completo (foto deixou de determinar quem aparece no elenco; só
-    decide foto vs. fallback dentro do card) — DONE; C4.3 — crew
-    editorial (Movie: até 5 pessoas únicas em Direção = Director e até 5
-    em Roteiro = Writer/Screenplay/Story; dedupe por pessoa dentro de
-    cada grupo, sem dedupe entre grupos; TV: só Criador(es) via
-    `created_by`, sem Direção/Roteiro — `aggregate_credits`
-    deliberadamente não adotado) — DONE; C4.4 — QA visual/responsivo/a11y
-    de Cast+Crew como conjunto (fix de polish: fallback de Direção/
-    Roteiro/Criador agora ocupa a mesma caixa 58×58 da foto, em vez de
-    só o ícone solto) — DONE; C4.5 — Final Regression / Closeout = NEXT.
-    Seção dedicada de fase fica para o closeout de C4.)
-  - **C5 — Seasons/Episodes**
+  - **C4 — Cast/Crew** = DONE (C4.1–C4.5; arquitetura, política,
+    polish, regressão e dívidas registradas na seção dedicada abaixo).
+  - **C5 — Seasons/Episodes** = NEXT
   - **C6 — Related/Collections**
   - **C7 — QA/Polish**
 - **D — Library & Organization**
@@ -704,3 +693,91 @@ com a mesma ambiguidade País × Onde-assistir, só documentada), UX de
 `onChanged` em Favorites, layout da página de Título, dívidas de tipo
 pré-existentes fora do necessário para compilar (`LooseTitleDetails`,
 `any` nos demais call sites). Nenhuma feature nova foi introduzida.
+
+## 24. Fase C4 — Cast/Crew (DONE)
+
+Fase C4 encerra a experiência de elenco e créditos editoriais da página de
+Título. O escopo ficou restrito à modelagem, apresentação e QA de cast/crew;
+não adiciona superfície de produto nova nem altera a política de dados de
+Watch Providers.
+
+### Fluxo final e contrato
+
+`sanitizeTitleDetails(value: unknown)` é a fronteira compartilhada entre o
+detalhe obtido por SSR e a rota `/api/tmdb/[type]/[id]`. Ela produz o contrato
+interno de `lib/title-credits.ts` (`CastCredit`, `CrewCredit` e
+`PersonCredit`) para elenco, crew editorial e criadores. A página entrega os
+detalhes iniciais ao `TitleView`; este separa os dados e passa-os para
+`TitleCastSection`, que mantém os painéis ARIA esperados pela navegação de
+conteúdo.
+
+```text
+TMDB details + credits
+        │
+        ▼
+sanitizeTitleDetails (limites, projeção e política editorial)
+        ├── SSR ──► page ──► TitleView ──► TitleCastSection
+        └── API /api/tmdb/[type]/[id]
+```
+
+### Políticas finais
+
+- Elenco: usar `credits.cast` e preservar a ordem do provedor; a fronteira
+  sanitizada limita a 24 pessoas e a UI apresenta as primeiras 12. A ausência
+  de foto não remove, reordena ou substitui uma pessoa: o cartão mantém o
+  link de perfil e mostra fallback visual.
+- Crew editorial: somente `Director`, `Writer`, `Screenplay` e `Story` são
+  projetados. Direção e roteiro são agrupados separadamente, preservando a
+  primeira ocorrência e a ordem recebida dentro de cada grupo; o mesmo ID
+  pode aparecer nos dois grupos quando tem funções diferentes. Cada grupo é
+  limitado a cinco pessoas.
+- TV: a UI de título não deriva direção/roteiro do agregado; `created_by`
+  continua sendo a fonte de criadores. Não há consulta de `aggregate_credits`
+  para essa experiência.
+- Grupos sem itens são omitidos. Se não houver elenco, direção, roteiro ou
+  criadores, a área correspondente mostra o estado vazio; produtoras podem
+  continuar visíveis independentemente.
+- Fotos de pessoas são decorativas para leitores de tela quando o nome já
+  aparece no mesmo link. Fallbacks são ocultados da árvore acessível e não
+  introduzem alvo de foco separado; o próprio link mantém o nome visível.
+- Os cartões do elenco e os links de produção mantêm composições próprias
+  (proporções e densidades diferentes), compartilhando apenas os contratos
+  e estilos realmente comuns.
+
+### Dívidas e decisões adiadas (não bloqueantes)
+
+- A sanitização é uma projeção defensiva, não validação runtime exaustiva do
+  schema completo do TMDB. `LooseTitleDetails` ainda estende
+  `TitleDetails & Record<string, any>`; `TitleView` conserva estado `any`,
+  e `companies` também permanece frouxamente tipado.
+- `created_by` é tipado como `PersonCredit[]`, mas atualmente reutiliza a
+  compactação que também serializa `character: null` e `order: null`. A
+  limpeza desse formato foi adiada para uma mudança de contrato explícita.
+- Não há deduplicação global entre elenco, crew e criadores. O dedupe da
+  crew editorial é apenas por ID dentro de cada grupo.
+- `aggregate_credits`, créditos por episódio, múltiplas funções e expansão
+  para outros cargos de crew permanecem fora da política da Title page.
+  A projeção `CastMember` da rota legada de indexação de personagens é um
+  contrato separado, não um segundo contrato de créditos da Title UI.
+- `word-break: break-word` junto de `overflow-wrap: anywhere` é redundante,
+  mas inofensivo; a remoção foi considerada limpeza cosmética sem impacto.
+  A experiência de detalhe de pessoa também continua evoluindo em seu
+  próprio escopo.
+
+### Histórico e closeout
+
+Commits de implementação verificados no histórico local:
+
+- C4.1 — `c1e9e04` (`refactor(title): type cast and crew credits`)
+- C4.2 — `50b7804` (`feat(title): preserve cast members without photos`)
+- C4.3 — `b3033eb` (`feat(title): add editorial crew credits`)
+- C4.4 — `ac66f3a` (`polish(title): refine cast and crew presentation`)
+
+C4.5 é este fechamento documental/QA e não tem commit próprio. A checagem
+de runtime (desktop/mobile, temas e console) ficou **NOT RUN**: não havia
+instância Chromium disponível no Browser integrado nesta sessão. O closeout
+estático e os resultados finais de `check`, `build` e `git diff --check`
+devem ser registrados no relatório da sessão; não inferir aprovação de
+runtime a partir dos testes estáticos.
+
+**Resultado da fase: C4 DONE. Próxima fase: C5 — Seasons/Episodes.**
