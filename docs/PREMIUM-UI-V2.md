@@ -409,7 +409,10 @@ fase de fechamento (B5) — apenas esta documentação.
     em Roteiro = Writer/Screenplay/Story; dedupe por pessoa dentro de
     cada grupo, sem dedupe entre grupos; TV: só Criador(es) via
     `created_by`, sem Direção/Roteiro — `aggregate_credits`
-    deliberadamente não adotado) — DONE; C4.4 = NEXT.
+    deliberadamente não adotado) — DONE; C4.4 — QA visual/responsivo/a11y
+    de Cast+Crew como conjunto (fix de polish: fallback de Direção/
+    Roteiro/Criador agora ocupa a mesma caixa 58×58 da foto, em vez de
+    só o ícone solto) — DONE; C4.5 — Final Regression / Closeout = NEXT.
     Seção dedicada de fase fica para o closeout de C4.)
   - **C5 — Seasons/Episodes**
   - **C6 — Related/Collections**

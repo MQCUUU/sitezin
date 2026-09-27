@@ -511,6 +511,13 @@
   background: var(--mc-color-surface-muted);
 }
 
+.mc-title-cast-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mc-color-text-muted);
+}
+
 .title-crew-group + .title-crew-group {
   margin-top: 20px;
 }

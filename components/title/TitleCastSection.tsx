@@ -38,7 +38,9 @@ function ProductionPersonLink({ person, keyPrefix }: { person: PersonCredit; key
           <Poster path={person.profile_path} alt="" sizes="58px" tmdbSize="w185" />
         </div>
       ) : (
-        <UserRound size={28} aria-hidden="true" />
+        <div className="mc-title-cast-avatar mc-title-cast-avatar-fallback">
+          <UserRound size={28} aria-hidden="true" />
+        </div>
       )}
 
       <strong>{person.name}</strong>
