@@ -5570,6 +5570,7 @@ button div > span {
 }
 
 .pick-provider-line > div > div {
+  position: relative;
   width: 27px;
   height: 27px;
 

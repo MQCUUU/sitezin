@@ -31,19 +31,27 @@ export type ProviderLogoProps = {
  * inside stays a purely visual, `aria-hidden` detail. When there IS a
  * logo, `Poster`'s own `<img alt>` already provides the accessible name,
  * so no extra role is needed there.
+ *
+ * Empty-name polish (C3.2B §11): `provider.name === ""` used to produce an
+ * empty `aria-label`/`alt` (no accessible name at all) despite the visual
+ * fallback still showing "?". Both branches now fall back to a real PT-BR
+ * label ("Provedor") whenever the name is empty/whitespace-only, so the
+ * accessible name and the visual fallback always agree.
  */
 export function ProviderLogo({ provider, sizes, className }: ProviderLogoProps) {
+  const displayName = provider.name?.trim() || "Provedor";
+
   if (!provider.logoPath) {
     return (
-      <div className={className} role="img" aria-label={provider.name} title={provider.name}>
-        <span aria-hidden="true">{String(provider.name || "?").slice(0, 1)}</span>
+      <div className={className} role="img" aria-label={displayName} title={displayName}>
+        <span aria-hidden="true">{displayName.slice(0, 1)}</span>
       </div>
     );
   }
 
   return (
-    <div className={className} title={provider.name}>
-      <Poster path={provider.logoPath} alt={provider.name} sizes={sizes} tmdbSize="w92" />
+    <div className={className} title={displayName}>
+      <Poster path={provider.logoPath} alt={displayName} sizes={sizes} tmdbSize="w92" />
     </div>
   );
 }

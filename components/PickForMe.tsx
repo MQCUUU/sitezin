@@ -37,6 +37,11 @@ import {
 
 import { useToast } from "@/components/ToastProvider";
 
+import { normalizeWatchProviders } from "@/components/media/providers/normalize";
+import { ProviderLogo } from "@/components/media/providers/ProviderLogo";
+import { WATCH_PROVIDER_KIND_LABELS } from "@/components/media/providers/types";
+import type { WatchProviderItem } from "@/components/media/providers/types";
+
 const STATUS_OPTIONS = [
   ["want", "Quero assistir"],
   ["watching", "Assistindo"],
@@ -2794,7 +2799,7 @@ export function PickForMe() {
                         </div>
                       )}
 
-                      <WatchProviders
+                      <PickForMeWatchProviders
                         winner={
                           winner
                         }
@@ -3598,82 +3603,26 @@ function MultiPicker({
   );
 }
 
-function WatchProviders({
+/*
+ * Region note (C3.2B): the "País" filter elsewhere in this component
+ * (`country` state) is TMDB's `with_origin_country` — it narrows which
+ * titles are eligible for the pick by production country, and is sent to
+ * `/api/pick-for-me` for that purpose only. It has never had any
+ * connection to which watch-provider region gets displayed here — this
+ * box always read `results.BR`, independent of that filter, both before
+ * and after this migration. Preserved exactly; not something this phase
+ * changes (see C3.2B report — PRE-EXISTING REGION UX DEBT).
+ */
+function PickForMeWatchProviders({
   winner,
 }: {
   winner:
     PickResult |
     null;
 }) {
-  const br =
-    winner
-      ?.watch_providers
-      ?.results
-      ?.BR ||
-    null;
+  const data = normalizeWatchProviders(winner?.watch_providers, "BR");
 
-  if (!br) {
-    return null;
-  }
-
-  const subscription =
-    [
-      ...(Array.isArray(
-        br.flatrate
-      )
-        ? br.flatrate
-        : []),
-      ...(Array.isArray(
-        br.free
-      )
-        ? br.free
-        : []),
-      ...(Array.isArray(
-        br.ads
-      )
-        ? br.ads
-        : []),
-    ].filter(
-      (
-        provider:
-          any,
-        index:
-          number,
-        all:
-          any[]
-      ) =>
-        all.findIndex(
-          (
-            current
-          ) =>
-            current.provider_id ===
-            provider.provider_id
-        ) ===
-        index
-    );
-
-  const rent =
-    Array.isArray(
-      br.rent
-    )
-      ? br.rent
-      : [];
-
-  const buy =
-    Array.isArray(
-      br.buy
-    )
-      ? br.buy
-      : [];
-
-  if (
-    subscription.length ===
-      0 &&
-    rent.length ===
-      0 &&
-    buy.length ===
-      0
-  ) {
+  if (data.groups.length === 0) {
     return null;
   }
 
@@ -3683,35 +3632,13 @@ function WatchProviders({
         Onde assistir no Brasil
       </strong>
 
-      {subscription.length >
-        0 && (
+      {data.groups.map((group) => (
         <ProviderLine
-          label="Streaming"
-          providers={
-            subscription
-          }
+          key={group.kind}
+          label={WATCH_PROVIDER_KIND_LABELS[group.kind]}
+          providers={group.providers}
         />
-      )}
-
-      {rent.length >
-        0 && (
-        <ProviderLine
-          label="Aluguel"
-          providers={
-            rent
-          }
-        />
-      )}
-
-      {buy.length >
-        0 && (
-        <ProviderLine
-          label="Compra"
-          providers={
-            buy
-          }
-        />
-      )}
+      ))}
     </div>
   );
 }
@@ -3720,10 +3647,8 @@ function ProviderLine({
   label,
   providers,
 }: {
-  label:
-    string;
-  providers:
-    any[];
+  label: string;
+  providers: WatchProviderItem[];
 }) {
   return (
     <div className="pick-provider-line">
@@ -3734,42 +3659,9 @@ function ProviderLine({
       </span>
 
       <div>
-        {providers.map(
-          (
-            provider
-          ) => (
-            <div
-              key={
-                provider.provider_id
-              }
-              title={
-                provider.provider_name
-              }
-            >
-              {provider.logo_path ? (
-                <img loading="lazy" decoding="async"
-                  src={img(
-                    provider.logo_path,
-                    "w92"
-                  )}
-                  alt={
-                    provider.provider_name
-                  }
-                />
-              ) : (
-                <span>
-                  {String(
-                    provider.provider_name ||
-                      "?"
-                  ).slice(
-                    0,
-                    1
-                  )}
-                </span>
-              )}
-            </div>
-          )
-        )}
+        {providers.map((provider) => (
+          <ProviderLogo key={provider.id} provider={provider} sizes="27px" className="pick-provider-logo" />
+        ))}
       </div>
     </div>
   );
