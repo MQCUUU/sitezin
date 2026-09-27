@@ -18,9 +18,11 @@ export type MediaPreviewDialogProps = {
   data: MediaPreviewData | null;
   actions?: MediaPreviewActionsConfig;
   /**
-   * Watch-providers area. Discover/Search can keep passing
-   * `<WatchProviderList details={details} loading={detailsLoading} />` as-is —
-   * the core never fetches or knows about providers itself (C2.1 spec §10, §28).
+   * Watch-providers area. Every Quick Peek surface passes
+   * `<WatchProviderList data={normalizeWatchProviders(details?.watch_providers, "BR")} loading={detailsLoading} />` —
+   * the core never fetches, normalizes or knows about providers itself
+   * (C2.1 spec §10, §28; normalization moved to the shared provider
+   * foundation in C3.2).
    */
   providers?: MediaPreviewProvidersSlot;
   /**
@@ -38,7 +40,9 @@ export type MediaPreviewDialogProps = {
  * only adds the Quick Peek's own chrome: close button + the
  * aria-labelledby wiring Dialog needs but doesn't generate itself.
  *
- * No surface has been migrated onto this yet — it's the foundation only.
+ * The only Quick Peek implementation in the app — Discover, Search, For
+ * You, Collection, Home, Library and Favorites (via PosterGrid) all render
+ * through this component (migrated across C2.2–C2.4).
  */
 export function MediaPreviewDialog({ open, onClose, data, actions, providers, extraActions }: MediaPreviewDialogProps) {
   const titleId = useId();

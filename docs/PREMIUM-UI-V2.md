@@ -397,9 +397,14 @@ fase de fechamento (B5) — apenas esta documentação.
 
 - **A — Foundation Premium** = DONE
 - **B — Discover & Search** = DONE
-- **C1 — Premium Title Page** = DONE
-- **C2 — Quick Peek / Preview Unification** = DONE
-- **C3 — Watch Providers Consolidation** = NEXT
+- **C — Media Experience**
+  - **C1 — Premium Title Page** = DONE
+  - **C2 — Quick Peek / Preview Unification** = DONE
+  - **C3 — Watch Providers Consolidation** = DONE
+  - **C4 — Cast/Crew** = NEXT
+  - **C5 — Seasons/Episodes**
+  - **C6 — Related/Collections**
+  - **C7 — QA/Polish**
 - **D — Library & Organization**
 - **E — Profile & Social**
 - **F — Premium Features**
@@ -498,6 +503,14 @@ não foram unificadas — isso é **C3 — Watch Providers Consolidation**,
 que também vai olhar cast/crew, seasons/episodes e related content na
 página de título.
 
+> **Nota (C3, DONE):** essa dívida foi resolvida. `PreviewProviders`,
+> `CollectionProviders` e `PreviewWatchProviders` (helpers locais)
+> foram removidos; For You, Collection e PosterGrid agora usam
+> `WatchProviderList` como Discover/Search, todos consumindo
+> `normalizeWatchProviders` da fundação compartilhada
+> `components/media/providers/`. Detalhes completos em
+> [§23 — Fase C3](#23-fase-c3--watch-providers-consolidation-done).
+
 ### CSS
 
 **Removido** (`app/globals.css`) — órfão confirmado por busca app-wide
@@ -550,3 +563,132 @@ ambiente `TEST_DATABASE_URL`/`TEST_NEON_AUTH_BASE_URL` isolado, nunca
 produção) — todos com layout/CSS intactos, favorito funcional, nenhum
 erro novo de console. `npm run check`, `npm run build` e
 `git diff --check` limpos.
+
+## 23. Fase C3 — Watch Providers Consolidation (DONE)
+
+### Objetivo
+
+Unificar a lógica de parsing/dedupe de `watch_providers` (streaming,
+aluguel, compra), até então duplicada em 6 pontos diferentes do app,
+em uma única fundação de dados compartilhada — preservando, de forma
+deliberada, 3 composições visuais distintas onde o layout realmente
+difere (Quick Peek, Pick for Me, Title).
+
+### Fundação de dados compartilhada
+
+`components/media/providers/`:
+
+- **`types.ts`** — `WatchProviderKind` (`"streaming" | "rent" | "buy"`),
+  `WATCH_PROVIDER_KIND_LABELS`, `WatchProviderItem`, `WatchProviderGroup`,
+  `WatchProviderData`, e os tipos "crus" de entrada (`RawWatchProviderItem`,
+  `RawWatchProviderRegion`, `RawWatchProviders`) que espelham o formato do
+  TMDB.
+- **`normalize.ts`** — `normalizeWatchProviders(raw, region)`: função pura,
+  sem fetch, sem estado, sem região default (região é sempre um argumento
+  explícito do chamador). Produz `{ groups: WatchProviderGroup[],
+  attributionUrl?: string | null }`.
+- **`ProviderLogo.tsx`** — primitivo visual único para o logo/fallback de
+  um provider, usado pelos 3 renderizadores finais.
+- **`index.ts`** — barrel público da fundação.
+
+### Regra de dedupe
+
+`flatrate + free + ads` são concatenados nessa ordem e deduplicados por
+`provider_id`, mantendo a primeira ocorrência (ou seja: `flatrate` vence
+sobre `free`, que vence sobre `ads`). `rent` e `buy` nunca são
+deduplicados entre si nem contra o grupo de streaming. Grupos vazios são
+omitidos do `groups[]` final — nenhum renderizador precisa checar
+`.length` manualmente.
+
+### Modelo de região
+
+Região é sempre um input explícito de quem chama `normalizeWatchProviders`
+— nunca um default embutido na fundação. Todos os 3 renderizadores finais
+passam `"BR"` literalmente no próprio call site (Quick Peek, Pick for Me,
+Title).
+
+**Dívida de UX pré-existente, documentada e não corrigida nesta fase:**
+em Pick for Me, o seletor "País" envia `country` para `/api/pick-for-me`,
+que o usa como filtro `with_origin_country` do TMDB (país de origem/
+produção dos títulos candidatos) — sem nenhuma relação com a caixa
+"Onde assistir no Brasil", que sempre lê `results.BR` independente do
+país escolhido. Confirmado empiricamente (request real inspecionada,
+`country=BR` no GET) e no código
+(`app/api/pick-for-me/route.ts` → `params.with_origin_country`).
+
+### As 3 composições visuais finais (deliberadamente não unificadas)
+
+1. **`WatchProviderList`** (`components/media/preview/WatchProviderList.tsx`)
+   — renderizador compacto do Quick Peek, consumido por Discover, Search,
+   For You, Collection e PosterGrid (Home/Library/Favorites). Usa o
+   primitivo `WatchProviderRow` (`components/media/preview/WatchProviderRow.tsx`).
+2. **`PickForMeWatchProviders`** (dentro de `components/PickForMe.tsx`) —
+   composição compacta específica do Pick for Me.
+3. **`TitleWatchProviders`** (`components/title/TitleWatchProviders.tsx`) —
+   composição rica da página de Título, com descrição por grupo, contagem
+   e link de atribuição (`attributionUrl`) — o único consumidor da
+   atribuição; Quick Peek e Pick for Me não a exibem.
+
+Todas as três chamam a mesma `normalizeWatchProviders` e renderizam o
+mesmo `ProviderLogo`; a diferença entre elas é puramente de composição/
+layout (o que cada superfície precisa mostrar), não de lógica de dados —
+por isso permanecem 3 implementações visuais sobre 1 única fundação, em
+vez de serem forçadas a virar 1 componente genérico.
+
+### Fetch ownership
+
+Nenhum renderizador, nem a normalização, nem os primitivos fazem fetch —
+cada superfície continua dona do próprio fetch de `details` (SWR/estado
+local/SSR), exatamente como antes da consolidação; C3 tocou apenas a
+etapa de parsing/renderização dos dados já carregados.
+
+### Dívidas de tipo pré-existentes (documentadas, não resolvidas)
+
+- A maioria das superfícies passa `details?.watch_providers` como `any`
+  (herdado de tipagem solta pré-existente) para `normalizeWatchProviders`
+  sem cast — o TS permite `any` → parâmetro tipado sem asserção.
+- `LooseTitleDetails` (`components/title/types.ts`) é
+  `TitleDetails & Record<string, any>`, dívida documentada desde a C1.2.
+- `details.watch_providers` na página de Título é, na verdade, tipado
+  `unknown` (`lib/title-details.ts`: `let watchProviders: unknown = null`),
+  não `any` — exigiu o único cast especificamente tipado do módulo,
+  `as RawWatchProviders | null | undefined` (nunca `as any`), em
+  `TitleWatchProviders.tsx`.
+
+### Correções deliberadas feitas durante a migração (MIGRATION FIX)
+
+- **For You / Collection** — os renderizadores locais antigos
+  (`PreviewProviders`, `CollectionProviders`) mostravam uma caixa/cabeçalho
+  vazio quando `rent`/`buy` eram arrays vazios (checavam `Array.isArray`,
+  não `.length`). A omissão de grupos vazios do `normalizeWatchProviders`
+  corrigiu isso "de graça" durante a migração.
+- **`ProviderLogo` — acessibilidade do fallback:** o branch sem
+  `logoPath` (letra-fallback) passou a usar `role="img"` + `aria-label`
+  no wrapper (antes era uma div sem nome acessível).
+  `provider.name` vazio/só-espaço agora cai para o rótulo acessível
+  "Provedor" (antes gerava `aria-label`/`alt` vazio).
+
+### CSS
+
+Órfãos confirmados e removidos em `app/globals.css`: `.title-watch-provider-fallback`
+e a parte órfã do seletor combinado `.title-watch-provider img,
+.title-watch-provider-fallback{...}` (a parte referente a
+`.title-watch-provider img` foi preservada onde ainda ativa). CSS novo,
+auto-contido, para `.mc-title-provider-logo` (dimensão/posição/overflow)
+e `.mc-title-provider-logo span[aria-hidden]` (estilo da letra-fallback),
+reproduzindo os dois estados visuais originais sob a única classe que o
+contrato de `ProviderLogo` permite.
+
+### Dead code
+
+`PreviewProviders`, `CollectionProviders`, `PreviewWatchProviders` e seus
+`ProviderRow`/`PreviewWatchRow` locais foram removidos por completo — 0
+ocorrências restantes.
+
+### Escopo explicitamente fora da C3
+
+Não alterado nesta fase: comportamento de região (Pick for Me continua
+com a mesma ambiguidade País × Onde-assistir, só documentada), UX de
+`onChanged` em Favorites, layout da página de Título, dívidas de tipo
+pré-existentes fora do necessário para compilar (`LooseTitleDetails`,
+`any` nos demais call sites). Nenhuma feature nova foi introduzida.
