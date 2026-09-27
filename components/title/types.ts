@@ -1,7 +1,9 @@
 import type { TitleDetails, TitleType } from "@/lib/title-details";
+import type { CastCredit, CrewCredit, PersonCredit, TitleCreditsData } from "@/lib/title-credits";
 import type { Status } from "@/lib/types";
 
 export type { TitleDetails, TitleType };
+export type { CastCredit, CrewCredit, PersonCredit, TitleCreditsData };
 
 /**
  * TitleDetails é o formato real vindo do servidor, mas os campos TMDB

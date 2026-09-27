@@ -2,11 +2,12 @@ import Link from "next/link";
 import { Building2, UserRound, Users } from "lucide-react";
 
 import { Poster } from "@/components/Poster";
+import type { CastCredit, CrewCredit, PersonCredit } from "./types";
 
 export type TitleCastSectionProps = {
-  directors: any[];
-  creators: any[];
-  cast: any[];
+  directors: CrewCredit[];
+  creators: PersonCredit[];
+  cast: CastCredit[];
   companies: any[];
 };
 
@@ -46,7 +47,7 @@ export function TitleCastSection({
                 gap: "12px",
               }}
             >
-              {directors.map((person: any) => (
+              {directors.map((person) => (
                 <Link
                   key={`director-${person.id}`}
                   href={`/person/${person.id}`}
@@ -81,7 +82,7 @@ export function TitleCastSection({
                 </Link>
               ))}
 
-              {creators.map((person: any) => (
+              {creators.map((person) => (
                 <Link
                   key={`creator-${person.id}`}
                   href={`/person/${person.id}`}
@@ -140,7 +141,7 @@ export function TitleCastSection({
                 gap: "14px",
               }}
             >
-              {cast.map((person: any) => (
+              {cast.map((person) => (
                 <Link
                   key={person.id}
                   href={`/person/${person.id}`}

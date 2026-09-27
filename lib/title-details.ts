@@ -1,4 +1,10 @@
 import { detailsTMDB } from "@/lib/tmdb";
+import type {
+  CastCredit,
+  CrewCredit,
+  PersonCredit,
+  TitleCreditsData,
+} from "@/lib/title-credits";
 
 /*
  * ============================================================
@@ -30,7 +36,9 @@ export type TitleType = "movie" | "tv";
 
 type TmdbRecord = Record<string, unknown>;
 
-function compactPerson(value: unknown, crew = false) {
+function compactPerson(value: unknown, crew: true): CrewCredit | null;
+function compactPerson(value: unknown, crew?: false): CastCredit | null;
+function compactPerson(value: unknown, crew = false): CastCredit | CrewCredit | null {
   if (!value || typeof value !== "object") return null;
 
   const person = value as TmdbRecord;
@@ -38,46 +46,63 @@ function compactPerson(value: unknown, crew = false) {
     return null;
   }
 
-  return {
+  const base: PersonCredit = {
     id: Number(person.id),
     name: person.name,
     profile_path: typeof person.profile_path === "string" ? person.profile_path : null,
-    ...(crew
-      ? {
-          department: typeof person.department === "string" ? person.department : null,
-          job: typeof person.job === "string" ? person.job : null,
-        }
-      : {
-          character: typeof person.character === "string" ? person.character : null,
-          order: Number.isInteger(Number(person.order)) ? Number(person.order) : null,
-        }),
   };
+
+  return crew
+    ? {
+        ...base,
+        department: typeof person.department === "string" ? person.department : null,
+        job: typeof person.job === "string" ? person.job : null,
+      }
+    : {
+        ...base,
+        character: typeof person.character === "string" ? person.character : null,
+        order: Number.isInteger(Number(person.order)) ? Number(person.order) : null,
+      };
 }
+
+/** Formato sanitizado devolvido por sanitizeTitleDetails / consumido pela UI. */
+export type SanitizedTitleDetails = Record<string, unknown> & {
+  credits: TitleCreditsData;
+  created_by: PersonCredit[];
+};
 
 /**
  * Reduz a resposta pública do TMDB aos dados realmente usados pela interface.
  * Além de diminuir o RSC/JSON, remove credit_id e números financeiros que
  * scanners confundem com cartões ou timestamps.
  */
-export function sanitizeTitleDetails(value: unknown): TmdbRecord {
-  if (!value || typeof value !== "object") return {};
+export function sanitizeTitleDetails(value: unknown): SanitizedTitleDetails {
+  if (!value || typeof value !== "object") {
+    return { credits: { cast: [], crew: [] }, created_by: [] };
+  }
 
   const details = value as TmdbRecord;
   const credits = details.credits && typeof details.credits === "object"
     ? details.credits as TmdbRecord
     : {};
-  const cast = Array.isArray(credits.cast)
-    ? credits.cast.map((person) => compactPerson(person)).filter(Boolean).slice(0, 24)
+  const cast: CastCredit[] = Array.isArray(credits.cast)
+    ? credits.cast
+        .map((person) => compactPerson(person))
+        .filter((person): person is CastCredit => person !== null)
+        .slice(0, 24)
     : [];
-  const crew = Array.isArray(credits.crew)
+  const crew: CrewCredit[] = Array.isArray(credits.crew)
     ? credits.crew
         .filter((person) => person && typeof person === "object" && (person as TmdbRecord).job === "Director")
         .map((person) => compactPerson(person, true))
-        .filter(Boolean)
+        .filter((person): person is CrewCredit => person !== null)
         .slice(0, 5)
     : [];
-  const createdBy = Array.isArray(details.created_by)
-    ? details.created_by.map((person) => compactPerson(person)).filter(Boolean).slice(0, 10)
+  const createdBy: PersonCredit[] = Array.isArray(details.created_by)
+    ? details.created_by
+        .map((person) => compactPerson(person))
+        .filter((person): person is CastCredit => person !== null)
+        .slice(0, 10)
     : [];
 
   const {

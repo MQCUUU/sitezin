@@ -22,9 +22,12 @@ import {
   TitleTrailer,
   TitleTvSections,
   TitleWatchProviders,
+  type CastCredit,
   type ContentTabValue,
+  type CrewCredit,
   type LibraryItem,
   type LibraryItemUpdate,
+  type PersonCredit,
 } from "@/components/title";
 
 export type TitleViewProps = {
@@ -233,7 +236,7 @@ export default function TitlePage({
             ).map(
               (
                 person:
-                  any
+                  PersonCredit
               ) =>
                 person.name
             ),
@@ -251,7 +254,7 @@ export default function TitlePage({
               .map(
                 (
                   person:
-                    any
+                    CastCredit
                 ) =>
                   person.name
               ),
@@ -1041,10 +1044,10 @@ export default function TitlePage({
    * ============================
    */
 
-  const cast =
+  const cast: CastCredit[] =
     details.credits?.cast
       ?.filter(
-        (person: any) =>
+        (person: CastCredit) =>
           person.profile_path
       )
       ?.slice(0, 12) || [];
@@ -1055,18 +1058,18 @@ export default function TitlePage({
    * ============================
    */
 
-  const directors =
+  const directors: CrewCredit[] =
     type === "movie"
       ? details.credits?.crew
           ?.filter(
-            (person: any) =>
+            (person: CrewCredit) =>
               person.job ===
               "Director"
           )
           ?.slice(0, 5) || []
       : [];
 
-  const creators =
+  const creators: PersonCredit[] =
     details.created_by || [];
 
   /*
