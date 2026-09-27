@@ -1,9 +1,11 @@
 /*
- * MyCatalog Premium UI V2 — shared Quick Peek / MediaPreviewDialog (C2.1).
+ * MyCatalog Premium UI V2 — shared Quick Peek / MediaPreviewDialog.
  *
- * This is the foundation only: no surface (Discover, Search, For You,
- * Collection) has been migrated onto MediaPreviewDialog yet, so none of
- * their existing `.discover-preview-*` styles are touched here.
+ * Built in C2.1; all seven consumers (Discover, Search, For You, Collection,
+ * Home, Library, Favorites) migrated onto it by C2.4. The legacy
+ * `.discover-preview-*`/`.library-preview-*` styles those surfaces used to
+ * render manually were removed from app/globals.css in C2.5 — this is now
+ * the only Quick Peek implementation in the app.
  */
 
 .mc-dialog.mc-preview-dialog {

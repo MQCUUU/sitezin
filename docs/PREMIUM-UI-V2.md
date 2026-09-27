@@ -397,7 +397,9 @@ fase de fechamento (B5) — apenas esta documentação.
 
 - **A — Foundation Premium** = DONE
 - **B — Discover & Search** = DONE
-- **C — Media Experience** = NEXT
+- **C1 — Premium Title Page** = DONE
+- **C2 — Quick Peek / Preview Unification** = DONE
+- **C3 — Watch Providers Consolidation** = NEXT
 - **D — Library & Organization**
 - **E — Profile & Social**
 - **F — Premium Features**
@@ -405,7 +407,12 @@ fase de fechamento (B5) — apenas esta documentação.
 - **H — Mobile/Accessibility/Performance**
 - **I — QA/Polish/Release**
 
-## 21. Fase C — Nota de handoff
+## 21. Fase C — Nota de handoff (histórico)
+
+A nota original abaixo (pré-C1/C2) listava as superfícies fora do
+escopo da Fase B para uma futura "Fase C — Media Experience". Essa fase
+foi dividida em C1 (title page, DONE), C2 (Quick Peek, DONE — ver §22)
+e C3 (Watch Providers, NEXT). Mantida como registro histórico:
 
 A Fase C deve **começar por uma auditoria** (sem alterar nada ainda) das
 seguintes superfícies, hoje fora do escopo revisado pela Fase B:
@@ -421,3 +428,125 @@ seguintes superfícies, hoje fora do escopo revisado pela Fase B:
 
 Nenhum desses sistemas foi alterado pela Fase B; o handoff é apenas
 apontar onde a Fase C deve olhar primeiro.
+
+## 22. Fase C2 — Quick Peek / Preview Unification (DONE)
+
+Cinco implementações independentes de "Quick Peek" (modal de prévia de
+mídia) existiam no início da C2, cada uma reimplementando manualmente
+backdrop, botão de fechar, poster, título/metadata, sinopse, providers,
+nota pessoal e link para a página completa. Todas foram unificadas numa
+única fundação compartilhada.
+
+### Arquitetura final
+
+- **`components/media/preview/MediaPreviewDialog.tsx`** — única
+  implementação de Quick Peek do produto. Constrói sobre
+  `components/ui/Dialog.tsx` (o mesmo primitivo genérico usado por
+  `ConfirmProvider`) e não reimplementa focus trap, Escape, scroll lock,
+  focus restore ou backdrop click — tudo isso vem do `Dialog` sem
+  segunda implementação.
+- **Modelo normalizado** (`components/media/preview/types.ts`) —
+  `MediaPreviewData`/`MediaPreviewLibraryState` tipados, sem `any`. Só
+  contém campos que pelo menos uma superfície real usa.
+- **Adapters por shape** (`components/media/preview/adapters.ts`) — cada
+  superfície tem o adapter que corresponde ao shape real dos seus
+  dados; nenhum adapter foi forçado a servir uma superfície cujo
+  shape não é o dele (ver mapa abaixo).
+- **Providers via slot** — o core nunca conhece `WatchProviderList` nem
+  nenhuma implementação de provider; cada superfície passa seu próprio
+  conteúdo de provider pronto via a prop `providers` (`ReactNode`).
+- **`extraActions` genérico** — único ponto de extensão para uma ação
+  que pertence a uma única superfície (hoje: o botão de favorito do
+  PosterGrid). O core recebe `ReactNode` pronto e não sabe o que
+  significa — nenhum "if (source === 'posterGrid')" existe em lugar
+  nenhum do core.
+- **Core sem fetch, sem mutation, sem rota de API conhecida** — todo
+  fetch de `details`, toda mutation de biblioteca/rating/favorito
+  continua na superfície/container que já fazia isso antes da migração.
+
+### As 7 superfícies
+
+| Superfície | Componente/página | Adapter usado | Fonte real dos dados |
+|---|---|---|---|
+| Discover | `app/discover/page.tsx` | `fromDiscoverItem` | Item da listagem + `genre_ids` resolvidos contra o lookup de gêneros do filtro |
+| Search | `app/search/page.tsx` | `fromSearchItem` | Item da listagem, com fallback campo-a-campo para `details` quando ausente no item |
+| For You | `app/for-you/page.tsx` | `fromLooseMediaItem` (sem 5º argumento) | **`details`-only** para runtime/genres — o preview antigo nunca usava o item da lista para esses dois campos, só para o resto |
+| Collection | `app/collection/[id]/page.tsx` | `fromLooseMediaItem` (`fallbackToListWhenDetailsUnavailable: true`) | **`details \|\| movie`** — semântica do preview legado preservada exatamente: quando `details` existe, ele vence até para runtime/genres; quando ausente, o item da lista fornece esses campos (inclusive `genres: []` de `details` continua `[]`, nunca cai para o item) |
+| Home | `components/PosterGrid.tsx` (consumer: `app/page.tsx`) | `fromLibraryItem` | `LibraryItem` diretamente — nenhum merge com `details`; `details` só alimenta o slot de providers |
+| Library | idem (consumer: `app/library/page.tsx`) | `fromLibraryItem` | idem |
+| Favorites | idem (consumer: `app/favorites/page.tsx`) | `fromLibraryItem` | idem |
+
+Home, Library e Favorites são três *consumers* de uma única
+implementação de superfície (`PosterGrid`), não três migrações
+separadas — o próprio `PosterGrid` é quem decide dado, mutation e
+processing; as três páginas só passam `items` (e, quando aplicável,
+`onChanged`/`viewMode`).
+
+### Provider debt — NÃO resolvida nesta fase
+
+As implementações de provider continuam deliberadamente duplicadas:
+
+- Discover/Search usam `WatchProviderList` (compartilhado entre os
+  dois desde a Fase B).
+- For You usa `PreviewProviders` (helper local).
+- Collection usa `CollectionProviders` (helper local).
+- PosterGrid usa `PreviewWatchProviders` (helper local).
+
+As quatro implementações resolvem a mesma lógica (`watch_providers.
+results.BR`, streaming/aluguel/compra) de formas quase idênticas, mas
+não foram unificadas — isso é **C3 — Watch Providers Consolidation**,
+que também vai olhar cast/crew, seasons/episodes e related content na
+página de título.
+
+### CSS
+
+**Removido** (`app/globals.css`) — órfão confirmado por busca app-wide
+antes da remoção, 0 consumidores restantes em `.tsx`:
+- `.discover-preview-*` (backdrop, modal, close, poster, content, meta,
+  genres, overview, actions, incluindo os dois `@media` exclusivos)
+- `.library-preview-*` (mesmo conjunto, incluindo um bloco de correção
+  de ~250 linhas com comentários explicativos e uma variante alternativa
+  comentada, ambos só sobre o modal antigo)
+- `.preview-personal-rating` / `.preview-personal-rating-head` /
+  `.preview-rating-options`
+- Duas listas de seletores compartilhados (`:focus-visible` e um bloco
+  de design system) tiveram só os dois tokens órfãos removidos —
+  `.mycatalog-confirm-modal`, `.watch-register-modal`, `.pick-modal` e
+  as demais classes daquelas listas continuam ativas e foram
+  preservadas.
+- Um `@media` que misturava `.library-preview-*` com
+  `.library-card-status-menu` (menu de status do PosterGrid, ainda
+  ativo) teve só as regras órfãs removidas — `.library-card-status-menu`
+  permanece com sua regra de breakpoint intacta.
+
+**Preservado intencionalmente** — ainda em uso pelos quatro helpers de
+provider listados acima: `.preview-watch-box`, `.preview-watch-head`,
+`.preview-watch-row` e correlatas. Tratamento fica para C3.
+
+Remoção validada por: busca app-wide pós-remoção (0 ocorrências de
+`.discover-preview-*`/`.preview-personal-rating*`/
+`.preview-rating-options*`; 1 ocorrência de `.library-preview-` restante,
+que é só um comentário explicativo), `npm run build` (CSS parseia sem
+erro), e QA runtime confirmando visual/layout intactos em Discover,
+Collection, Home, Library e Favorites (ver §"QA final" abaixo).
+
+### Dívida de UX pré-existente (não corrigida nesta fase)
+
+Em **Favorites**, descurtir um item de dentro do Quick Peek não remove
+o card da lista imediatamente — o dialog atualiza corretamente
+("Curtido" → "Curtir"), mas a página `/favorites` nunca passou
+`onChanged` para `PosterGrid`, então a lista só reflete a mudança após
+recarregar. Esse comportamento já existia antes da unificação (mesma
+função `toggleFavorite`, inalterada); registrado aqui como dívida
+conhecida, não como regressão da C2.
+
+### QA final (C2.5)
+
+Smoke runtime com Chromium real após a remoção de CSS: Discover e
+Collection (guest, com foco em restore X/Escape/backdrop, ARIA, mobile
+390px e os três temas — dark/light/oled, todos com background distinto
+e correto); Home, Library e Favorites (conta de teste descartável em
+ambiente `TEST_DATABASE_URL`/`TEST_NEON_AUTH_BASE_URL` isolado, nunca
+produção) — todos com layout/CSS intactos, favorito funcional, nenhum
+erro novo de console. `npm run check`, `npm run build` e
+`git diff --check` limpos.
