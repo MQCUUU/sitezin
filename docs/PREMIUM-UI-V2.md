@@ -439,9 +439,9 @@ fase de fechamento (B5) — apenas esta documentação.
     filmes já assistidos, Notifications sem preferências órfãs visíveis,
     STATUS_LABELS unificado no Diário, Export/Backup confirmado seguro
     sem alteração).
-- **G — Motion & React Bits** = próxima na ordem do roadmap, escopo
-  ainda não detalhado (mesma situação que F tinha antes do F0 — precisa
-  de um G0 de auditoria antes de qualquer implementação).
+- **G — Motion & React Bits** = IN PROGRESS (G0 — auditoria em
+  [`docs/G-MOTION-REACT-BITS-AUDIT.md`](./G-MOTION-REACT-BITS-AUDIT.md) —
+  DONE; G1 — implementação consolidada = NEXT).
 - **H — Mobile/Accessibility/Performance**
 - **I — QA/Polish/Release**
 
