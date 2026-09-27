@@ -403,9 +403,13 @@ fase de fechamento (B5) — apenas esta documentação.
   - **C3 — Watch Providers Consolidation** = DONE
   - **C4 — Cast/Crew** = DONE (C4.1–C4.5; arquitetura, política,
     polish, regressão e dívidas registradas na seção dedicada abaixo).
-  - **C5 — Seasons/Episodes** = NEXT (auditoria C5.0 em
-    [`docs/C5-SEASONS-EPISODES-AUDIT.md`](./C5-SEASONS-EPISODES-AUDIT.md);
-    produto e decisões em aberto inventariados, sem implementação).
+  - **C5 — Seasons/Episodes** = IN PROGRESS (C5.0 — auditoria em
+    [`docs/C5-SEASONS-EPISODES-AUDIT.md`](./C5-SEASONS-EPISODES-AUDIT.md)
+    — DONE; C5.1 — contratos tipados, normalização RAW→interno, endpoint
+    de season normalizado, `?season=N` como fonte de verdade da URL,
+    Especiais/Season 0, loading/erro/vazio distintos, semântica
+    released/future/unknown com spoiler e gating de assistido — DONE;
+    C5.2 = NEXT, ver handoff no fim da auditoria).
   - **C6 — Related/Collections**
   - **C7 — QA/Polish**
 - **D — Library & Organization**

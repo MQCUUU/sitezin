@@ -491,3 +491,195 @@ concentram em:
 - `git diff --check = PASS (exit 0)`.
 - `OWN QA PROCESSES = 0`; nenhum script/log/screenshot/fixture temporário
   foi criado ou ficou no workspace.
+
+## C5.1 — Consolidação (DONE)
+
+Cobre contratos tipados, normalização RAW→interno, endpoint de season,
+fetch/URL, Specials, estados de loading/erro/vazio, semântica de episódio
+futuro/desconhecido e polish básico. **Não** toca integridade de progresso
+persistido (`episodes_progress`, `current_season`, `completed_seasons`,
+`stopped_season`, cascatas, complete/reset) — isso é C5.2.
+
+### Contrato
+
+`lib/title-seasons.ts` (novo, neutro — sem React/CSS/fetch/DOM):
+
+- `SeasonSummary` — `id, season_number (>=0), name, overview, air_date,
+  episode_count, poster_path`.
+- `EpisodeSummary` — `id, name, overview, episode_number (>=1),
+  season_number (>=0), air_date, runtime, still_path, vote_average, crew`
+  (`crew: CrewCredit[]`, reaproveita o tipo da C4 — mesmo conceito,
+  granularidade de episódio; só a página de episódio usa esse campo).
+- `SeasonDetails` — `id, name, overview, season_number, air_date,
+  poster_path, episodes: EpisodeSummary[]`.
+- Normalizers puros: `normalizeSeasonSummary(y)`,
+  `normalizeSeasonSummaries(raw: unknown)`, `normalizeEpisodeSummary(raw:
+  unknown)`, `normalizeSeasonDetails(raw: unknown)`,
+  `normalizeEpisodeCrew(raw: unknown)`. Entrada sempre `unknown`; objeto
+  inválido → `null`; array → filtra entradas inválidas sem fabricar
+  id/season_number/episode_number falso.
+- `getEpisodeReleaseStatus(airDate)` → `"released" | "future" |
+  "unknown"`, por comparação de data civil (string `YYYY-MM-DD`, sem
+  `Date` completo, evitando bug de fuso). **`air_date` ausente/inválida
+  nunca é `"released"`** — essa é a decisão de produto da fase.
+
+### Fronteira RAW → interno
+
+`sanitizeTitleDetails` (SSR + `/api/tmdb/[type]/[id]`, compartilhados)
+agora normaliza `seasons` → `SeasonSummary[]`, `last_episode_to_air` e
+`next_episode_to_air` → `EpisodeSummary | null`, no lugar de espalhar os
+três campos crus pelo spread. Comportamento de `movie` intacto (esses
+campos nunca existem no payload de filme; os normalizers recebem
+`undefined` e devolvem `[]`/`null` de forma defensiva — o único efeito
+colateral é que o JSON de filme passa a ter essas três chaves sempre
+presentes e vazias, em vez de ausentes; nenhum consumer de filme lê essas
+chaves).
+
+`GET /api/tv/[id]/season/[season]` migrou de repassar o JSON cru do TMDB
+para devolver `SeasonDetails` normalizado. `seasonTMDB()` continua o único
+dono da chamada TMDB (cache ~6h e headers de `Cache-Control`
+preservados). Falha HTTP/rede do TMDB e falha de shape num 200 inesperado
+caem no mesmo `502` de antes; `episodes: []` dentro de uma resposta 200
+válida é o estado "temporada vazia" — os dois nunca se confundem.
+Consumers auditados e confirmados compatíveis com o novo shape (só leem
+`episodes[]` com os mesmos nomes de campo de antes): `EpisodeBrowser`,
+`SeasonProgress` (`completeCurrentSeason`), a página de episódio, e o
+widget "Continuar assistindo" da Home (`app/page.tsx`) — nenhum desses
+lê campos fora do contrato novo. `/api/episodes` e
+`lib/complete-series-progress.ts` chamam `seasonTMDB()` **diretamente**
+(não passam pela rota), então não são afetados pela normalização da API.
+
+`SeriesSchedule` **não foi migrado** para o contrato compartilhado: sua
+projeção de episódio (`/api/tv/[id]/schedule`) pré-processa fallbacks
+diferentes (`name` já vira `"Episódio N"`, `overview` já vira `""`,
+`runtime`/`vote_average` zero já colapsam para `null`) — é uma projeção
+semanticamente diferente de `EpisodeSummary`, não o mesmo contrato à
+força. Tipo local mantido deliberadamente (`KEPT`, não `REMOVED`).
+
+### URL como fonte de verdade
+
+`EpisodeBrowser` não gera mais `1..number_of_seasons` como fonte do
+seletor — usa `details.seasons` normalizado (prop `seasons:
+SeasonSummary[]`). `totalSeasons` continua sendo passado exatamente como
+antes (`Number(details.number_of_seasons || 1)`) só para os cálculos que
+já existiam (`total_seasons` enviado a `/api/episodes`) — Season 0 nunca
+entra nessa contagem.
+
+A temporada selecionada é derivada de `useSearchParams()` a cada render
+(mesmo padrão de `lib/discover/useDiscoverParams.ts` — sem `useState`
+espelhado); trocar de temporada faz `router.push` (não `replace`, para
+Back/Forward funcionarem como passos de histórico), preservando os
+demais parâmetros da URL. Prioridade de resolução: `?season=` válido (e
+presente nas temporadas selecionáveis) → temporada atual da biblioteca
+(se existir entre as regulares) → primeira regular disponível → Season 0
+se for a única opção → nenhuma. `?season=` inválido/inexistente na série
+cai no fallback, sem erro de página.
+
+Confirmado por QA runtime (Chromium real, Breaking Bad/1396): selecionar
+temporada atualiza a URL; Back/Forward restauram URL e valor do `<select>`
+corretamente; refresh com `?season=3` reabre a temporada 3; trocar de
+temporada dispara exatamente 1 request de season (nenhum refetch de
+`/api/tmdb/tv/[id]`); resposta lenta de uma temporada anterior nunca
+sobrescreve a temporada mais nova selecionada (cleanup por `cancelled`
+flag, mesmo padrão que o componente já usava antes da fase).
+
+### Specials / Season 0
+
+Suportado **somente** se `season_number = 0` existir de fato no array de
+summaries (nunca fabricado). Aparece como opção "Especiais" **depois**
+das temporadas regulares no seletor. Não entra na contagem "X
+temporadas" nem nos cálculos de conclusão da série (que continuam usando
+`totalSeasons`/temporadas regulares, inalterados). Confirmado com
+Breaking Bad/1396 (tem season 0 com 9 episódios reais) — selecionar
+"Especiais" via UI, via URL direta e via `?season=0` funciona; um título
+sem season 0 (`?season=0` nele) cai no fallback seguro em vez de mostrar
+uma temporada inexistente.
+
+### Loading / erro / vazio
+
+Estados agora distintos: loading (spinner), erro (`role="alert"` +
+mensagem + "Tentar novamente", só re-dispara a mesma temporada via
+`retryToken`), vazio (`episodes: []` dentro de uma resposta válida —
+mensagem neutra, sem `role="alert"`). Confirmado via fixture controlada
+(`page.route`): uma falha HTTP 502 na temporada 2 mostra o estado de erro
+(nunca uma lista vazia disfarçada); a temporada 1 com `episodes: []`
+mostra o estado vazio (nunca o visual de erro); clicar "Tentar novamente"
+depois de trocar a fixture para uma resposta válida repõe a lista.
+
+### Episódio futuro / data desconhecida
+
+`getEpisodeReleaseStatus` alimenta: badge "Futuro" discreto, ocultação de
+sinopse por padrão (`"Sinopse oculta até o lançamento." + "Mostrar
+sinopse"`, revelação é estado local, não persistida) só para `future`
+confirmado (`unknown` mantém a sinopse visível), e desabilitação do botão
+individual de assistido (`disabled` real + `aria-label`/`title`
+explicando o motivo) para `future` **e** `unknown` — data desconhecida
+nunca é tratada como lançada.
+
+**Importante, registrado explicitamente:** essa nova gating cobre só a
+ação individual (botão de check por episódio) e a página de episódio.
+`released_episode_count`/a lista usada por "Marcar episódios lançados
+como assistidos" (`completeSeason`) **continuam com a definição antiga**
+(`!air_date || air_date <= hoje`, que trata data ausente como lançada) —
+isso é proposital: a fase trava explicitamente cascata/complete-season/
+`released_episode_count` como escopo de C5.2 (integridade de progresso).
+Efeito prático: um episódio com `air_date` desconhecida não pode ser
+marcado individualmente (botão desabilitado), mas teoricamente ainda
+entraria na contagem de "lançados" do botão de completar temporada em
+lote — essa inconsistência estreita e documentada é intencional nesta
+fase e vira item explícito do handoff C5.2 abaixo.
+
+Confirmado com dado real: Lei & Ordem: SVU (id 2734), próximo episódio
+real S28E01 com `air_date` futura (2026-10-08) — badge "Futuro" e
+sinopse oculta aparecem tanto no `EpisodeBrowser` quanto na página de
+episódio; revelar sinopse funciona (mostra "Sinopse indisponível.", já
+que o TMDB ainda não publicou overview); nenhum erro novo de console.
+
+### A11y
+
+Foto de still (browser e detalhe) decorativa (`alt=""`) quando o nome já
+é texto visível ao lado; fallback sem still usa `aria-hidden="true"`.
+Erro tem `role="alert"`; vazio não. Botão de assistido desabilitado tem
+`aria-label`/`title` explicando o motivo em vez de só ficar cinza. Tab
+order confirmado sequencial (seletor → cards de produção/elenco →
+episódios) sem focus trap.
+
+### Não alterado (confirmado, 0 diff)
+
+`lib/complete-series-progress.ts`, `app/api/episodes/route.ts`,
+`components/SeriesSchedule.tsx`, `app/api/tv/[id]/schedule/route.ts`,
+schema/banco, `stopped_episode` (dívida já catalogada em C5.0, não
+tocada).
+
+## C5.2 — Handoff (o que ainda falta auditar/hardenizar)
+
+C5.2 é a única fase seguinte planejada para C5 antes de C6 (herda a
+sequência original C5.1→C5.6 da auditoria; as subfases de UI/polish
+antes distribuídas em C5.3/C5.5 foram absorvidas pela C5.1 consolidada e
+não precisam de subfase própria).
+
+Itens explicitamente NÃO tocados por C5.1 e que C5.2 precisa auditar:
+
+1. **`episodes_progress`** — integridade/idempotência do upsert, cascatas
+   de "marcar anteriores como assistidos".
+2. **`current_season` / `completed_seasons` / `stopped_season`** — cálculo
+   em `/api/episodes` (POST/PUT) e em `SeasonProgress`, hoje inalterado.
+3. **`stopped_episode`** — `app/api/library/sync-seasons/route.ts` grava
+   essa coluna, mas ela não foi encontrada no `supabase/schema.sql`
+   versionado (achado da C5.0, não investigado nem corrigido).
+4. **Cascatas/complete/reset de temporada** — `completeSeason` no
+   `EpisodeBrowser`, `completeCurrentSeason` no `SeasonProgress`, e os
+   helpers de completar/resetar série completa.
+5. **`released_episode_count` usando data ausente = lançado** —
+   inconsistência documentada acima entre o gating individual (novo,
+   correto) e o cálculo em lote (antigo, inalterado); C5.2 decide se
+   generaliza a nova semântica para o cálculo em lote/backend ou mantém
+   a distinção.
+6. **Sync de novas temporadas** — comportamento quando o TMDB adiciona
+   temporadas/episódios depois que o usuário já tem progresso salvo.
+7. **Compatibilidade schema real vs. versionado** — confirmar
+   `stopped_episode` e quaisquer outras colunas usadas em código mas não
+   vistas no schema auditado.
+8. **Regressão final e closeout de C5** — depois de C5.2, rodar
+   regressão independente cobrindo C5.1+C5.2 juntas antes de fechar C5
+   inteira e abrir C6.

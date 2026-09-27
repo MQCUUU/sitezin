@@ -6,6 +6,11 @@ import type {
   TitleCreditsData,
 } from "@/lib/title-credits";
 import { groupEditorialCrew } from "@/lib/title-credits";
+import type { EpisodeSummary, SeasonSummary } from "@/lib/title-seasons";
+import {
+  normalizeEpisodeSummary,
+  normalizeSeasonSummaries,
+} from "@/lib/title-seasons";
 
 /*
  * ============================================================
@@ -82,6 +87,9 @@ function compactPerson(value: unknown, crew = false): CastCredit | CrewCredit | 
 export type SanitizedTitleDetails = Record<string, unknown> & {
   credits: TitleCreditsData;
   created_by: PersonCredit[];
+  seasons: SeasonSummary[];
+  last_episode_to_air: EpisodeSummary | null;
+  next_episode_to_air: EpisodeSummary | null;
 };
 
 /**
@@ -91,7 +99,13 @@ export type SanitizedTitleDetails = Record<string, unknown> & {
  */
 export function sanitizeTitleDetails(value: unknown): SanitizedTitleDetails {
   if (!value || typeof value !== "object") {
-    return { credits: { cast: [], crew: [] }, created_by: [] };
+    return {
+      credits: { cast: [], crew: [] },
+      created_by: [],
+      seasons: [],
+      last_episode_to_air: null,
+      next_episode_to_air: null,
+    };
   }
 
   const details = value as TmdbRecord;
@@ -129,6 +143,14 @@ export function sanitizeTitleDetails(value: unknown): SanitizedTitleDetails {
         .slice(0, 10)
     : [];
 
+  const seasons: SeasonSummary[] = normalizeSeasonSummaries(details.seasons);
+  const lastEpisodeToAir: EpisodeSummary | null = normalizeEpisodeSummary(
+    details.last_episode_to_air
+  );
+  const nextEpisodeToAir: EpisodeSummary | null = normalizeEpisodeSummary(
+    details.next_episode_to_air
+  );
+
   const {
     budget: _budget,
     revenue: _revenue,
@@ -136,6 +158,9 @@ export function sanitizeTitleDetails(value: unknown): SanitizedTitleDetails {
     aggregate_credits: _aggregateCredits,
     images: _images,
     created_by: _createdBy,
+    seasons: _seasons,
+    last_episode_to_air: _lastEpisodeToAir,
+    next_episode_to_air: _nextEpisodeToAir,
     ...safeDetails
   } = details;
 
@@ -143,6 +168,9 @@ export function sanitizeTitleDetails(value: unknown): SanitizedTitleDetails {
     ...safeDetails,
     credits: { cast, crew },
     created_by: createdBy,
+    seasons,
+    last_episode_to_air: lastEpisodeToAir,
+    next_episode_to_air: nextEpisodeToAir,
   };
 }
 

@@ -34,8 +34,8 @@ export function TitleTvSections({
         <EpisodeBrowser
           tvId={Number(details.id)}
           libraryItem={libraryItem}
+          seasons={details.seasons}
           totalSeasons={Number(details.number_of_seasons || 1)}
-          initialSeason={Number(libraryItem?.current_season || 1)}
           onProgressChange={onProgressChange}
           onLibraryChange={onLibraryChange}
         />
