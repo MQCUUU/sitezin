@@ -1044,12 +1044,13 @@ export default function TitlePage({
    * ============================
    */
 
+  /*
+   * A ausência de foto NÃO exclui alguém do elenco exibido (C4.2) —
+   * `profile_path` só decide foto vs. fallback dentro do card, nunca
+   * quem aparece nem a ordem (que continua a do payload sanitizado).
+   */
   const cast: CastCredit[] =
     details.credits?.cast
-      ?.filter(
-        (person: CastCredit) =>
-          person.profile_path
-      )
       ?.slice(0, 12) || [];
 
   /*

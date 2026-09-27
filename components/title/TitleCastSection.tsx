@@ -150,24 +150,19 @@ export function TitleCastSection({
                 >
                   {person.profile_path ? (
                     <div className="mc-title-cast-card-media">
+                      {/* Nome já é texto visível logo abaixo, dentro do
+                          mesmo link — a foto é decorativa aqui para não
+                          duplicar o nome no accessible name do card. */}
                       <Poster
                         path={person.profile_path}
-                        alt={person.name}
+                        alt=""
                         sizes="(max-width: 700px) 45vw, 150px"
                         tmdbSize="w185"
                       />
                     </div>
                   ) : (
-                    <div
-                      style={{
-                        width: "100%",
-                        aspectRatio: "2 / 3",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Users size={32} />
+                    <div className="mc-title-cast-card-media mc-title-cast-card-fallback">
+                      <Users size={32} aria-hidden="true" />
                     </div>
                   )}
 

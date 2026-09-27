@@ -402,7 +402,9 @@ fase de fechamento (B5) — apenas esta documentação.
   - **C2 — Quick Peek / Preview Unification** = DONE
   - **C3 — Watch Providers Consolidation** = DONE
   - **C4 — Cast/Crew** = IN PROGRESS (C4.1 — contrato tipado de
-    cast/crew/created_by, `lib/title-credits.ts` — DONE; C4.2 = NEXT.
+    cast/crew/created_by, `lib/title-credits.ts` — DONE; C4.2 — elenco
+    completo (foto deixou de determinar quem aparece no elenco; só
+    decide foto vs. fallback dentro do card) — DONE; C4.3 = NEXT.
     Seção dedicada de fase fica para o closeout de C4.)
   - **C5 — Seasons/Episodes**
   - **C6 — Related/Collections**

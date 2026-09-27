@@ -519,6 +519,19 @@
   background: var(--mc-color-surface-muted);
 }
 
+.mc-title-cast-card-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mc-color-text-muted);
+}
+
+.title-cast-card strong,
+.title-cast-card .muted {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 /* =====================================================================
    Watch providers
    ===================================================================== */
