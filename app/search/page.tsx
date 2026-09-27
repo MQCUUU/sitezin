@@ -27,6 +27,7 @@ import {
 import { MediaPreviewDialog } from "@/components/media/preview/MediaPreviewDialog";
 import { WatchProviderList } from "@/components/media/preview/WatchProviderList";
 import { fromSearchItem } from "@/components/media/preview/adapters";
+import { normalizeWatchProviders } from "@/components/media/providers";
 
 function normalizeText(value: string) {
   return value
@@ -855,7 +856,7 @@ function SearchPageContent() {
           onRating: (_, rating) => previewItem && updateRating(previewItem, rating),
           disabled: previewItem ? processing === `${previewItem.media_type}-${previewItem.id}` : false,
         }}
-        providers={<WatchProviderList details={previewDetails} loading={previewDetailsLoading} />}
+        providers={<WatchProviderList data={normalizeWatchProviders(previewDetails?.watch_providers, "BR")} loading={previewDetailsLoading} />}
       />
 
       {removeTarget && (

@@ -23,12 +23,19 @@ export type ProviderLogoProps = {
  * audited renderers already used (C3.1 spec §21). Uses `w92` via `Poster`,
  * the common denominator size across every renderer that used TMDB sizing.
  *
- * Not consumed by any surface yet — C3.1 is foundation-only.
+ * Accessibility fix (C3.2 §9): the fallback branch used to render a bare
+ * `<div>` (no role, not exposed to the accessibility tree at all) around
+ * an `aria-hidden` letter — the provider ended up with no accessible name
+ * whatsoever when it had no logo. The div now carries `role="img"` +
+ * `aria-label`, so the container itself is the named image; the letter
+ * inside stays a purely visual, `aria-hidden` detail. When there IS a
+ * logo, `Poster`'s own `<img alt>` already provides the accessible name,
+ * so no extra role is needed there.
  */
 export function ProviderLogo({ provider, sizes, className }: ProviderLogoProps) {
   if (!provider.logoPath) {
     return (
-      <div className={className} title={provider.name}>
+      <div className={className} role="img" aria-label={provider.name} title={provider.name}>
         <span aria-hidden="true">{String(provider.name || "?").slice(0, 1)}</span>
       </div>
     );

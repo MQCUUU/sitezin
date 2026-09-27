@@ -33,6 +33,7 @@ import {
 import { MediaPreviewDialog } from "@/components/media/preview/MediaPreviewDialog";
 import { WatchProviderList } from "@/components/media/preview/WatchProviderList";
 import { fromDiscoverItem } from "@/components/media/preview/adapters";
+import { normalizeWatchProviders } from "@/components/media/providers";
 
 export default function DiscoverPage() {
   return (
@@ -845,7 +846,7 @@ function DiscoverContent() {
           onRating: (_, rating) => previewItem && updatePersonalRating(previewItem, rating),
           disabled: previewItem ? processing === `${previewItem.media_type}-${previewItem.id}` : false,
         }}
-        providers={<WatchProviderList details={previewDetails} loading={previewDetailsLoading} />}
+        providers={<WatchProviderList data={normalizeWatchProviders(previewDetails?.watch_providers, "BR")} loading={previewDetailsLoading} />}
       />
 
       {removeTarget && (
