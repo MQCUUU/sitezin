@@ -1,0 +1,271 @@
+/*
+ * MyCatalog Premium UI V2 — shared Quick Peek / MediaPreviewDialog (C2.1).
+ *
+ * This is the foundation only: no surface (Discover, Search, For You,
+ * Collection) has been migrated onto MediaPreviewDialog yet, so none of
+ * their existing `.discover-preview-*` styles are touched here.
+ */
+
+.mc-dialog.mc-preview-dialog {
+  width: min(680px, 100%);
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.mc-preview-dialog .mc-preview-backdrop,
+.mc-preview-dialog .mc-preview-body {
+  flex-shrink: 0;
+}
+
+.mc-preview-dialog {
+  overflow-y: auto;
+}
+
+.mc-preview-close {
+  position: absolute;
+  top: var(--mc-space-12);
+  right: var(--mc-space-12);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--mc-radius-pill);
+  background: color-mix(in srgb, black 45%, transparent);
+  color: #fff;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+
+.mc-preview-close:hover {
+  background: color-mix(in srgb, black 60%, transparent);
+}
+
+.mc-preview-backdrop {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 7;
+  background: var(--mc-color-surface-muted);
+}
+
+.mc-preview-backdrop-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(var(--mc-color-scrim), 0.05) 0%,
+    rgba(var(--mc-color-scrim), 0.55) 75%,
+    rgba(var(--mc-color-scrim), 0.85) 100%
+  );
+}
+
+.mc-preview-body {
+  display: flex;
+  gap: var(--mc-space-16);
+  padding: var(--mc-space-20);
+}
+
+.mc-preview-poster {
+  position: relative;
+  flex-shrink: 0;
+  width: 96px;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--mc-radius-md);
+  overflow: hidden;
+  background: var(--mc-color-surface-muted);
+  box-shadow: var(--mc-shadow-md);
+}
+
+.mc-preview-poster-status {
+  position: absolute;
+  left: var(--mc-space-6);
+  bottom: var(--mc-space-6);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mc-space-4);
+  padding: 2px var(--mc-space-6);
+  border-radius: var(--mc-radius-pill);
+  background: color-mix(in srgb, black 55%, transparent);
+  color: #fff;
+  font-size: var(--mc-text-caption-size);
+  line-height: var(--mc-text-caption-line);
+  backdrop-filter: blur(4px);
+}
+
+.mc-preview-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mc-color-success);
+}
+
+.mc-preview-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mc-space-8);
+}
+
+.mc-preview-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--mc-space-6);
+  color: var(--mc-color-text-secondary);
+  font-family: var(--mc-font-sans);
+  font-size: var(--mc-text-overline-size);
+  letter-spacing: var(--mc-text-overline-tracking);
+  text-transform: uppercase;
+}
+
+.mc-preview-title {
+  margin: 0;
+  font-family: var(--mc-font-sans);
+  font-size: var(--mc-text-h3-size);
+  line-height: var(--mc-text-h3-line);
+  font-weight: var(--mc-text-h3-weight);
+  color: var(--mc-color-text);
+}
+
+.mc-preview-original-title {
+  color: var(--mc-color-text-muted);
+  font-size: var(--mc-text-body-small-size);
+  font-style: italic;
+}
+
+.mc-preview-meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--mc-space-12);
+  color: var(--mc-color-text-secondary);
+  font-size: var(--mc-text-body-small-size);
+}
+
+.mc-preview-rating-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mc-space-4);
+  color: var(--mc-color-rating);
+  font-weight: 600;
+}
+
+.mc-preview-overview {
+  margin: 0;
+  color: var(--mc-color-text-secondary);
+  font-size: var(--mc-text-body-small-size);
+  line-height: var(--mc-text-body-small-line);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mc-preview-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--mc-space-12);
+  margin-top: var(--mc-space-8);
+}
+
+.mc-preview-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--mc-space-8);
+}
+
+.mc-preview-rating {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mc-space-6);
+}
+
+.mc-preview-rating-label {
+  color: var(--mc-color-text-muted);
+  font-size: var(--mc-text-caption-size);
+}
+
+.mc-preview-rating-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mc-space-4);
+}
+
+.mc-preview-rating-btn {
+  width: 28px;
+  height: 28px;
+  border: var(--mc-border-subtle);
+  border-radius: var(--mc-radius-sm);
+  background: var(--mc-color-surface);
+  color: var(--mc-color-text-secondary);
+  font-size: var(--mc-text-caption-size);
+  cursor: pointer;
+}
+
+.mc-preview-rating-btn:hover:not(:disabled) {
+  background: var(--mc-color-surface-hover);
+}
+
+.mc-preview-rating-btn--active {
+  border-color: var(--mc-color-rating);
+  background: color-mix(in srgb, var(--mc-color-rating) 18%, var(--mc-color-surface));
+  color: var(--mc-color-rating);
+}
+
+.mc-preview-rating-btn:disabled,
+.mc-preview-rating-clear:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.mc-preview-rating-clear {
+  padding: 0 var(--mc-space-8);
+  border: none;
+  background: none;
+  color: var(--mc-color-text-muted);
+  font-size: var(--mc-text-caption-size);
+  cursor: pointer;
+}
+
+.mc-preview-rating-clear:hover:not(:disabled) {
+  color: var(--mc-color-text-secondary);
+}
+
+@media (max-width: 480px) {
+  .mc-preview-body {
+    flex-direction: column;
+    padding: var(--mc-space-16);
+  }
+
+  .mc-preview-poster {
+    width: 76px;
+  }
+
+  .mc-preview-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mc-preview-rating-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(44px, 1fr));
+    gap: var(--mc-space-6);
+  }
+
+  .mc-preview-rating-btn {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .mc-preview-rating-clear {
+    grid-column: span 2;
+    min-height: 44px;
+  }
+}
