@@ -1,6 +1,8 @@
 import { ExternalLink } from "lucide-react";
 
-import { Poster } from "@/components/Poster";
+import { normalizeWatchProviders } from "@/components/media/providers/normalize";
+import { ProviderLogo } from "@/components/media/providers/ProviderLogo";
+import type { RawWatchProviders, WatchProviderGroup, WatchProviderKind } from "@/components/media/providers/types";
 import type { LooseTitleDetails } from "./types";
 
 export type TitleWatchProvidersProps = {
@@ -8,47 +10,37 @@ export type TitleWatchProvidersProps = {
 };
 
 /**
- * "Onde assistir no Brasil" — deriva as listas de streaming/aluguel/compra
- * do `watch_providers` que já vem embutido em `details` e não renderiza
- * nada quando não há nenhum provider (mesma condição `hasWatchProviders`
- * que o container aplicava antes de montar a seção).
+ * Group copy (title + description) is Title-specific presentation, not part
+ * of the shared model — the normalized `kind` only carries the semantic
+ * grouping, never UI strings (C3.1 spec §15, C3.3 §10). `watch_providers` on
+ * `LooseTitleDetails` is `any` via the pre-existing `Record<string, any>`
+ * intersection (components/title/types.ts) — a documented boundary from
+ * C1.2, not something this migration introduces or widens.
+ */
+const GROUP_COPY: Record<WatchProviderKind, { title: string; description: string }> = {
+  streaming: { title: "Streaming", description: "Incluído em assinatura, gratuito ou com anúncios" },
+  rent: { title: "Aluguel", description: "Disponível para alugar digitalmente" },
+  buy: { title: "Compra", description: "Disponível para compra digital" },
+};
+
+/**
+ * "Onde assistir no Brasil" — Title's own rich composition (section heading,
+ * per-group description + count, attribution footer), now sourced from
+ * `normalizeWatchProviders` instead of parsing `watch_providers` itself.
+ * Region stays explicit here ("BR"), not in the foundation (C3.3 spec §5).
  */
 export function TitleWatchProviders({ details }: TitleWatchProvidersProps) {
-  const watchProviders = details.watch_providers as any;
-  const brazilWatch = watchProviders?.results?.BR || null;
+  /*
+   * `details.watch_providers` is `unknown` (lib/title-details.ts:136 —
+   * `let watchProviders: unknown = null`), not `any`. This is the one,
+   * specifically-typed assertion needed to cross that pre-existing
+   * boundary — not `as any`, and not a new `any`/`Record<string, any>`
+   * (C3.3 spec §7/§45).
+   */
+  const rawWatchProviders = details.watch_providers as RawWatchProviders | null | undefined;
+  const data = normalizeWatchProviders(rawWatchProviders, "BR");
 
-  const streamingProviders = Array.isArray(brazilWatch?.flatrate)
-    ? brazilWatch.flatrate
-    : [];
-
-  const freeProviders = Array.isArray(brazilWatch?.free)
-    ? brazilWatch.free
-    : [];
-
-  const adsProviders = Array.isArray(brazilWatch?.ads) ? brazilWatch.ads : [];
-
-  const rentProviders = Array.isArray(brazilWatch?.rent)
-    ? brazilWatch.rent
-    : [];
-
-  const buyProviders = Array.isArray(brazilWatch?.buy) ? brazilWatch.buy : [];
-
-  const subscriptionProviders = [
-    ...streamingProviders,
-    ...freeProviders,
-    ...adsProviders,
-  ].filter(
-    (provider: any, index: number, all: any[]) =>
-      all.findIndex((item) => item.provider_id === provider.provider_id) ===
-      index
-  );
-
-  const hasWatchProviders =
-    subscriptionProviders.length > 0 ||
-    rentProviders.length > 0 ||
-    buyProviders.length > 0;
-
-  if (!hasWatchProviders) return null;
+  if (data.groups.length === 0) return null;
 
   return (
     <section className="section mc-title-section title-watch-section">
@@ -59,38 +51,18 @@ export function TitleWatchProviders({ details }: TitleWatchProvidersProps) {
       </div>
 
       <div className="title-watch-panel panel">
-        {subscriptionProviders.length > 0 && (
-          <WatchProviderGroup
-            title="Streaming"
-            description="Incluído em assinatura, gratuito ou com anúncios"
-            providers={subscriptionProviders}
-          />
-        )}
+        {data.groups.map((group) => (
+          <TitleWatchProviderGroup key={group.kind} group={group} />
+        ))}
 
-        {rentProviders.length > 0 && (
-          <WatchProviderGroup
-            title="Aluguel"
-            description="Disponível para alugar digitalmente"
-            providers={rentProviders}
-          />
-        )}
-
-        {buyProviders.length > 0 && (
-          <WatchProviderGroup
-            title="Compra"
-            description="Disponível para compra digital"
-            providers={buyProviders}
-          />
-        )}
-
-        {brazilWatch?.link && (
+        {data.attributionUrl && (
           <div className="title-watch-footer">
             <span className="muted">
               Disponibilidade fornecida pelo TMDB/JustWatch e pode mudar.
             </span>
 
             <a
-              href={brazilWatch.link}
+              href={data.attributionUrl}
               target="_blank"
               rel="noreferrer"
               className="btn"
@@ -105,50 +77,27 @@ export function TitleWatchProviders({ details }: TitleWatchProvidersProps) {
   );
 }
 
-function WatchProviderGroup({
-  title,
-  description,
-  providers,
-}: {
-  title: string;
-  description: string;
-  providers: any[];
-}) {
+function TitleWatchProviderGroup({ group }: { group: WatchProviderGroup }) {
+  const copy = GROUP_COPY[group.kind];
+
   return (
     <div className="title-watch-group">
       <div className="title-watch-group-head">
         <div>
-          <strong>{title}</strong>
+          <strong>{copy.title}</strong>
 
-          <span>{description}</span>
+          <span>{copy.description}</span>
         </div>
 
-        <b>{providers.length}</b>
+        <b>{group.providers.length}</b>
       </div>
 
       <div className="title-watch-providers">
-        {providers.map((provider: any) => (
-          <div
-            key={provider.provider_id}
-            className="title-watch-provider"
-            title={provider.provider_name}
-          >
-            {provider.logo_path ? (
-              <div className="mc-title-provider-logo">
-                <Poster
-                  path={provider.logo_path}
-                  alt={provider.provider_name}
-                  sizes="40px"
-                  tmdbSize="w92"
-                />
-              </div>
-            ) : (
-              <div className="title-watch-provider-fallback">
-                {String(provider.provider_name || "?").slice(0, 1)}
-              </div>
-            )}
+        {group.providers.map((provider) => (
+          <div key={provider.id} className="title-watch-provider" title={provider.name}>
+            <ProviderLogo provider={provider} sizes="40px" className="mc-title-provider-logo" />
 
-            <span>{provider.provider_name}</span>
+            <span>{provider.name}</span>
           </div>
         ))}
       </div>
