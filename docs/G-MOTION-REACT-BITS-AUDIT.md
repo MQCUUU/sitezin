@@ -6,8 +6,11 @@ CSS, pacote ou comportamento foi alterado. Fase F encerrada em
 `d8c9405 feat(premium): consolidate premium features`; checkpoint
 inicial estava limpo.
 
-> **Status: G0 = DONE.** Proposta de implementação em § 34 (G1). Decisões
-> de produto necessárias em § 37.
+> **Status: G0 = DONE, G1 = DONE. Fase G encerrada.** A implementação de
+> G1 (consolidação a partir da proposta da seção 34) está documentada em
+> [`docs/PREMIUM-UI-V2.md` § 30](./PREMIUM-UI-V2.md#30-fase-g1--motion--interaction-consolidation-done).
+> As seções abaixo permanecem como registro fiel do estado encontrado
+> **antes** de G1.
 
 ## 1. Definição real de G no roadmap
 

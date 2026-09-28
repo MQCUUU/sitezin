@@ -17,7 +17,21 @@ export function CarouselRail({ children, className = "" }: { children: ReactNode
   const move = (direction: -1 | 1) => {
     const rail = railRef.current;
     if (!rail) return;
-    rail.scrollBy({ left: direction * Math.max(rail.clientWidth * 0.82, 280), behavior: "smooth" });
+    /*
+     * G1 — `scrollBy({ behavior: "smooth" })` é um argumento explícito da
+     * Scroll API, não uma propriedade CSS: a regra global
+     * `scroll-behavior: auto !important` (que zera o motion do resto do
+     * app) não necessariamente sobrepõe um `behavior` passado direto na
+     * chamada JS. Checando as duas preferências aqui (SO + app) e caindo
+     * para "auto" fecha esse gap sem depender só do CSS.
+     */
+    const reduceMotion =
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+      document.documentElement.dataset.motion === "reduced";
+    rail.scrollBy({
+      left: direction * Math.max(rail.clientWidth * 0.82, 280),
+      behavior: reduceMotion ? "auto" : "smooth",
+    });
   };
 
   useEffect(() => {

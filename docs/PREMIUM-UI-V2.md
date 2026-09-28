@@ -439,9 +439,18 @@ fase de fechamento (B5) — apenas esta documentação.
     filmes já assistidos, Notifications sem preferências órfãs visíveis,
     STATUS_LABELS unificado no Diário, Export/Backup confirmado seguro
     sem alteração).
-- **G — Motion & React Bits** = IN PROGRESS (G0 — auditoria em
-  [`docs/G-MOTION-REACT-BITS-AUDIT.md`](./G-MOTION-REACT-BITS-AUDIT.md) —
-  DONE; G1 — implementação consolidada = NEXT).
+- **G — Motion & React Bits** = DONE (G0 auditoria + G1 implementação
+  consolidada — ver [`docs/G-MOTION-REACT-BITS-AUDIT.md`](./G-MOTION-REACT-BITS-AUDIT.md)
+  para o detalhe completo de ambas as subfases).
+  - **G0 — Auditoria** = DONE.
+  - **G1 — Consolidação** = DONE (React Bits avaliado e não adotado,
+    duplicação de reduced-motion removida, gap de foco em `.card-actions`
+    corrigido, feedback de pressão adicionado aos controles principais,
+    menus de status ganharam transição consistente, `CarouselRail`
+    respeita reduced-motion em JS).
+- **H — Mobile/Accessibility/Performance** = próxima na ordem do
+  roadmap, escopo ainda não detalhado (mesma situação que F e G tinham
+  antes de suas próprias auditorias — precisa de um H0).
 - **H — Mobile/Accessibility/Performance**
 - **I — QA/Polish/Release**
 
@@ -1357,3 +1366,113 @@ foram preservadas, só escondidas da UI ativa.
 **Resultado da fase: F1 DONE. FASE F — PREMIUM FEATURES ENCERRADA.
 Próxima fase: G — Motion & React Bits (nome definido no roadmap, escopo
 ainda não detalhado).**
+
+## 30. Fase G1 — Motion & Interaction Consolidation (DONE)
+
+**Escopo:** implementação consolidada da Fase G a partir do diagnóstico
+do G0 (ver [`docs/G-MOTION-REACT-BITS-AUDIT.md`](./G-MOTION-REACT-BITS-AUDIT.md)).
+
+### Decisão de React Bits
+
+**Não adotado.** Os 5 candidatos avaliados no G0 (Spotlight/Glow Card,
+Animated gradient text, Marquee, Tilt 3D, Particles/background) foram
+todos classificados `NO` — nenhum resolve um problema real que a
+fundação de tokens já existente (`styles/tokens.css`) não resolvesse
+com menor custo. `REACT BITS ADDED = 0`. Nenhuma dependência nova
+instalada (`package.json`/lockfile inalterados).
+
+### O que mudou
+
+- **`app/globals.css` — duplicação de reduced-motion removida**: dois
+  blocos `@media (prefers-reduced-motion: reduce) { *, *::before,
+  *::after {...} }` idênticos (dois "Lotes" de patch independentes que
+  não sabiam um do outro) viraram um só. Efeito visual idêntico — é a
+  mesma regra universal `!important`, a posição no arquivo não muda o
+  resultado.
+- **`.mc-skeleton::after` (skeleton legado) ganhou reduced-motion
+  explícito** — antes só herdava o congelamento genérico (que podia
+  deixar uma faixa de brilho parada em vez de um fundo estático limpo).
+  Agora esconde a faixa (`display:none`) sob `[data-motion="reduced"]`
+  e `prefers-reduced-motion: reduce`, igualando o comportamento que
+  `.mc-ui-skeleton` (sistema novo) já tinha.
+- **`components/CarouselRail.tsx`** — `scrollBy({behavior:"smooth"})` é
+  um argumento JS da Scroll API, não uma propriedade CSS; a regra
+  global `scroll-behavior:auto!important` não é garantida a sobrepor
+  esse argumento em todos os browsers. Agora o componente checa
+  `prefers-reduced-motion` (SO) e `data-motion="reduced"` (preferência
+  do app, já configurável em Configurações → Aparência) antes de rolar,
+  e usa `behavior:"auto"` quando qualquer um estiver ativo.
+- **Gap real de foco corrigido**: `.card-actions` (ações do card —
+  Preview/Favoritar/Status) eram reveladas só no hover
+  (`@media(hover:hover)`, já corretamente protegido para touch) mas sem
+  `:focus-within` equivalente — um usuário de teclado tabulava até um
+  botão com `opacity:0`. Adicionado `.card:focus-within .card-actions`
+  ao lado de `.card:hover .card-actions`. Verificado em runtime: o
+  botão atinge `opacity:1` ao receber foco via teclado.
+- **Feedback de pressão (`:active`) adicionado** aos controles
+  principais que não tinham nenhum — `.btn`, `.card-action` (2
+  variantes), `.view-switcher button`, `.library-quick-filter`,
+  `.discover-favorite-button`, `.library-page-btn` — todos com
+  transform/background sutis (ex.: `scale(0.96)`,
+  `translateY(0.5px)`), guardados por `:not(:disabled)` onde aplicável,
+  sem alterar layout. Verificado em runtime: `.card-action` aplica
+  `matrix(0.96,0,0,0.96,0,0)` durante o clique.
+- **Menus de status ganharam transição de abertura consistente** —
+  `library-card-status-menu`, `discover-library-status-menu`,
+  `fy-status-menu`, `collection-status-menu`, `pick-status-menu` agora
+  usam `animation: mc-popover-in var(--mc-duration-fast)
+  var(--mc-ease-enter)` (o mesmo keyframe tokenizado, já
+  reduced-motion-safe, que `Popover.tsx` usa) em vez de aparecer com
+  corte seco. Comportamento funcional (abrir/fechar, ações) preservado
+  — só a transição visual foi adicionada.
+- **Achado durante a implementação, corrigido junto**: `.account-dropdown`
+  tinha DUAS regras de `animation` competindo no mesmo elemento — a
+  própria (`accountMenuIn`, legada) e `mc-popover-in` (herdada de
+  `.mc-popover`, a classe que `<Popover>` sempre aplica). Quem vencia
+  dependia só da ordem de importação das folhas de estilo. Removida a
+  duplicata local (`accountMenuIn` e seu `@keyframes`, 0 outros
+  consumidores confirmados) — o menu de conta passa a usar só a
+  animação tokenizada compartilhada.
+- **`.media-carousel-arrow` (2 blocos aparentemente duplicados no G0)**
+  — investigado e confirmado que **não são duplicatas reais**: o
+  segundo bloco é uma sobrescrita deliberada em cascata (muda posição,
+  opacidade padrão para hover-reveal, e o comportamento em mobile de
+  "esconder" para "mostrar menor"). Preservado sem alteração, conforme
+  instrução de não quebrar cascata intencional.
+
+### Fora do escopo, por decisão de produto (G1)
+
+React Bits, page transitions, scroll reveal global, partículas, cursor
+follower, parallax global, tilt 3D, marquee contínuo, backgrounds
+animados, shaders pesados, efeitos de texto decorativos globais —
+nenhum implementado.
+
+### QA em runtime
+
+Conta descartável criada via `/signup` no `TEST_NEON_AUTH_BASE_URL` +
+`TEST_DATABASE_URL`, com 2 títulos seedados para exercitar Quick Peek,
+menu de status e feedback de pressão. Verificado com motion normal E
+com `prefers-reduced-motion: reduce`: Title, Library, Profile, Stats,
+Retrospective, Home — zero erros de console novos, zero overflow
+horizontal em 360/390/430/768/1440. Quick Peek (`MediaPreviewDialog`)
+abre e fecha corretamente por Escape em ambos os modos de motion — sem
+regressão no `Dialog` primitive (não reescrito, conforme instrução).
+Menu de status abre corretamente com a nova animação. Foco por teclado
+em `.card-actions` confirmado revelando as ações
+(`opacity:1`). Feedback de pressão confirmado (`transform:
+scale(0.96)`) no clique real. `CarouselRail`: a correção de
+reduced-motion foi verificada por revisão de código e build (sem
+erro de tipo/lint) — o fixture de QA não tinha conteúdo suficiente
+para produzir uma trilha com overflow real em nenhuma superfície
+disponível na conta descartável, então o comportamento visual do
+scroll em si não foi observado diretamente no browser desta vez;
+documentado como limitação, não como pendência de código.
+
+### Banco de dados
+
+Nenhuma tabela tocada — Fase G é puramente CSS/motion, sem contato com
+banco. `MIGRATIONS = 0`, `DB SCHEMA DIFF = 0`.
+
+**Resultado da fase: G1 DONE. FASE G — MOTION & REACT BITS ENCERRADA.
+Próxima fase: H — Mobile/Accessibility/Performance (nome definido no
+roadmap, escopo ainda não detalhado).**
