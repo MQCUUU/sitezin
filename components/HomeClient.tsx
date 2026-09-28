@@ -421,14 +421,100 @@ function itemTimestamp(
     : 0;
 }
 
+/*
+ * V2.1-D — contrato de GET /api/home (ver app/api/home/route.ts).
+ * As linhas chegam no mesmo formato de GET /api/library
+ * ({ id, status, ..., media: {...} }); `flattenHomeItem` faz o mesmo
+ * achatamento que a Home sempre fez (`library_id` + `...item.media`).
+ */
+type HomeTotals = {
+  library: number;
+  watching: number;
+  want: number;
+  watched: number;
+  favorites: number;
+  rated: number;
+  average_rating: number | null;
+  completion_base: number;
+};
+
+type HomeData = {
+  totals: HomeTotals;
+  watching: LibraryItem[];
+  want: LibraryItem[];
+  best: LibraryItem[];
+  recent: LibraryItem[];
+};
+
+const EMPTY_HOME_DATA: HomeData = {
+  totals: {
+    library: 0,
+    watching: 0,
+    want: 0,
+    watched: 0,
+    favorites: 0,
+    rated: 0,
+    average_rating: null,
+    completion_base: 0,
+  },
+  watching: [],
+  want: [],
+  best: [],
+  recent: [],
+};
+
+function flattenHomeItem(item: any): LibraryItem {
+  return {
+    ...item,
+    library_id: item.id,
+    ...item.media,
+  };
+}
+
+function normalizeHomeData(raw: any): HomeData {
+  const shelf = (value: unknown): LibraryItem[] =>
+    Array.isArray(value) ? value.map(flattenHomeItem) : [];
+
+  return {
+    totals: { ...EMPTY_HOME_DATA.totals, ...(raw?.totals || {}) },
+    watching: shelf(raw?.watching),
+    want: shelf(raw?.want),
+    best: shelf(raw?.best),
+    recent: shelf(raw?.recent),
+  };
+}
+
+/*
+ * Valida o formato ANTES de usar (resposta da API OU cache de
+ * sessionStorage) — um cache antigo/incompatível nunca deve quebrar a
+ * Home; simplesmente é ignorado.
+ */
+function isHomeData(value: any): value is HomeData {
+  return (
+    value &&
+    typeof value === "object" &&
+    value.totals &&
+    typeof value.totals.library === "number" &&
+    Array.isArray(value.watching) &&
+    Array.isArray(value.want) &&
+    Array.isArray(value.best) &&
+    Array.isArray(value.recent)
+  );
+}
+
 export default function HomeClient() {
+  /*
+   * V2.1-D — antes: `data` = biblioteca INTEIRA (GET /api/library).
+   * Agora: só o que a Home usa (GET /api/home) — 4 prateleiras com
+   * limite fixo + totais agregados no SQL.
+   */
   const [
-    data,
-    setData,
+    homeData,
+    setHomeData,
   ] =
-    useState<
-      LibraryItem[]
-    >([]);
+    useState<HomeData>(
+      EMPTY_HOME_DATA
+    );
 
   const [
     loading,
@@ -588,9 +674,7 @@ export default function HomeClient() {
     if (
       !user
     ) {
-      setData(
-        []
-      );
+      setHomeData(EMPTY_HOME_DATA);
 
       setCalendar(
         []
@@ -618,17 +702,17 @@ export default function HomeClient() {
     let cancelled =
       false;
 
-    const homeCacheKey = `mycatalog:home:v2:${user.email}`;
+    const homeCacheKey = `mycatalog:home:v3:${user.email}`;
     let hasLibraryCache = false;
     let hasCalendarCache = false;
     let hasActivityCache = false;
     try {
       const cached = JSON.parse(sessionStorage.getItem(homeCacheKey) || "null");
       if (cached && Date.now() - cached.savedAt < 5 * 60 * 1000) {
-        hasLibraryCache = Array.isArray(cached.library);
+        hasLibraryCache = isHomeData(cached.home);
         hasCalendarCache = Array.isArray(cached.calendar);
         hasActivityCache = Array.isArray(cached.activity);
-        if (hasLibraryCache) setData(cached.library);
+        if (hasLibraryCache) setHomeData(cached.home);
         if (hasCalendarCache) setCalendar(cached.calendar);
         if (hasActivityCache) setActivity(cached.activity);
         if (hasLibraryCache) setLoading(false);
@@ -645,79 +729,34 @@ export default function HomeClient() {
       try {
         if (!hasLibraryCache) setLoading(true);
 
-        const response =
-          await fetch(
-            "/api/library",
-            {
-              cache:
-                "no-store",
-            }
-          );
+        const response = await fetch("/api/home", { cache: "no-store" });
+        const result = await response.json().catch(() => null);
 
-        const result =
-          await response
-            .json()
-            .catch(
-              () => null
-            );
-
-        if (
-          response.status ===
-          401
-        ) {
+        if (response.status === 401) {
           return;
         }
 
-        if (
-          !response.ok
-        ) {
+        if (!response.ok) {
           throw new Error(
-            result?.error ||
-            "Não foi possível carregar a biblioteca."
+            result?.error || "Não foi possível carregar a Home."
           );
         }
 
-        const library =
-          Array.isArray(
-            result
-          )
-            ? result.map(
-                (
-                  item:
-                    any
-                ) => ({
-                  ...item,
+        const home = normalizeHomeData(result);
 
-                  library_id:
-                    item.id,
-
-                  ...item.media,
-                })
-              )
-            : [];
-
-        if (
-          !cancelled
-        ) {
-          setData(
-            library
-          );
-          saveHomeCache({ library });
+        if (!isHomeData(home)) {
+          throw new Error("Resposta da Home em formato inesperado.");
         }
-      } catch (
-        error
-      ) {
-        console.error(
-          "Erro ao carregar Home:",
-          error
-        );
+
+        if (!cancelled) {
+          setHomeData(home);
+          saveHomeCache({ home });
+        }
+      } catch (error) {
+        console.error("Erro ao carregar Home:", error);
       } finally {
-        if (
-          !cancelled
-        ) {
-          setLoading(
-            false
-          );
+        if (!cancelled) {
+          setLoading(false);
         }
       }
     }
@@ -953,212 +992,33 @@ export default function HomeClient() {
    * ==========================================
    */
 
-  const watching =
-    useMemo(
-      () =>
-        [
-          ...data,
-        ]
-          .filter(
-            (
-              item
-            ) =>
-              item.status ===
-                "watching" ||
-              item.status ===
-                "rewatching"
-          )
-          .sort(
-            (
-              a,
-              b
-            ) =>
-              itemTimestamp(
-                b
-              ) -
-              itemTimestamp(
-                a
-              )
-          ),
-      [
-        data,
-      ]
-    );
+  /*
+   * V2.1-D — as prateleiras já chegam ordenadas e limitadas do
+   * servidor; os totais (contagens/média) já chegam agregados. Nada
+   * mais é filtrado/ordenado sobre a biblioteca inteira no browser.
+   */
+  const watching = homeData.watching;
+  const want = homeData.want;
+  const best = homeData.best;
+  const recent = homeData.recent;
 
-  const want =
-    useMemo(
-      () =>
-        [
-          ...data,
-        ]
-          .filter(
-            (
-              item
-            ) =>
-              item.status ===
-              "want"
-          )
-          .sort(
-            (
-              a,
-              b
-            ) =>
-              itemTimestamp(
-                b
-              ) -
-              itemTimestamp(
-                a
-              )
-          ),
-      [
-        data,
-      ]
-    );
-
-  const recent =
-    useMemo(
-      () =>
-        [
-          ...data,
-        ]
-          .sort(
-            (
-              a:
-                any,
-              b:
-                any
-            ) =>
-              new Date(
-                b.added_at ||
-                0
-              ).getTime() -
-              new Date(
-                a.added_at ||
-                0
-              ).getTime()
-          ),
-      [
-        data,
-      ]
-    );
-
-  const best =
-    useMemo(
-      () =>
-        [
-          ...data,
-        ]
-          .filter(
-            (
-              item
-            ) =>
-              item.personal_rating !==
-                null &&
-              item.personal_rating !==
-                undefined
-          )
-          .sort(
-            (
-              a,
-              b
-            ) =>
-              Number(
-                b.personal_rating ||
-                0
-              ) -
-              Number(
-                a.personal_rating ||
-                0
-              )
-          ),
-      [
-        data,
-      ]
-    );
-
-  const watched =
-    data.filter(
-      (
-        item
-      ) =>
-        item.status ===
-          "watched" ||
-        item.status ===
-          "rewatching" ||
-        item.status ===
-          "rewatched"
-    ).length;
-
-  const wantCount =
-    data.filter(
-      (
-        item
-      ) =>
-        item.status ===
-        "want"
-    ).length;
-
-  const favorites =
-    data.filter(
-      (
-        item
-      ) =>
-        item.favorite ===
-        true
-    ).length;
-
-  const ratedItems =
-    data.filter(
-      (
-        item
-      ) =>
-        item.personal_rating !==
-          null &&
-        item.personal_rating !==
-          undefined
-    );
+  const librarySize = homeData.totals.library;
+  const watchingCount = homeData.totals.watching;
+  const watched = homeData.totals.watched;
+  const wantCount = homeData.totals.want;
+  const favorites = homeData.totals.favorites;
+  const ratedCount = homeData.totals.rated;
 
   const averageRating =
-    ratedItems.length >
-    0
-      ? (
-          ratedItems.reduce(
-            (
-              sum,
-              item
-            ) =>
-              sum +
-              Number(
-                item.personal_rating ||
-                  0
-              ),
-            0
-          ) /
-          ratedItems.length
-        ).toFixed(
-          1
-        )
+    homeData.totals.average_rating !== null
+      ? homeData.totals.average_rating.toFixed(1)
       : "—";
 
-  const completionBase =
-    data.filter(
-      (
-        item
-      ) =>
-        item.status !==
-        "want"
-    ).length;
+  const completionBase = homeData.totals.completion_base;
 
   const progress =
-    completionBase >
-    0
-      ? Math.round(
-          (
-            watched /
-            completionBase
-          ) *
-            100
-        )
+    completionBase > 0
+      ? Math.round((watched / completionBase) * 100)
       : 0;
 
   const nextEvent =
@@ -1334,13 +1194,13 @@ export default function HomeClient() {
             "DESCUBRA ALGO NOVO",
 
           title:
-            data.length >
+            librarySize >
             0
               ? "Que tal encontrar seu próximo título?"
               : "Comece seu catálogo",
 
           description:
-            data.length >
+            librarySize >
             0
               ? "Use o Descobrir, Para você ou deixe a roleta escolher."
               : "Pesquise, descubra e adicione seus primeiros filmes e séries.",
@@ -1353,7 +1213,7 @@ export default function HomeClient() {
         };
       },
       [
-        data.length,
+        librarySize,
         nextEvent,
         nextEventDays,
         primaryWatching,
@@ -1575,13 +1435,13 @@ export default function HomeClient() {
         </div>
 
         {!loading &&
-          data.length >
+          librarySize >
             0 && (
           <div className="home-smart-summary">
             <span>
               <strong>
                 {
-                  data.length
+                  librarySize
                 }
               </strong>
               na biblioteca
@@ -1590,7 +1450,7 @@ export default function HomeClient() {
             <span>
               <strong>
                 {
-                  watching.length
+                  watchingCount
                 }
               </strong>
               em andamento
@@ -1771,7 +1631,7 @@ export default function HomeClient() {
           }
           label="Em andamento"
           value={
-            watching.length
+            watchingCount
           }
         />
 
@@ -1810,7 +1670,7 @@ export default function HomeClient() {
           }
           label="Avaliados"
           value={
-            ratedItems.length
+            ratedCount
           }
         />
 
@@ -2136,7 +1996,7 @@ export default function HomeClient() {
               value={
                 loading
                   ? "—"
-                  : data.length
+                  : librarySize
               }
               icon={
                 <Library
@@ -2257,7 +2117,7 @@ export default function HomeClient() {
       {/* ====================================== */}
 
       {!loading &&
-        data.length ===
+        librarySize ===
           0 && (
         <section className="section">
           <div className="panel home-empty-state">

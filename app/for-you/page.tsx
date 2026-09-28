@@ -573,88 +573,46 @@ export default function ForYouPage() {
     return q;
   }
 
-  async function loadLibrary() {
-    try {
-      const response =
-        await fetch(
-          "/api/library"
-        );
+  /*
+   * V2.1-D — antes esta tela buscava /api/library INTEIRA
+   * (sem paginação) só para descobrir o estado (salvo/status/
+   * favorito/nota) dos cards. Agora /api/for-you já devolve
+   * `library_id`/`status`/`favorite`/`personal_rating` em cada
+   * resultado salvo — o estado local é semeado a partir das
+   * prateleiras recebidas (só K cards visíveis, não a biblioteca).
+   */
+  function mergeLibraryFromShelves(incoming: any[]) {
+    const seeded: LibraryItem[] = [];
 
-      if (
-        !response.ok
-      ) {
-        return;
+    for (const shelf of incoming) {
+      for (const item of Array.isArray(shelf?.results) ? shelf.results : []) {
+        if (!item?.in_library || !item?.library_id) continue;
+
+        seeded.push({
+          library_id: String(item.library_id),
+          tmdb_id: Number(item.id),
+          media_type: item.media_type,
+          favorite: Boolean(item.favorite),
+          status: item.status || null,
+          personal_rating:
+            item.personal_rating === null || item.personal_rating === undefined
+              ? null
+              : Number(item.personal_rating),
+        } as LibraryItem);
       }
-
-      const data =
-        await safeJson(
-          response
-        );
-
-      if (
-        !Array.isArray(
-          data
-        )
-      ) {
-        return;
-      }
-
-      setLibrary(
-        data
-          .filter(
-            (
-              item:
-                any
-            ) =>
-              item.media
-                ?.tmdb_id &&
-              item.media
-                ?.media_type
-          )
-          .map(
-            (
-              item:
-                any
-            ) => ({
-              library_id:
-                String(
-                  item.id
-                ),
-              tmdb_id:
-                Number(
-                  item.media
-                    .tmdb_id
-                ),
-              media_type:
-                item.media
-                  .media_type,
-              favorite:
-                Boolean(
-                  item.favorite
-                ),
-              status:
-                item.status ||
-                null,
-              personal_rating:
-                item.personal_rating ===
-                  null ||
-                item.personal_rating ===
-                  undefined
-                  ? null
-                  : Number(
-                      item.personal_rating
-                    ),
-            })
-          )
-      );
-    } catch (
-      error
-    ) {
-      console.error(
-        "Biblioteca:",
-        error
-      );
     }
+
+    if (seeded.length === 0) return;
+
+    setLibrary((current) => {
+      const merged = new Map<string, LibraryItem>();
+      const keyOf = (entry: LibraryItem) => `${entry.media_type}-${entry.tmdb_id}`;
+
+      for (const entry of current) merged.set(keyOf(entry), entry);
+      for (const entry of seeded) merged.set(keyOf(entry), entry);
+
+      return Array.from(merged.values());
+    });
   }
 
   async function load(
@@ -680,20 +638,12 @@ export default function ForYouPage() {
         );
       }
 
-      const [
-        response,
-      ] =
-        await Promise.all([
-          fetch(
-            `/api/for-you?${queryFor(
-              nextPage
-            ).toString()}`
-          ),
-
-          append
-            ? Promise.resolve()
-            : loadLibrary(),
-        ]);
+      const response =
+        await fetch(
+          `/api/for-you?${queryFor(
+            nextPage
+          ).toString()}`
+        );
 
       const data =
         await safeJson(
@@ -716,6 +666,8 @@ export default function ForYouPage() {
         )
           ? data.shelves
           : [];
+
+      mergeLibraryFromShelves(incoming);
 
       setShelves(
         (

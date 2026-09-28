@@ -253,42 +253,92 @@ export async function GET(
     "pt-BR";
 
   /*
+   * V2.1-D — antes esta rota materializava a biblioteca INTEIRA do
+   * usuário em memória (`SELECT ... FROM library_items` sem LIMIT) só
+   * para (a) escolher seeds/gêneros e (b) montar um Map de "este
+   * candidato já está na biblioteca?". Custo O(N biblioteca) por
+   * requisição, repetido a cada página de "carregar mais".
+   *
+   * Agora:
+   *  - seeds: `ORDER BY score DESC LIMIT MAX_SEEDS` direto no SQL (o
+   *    mesmo score de `libraryScore`, só que calculado no banco).
+   *    MAX_SEEDS é um teto explícito: 4 seeds por página x 15 páginas
+   *    de "carregar mais" = 60 — o crescimento da biblioteca não
+   *    aumenta mais linearmente o trabalho desta rota.
+   *  - estado de biblioteca dos candidatos e itens ocultos: consulta
+   *    batched só dos IDs candidatos (`preloadCandidateState`), nunca
+   *    a biblioteca/`user_hidden_titles` inteira.
+   *
    * IMPORTANTE:
    * NÃO selecionamos vote_average da tabela media.
    * Essa coluna não existe no seu Supabase.
    */
-  let library: any[] = [];
+  const MAX_SEEDS = 60;
+  const userId: string = user.id;
+  const sql = getDb();
+
+  const SEED_SELECT = `
+    SELECT
+      li.id,
+      li.status,
+      li.favorite,
+      li.personal_rating,
+      json_build_object(
+        'tmdb_id', m.tmdb_id,
+        'media_type', m.media_type,
+        'title', m.title,
+        'genres', m.genres
+      ) AS media
+    FROM public.library_items li
+    JOIN public.media m ON m.id = li.media_id
+    WHERE li.user_id = $1
+  `;
+
+  let seeds: any[] = [];
+  let fallbackSeeds: any[] = [];
   try {
-    const sql = getDb();
-    library = await sql`
-      SELECT
-        li.id,
-        li.status,
-        li.favorite,
-        li.personal_rating,
-        json_build_object(
-          'tmdb_id', m.tmdb_id,
-          'media_type', m.media_type,
-          'title', m.title,
-          'genres', m.genres
-        ) AS media
-      FROM public.library_items li
-      JOIN public.media m ON m.id = li.media_id
-      WHERE li.user_id = ${user.id}
-    `;
+    seeds = (await sql.query(
+      `${SEED_SELECT}
+        AND (coalesce(li.personal_rating, 0) >= 7 OR li.favorite)
+      ORDER BY
+        (coalesce(li.personal_rating, 0) * 2
+          + (CASE WHEN li.favorite THEN 5 ELSE 0 END)
+          + (CASE WHEN li.status IN ('rewatched', 'rewatching') THEN 2 ELSE 0 END)) DESC,
+        li.updated_at DESC
+      LIMIT ${MAX_SEEDS}`,
+      [user.id]
+    )) as any[];
+
+    /*
+     * Caso o usuário ainda não tenha notas/favoritos,
+     * usamos assistidos como semente de fallback.
+     */
+    if (seeds.length === 0) {
+      fallbackSeeds = (await sql.query(
+        `${SEED_SELECT}
+          AND li.status IN ('watched', 'rewatched')
+        ORDER BY li.updated_at DESC
+        LIMIT 20`,
+        [user.id]
+      )) as any[];
+    }
   } catch (error: any) {
     return respostaDeErro(error, "GET /api/for-you");
   }
 
+  seeds = seeds.filter(
+    (item: any) => item.media?.tmdb_id && item.media?.media_type
+  );
+  fallbackSeeds = fallbackSeeds.filter(
+    (item: any) => item.media?.tmdb_id && item.media?.media_type
+  );
 
-
-  const items =
-    Array.isArray(
-      library
-    )
-      ? library
-      : [];
-
+  /*
+   * Estado pessoal dos CANDIDATOS (não da biblioteca inteira):
+   * `libraryMap` e `hiddenSet` só ganham as chaves dos candidatos que
+   * cada prateleira acabou de buscar no TMDB, via
+   * `preloadCandidateState` (1 query batched por prateleira).
+   */
   const libraryMap =
     new Map<
       string,
@@ -300,120 +350,67 @@ export async function GET(
       string
     >();
 
-  for (
-    const item
-    of items as any[]
+  const checkedKeys = new Set<string>();
+
+  async function preloadCandidateState(
+    candidates: any[],
+    mediaType: MediaType
   ) {
-    if (
-      !item.media
-        ?.tmdb_id ||
-      !item.media
-        ?.media_type
-    ) {
-      continue;
+    const ids: number[] = [];
+
+    for (const candidate of candidates.slice(0, 100)) {
+      const id = Number(candidate?.id);
+      const key = `${mediaType}-${id}`;
+
+      if (!Number.isFinite(id) || checkedKeys.has(key)) continue;
+
+      checkedKeys.add(key);
+      ids.push(id);
     }
 
-    libraryMap.set(
-      `${item.media.media_type}-${item.media.tmdb_id}`,
-      item
-    );
-  }
+    if (ids.length === 0) return;
 
-  const sql = getDb();
-  let hidden: any[] = [];
-  let hiddenError: any = null;
-  try {
-    hidden = await sql`
-      SELECT tmdb_id, media_type
-      FROM public.user_hidden_titles
-      WHERE user_id = ${user.id}
-    `;
-  } catch (err: any) {
-    hiddenError = err;
-  }
+    try {
+      const rows = (await sql.query(
+        `SELECT li.id, li.status, li.favorite, li.personal_rating, m.tmdb_id
+         FROM public.library_items li
+         JOIN public.media m ON m.id = li.media_id
+         WHERE li.user_id = $1
+           AND m.media_type = $2
+           AND m.tmdb_id = ANY($3::bigint[])`,
+        [userId, mediaType, ids]
+      )) as any[];
 
-  if (
-    hiddenError
-  ) {
-    console.warn(
-      "Não foi possível carregar títulos ocultos:",
-      hiddenError.message
-    );
-  } else {
-    for (
-      const item
-      of (
-        hidden ||
-        []
-      ) as any[]
-    ) {
-      hiddenSet.add(
-        `${item.media_type}-${item.tmdb_id}`
+      for (const row of rows) {
+        libraryMap.set(`${mediaType}-${row.tmdb_id}`, row);
+      }
+    } catch (error: any) {
+      console.warn(
+        "Não foi possível carregar estado da biblioteca dos candidatos:",
+        error?.message
+      );
+    }
+
+    try {
+      const rows = (await sql.query(
+        `SELECT tmdb_id
+         FROM public.user_hidden_titles
+         WHERE user_id = $1
+           AND media_type = $2
+           AND tmdb_id = ANY($3::bigint[])`,
+        [userId, mediaType, ids]
+      )) as any[];
+
+      for (const row of rows) {
+        hiddenSet.add(`${mediaType}-${row.tmdb_id}`);
+      }
+    } catch (error: any) {
+      console.warn(
+        "Não foi possível carregar títulos ocultos:",
+        error?.message
       );
     }
   }
-
-  const seeds =
-    items
-      .filter(
-        (
-          item:
-            any
-        ) =>
-          item.media
-            ?.tmdb_id &&
-          item.media
-            ?.media_type &&
-          (
-            Number(
-              item.personal_rating ||
-                0
-            ) >=
-              7 ||
-            item.favorite
-          )
-      )
-      .sort(
-        (
-          a:
-            any,
-          b:
-            any
-        ) =>
-          libraryScore(
-            b
-          ) -
-          libraryScore(
-            a
-          )
-      );
-
-  /*
-   * Caso o usuário ainda não tenha notas/favoritos,
-   * usamos assistidos como semente de fallback.
-   */
-  const fallbackSeeds =
-    items
-      .filter(
-        (
-          item:
-            any
-        ) =>
-          item.media
-            ?.tmdb_id &&
-          item.media
-            ?.media_type &&
-          [
-            "watched",
-            "rewatched",
-          ].includes(
-            item.status
-          )
-      )
-      .slice(
-        0,
-        20
-      );
 
   const allSeeds =
     seeds.length >
@@ -938,6 +935,24 @@ export async function GET(
               ?.favorite
           ),
 
+        /*
+         * V2.1-D — só os campos que a UI realmente usa por card
+         * (o client não busca mais /api/library inteira).
+         */
+        library_id:
+          libraryItem?.id ||
+          null,
+
+        personal_rating:
+          libraryItem?.personal_rating ===
+            null ||
+          libraryItem?.personal_rating ===
+            undefined
+            ? null
+            : Number(
+                libraryItem.personal_rating
+              ),
+
         reason:
           item.reason ||
           reason,
@@ -993,13 +1008,21 @@ export async function GET(
         }
       );
 
+    const candidates =
+      Array.isArray(
+        data?.results
+      )
+        ? data.results
+        : [];
+
+    await preloadCandidateState(
+      candidates,
+      media.media_type
+    );
+
     const results =
       finish(
-        Array.isArray(
-          data?.results
-        )
-          ? data.results
-          : [],
+        candidates,
         media.media_type,
         `Porque você gostou de ${media.title}`,
         10
@@ -1140,13 +1163,21 @@ export async function GET(
         finalParams
       );
 
+    const candidates =
+      Array.isArray(
+        data?.results
+      )
+        ? data.results
+        : [];
+
+    await preloadCandidateState(
+      candidates,
+      mediaType
+    );
+
     const results =
       finish(
-        Array.isArray(
-          data?.results
-        )
-          ? data.results
-          : [],
+        candidates,
         mediaType,
         reason,
         10

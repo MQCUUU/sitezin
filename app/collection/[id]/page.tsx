@@ -1,5 +1,6 @@
 "use client";
 
+import { chunkLibraryStateIds } from "@/lib/library-state-batches";
 import {
   useEffect,
   useMemo,
@@ -482,19 +483,10 @@ export default function CollectionPage() {
           ""
         );
 
-        const [
-          collectionResponse,
-          libraryResponse,
-        ] =
-          await Promise.all([
-            fetch(
-              `/api/collection/${params.id}`
-            ),
-
-            fetch(
-              "/api/library"
-            ),
-          ]);
+        const collectionResponse =
+          await fetch(
+            `/api/collection/${params.id}`
+          );
 
         const collectionData =
           await safeJson(
@@ -535,72 +527,59 @@ export default function CollectionPage() {
             : []
         );
 
-        if (
-          libraryResponse.ok
-        ) {
-          const libraryData =
-            await safeJson(
-              libraryResponse
+        /*
+         * V2.1-D — antes: fetch("/api/library") INTEIRA só para cruzar o
+         * estado de poucos filmes desta coleção. Agora: ceil(N/100) chamadas
+         * batched (POST /api/library/state) só com os IDs das partes
+         * (o endpoint limita a 100 e exige sessão — guest recebe 401 e
+         * a coleção continua pública/funcional, só sem estado pessoal).
+         * Falha aqui nunca derruba a coleção em si.
+         */
+        const partIds: number[] = (
+          Array.isArray(collectionData.parts) ? collectionData.parts : []
+        )
+          .map((part: any) => Number(part?.id))
+          .filter((id: number) => Number.isInteger(id) && id > 0);
+
+        if (partIds.length > 0) {
+          try {
+            // ceil(N / 100) requests em paralelo — sem truncar coleções grandes.
+            const batches = await Promise.all(
+              chunkLibraryStateIds(partIds).map(async (ids) => {
+                const stateResponse = await fetch("/api/library/state", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    items: ids.map((id) => ({ media_type: "movie", tmdb_id: id })),
+                  }),
+                });
+
+                if (!stateResponse.ok) return [];
+
+                const stateData = await safeJson(stateResponse);
+
+                return Array.isArray(stateData?.items) ? stateData.items : [];
+              })
             );
 
-          if (
-            Array.isArray(
-              libraryData
-            )
-          ) {
-            setLibrary(
-              libraryData
-                .filter(
-                  (
-                    item:
-                      any
-                  ) =>
-                    item.media
-                      ?.tmdb_id &&
-                    item.media
-                      ?.media_type ===
-                      "movie"
-                )
-                .map(
-                  (
-                    item:
-                      any
-                  ) => ({
-                    library_id:
-                      String(
-                        item.id
-                      ),
-
-                    tmdb_id:
-                      Number(
-                        item.media
-                          .tmdb_id
-                      ),
-
-                    media_type:
-                      "movie",
-
-                    favorite:
-                      Boolean(
-                        item.favorite
-                      ),
-
-                    status:
-                      item.status ||
-                      null,
-
-                    personal_rating:
-                      item.personal_rating ===
-                        null ||
-                      item.personal_rating ===
-                        undefined
-                        ? null
-                        : Number(
-                            item.personal_rating
-                          ),
-                  })
-                )
-            );
+            if (!cancelled) {
+              setLibrary(
+                batches.flat().map((item: any) => ({
+                  library_id: String(item.library_id),
+                  tmdb_id: Number(item.tmdb_id),
+                  media_type: "movie",
+                  favorite: Boolean(item.favorite),
+                  status: item.status || null,
+                  personal_rating:
+                    item.personal_rating === null ||
+                    item.personal_rating === undefined
+                      ? null
+                      : Number(item.personal_rating),
+                }))
+              );
+            }
+          } catch {
+            /* estado pessoal é opcional — a coleção pública segue funcionando */
           }
         }
       } catch (
