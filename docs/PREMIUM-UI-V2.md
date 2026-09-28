@@ -458,8 +458,13 @@ fase de fechamento (B5) — apenas esta documentação.
     adicionado, formulários de Settings e botão do ReviewPanel com nome
     acessível, foco/setas/restore no menu de status, touch targets
     ampliados, safe-area no Dialog).
-- **I — QA/Polish/Release** = próxima na ordem do roadmap, escopo ainda
-  não detalhado.
+- **I — QA/Polish/Release** = EM ANDAMENTO (I0 auditoria = DONE — ver
+  [`docs/I-QA-POLISH-RELEASE-AUDIT.md`](./I-QA-POLISH-RELEASE-AUDIT.md);
+  I1 = NEXT, escopo definido no documento: 2 achados BLOQUEADOR — IDOR
+  em `account/import`, segredo HMAC hardcoded duplicado — mais itens
+  ALTO/MÉDIO de hidratação, fuso horário e saúde de pacotes).
+  - **I0 — Auditoria** = DONE.
+  - **I1 — Consolidação** = NEXT.
 
 ## 21. Fase C — Nota de handoff (histórico)
 
