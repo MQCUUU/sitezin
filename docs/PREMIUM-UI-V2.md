@@ -448,10 +448,9 @@ fase de fechamento (B5) — apenas esta documentação.
     corrigido, feedback de pressão adicionado aos controles principais,
     menus de status ganharam transição consistente, `CarouselRail`
     respeita reduced-motion em JS).
-- **H — Mobile/Accessibility/Performance** = próxima na ordem do
-  roadmap, escopo ainda não detalhado (mesma situação que F e G tinham
-  antes de suas próprias auditorias — precisa de um H0).
-- **H — Mobile/Accessibility/Performance**
+- **H — Mobile/Accessibility/Performance** = IN PROGRESS (H0 — auditoria
+  em [`docs/H-MOBILE-A11Y-PERFORMANCE-AUDIT.md`](./H-MOBILE-A11Y-PERFORMANCE-AUDIT.md) —
+  DONE; H1 — implementação consolidada = NEXT).
 - **I — QA/Polish/Release**
 
 ## 21. Fase C — Nota de handoff (histórico)
