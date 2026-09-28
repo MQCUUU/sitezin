@@ -128,3 +128,32 @@ inserido múltiplas vezes com timestamp idêntico) descoberto durante
 esta fase — root cause não investigada, provavelmente na cascata de
 conclusão de temporada; não corrigido para não expandir o escopo de
 segurança/hidratação/timezone desta fase.
+
+## Estado atual do banco de produção
+
+Projeto Neon: Bisnaga MyCatalog
+
+Branch usada pela aplicação em produção:
+- `import`
+
+A branch Neon chamada `production` NÃO é atualmente utilizada pela aplicação
+e está sem o schema principal.
+
+Regra operacional:
+- Toda migration/deploy que envolva banco deve confirmar primeiro que o
+  `DATABASE_URL` da Vercel Production aponta para a branch `import`.
+- Não usar a branch `production` apenas pelo nome ou por estar marcada
+  como default no Neon.
+
+## Segurança pós-release
+
+Durante o release, uma connection string completa do Neon foi exibida
+acidentalmente no terminal local.
+
+A credencial correspondente deve ser considerada exposta e rotacionada.
+
+Após a rotação:
+1. atualizar `DATABASE_URL` em Vercel Production;
+2. redeployar;
+3. executar smoke de conexão/auth;
+4. nunca registrar o valor da credencial neste documento.
