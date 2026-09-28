@@ -11,6 +11,10 @@ import Link from "next/link";
 import { Search } from "@/components/Search";
 import { img } from "@/lib/tmdb";
 import { STATUS_LABELS } from "@/lib/types";
+import {
+  type ActivityEvent,
+  deduplicateActivityEvents,
+} from "@/lib/activity-events";
 
 import {
   CalendarDays,
@@ -23,47 +27,6 @@ import {
   Tv,
   XCircle,
 } from "lucide-react";
-
-type ActivityEvent = {
-  id: string;
-
-  event_type:
-    | "library_added"
-    | "status_changed"
-    | "season_completed"
-    | "series_completed"
-    | "rewatch_started"
-    | "watch_logged";
-
-  metadata:
-    Record<string, any>;
-
-  occurred_at:
-    string;
-
-  media: {
-    id: string;
-    tmdb_id: number;
-    media_type:
-      | "movie"
-      | "tv";
-    title: string;
-    poster_path:
-      string | null;
-    seasons_count:
-      number | null;
-    runtime:
-      number | null;
-    genres:
-      (
-        | string
-        | {
-            id?: number;
-            name?: string;
-          }
-      )[] | null;
-  } | null;
-};
 
 function formatDate(
   date: string
@@ -332,7 +295,7 @@ export default function DiaryPage() {
           Array.isArray(
             data
           )
-            ? data
+            ? deduplicateActivityEvents(data)
             : []
         );
       } catch (err) {

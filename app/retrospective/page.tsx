@@ -10,65 +10,23 @@ import Link from "next/link";
 
 import { Search } from "@/components/Search";
 import { img } from "@/lib/tmdb";
+import {
+  type ActivityEvent,
+  deduplicateActivityEvents,
+} from "@/lib/activity-events";
 
 import {
   CalendarRange,
   CheckCircle2,
   Clapperboard,
   Clock3,
+  Eye,
   Film,
   RefreshCcw,
   Star,
   Trophy,
   Tv,
 } from "lucide-react";
-
-type ActivityEvent = {
-  id: string;
-
-  event_type:
-    | "library_added"
-    | "status_changed"
-    | "season_completed"
-    | "series_completed"
-    | "rewatch_started";
-
-  metadata:
-    Record<string, any>;
-
-  occurred_at:
-    string;
-
-  media: {
-    id: string;
-
-    tmdb_id: number;
-
-    media_type:
-      | "movie"
-      | "tv";
-
-    title: string;
-
-    poster_path:
-      string | null;
-
-    seasons_count:
-      number | null;
-
-    runtime:
-      number | null;
-
-    genres:
-      (
-        | string
-        | {
-            id?: number;
-            name?: string;
-          }
-      )[] | null;
-  } | null;
-};
 
 function currentYear() {
   return new Date().getFullYear();
@@ -136,7 +94,7 @@ export default function RetrospectivePage() {
           Array.isArray(
             data
           )
-            ? data
+            ? deduplicateActivityEvents(data)
             : []
         );
       } catch (err) {
@@ -230,6 +188,80 @@ export default function RetrospectivePage() {
     );
 
   /*
+   * V2.1-A — RETRO-01: `watch_logged` é o evento mais fiel a "eu
+   * realmente assisti isso" (inserido por POST /api/watch-history, o
+   * fluxo de Diário/avaliação), mas antes não tinha nenhuma
+   * representação própria na Retrospectiva.
+   */
+  const watchLoggedEvents =
+    useMemo(
+      () =>
+        events.filter(
+          (event) =>
+            event.event_type ===
+            "watch_logged"
+        ),
+      [events]
+    );
+
+  /*
+   * V2.1-A (2º ajuste pós-gate — precedência por título era ampla
+   * demais) — auditoria confirmou que NENHUM caminho de código emite
+   * `watch_logged` e `status_changed` na mesma ação: `watch-history/
+   * route.ts` só insere `watch_logged`; `library/[id]/route.ts` e
+   * `library/route.ts` só inserem `status_changed`/`library_added`/
+   * `rewatch_started` — nenhuma das duas rotas chama a outra
+   * internamente, e `metadata` de um nunca referencia o outro (sem
+   * `watch_entry_id` em `status_changed`, sem `to`/`from` em
+   * `watch_logged`). Sem prova de dupla emissão pela mesma ação, a
+   * versão anterior (suprimir TODO `status_changed` de um título só
+   * porque existe QUALQUER `watch_logged` daquele título, mesmo em
+   * datas totalmente diferentes) apagava eventos históricos legítimos
+   * — ex.: `status_changed(to=watched)` em 2025 sendo descartado só
+   * por existir um `watch_logged` de 2026 no mesmo título. Removida.
+   *
+   * Regra final: `watch_logged` e `status_changed(to=watched/
+   * rewatched)` são sempre eventos independentes e legítimos — cada um
+   * conta por si, sem um suprimir o outro. Múltiplos eventos do mesmo
+   * tipo para o mesmo título (ex.: duas reassistidas datadas
+   * diferentes) também são preservados, pois cada um representa uma
+   * interação real distinta no tempo.
+   */
+  const statusWatchedFallbackEvents =
+    useMemo(
+      () =>
+        events.filter((event) => {
+          if (event.event_type !== "status_changed") return false;
+          const to = event.metadata?.to;
+          return to === "watched" || to === "rewatched";
+        }),
+      [events]
+    );
+
+  /*
+   * V2.1-A — RETRO-02: eventos que não representam consumo real
+   * (`library_added`, `status_changed` para status que não implicam
+   * conclusão) ficam de fora do cálculo de "gênero mais presente" e
+   * "mês mais ativo" — do contrário, só catalogar um título (sem nunca
+   * assistir) infla essas métricas tanto quanto realmente assisti-lo.
+   * `status_changed(to=watched/rewatched)` participa via
+   * `statusWatchedFallbackEvents`, já deduplicado por título contra
+   * `watch_logged`.
+   */
+  const consumptionEvents =
+    useMemo(
+      () =>
+        events.filter(
+          (event) =>
+            event.event_type === "watch_logged" ||
+            event.event_type === "season_completed" ||
+            event.event_type === "series_completed" ||
+            event.event_type === "rewatch_started"
+        ).concat(statusWatchedFallbackEvents),
+      [events, statusWatchedFallbackEvents]
+    );
+
+  /*
    * ==========================================
    * FILMES E SÉRIES ADICIONADOS
    * ==========================================
@@ -288,7 +320,7 @@ export default function RetrospectivePage() {
 
       for (
         const event
-        of events
+        of consumptionEvents
       ) {
         const genres =
           event.media
@@ -344,7 +376,7 @@ export default function RetrospectivePage() {
           sorted[0][1],
       };
     }, [
-      events,
+      consumptionEvents,
     ]);
 
   /*
@@ -369,9 +401,20 @@ export default function RetrospectivePage() {
           }
         >();
 
+      /*
+       * V2.1-A — RETRO-02: `library_added` (só catalogar, sem nunca
+       * assistir) não pontua mais aqui — antes tinha peso 1 e podia
+       * colocar um título nunca visto entre os "títulos que marcaram seu
+       * ano". `status_changed` nunca pontuou (mantido assim). Pesos
+       * agora refletem só evidência real de consumo, com `watch_logged`
+       * (evento mais direto de "eu assisti") pesando mais que
+       * `season_completed` (dado incerto — sem produtor ativo, ver
+       * docs/V2.1-A-DATA-INTEGRITY.md), mas menos que concluir uma série
+       * inteira.
+       */
       for (
         const event
-        of events
+        of consumptionEvents
       ) {
         if (
           !event.media
@@ -392,25 +435,39 @@ export default function RetrospectivePage() {
             score: 0,
           };
 
-        /*
-         * Quanto mais relevante
-         * o evento, maior o peso.
-         */
-
-        if (
-          event.event_type ===
-          "library_added"
-        ) {
-          current.score +=
-            1;
-        }
-
         if (
           event.event_type ===
           "season_completed"
         ) {
           current.score +=
             2;
+        }
+
+        if (
+          event.event_type ===
+          "watch_logged"
+        ) {
+          current.score +=
+            3;
+        }
+
+        /*
+         * V2.1-A — status_changed(to=watched/rewatched) sempre conta,
+         * independente de existir watch_logged para o mesmo título (ver
+         * comentário de statusWatchedFallbackEvents — os dois nunca são
+         * emitidos pela mesma ação, sem prova de dupla emissão não há
+         * base para suprimir um pelo outro). Peso menor que
+         * watch_logged/rewatch_started — é um sinal real e datado, mas
+         * menos deliberado que registrar no Diário.
+         */
+        if (
+          event.event_type ===
+            "status_changed" &&
+          (event.metadata?.to === "watched" ||
+            event.metadata?.to === "rewatched")
+        ) {
+          current.score +=
+            1;
         }
 
         if (
@@ -448,7 +505,7 @@ export default function RetrospectivePage() {
           6
         );
     }, [
-      events,
+      consumptionEvents,
     ]);
 
   /*
@@ -467,7 +524,7 @@ export default function RetrospectivePage() {
 
       for (
         const event
-        of events
+        of consumptionEvents
       ) {
         const month =
           new Date(
@@ -523,7 +580,7 @@ export default function RetrospectivePage() {
           sorted[0][1],
       };
     }, [
-      events,
+      consumptionEvents,
       year,
     ]);
 
@@ -675,6 +732,46 @@ export default function RetrospectivePage() {
               <div className="panel retrospective-stat">
 
                 <div className="retrospective-stat-icon">
+                  <Eye
+                    size={20}
+                  />
+                </div>
+
+                <span>
+                  Visualizações registradas
+                </span>
+
+                <strong>
+                  {
+                    watchLoggedEvents.length
+                  }
+                </strong>
+
+              </div>
+
+              <div className="panel retrospective-stat">
+
+                <div className="retrospective-stat-icon">
+                  <CheckCircle2
+                    size={20}
+                  />
+                </div>
+
+                <span>
+                  Marcados como assistidos
+                </span>
+
+                <strong>
+                  {
+                    statusWatchedFallbackEvents.length
+                  }
+                </strong>
+
+              </div>
+
+              <div className="panel retrospective-stat">
+
+                <div className="retrospective-stat-icon">
                   <Film
                     size={20}
                   />
@@ -793,6 +890,25 @@ export default function RetrospectivePage() {
               </div>
 
             </div>
+
+            <p className="muted">
+              * &ldquo;Adicionados&rdquo; conta o que
+              entrou na sua biblioteca, não
+              necessariamente o que você
+              assistiu. &ldquo;Visualizações
+              registradas&rdquo;, &ldquo;Marcados como
+              assistidos&rdquo; e &ldquo;Reassistidas&rdquo;
+              refletem consumo real.
+            </p>
+
+            <p className="muted">
+              * Esta retrospectiva considera
+              atividades registradas com data
+              no MyCatalog. Títulos antigos
+              marcados como assistidos sem um
+              registro datado podem não
+              aparecer aqui.
+            </p>
 
           </section>
 
@@ -1095,6 +1211,12 @@ export default function RetrospectivePage() {
                               "Começou a reassistir"}
 
                             {event.event_type ===
+                              "watch_logged" &&
+                              (event.metadata?.is_rewatch
+                                ? "Reassistiu e registrou no Diário"
+                                : "Assistiu e registrou no Diário")}
+
+                            {event.event_type ===
                               "status_changed" &&
                               event.metadata?.to ===
                                 "dropped" &&
@@ -1108,8 +1230,20 @@ export default function RetrospectivePage() {
 
                             {event.event_type ===
                               "status_changed" &&
+                              (event.metadata?.to ===
+                                "watched" ||
+                                event.metadata?.to ===
+                                  "rewatched") &&
+                              "Marcado como assistido"}
+
+                            {event.event_type ===
+                              "status_changed" &&
                               event.metadata?.to !==
                                 "dropped" &&
+                              event.metadata?.to !==
+                                "watched" &&
+                              event.metadata?.to !==
+                                "rewatched" &&
                               `Mudou o status para ${
                                 event.metadata
                                   ?.to ||

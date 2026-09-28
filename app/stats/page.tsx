@@ -35,6 +35,13 @@ import type { StatsSummary } from "@/app/api/stats/route";
  * presentes" renderizava `years.map(...)` em vez de `genres.map(...)`
  * (cópia-e-cola) — mostrava anos duas vezes e a lista de gêneros nunca
  * aparecia. Corrigido junto, não é um comportamento a preservar.
+ *
+ * V2.1-A — STATS-01/02/03 (docs/V2.1-POST-V2-AUDIT.md): "Tempo
+ * estimado"/"Episódios" contavam o catálogo inteiro (qualquer status,
+ * inclusive "want" nunca assistido) como se fosse consumo real. A tela
+ * agora separa "Sua biblioteca" (o que você tem catalogado) de "Seu
+ * histórico" (o que você realmente assistiu, via `summary.watched`).
+ * Ver docs/V2.1-A-DATA-INTEGRITY.md para a semântica canônica completa.
  */
 
 type Estado = "carregando" | "erro" | "pronto";
@@ -79,14 +86,16 @@ export default function Stats() {
 
       <div className="section">
         <div className="eyebrow">
-          Seu histórico
+          Biblioteca e histórico
         </div>
 
         <h1>Estatísticas</h1>
 
         <p className="muted">
-          Uma visão completa da sua
-          biblioteca.
+          Sua biblioteca (o que você tem
+          catalogado) e seu histórico (o
+          que você realmente assistiu),
+          separados.
         </p>
       </div>
 
@@ -116,7 +125,11 @@ export default function Stats() {
 
       {estado === "pronto" && summary && summary.totals.items > 0 && (
         <>
-          {/* VISÃO GERAL */}
+          {/* SUA BIBLIOTECA — o que você tem catalogado, qualquer status */}
+
+          <div className="section">
+            <h2>Sua biblioteca</h2>
+          </div>
 
           <div className="stat-grid">
             <div className="stat">
@@ -146,17 +159,37 @@ export default function Stats() {
               <span className="muted">Curtidos</span>
               <b>{summary.favorites}</b>
             </div>
+          </div>
 
+          {/* SEU HISTÓRICO — só consumo com evidência real, nunca "want" */}
+
+          <div className="section">
+            <h2>Seu histórico</h2>
+          </div>
+
+          <div className="stat-grid">
             <div className="stat">
               <Clock3 size={18} />
-              <span className="muted">Tempo estimado</span>
-              <b>{summary.watch_time.total_hours}h</b>
+              <span className="muted">Tempo assistido (estimado)</span>
+              <b>{summary.watched.watch_time.total_hours}h</b>
             </div>
 
             <div className="stat">
               <Play size={18} />
-              <span className="muted">Episódios</span>
-              <b>{summary.episodes}</b>
+              <span className="muted">Episódios assistidos</span>
+              <b>{summary.watched.episodes_watched}</b>
+            </div>
+
+            <div className="stat">
+              <Check size={18} />
+              <span className="muted">Filmes assistidos</span>
+              <b>{summary.watched.movies_watched}</b>
+            </div>
+
+            <div className="stat">
+              <Trophy size={18} />
+              <span className="muted">Séries concluídas</span>
+              <b>{summary.watched.series_completed}</b>
             </div>
           </div>
 
@@ -253,18 +286,18 @@ export default function Stats() {
               </div>
 
               <div className="row">
-                <span>Temporadas</span>
-                <b>{summary.seasons}</b>
+                <span>Temporadas concluídas</span>
+                <b>{summary.watched.seasons_completed}</b>
               </div>
 
               <div className="row">
                 <span>Reassistências</span>
-                <b>{summary.rewatched}</b>
+                <b>{summary.watched.rewatched}</b>
               </div>
 
               <div className="row">
-                <span>Dias equivalentes</span>
-                <b>{summary.watch_time.days_watched}</b>
+                <span>Dias equivalentes (estimado)</span>
+                <b>{summary.watched.watch_time.days_watched}</b>
               </div>
             </div>
           </div>
@@ -357,10 +390,16 @@ export default function Stats() {
           )}
 
           <p className="muted">
-            * O tempo é uma estimativa baseada
-            na duração disponível. Para séries,
-            é calculado usando a duração média
-            disponível e o número de episódios.
+            * &ldquo;Sua biblioteca&rdquo; mostra tudo o que
+            você catalogou, independente de já
+            ter assistido. &ldquo;Seu histórico&rdquo; conta
+            só o que você realmente assistiu —
+            títulos em &ldquo;Quero assistir&rdquo; nunca
+            entram aqui. O tempo assistido é uma
+            estimativa baseada na duração média
+            disponível de cada filme/episódio
+            realmente assistido, não da série
+            inteira.
           </p>
         </>
       )}
