@@ -82,6 +82,25 @@ const nextConfig: NextConfig = {
    * A CSP foi calibrada para o App Router, Neon Auth, Vercel Blob, imagens externas
    * e trailers do YouTube sem desativar o prerender das páginas.
    */
+  /*
+   * V2.1-B — "/favorites" era uma visão filtrada da Biblioteca
+   * (mesmo fetch, mesmo PosterGrid, sem viewMode/onAddToList/paginação
+   * que /library já tem) — confirmado sem funcionalidade exclusiva
+   * antes de remover a página. "/favorites" continua em PRIVATE_ROUTES
+   * (proxy.ts) — um guest é barrado ali antes mesmo de chegar neste
+   * redirect; um usuário autenticado cai direto em
+   * /library?favorite=true, que já aplica o filtro real no servidor.
+   */
+  async redirects() {
+    return [
+      {
+        source: "/favorites",
+        destination: "/library?favorite=true",
+        permanent: false,
+      },
+    ];
+  },
+
   async headers() {
     return [
       {

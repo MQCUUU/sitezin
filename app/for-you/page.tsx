@@ -7,6 +7,7 @@ import {
 } from "react";
 
 import {
+  Bot,
   CalendarDays,
   Check,
   ChevronDown,
@@ -1447,6 +1448,30 @@ export default function ForYouPage() {
               )}
           </section>
         )}
+
+        {/*
+         * V2.1-B — Assistente IA saiu da navegação principal, mas
+         * continua acessível (/assistant intacto) — este é o atalho
+         * visível dentro de "Para você" (docs/V2.1-B-PRODUCT-
+         * ARCHITECTURE.md). Não é um redesign da página, só um card
+         * no mesmo padrão visual das demais seções "fy-*".
+         */}
+        <section className="fy-assistant-cta panel">
+          <div className="fy-assistant-cta-icon">
+            <Bot size={22} strokeWidth={2} aria-hidden="true" />
+          </div>
+
+          <div>
+            <strong>Não sabe o que assistir?</strong>
+            <p className="muted">
+              Peça uma recomendação ao MyCatalog AI.
+            </p>
+          </div>
+
+          <Link href="/assistant" className="btn primary">
+            Abrir Assistente
+          </Link>
+        </section>
 
         <section className="fy-toolbar">
           <div className="fy-tabs">

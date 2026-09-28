@@ -11859,3 +11859,35 @@ svg{vertical-align:middle}.btn>svg,button>svg,a>svg,.section-head svg,.title-sec
 .stats-bar-row{width:55%;display:flex;align-items:center;gap:8px}
 .stats-bar-track{flex:1;height:8px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden}
 .stats-bar-fill{height:100%;border-radius:999px;background:var(--accent)}
+
+/*
+ * V2.1-B — subnav de Insights (Estatísticas/Ranking/Retrospectiva),
+ * exibida no topo das 3 páginas e no hub /insights, para que quem
+ * chegue direto por bookmark/deep link perceba que está dentro da
+ * área "Insights". Reaproveita o mesmo visual sticky de .settings-tabs
+ * (padrão já existente), mas com <a> em vez de <button>, já que aqui
+ * são páginas reais, não abas de estado local.
+ */
+.insights-subnav{position:sticky;z-index:10;top:8px;display:flex;gap:5px;overflow-x:auto;padding:5px;border:1px solid var(--border);border-radius:13px;background:color-mix(in srgb,var(--panel) 92%,transparent);backdrop-filter:blur(15px);margin-bottom:18px;scrollbar-width:none}
+.insights-subnav::-webkit-scrollbar{display:none}
+.insights-subnav a{min-width:max-content;flex:1;padding:11px 15px;border:0;border-radius:9px;background:transparent;color:var(--muted);font-weight:800;font-family:var(--font-ui);letter-spacing:0;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px}
+.insights-subnav a[aria-selected="true"]{background:var(--accent);color:#07110d}
+@media(max-width:700px){.insights-subnav{top:4px}}
+
+.insights-hub-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.insights-hub-card{display:flex;gap:14px;align-items:flex-start;padding:20px;text-align:left}
+.insights-hub-card:hover{border-color:var(--accent)}
+.insights-hub-card-icon{display:flex;align-items:center;justify-content:center;width:42px;height:42px;flex:none;border-radius:12px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+.insights-hub-card strong{display:block;margin-bottom:4px;font-size:16px}
+@media(max-width:820px){.insights-hub-grid{grid-template-columns:1fr}}
+
+/* V2.1-B — atalho secundário (Assistente IA) no sheet "Mais" do mobile */
+.mobile-more-secondary{grid-column:1 / -1;border-top:1px solid var(--line);margin-top:4px;padding-top:13px}
+
+/* V2.1-B — CTA do Assistente IA dentro de "Para você" */
+.fy-assistant-cta{display:flex;align-items:center;gap:16px;padding:18px 20px;margin-bottom:20px}
+.fy-assistant-cta-icon{display:flex;align-items:center;justify-content:center;width:44px;height:44px;flex:none;border-radius:12px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+.fy-assistant-cta strong{display:block;font-size:15px}
+.fy-assistant-cta>div{flex:1}
+.fy-assistant-cta .btn{flex:none}
+@media(max-width:640px){.fy-assistant-cta{flex-wrap:wrap}.fy-assistant-cta .btn{width:100%}}

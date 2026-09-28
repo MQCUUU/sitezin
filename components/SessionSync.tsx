@@ -16,11 +16,21 @@ const PRIVATE_ROUTES = [
   "/favorites",
   "/profile",
   "/settings",
+  "/insights",
 ];
 
+/*
+ * V2.1-B — mesma ressalva de proxy.ts: "/lists" é privada (a tela
+ * "Minhas listas"), mas "/lists/[id]" (lista pública individual) não
+ * pode ser tratada como privada por correspondência de prefixo.
+ */
+const PRIVATE_EXACT_ROUTES = ["/lists"];
+
 function isPrivate(pathname: string) {
-  return PRIVATE_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`)
+  return (
+    PRIVATE_ROUTES.some(
+      (route) => pathname === route || pathname.startsWith(`${route}/`)
+    ) || PRIVATE_EXACT_ROUTES.some((route) => pathname === route)
   );
 }
 

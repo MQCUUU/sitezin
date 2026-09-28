@@ -6,6 +6,7 @@ import {
 } from "react";
 
 import { Search } from "@/components/Search";
+import { InsightsSubNav } from "@/components/InsightsSubNav";
 
 import {
   Film,
@@ -83,6 +84,8 @@ export default function Stats() {
   return (
     <>
       <Search />
+
+      <InsightsSubNav active="stats" />
 
       <div className="section">
         <div className="eyebrow">

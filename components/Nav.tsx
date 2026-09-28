@@ -8,8 +8,6 @@ import {
   House,
   Library,
   ChartNoAxesCombined,
-  Eye,
-  Trophy,
   BookOpenText,
   Sparkles,
   CalendarDays,
@@ -22,30 +20,43 @@ import {
 
 /*
  * ==========================================
- * ITENS PRINCIPAIS DA NAVEGAÇÃO
+ * ITENS PRINCIPAIS DA NAVEGAÇÃO — V2.1-B
  * ==========================================
  *
- * Perfil, Configurações e Sair NÃO ficam mais
- * aqui.
+ * Reduzido de 12 para 8 destinos de primeiro nível
+ * (docs/V2.1-B-PRODUCT-ARCHITECTURE.md):
  *
- * Essas opções agora ficam no AccountMenu,
- * na bolinha do usuário no canto superior
- * direito.
+ * - Estatísticas + Meu Ranking + Retrospectiva viraram "Insights"
+ *   (um item de nav, três URLs continuam existindo:
+ *   /stats, /ranking, /retrospective — ver InsightsSubNav).
+ * - Curtidos saiu do menu ("/favorites" agora redireciona para
+ *   "/library?favorite=true", que já cobre o mesmo caso de uso).
+ * - Assistente IA saiu do menu principal, mas "/assistant" continua
+ *   acessível direto e ganhou um atalho dentro de "Para você" e no
+ *   sheet "Mais" do mobile.
+ *
+ * Perfil, Configurações e Sair NÃO ficam aqui — ficam no AccountMenu,
+ * na bolinha do usuário no canto superior direito.
+ *
+ * `insightsMatch` é usado só pelo item "Insights", que precisa ficar
+ * ativo em 4 rotas diferentes (a própria + as 3 que agrupa).
  */
+
+const INSIGHTS_ROUTES = ["/insights", "/stats", "/ranking", "/retrospective"];
 
 const items = [
   ["/", "Início", House],
   ["/discover", "Descobrir", Compass],
   ["/for-you", "Para você", Sparkles],
-  ["/assistant", "Assistente IA", Bot],
   ["/library", "Biblioteca", Library],
   ["/diary", "Diário", BookOpenText],
   ["/calendar", "Calendário", CalendarDays],
-  ["/ranking", "Meu Ranking", Trophy],
-  ["/stats", "Estatísticas", ChartNoAxesCombined],
-  ["/retrospective", "Retrospectiva", Sparkles],
-  ["/favorites", "Curtidos", Eye],
+  ["/insights", "Insights", ChartNoAxesCombined],
   ["/lists", "Listas", List],
+] as const;
+
+const secondaryItems = [
+  ["/assistant", "Assistente IA", Bot],
 ] as const;
 
 /*
@@ -113,11 +124,20 @@ export function Nav() {
    *
    * /library/123
    * /diary/alguma-coisa
+   *
+   * "/insights" é especial: fica ativo em 4 rotas (a própria e as 3
+   * que agrupa), então não usa o pathMatches genérico.
    */
 
   const isActive = (href: string) => {
     if (href === "/") {
       return pathname === "/";
+    }
+
+    if (href === "/insights") {
+      return INSIGHTS_ROUTES.some(
+        (route) => pathname === route || pathname.startsWith(`${route}/`)
+      );
     }
 
     return (
@@ -190,11 +210,11 @@ export function Nav() {
         className="mobile-nav"
         aria-label="Navegação mobile"
       >
-        {[ 
+        {[
           items[0],  // Início
           items[1],  // Descobrir
-          items[4],  // Biblioteca
-          items[10], // Curtidos
+          items[3],  // Biblioteca
+          items[2],  // Para você
         ].map(
           ([href, label, Icon]) => (
             <Link
@@ -230,7 +250,10 @@ export function Nav() {
       {moreOpen && <div className="mobile-more-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setMoreOpen(false)}>
         <section className="mobile-more-sheet" aria-label="Mais páginas" role="dialog" aria-modal="true">
           <header><strong>Todas as páginas</strong><button className="mc-focusable" onClick={() => setMoreOpen(false)} aria-label="Fechar"><X size={20} /></button></header>
-          <div>{[items[2], items[3], items[5], items[6], items[7], items[8], items[9], items[11]].map(([href, label, Icon]) => <Link key={href} href={href} className={`mc-focusable ${isActive(href) ? "active" : ""}`}><Icon size={20} /><span>{label}</span></Link>)}</div>
+          <div>
+            {[items[4], items[5], items[6], items[7]].map(([href, label, Icon]) => <Link key={href} href={href} className={`mc-focusable ${isActive(href) ? "active" : ""}`} aria-current={isActive(href) ? "page" : undefined}><Icon size={20} /><span>{label}</span></Link>)}
+            {secondaryItems.map(([href, label, Icon]) => <Link key={href} href={href} className={`mc-focusable mobile-more-secondary ${isActive(href) ? "active" : ""}`} aria-current={isActive(href) ? "page" : undefined}><Icon size={20} /><span>{label}</span></Link>)}
+          </div>
         </section>
       </div>}
     </>

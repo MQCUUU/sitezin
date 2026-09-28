@@ -10,6 +10,7 @@ import Link from "next/link";
 
 import { Search } from "@/components/Search";
 import { img } from "@/lib/tmdb";
+import { InsightsSubNav } from "@/components/InsightsSubNav";
 import {
   type ActivityEvent,
   deduplicateActivityEvents,
@@ -598,6 +599,8 @@ export default function RetrospectivePage() {
       <div className="topbar">
         <Search />
       </div>
+
+      <InsightsSubNav active="retrospective" />
 
       <section className="section retrospective-head">
 

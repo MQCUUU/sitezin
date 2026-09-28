@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Search } from "@/components/Search";
 import { img } from "@/lib/tmdb";
+import { InsightsSubNav } from "@/components/InsightsSubNav";
 
 /*
  * SUBSTITUI app/ranking/page.tsx
@@ -90,6 +91,8 @@ export default function Ranking() {
   return (
     <>
       <Search />
+
+      <InsightsSubNav active="ranking" />
 
       <div className="section-head section">
         <div>

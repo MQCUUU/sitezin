@@ -23,7 +23,19 @@ const PRIVATE_ROUTES = [
   "/favorites",
   "/profile",
   "/settings",
+  "/insights",
 ] as const;
+
+/*
+ * V2.1-B — "/lists" (a tela "Minhas listas") é pessoal, igual às rotas
+ * acima, mas não pode usar o mesmo `pathMatches` por prefixo: uma
+ * lista individual pública (`/lists/[id]`) é pública por design
+ * (confirmado em fases anteriores) e `pathMatches("/lists/abc",
+ * "/lists")` daria `true` (bate no `startsWith("/lists/")`), o que
+ * bloquearia a lista pública também. Por isso "/lists" usa correspondência
+ * EXATA — só a listagem "minhas listas" é privada, nunca `/lists/*`.
+ */
+const PRIVATE_EXACT_ROUTES = ["/lists"] as const;
 
 /*
  * Rotas exclusivas para visitantes sem sessão.
@@ -38,7 +50,10 @@ function pathMatches(pathname: string, route: string): boolean {
 }
 
 function isPrivatePage(pathname: string): boolean {
-  return PRIVATE_ROUTES.some((route) => pathMatches(pathname, route));
+  return (
+    PRIVATE_ROUTES.some((route) => pathMatches(pathname, route)) ||
+    PRIVATE_EXACT_ROUTES.some((route) => pathname === route)
+  );
 }
 
 function isGuestOnlyPage(pathname: string): boolean {
