@@ -15,6 +15,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 1,
     },
+    // V2.1-C — "/discover" passou a ser indexável (robots.ts + layout
+    // próprio); sem lastModified porque o conteúdo é dinâmico/filtrável,
+    // não uma entidade com data de atualização real.
+    {
+      url: `${siteUrl}/discover`,
+      changeFrequency: "daily",
+      priority: 0.8,
+    },
   ];
 
   try {

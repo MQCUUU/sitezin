@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { detailsTMDB, img } from "@/lib/tmdb";
+import { getSiteUrl } from "@/lib/site-url";
 
 /*
  * ============================================================
@@ -122,10 +123,145 @@ export async function generateMetadata({
   }
 }
 
-export default function TitleLayout({
+/*
+ * V2.1-C — JSON-LD (schema.org Movie/TVSeries), server-rendered.
+ *
+ * Só campos com dado real do TMDB — nada inventado:
+ * - `aggregateRating` usa `vote_average`/`vote_count` do TMDB (nota e
+ *   contagem PÚBLICAS do TMDB, nunca a nota pessoal do usuário
+ *   logado, que nem chega a este componente). Só emitido quando
+ *   `vote_count > 0` — sem isso seria um AggregateRating vazio/
+ *   enganoso.
+ * - `sameAs` só quando dá para montar a URL real do TMDB (sempre dá,
+ *   já que `type`/`id` vêm da própria rota).
+ * - `actor`/`director`/`creator` só com os nomes que o TMDB retornou
+ *   em `credits` (já buscado por `detailsTMDB`, sem fetch extra).
+ */
+type JsonLdMovieOrSeries = Record<string, unknown>;
+
+function buildJsonLd(
+  type: "movie" | "tv",
+  id: string,
+  data: any
+): JsonLdMovieOrSeries | null {
+  if (!data) return null;
+
+  const name: string = data.title || data.name || "";
+  if (!name) return null;
+
+  const siteUrl = getSiteUrl();
+  const image = data.poster_path
+    ? img(data.poster_path, "w500")
+    : data.backdrop_path
+      ? img(data.backdrop_path, "w780")
+      : undefined;
+
+  const cast = Array.isArray(data.credits?.cast)
+    ? data.credits.cast
+        .slice(0, 10)
+        .map((person: any) => person?.name)
+        .filter(Boolean)
+    : [];
+
+  const jsonLd: JsonLdMovieOrSeries = {
+    "@context": "https://schema.org",
+    "@type": type === "movie" ? "Movie" : "TVSeries",
+    name,
+    url: `${siteUrl}/title/${type}/${id}`,
+    sameAs: `https://www.themoviedb.org/${type}/${id}`,
+  };
+
+  if (data.overview?.trim()) jsonLd.description = data.overview.trim();
+  if (image) jsonLd.image = image;
+
+  const dateField = type === "movie" ? data.release_date : data.first_air_date;
+  if (dateField) jsonLd.datePublished = dateField;
+
+  if (Array.isArray(data.genres) && data.genres.length > 0) {
+    jsonLd.genre = data.genres.map((genre: any) => genre?.name).filter(Boolean);
+  }
+
+  if (cast.length > 0) {
+    jsonLd.actor = cast.map((personName: string) => ({
+      "@type": "Person",
+      name: personName,
+    }));
+  }
+
+  if (type === "movie") {
+    const director = Array.isArray(data.credits?.crew)
+      ? data.credits.crew.find((person: any) => person?.job === "Director")
+      : null;
+    if (director?.name) {
+      jsonLd.director = { "@type": "Person", name: director.name };
+    }
+  } else {
+    const creators = Array.isArray(data.created_by)
+      ? data.created_by.map((person: any) => person?.name).filter(Boolean)
+      : [];
+    if (creators.length > 0) {
+      jsonLd.creator = creators.map((personName: string) => ({
+        "@type": "Person",
+        name: personName,
+      }));
+    }
+  }
+
+  // Nota pública do TMDB, nunca a nota pessoal do usuário — só emitida
+  // com contagem real (vote_count > 0), documentando a origem.
+  const voteAverage = Number(data.vote_average || 0);
+  const voteCount = Number(data.vote_count || 0);
+  if (voteAverage > 0 && voteCount > 0) {
+    jsonLd.aggregateRating = {
+      "@type": "AggregateRating",
+      ratingValue: voteAverage,
+      ratingCount: voteCount,
+      bestRating: 10,
+      worstRating: 0,
+    };
+  }
+
+  return jsonLd;
+}
+
+/**
+ * Serialização segura: escapa `<` para que um `overview`/nome contendo
+ * literalmente "</script>" não feche a tag e injete HTML/JS arbitrário
+ * (o JSON em si já teria as aspas escapadas pelo JSON.stringify — o
+ * risco real é só essa sequência de fechamento de tag).
+ */
+function safeJsonLdString(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, "\\u003c");
+}
+
+export default async function TitleLayout({
   children,
+  params,
 }: {
   children: React.ReactNode;
+  params: Promise<{ type: string; id: string }>;
 }) {
-  return children;
+  const { type, id } = await params;
+  let jsonLd: JsonLdMovieOrSeries | null = null;
+
+  if (type === "movie" || type === "tv") {
+    try {
+      const data = await detailsTMDB(type, id);
+      jsonLd = buildJsonLd(type, id, data);
+    } catch {
+      jsonLd = null;
+    }
+  }
+
+  return (
+    <>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: safeJsonLdString(jsonLd) }}
+        />
+      )}
+      {children}
+    </>
+  );
 }

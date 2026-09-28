@@ -11884,6 +11884,19 @@ svg{vertical-align:middle}.btn>svg,button>svg,a>svg,.section-head svg,.title-sec
 /* V2.1-B — atalho secundário (Assistente IA) no sheet "Mais" do mobile */
 .mobile-more-secondary{grid-column:1 / -1;border-top:1px solid var(--line);margin-top:4px;padding-top:13px}
 
+/* V2.1-C — Home de visitante: features + prévia real */
+.home-guest-login-link{display:inline-flex;align-items:center;gap:6px;margin-top:14px;color:var(--muted);font-size:13px}
+.home-guest-login-link:hover{color:var(--text)}
+.home-guest-features{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.home-guest-feature{padding:18px}
+.home-guest-feature-icon{display:flex;align-items:center;justify-content:center;width:40px;height:40px;margin-bottom:10px;border-radius:11px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+.home-guest-feature h2{margin:0 0 6px;font-size:16px}
+.home-guest-trending-rail{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory}
+.home-guest-trending-item{flex:none;width:140px;display:flex;flex-direction:column;gap:6px;scroll-snap-align:start}
+.home-guest-trending-item>span{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.home-guest-trending-item .poster{position:relative;isolation:isolate;aspect-ratio:2/3;border-radius:10px;overflow:hidden;background:var(--panel2)}
+@media(max-width:820px){.home-guest-features{grid-template-columns:1fr}}
+
 /* V2.1-B — CTA do Assistente IA dentro de "Para você" */
 .fy-assistant-cta{display:flex;align-items:center;gap:16px;padding:18px 20px;margin-bottom:20px}
 .fy-assistant-cta-icon{display:flex;align-items:center;justify-content:center;width:44px;height:44px;flex:none;border-radius:12px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
