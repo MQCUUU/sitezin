@@ -1,13 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Search } from "@/components/Search";
 import { img } from "@/lib/tmdb";
-import type { LibraryItem } from "@/lib/types";
 
 /*
  * SUBSTITUI app/ranking/page.tsx
+ *
+ * H1 — antes buscava a biblioteca inteira via /api/library (sem
+ * filtro/paginação) e aplicava a regra de elegibilidade
+ * (nota pessoal preenchida + status != "quero assistir") inteira no
+ * client. Agora consome /api/ranking, que já filtra e ordena no banco
+ * — nunca mais busca a biblioteca inteira. Nota 0 continua contando
+ * (checagem é `IS NOT NULL`, nunca "maior que zero").
  *
  * BUG CORRIGIDO (o usuário via isto)
  *   Os três botões de filtro nunca recebiam a classe `active`.
@@ -35,6 +41,15 @@ import type { LibraryItem } from "@/lib/types";
 type Filtro = "all" | "movie" | "tv";
 type Estado = "carregando" | "erro" | "pronto";
 
+type RankingItem = {
+  library_id: string;
+  personal_rating: number | null;
+  tmdb_id: number;
+  media_type: "movie" | "tv";
+  title: string;
+  poster_path: string | null;
+};
+
 const FILTROS: { id: Filtro; label: string }[] = [
   { id: "all", label: "Todos" },
   { id: "movie", label: "Filmes" },
@@ -42,31 +57,25 @@ const FILTROS: { id: Filtro; label: string }[] = [
 ];
 
 export default function Ranking() {
-  const [itens, setItens] = useState<LibraryItem[]>([]);
+  const [ranking, setRanking] = useState<RankingItem[]>([]);
   const [estado, setEstado] = useState<Estado>("carregando");
   const [filtro, setFiltro] = useState<Filtro>("all");
+  const [retryTick, setRetryTick] = useState(0);
 
   useEffect(() => {
     let vivo = true;
+    setEstado("carregando");
 
-    fetch("/api/library")
+    const params = filtro !== "all" ? `?type=${filtro}` : "";
+
+    fetch(`/api/ranking${params}`, { cache: "no-store" })
       .then((r) => {
         if (!r.ok) throw new Error(String(r.status));
         return r.json();
       })
       .then((dados) => {
         if (!vivo) return;
-
-        setItens(
-          Array.isArray(dados)
-            ? dados.map((i: any) => ({
-                ...i,
-                library_id: i.id,
-                ...i.media,
-              }))
-            : []
-        );
-
+        setRanking(Array.isArray(dados) ? dados : []);
         setEstado("pronto");
       })
       .catch(() => {
@@ -76,26 +85,7 @@ export default function Ranking() {
     return () => {
       vivo = false;
     };
-  }, []);
-
-  /*
-   * useMemo evita reordenar a lista inteira a cada render —
-   * só recalcula quando os itens ou o filtro mudam.
-   */
-  const ranking = useMemo(
-    () =>
-      itens
-        .filter(
-          (i) =>
-            i.personal_rating !== null &&
-            i.status !== "want" &&
-            (filtro === "all" || i.media_type === filtro)
-        )
-        .sort(
-          (a, b) => (b.personal_rating || 0) - (a.personal_rating || 0)
-        ),
-    [itens, filtro]
-  );
+  }, [filtro, retryTick]);
 
   return (
     <>
@@ -133,8 +123,9 @@ export default function Ranking() {
           <strong>Não foi possível carregar seu ranking.</strong>
           <p className="muted">Verifique sua conexão e tente novamente.</p>
           <button
+            type="button"
             className="btn primary"
-            onClick={() => window.location.reload()}
+            onClick={() => setRetryTick((tick) => tick + 1)}
           >
             Tentar de novo
           </button>

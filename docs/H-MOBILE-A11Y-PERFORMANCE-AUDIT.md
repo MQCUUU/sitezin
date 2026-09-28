@@ -6,8 +6,11 @@ Nenhum código, CSS, banco ou comportamento foi alterado. Fase G
 encerrada em `378aeda feat(motion): consolidate interactions and
 reduced motion`; checkpoint inicial estava limpo.
 
-> **Status: H0 = DONE.** Proposta de implementação em § "Proposta H1".
-> Decisões de produto necessárias na seção correspondente.
+> **Status: H0 = DONE, H1 = DONE. Fase H encerrada.** A implementação da
+> H1 (consolidação a partir da "Proposta H1" abaixo) está documentada em
+> [`docs/PREMIUM-UI-V2.md` § 31](./PREMIUM-UI-V2.md#31-fase-h1--mobile-accessibility-performance-consolidation-done).
+> As seções abaixo permanecem como registro fiel do estado encontrado
+> **antes** de H1.
 
 ## 1. Definição real de H no roadmap
 

@@ -592,7 +592,7 @@ export default function Settings() {
                 <ArrowDownUp size={17} />
 
                 <div>
-                  <b>Ordem da biblioteca</b>
+                  <b id="settings-library-order-label">Ordem da biblioteca</b>
 
                   <span>
                     Escolha como sua coleção deve abrir.
@@ -603,6 +603,7 @@ export default function Settings() {
 
               <select
                 className="settings-select"
+                aria-labelledby="settings-library-order-label"
                 value={preferences.defaultSort}
                 onChange={(event) =>
                   changePreference(
@@ -684,6 +685,7 @@ export default function Settings() {
 
                 <input
                   value={x.name}
+                  aria-label="Nome da categoria de avaliação"
                   onChange={(e) =>
                     update(
                       x.id,
@@ -704,6 +706,7 @@ export default function Settings() {
                   min="0"
                   max="100"
                   value={x.weight}
+                  aria-label={`Peso da categoria ${x.name || "sem nome"}`}
                   onChange={(e) =>
                     update(
                       x.id,

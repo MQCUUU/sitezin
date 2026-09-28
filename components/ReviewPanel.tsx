@@ -673,6 +673,7 @@ export function ReviewPanel({
                               )
                             }
                             title="Remover categoria"
+                            aria-label={`Remover categoria ${category.name}`}
                           >
                             <Trash2
                               size={15}

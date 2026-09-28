@@ -246,57 +246,99 @@ export async function GET(req: NextRequest) {
    * ==========================================
    */
 
-  const libraryPromise =
-    Promise.allSettled(
-      eligible.map(
-        async (
-          item: any
-        ) => {
-          const media =
-            item.media;
+  /*
+   * ==========================================
+   * CONCORRÊNCIA LIMITADA (H1)
+   * ==========================================
+   *
+   * Antes: `Promise.allSettled(eligible.map(...))` disparava uma
+   * chamada TMDB por título elegível de uma vez só — numa biblioteca
+   * grande, isso é um fan-out sem teto (H0, HIGH). Não dá para
+   * simplesmente cortar `eligible` (isso faria títulos desaparecerem
+   * do calendário sem nenhuma decisão de produto por trás — proibido
+   * nesta fase); a mitigação certa é limitar QUANTAS chamadas rodam ao
+   * mesmo tempo, preservando cobertura total. `mapWithLimitedConcurrency`
+   * é um helper local pequeno (sem pacote novo) — só este arquivo
+   * consome esse padrão hoje, não há motivo para promovê-lo a
+   * compartilhado ainda.
+   */
+  async function mapWithLimitedConcurrency<T, R>(
+    values: T[],
+    limit: number,
+    worker: (value: T) => Promise<R>
+  ): Promise<PromiseSettledResult<R>[]> {
+    const results: PromiseSettledResult<R>[] = new Array(values.length);
+    let next = 0;
 
-          const events =
-            await calendarTMDB(
-              media.media_type,
-              media.tmdb_id
-            );
-
-          return events.map(
-            (
-              event
-            ): LibraryCalendarEvent => ({
-              ...event,
-
-              source:
-                "library",
-
-              in_library:
-                true,
-
-              library_item_id:
-                item.id,
-
-              library_status:
-                item.status,
-
-              current_season:
-                item.current_season ??
-                null,
-
-              completed_seasons:
-                Number(
-                  item.completed_seasons ||
-                    0
-                ),
-
-              stopped_season:
-                item.stopped_season ??
-                null,
-            })
-          );
+    async function run() {
+      while (next < values.length) {
+        const index = next;
+        next += 1;
+        try {
+          results[index] = { status: "fulfilled", value: await worker(values[index]) };
+        } catch (reason) {
+          results[index] = { status: "rejected", reason };
         }
-      )
+      }
+    }
+
+    await Promise.all(
+      Array.from({ length: Math.min(limit, values.length) }, () => run())
     );
+
+    return results;
+  }
+
+  const CALENDAR_TMDB_CONCURRENCY = 6;
+
+  const libraryPromise = mapWithLimitedConcurrency(
+    eligible,
+    CALENDAR_TMDB_CONCURRENCY,
+    async (item: any) => {
+      const media =
+        item.media;
+
+      const events =
+        await calendarTMDB(
+          media.media_type,
+          media.tmdb_id
+        );
+
+      return events.map(
+        (
+          event
+        ): LibraryCalendarEvent => ({
+          ...event,
+
+          source:
+            "library",
+
+          in_library:
+            true,
+
+          library_item_id:
+            item.id,
+
+          library_status:
+            item.status,
+
+          current_season:
+            item.current_season ??
+            null,
+
+          completed_seasons:
+            Number(
+              item.completed_seasons ||
+                0
+            ),
+
+          stopped_season:
+            item.stopped_season ??
+            null,
+        })
+      );
+    }
+  );
 
   /*
    * Só buscamos descobertas gerais quando

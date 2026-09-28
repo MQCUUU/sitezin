@@ -207,20 +207,26 @@ export default function ListDetailPage() {
     }
   }
 
-  async function openPicker() {
-    setShowPicker(true);
-    if (libraryItems.length > 0) return;
-
+  /*
+   * H1 — antes buscava `/api/library` inteira (sem filtro/paginação)
+   * uma única vez ao abrir o seletor, e todo o filtro por texto
+   * acontecia em memória sobre a biblioteca completa (H0, achado
+   * novo). Agora usa o modo paginado + `search` que a D1 já deixou
+   * pronto em `/api/library` — a cada busca (com debounce de 250ms),
+   * o servidor devolve só os 40 resultados relevantes, nunca a
+   * biblioteca inteira.
+   */
+  async function loadPickerResults(term: string) {
     setLibraryLoading(true);
     try {
-      const response = await fetch("/api/library", { cache: "no-store" });
+      const params = new URLSearchParams({ paginated: "true", limit: "40", sort: "added" });
+      if (term) params.set("search", term);
+
+      const response = await fetch(`/api/library?${params.toString()}`, { cache: "no-store" });
       if (!response.ok) throw new Error(String(response.status));
-      const rows = await response.json();
-      setLibraryItems(
-        Array.isArray(rows)
-          ? rows.map((row: any) => ({ ...row, library_id: row.id, ...row.media }))
-          : []
-      );
+      const result = await response.json();
+      const rows = Array.isArray(result.items) ? result.items : [];
+      setLibraryItems(rows.map((row: any) => ({ ...row, library_id: row.id, ...row.media })));
     } catch (error) {
       console.error("Erro ao carregar sua biblioteca:", error);
       toast.error("Não foi possível carregar sua biblioteca.");
@@ -229,15 +235,27 @@ export default function ListDetailPage() {
     }
   }
 
+  function openPicker() {
+    setShowPicker(true);
+  }
+
+  useEffect(() => {
+    if (!showPicker) return;
+
+    const timer = window.setTimeout(() => {
+      void loadPickerResults(pickerSearch.trim());
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickerSearch, showPicker]);
+
   const inListIds = useMemo(() => new Set(items.map((item) => item.library_id)), [items]);
 
-  const pickerResults = useMemo(() => {
-    const term = pickerSearch.trim().toLowerCase();
-    return libraryItems
-      .filter((item) => !inListIds.has((item as any).library_id))
-      .filter((item) => !term || String(item.title || "").toLowerCase().includes(term))
-      .slice(0, 40);
-  }, [libraryItems, pickerSearch, inListIds]);
+  const pickerResults = useMemo(
+    () => libraryItems.filter((item) => !inListIds.has((item as any).library_id)),
+    [libraryItems, inListIds]
+  );
 
   async function addItem(item: LibraryItem & { library_id: string }) {
     if (!meta) return;

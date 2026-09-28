@@ -205,6 +205,14 @@ create table if not exists public.follows (
   check (follower_id <> following_id)
 );
 
+-- H1 — a PK composta (follower_id, following_id) só serve bem buscas
+-- por follower_id (prefixo esquerdo). Seguidores de um perfil,
+-- solicitações recebidas e a contagem de followers do perfil público
+-- filtram por following_id sozinho, repetidamente, sem nenhum índice
+-- dedicado até aqui (H0, achado concreto). Migration mínima, não
+-- executada nesta fase.
+create index if not exists follows_following_id_idx on public.follows (following_id);
+
 -- Escritas em follows sao feitas pela rota autenticada do servidor.
 revoke insert, update, delete on table public.follows from anon, authenticated;
 grant select on table public.follows to authenticated;

@@ -145,6 +145,21 @@
   width: 32px;
   height: 32px;
   border-radius: var(--mc-radius-sm);
+  position: relative;
+}
+
+/*
+ * H1 — 32px é menor que o alvo de toque mínimo recomendado (~40px).
+ * Em vez de aumentar o tamanho visual do botão (que infla o layout
+ * onde ele é usado por ser deliberadamente compacto), a área
+ * clicável real cresce via um `::before` invisível maior que o
+ * botão — o alvo de toque atinge ~40px sem mudar como o botão
+ * aparece na tela.
+ */
+.mc-icon-btn--sm::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
 }
 
 .mc-icon-btn--lg {

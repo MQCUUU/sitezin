@@ -31,7 +31,7 @@ import {
   MediaCardActions,
 } from "@/components/media";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { MediaPreviewDialog } from "@/components/media/preview/MediaPreviewDialog";
 import { WatchProviderList } from "@/components/media/preview/WatchProviderList";
@@ -1429,6 +1429,35 @@ function ActionButtons({
 }: CardActionProps & { item: LibraryItem }) {
   const busy = processing === item.library_id;
   const menuOpen = openStatusMenu === item.library_id;
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  /*
+   * H1 — o menu já fechava com Escape e já era navegável por Tab, mas
+   * não movia o foco para dentro ao abrir nem o devolvia ao botão de
+   * disparo ao fechar (H0, achado). `ActionButtons` continua sendo um
+   * componente module-level (ver comentário acima de `cardActionProps`
+   * — identidade estável entre renders do pai); os hooks abaixo vivem
+   * dentro dele mesmo, sem afetar essa garantia.
+   */
+  useEffect(() => {
+    if (!menuOpen) return;
+    const firstItem = menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]');
+    firstItem?.focus();
+  }, [menuOpen]);
+
+  function closeAndRestoreFocus() {
+    onToggleStatusMenu(item.library_id);
+    triggerRef.current?.focus();
+  }
+
+  function moveFocus(direction: 1 | -1) {
+    const items = Array.from(menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') || []);
+    if (!items.length) return;
+    const currentIndex = items.indexOf(document.activeElement as HTMLElement);
+    const nextIndex = (currentIndex + direction + items.length) % items.length;
+    items[nextIndex]?.focus();
+  }
 
   return (
     <>
@@ -1464,6 +1493,7 @@ function ActionButtons({
         </button>
 
         <button
+          ref={triggerRef}
           type="button"
           className="card-action active library-status-action"
           title="Alterar status"
@@ -1493,6 +1523,7 @@ function ActionButtons({
 
       {menuOpen && (
         <div
+          ref={menuRef}
           className="library-card-status-menu"
           role="menu"
           aria-label="Alterar status"
@@ -1502,8 +1533,15 @@ function ActionButtons({
           }}
           onKeyDown={(event) => {
             if (event.key === "Escape") {
+              event.preventDefault();
               event.stopPropagation();
-              onToggleStatusMenu(item.library_id);
+              closeAndRestoreFocus();
+            } else if (event.key === "ArrowDown") {
+              event.preventDefault();
+              moveFocus(1);
+            } else if (event.key === "ArrowUp") {
+              event.preventDefault();
+              moveFocus(-1);
             }
           }}
         >

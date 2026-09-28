@@ -51,6 +51,26 @@
   }
 }
 
+/*
+ * H1 — em mobile com notch/home-indicator, o padding fixo do backdrop
+ * deixava o diálogo mais perto da borda física do que o resto do app
+ * (que já usa `env(safe-area-inset-*)` em `.mobile-nav`/
+ * `.mobile-more-sheet`/`.toast-viewport`) — H0, achado. Só dentro do
+ * breakpoint mobile (`--mc-breakpoint-md`, 768px), sem tocar desktop.
+ */
+@media (max-width: 768px) {
+  .mc-dialog-backdrop {
+    padding: calc(var(--mc-space-16) + env(safe-area-inset-top))
+      calc(var(--mc-space-16) + env(safe-area-inset-right))
+      calc(var(--mc-space-16) + env(safe-area-inset-bottom))
+      calc(var(--mc-space-16) + env(safe-area-inset-left));
+  }
+
+  .mc-dialog {
+    max-height: calc(100dvh - var(--mc-space-32) - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+}
+
 [data-motion="reduced"] .mc-dialog-backdrop,
 [data-motion="reduced"] .mc-dialog {
   animation: none;

@@ -448,10 +448,18 @@ fase de fechamento (B5) — apenas esta documentação.
     corrigido, feedback de pressão adicionado aos controles principais,
     menus de status ganharam transição consistente, `CarouselRail`
     respeita reduced-motion em JS).
-- **H — Mobile/Accessibility/Performance** = IN PROGRESS (H0 — auditoria
-  em [`docs/H-MOBILE-A11Y-PERFORMANCE-AUDIT.md`](./H-MOBILE-A11Y-PERFORMANCE-AUDIT.md) —
-  DONE; H1 — implementação consolidada = NEXT).
-- **I — QA/Polish/Release**
+- **H — Mobile/Accessibility/Performance** = DONE (H0 auditoria + H1
+  implementação consolidada — ver [`docs/H-MOBILE-A11Y-PERFORMANCE-AUDIT.md`](./H-MOBILE-A11Y-PERFORMANCE-AUDIT.md)
+  para o detalhe completo de ambas as subfases).
+  - **H0 — Auditoria** = DONE.
+  - **H1 — Consolidação** = DONE (full-fetches de Ranking/List
+    detail/ProfileShowcaseEditor/public-profile eliminados, fan-out do
+    Calendar com concorrência limitada, índice de `follows.following_id`
+    adicionado, formulários de Settings e botão do ReviewPanel com nome
+    acessível, foco/setas/restore no menu de status, touch targets
+    ampliados, safe-area no Dialog).
+- **I — QA/Polish/Release** = próxima na ordem do roadmap, escopo ainda
+  não detalhado.
 
 ## 21. Fase C — Nota de handoff (histórico)
 
@@ -1475,3 +1483,144 @@ banco. `MIGRATIONS = 0`, `DB SCHEMA DIFF = 0`.
 **Resultado da fase: G1 DONE. FASE G — MOTION & REACT BITS ENCERRADA.
 Próxima fase: H — Mobile/Accessibility/Performance (nome definido no
 roadmap, escopo ainda não detalhado).**
+
+## 31. Fase H1 — Mobile / Accessibility / Performance Consolidation (DONE)
+
+**Escopo:** implementação consolidada da Fase H a partir do diagnóstico
+da H0 (ver [`docs/H-MOBILE-A11Y-PERFORMANCE-AUDIT.md`](./H-MOBILE-A11Y-PERFORMANCE-AUDIT.md)).
+
+### Full-fetches eliminados
+
+- **`app/api/public-profile/[username]/route.ts`** — antes buscava
+  `library_items` inteira (sem `LIMIT`) e derivava `stats`/`reviews`/
+  `recent_reviews`/`liked_titles` em JS (H0, HIGH — pior que o full-fetch
+  que a D1 já tinha corrigido em Library, porque este é exposto a
+  qualquer visitante de um perfil público, não só ao dono). Reescrito
+  com quatro queries específicas: um agregado SQL (`COUNT ... FILTER`)
+  para `stats`, e três listas já filtradas/ordenadas/limitadas no banco
+  (`reviews` com teto de 200 — generoso o bastante para nunca ser
+  atingido por um uso real, já que antes não tinha limite nenhum;
+  `recent_reviews` LIMIT 8; `liked_titles` LIMIT 20). As duas seções
+  protegidas por privacidade só disparam a query quando a seção está
+  visível para quem pediu. Nenhuma semântica de produto mudou (locked
+  profile, visibilidade, Top 5, reviews públicas — tudo preservado).
+  Contagem de queries no caminho comum (dono ou perfil público): 13 (1
+  perfil + 12 em paralelo), substituindo 1 query que trazia a biblioteca
+  inteira.
+- **`app/api/ranking/route.ts` (novo)** — `/ranking` buscava a
+  biblioteca inteira e aplicava a regra de elegibilidade
+  (`personal_rating IS NOT NULL AND status != "want"`) em JS (H0,
+  achado nunca revisitado desde a D1). Essa regra de exclusão não se
+  encaixa nos filtros de igualdade que `/api/library` já suporta, então
+  ganhou um endpoint pequeno e dedicado em vez de forçar o contrato já
+  fechado da D1. **Nota 0 confirmada preservada em runtime** — a
+  checagem é `IS NOT NULL`, nunca `> 0`.
+- **`app/lists/[id]/page.tsx`** — o seletor "adicionar título" buscava
+  a biblioteca inteira uma única vez ao abrir (H0, achado novo). Passou
+  a usar o modo paginado + `search` que a D1 já tinha deixado pronto em
+  `/api/library` (debounce de 250ms) — confirmado em runtime: só
+  `/api/library?paginated=true&limit=40&sort=added` é chamado, nunca o
+  full-fetch. Zero N+1 (uma chamada por busca, não uma por item).
+- **`app/api/profile/showcase/eligible/route.ts` (novo)** +
+  `components/ProfileShowcaseEditor.tsx` — o editor de vitrine buscava a
+  biblioteca inteira só para (a) mostrar o título já escolhido em cada
+  uma das 10 posições e (b) alimentar o seletor de novos títulos (H0,
+  achado novo). (a) passou a usar os dados que `GET /api/profile/
+  showcase` já devolve via join com `media`; (b) ganhou um endpoint
+  dedicado que aplica a MESMA regra de elegibilidade que `PUT
+  /api/profile/showcase` já validava no servidor (assistido/
+  reassistindo/reassistido), filtrado por tipo e busca. Confirmado em
+  runtime: abrir o seletor chama só `/api/profile/showcase/eligible?
+  type=movie`, e a lista mostrada já exclui corretamente títulos "quero
+  assistir".
+- **Discover/Search** — full-fetches preservados sem alteração,
+  conforme decisão fechada: já têm propósito conhecido (cross-reference
+  de estado da biblioteca por card) e não fazem parte desta
+  consolidação.
+
+### Calendar
+
+- **`app/api/calendar/route.ts`** — o fan-out contra TMDB (uma chamada
+  por título elegível) não tinha teto de concorrência (H0, HIGH).
+  Adicionado `mapWithLimitedConcurrency`, um helper local pequeno (sem
+  pacote novo, só este arquivo consome o padrão hoje) que processa os
+  itens elegíveis com no máximo 6 chamadas TMDB simultâneas — a
+  cobertura funcional continua completa (nenhum `LIMIT`/`.slice()` foi
+  adicionado à lista de elegíveis, conforme proibição explícita da
+  fase), só a EXECUÇÃO ficou limitada. Cache TMDB (`calendarTMDB`/
+  `tmdb()`/`revalidate`) preservado sem bypass. Falha individual
+  continua não derrubando o calendário inteiro (mesmo padrão de
+  `PromiseSettledResult` de antes). Verificado em runtime: `/calendar`
+  carrega sem erros com a nova lógica.
+
+### Índice de `follows`
+
+- **`supabase/schema.sql`** — `public.follows` só tinha a PK composta
+  `(follower_id, following_id)`, sem servir bem buscas por
+  `following_id` sozinho (seguidores de um perfil, solicitações
+  recebidas) — H0, achado concreto. Adicionado `create index if not
+  exists follows_following_id_idx on public.follows (following_id)`.
+  Migration mínima, documentada, **não executada**.
+
+### ILIKE / trigram
+
+**DEFERIDO com evidência, não por padrão.** Antes de decidir, a
+cardinalidade real das tabelas afetadas foi checada por introspecção
+read-only no `TEST_DATABASE_URL`: `media` tem 205 linhas, `profiles`
+tem 23 — volume baixo demais para justificar um índice GIN/trigram
+hoje, mesmo com `pg_trgm` já disponível na instância. Nenhum índice
+especulativo foi criado.
+
+### Acessibilidade / Mobile
+
+- **Settings** — `<select>` de "Ordem da biblioteca" ganhou associação
+  real (`aria-labelledby` apontando para o rótulo visível); os 2 inputs
+  de categoria de avaliação (nome, peso) sem nenhum nome acessível
+  ganharam `aria-label` descritivo.
+- **`components/ReviewPanel.tsx`** — botão de remover categoria (só
+  tinha `title`) ganhou `aria-label` com o nome da categoria.
+- **Menu de status** (`components/PosterGrid.tsx`) — ao abrir, o foco
+  move automaticamente para o primeiro item; `ArrowUp`/`ArrowDown`
+  navegam entre os itens; `Escape` fecha E devolve o foco ao botão que
+  abriu o menu. Os três comportamentos foram verificados em runtime
+  (Enter no trigger → foco no primeiro item → ArrowDown/ArrowUp movendo
+  corretamente → Escape fechando e restaurando foco).
+- **Touch targets** — `.mc-icon-btn--sm` (32px), botão de marcar
+  notificação como lida (32px) e setas do carrossel em mobile (34px de
+  largura) ganharam área de toque ampliada via `::before` invisível
+  (~40-44px de alvo real), sem mudar o tamanho visual dos elementos.
+- **`styles/overlays.css`** — `.mc-dialog`/`.mc-dialog-backdrop`
+  ganharam `env(safe-area-inset-*)` dentro do breakpoint mobile (768px),
+  sem alterar desktop.
+
+### Fora do escopo, por decisão de produto (H1)
+
+Web Vitals instrumentation, virtualização de listas, reescrita de
+bundle/client-boundary, migração completa de `<img>` para `Poster`/
+`next/image`, `loading.tsx` para as rotas restantes, remoção do z-index
+legado — nenhum implementado, todos permanecem DEFERRED com a
+justificativa já registrada na H0.
+
+### QA em runtime
+
+Conta descartável criada via `/signup` no `TEST_NEON_AUTH_BASE_URL` +
+`TEST_DATABASE_URL`, com biblioteca seedada incluindo um item com nota
+0 especificamente para validar essa regra. Confirmado em runtime: nota
+0 aparece no Ranking; Stats inclui nota 0 na média; Showcase exclui
+corretamente títulos "quero assistir"; List detail e Showcase nunca
+chamam `/api/library` sem paginação; Calendar carrega sem erros;
+Dialog/Quick Peek abre e fecha (Escape) em motion normal e reduzido;
+teclado no menu de status (Enter/ArrowDown/ArrowUp/Escape) funciona
+como descrito acima; zero overflow horizontal em 360/390/430/768/1440
+× 5 páginas; zero overflow nos 3 temas (dark/light/oled). Dados de
+fixture removidos do TEST DB ao final.
+
+### Banco de dados
+
+Uma migration versionada (índice de `follows.following_id`), não
+executada. `MIGRATIONS = 1` (criada, não rodada). Nenhuma tabela
+apagada. `DB SCHEMA DIFF` = só o índice documentado acima.
+
+**Resultado da fase: H1 DONE. FASE H — MOBILE / ACCESSIBILITY /
+PERFORMANCE ENCERRADA. Próxima fase: I — QA/Polish/Release (nome
+definido no roadmap, escopo ainda não detalhado).**
