@@ -1,4 +1,5 @@
 import type { CrewCredit } from "@/lib/title-credits";
+import { BRAZIL_TIME_ZONE, dateKeyInTimeZone } from "@/lib/date-only";
 
 /*
  * Contrato interno (sanitizado) de temporadas/episódios de série (C5.1).
@@ -197,10 +198,15 @@ export function normalizeEpisodeCrew(raw: unknown): CrewCredit[] {
 
 /**
  * Status de lançamento derivado de `air_date`, por comparação de data
- * civil (string `YYYY-MM-DD`, sem `Date` completo) para não depender do
- * fuso horário do processo. `air_date` ausente/inválida é `"unknown"` —
- * NUNCA `"released"`. Essa é a decisão de produto da C5.1: episódio sem
- * data não pode ser assumido como lançado.
+ * civil (string `YYYY-MM-DD`) contra o dia civil de "hoje" no fuso do
+ * produto (`America/Sao_Paulo` — I1, corrige viés de fuso:
+ * `toISOString().slice(0,10)` usava a data em UTC, que "vira o dia" até
+ * 3h antes do horário de Brasília; isso também corrigia errado no server,
+ * que roda em UTC, então ancorar em fuso explícito, não no fuso ambiente
+ * do processo, é o que garante o mesmo resultado em client e server).
+ * `air_date` ausente/inválida é `"unknown"` — NUNCA `"released"`. Essa é
+ * a decisão de produto da C5.1: episódio sem data não pode ser assumido
+ * como lançado.
  */
 export function getEpisodeReleaseStatus(
   airDate: string | null | undefined
@@ -217,7 +223,7 @@ export function getEpisodeReleaseStatus(
     return "unknown";
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dateKeyInTimeZone(new Date(), BRAZIL_TIME_ZONE);
   return dateOnly <= today ? "released" : "future";
 }
 

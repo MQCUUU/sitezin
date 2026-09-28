@@ -60,7 +60,12 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
 
     return NextResponse.json(
       {
-        profile,
+        // I1 — achado durante a auditoria de metadata (§30): esta rota
+        // devolvia `profile` cru, incluindo `bio` (texto livre do
+        // usuário), mesmo com `canView=false`. As demais seções já eram
+        // corretamente ocultadas (arrays vazios); a bio escapava disso
+        // por ser um campo do objeto `profile`, não uma seção separada.
+        profile: { ...profile, bio: null },
         locked: true,
         favorites: [],
         activity: [],

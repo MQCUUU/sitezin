@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { isValidUsername, normalizeUsername, USERNAME_RULE_MESSAGE } from "@/lib/username";
+import { applyUsernameChange } from "@/lib/username-change";
 
 export async function GET() {
   try {
@@ -94,44 +95,21 @@ export async function POST(request: Request) {
     let finalUsername: string;
 
     if (myProfile.length > 0) {
-      const currentUsername = myProfile[0].username;
+      const result = await applyUsernameChange(
+        sql,
+        user.id,
+        username,
+        myProfile[0].username
+      );
 
-      if (currentUsername && currentUsername !== username) {
-        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-        const changesCountRes = await sql`
-          SELECT count(*)::int as count
-          FROM public.username_changes
-          WHERE user_id = ${user.id} AND changed_at >= ${thirtyDaysAgo}
-        `;
-
-        if (Number(changesCountRes[0]?.count || 0) >= 2) {
-          return NextResponse.json(
-            { error: "Você já usou as 2 trocas de @ dos últimos 30 dias." },
-            { status: 429, headers: { "X-Username-Backend": "neon-direct-v1" } }
-          );
-        }
-
-        await sql.transaction([
-          sql`
-            UPDATE public.profiles
-            SET username = ${username}
-            WHERE id = ${user.id}
-          `,
-          sql`
-            INSERT INTO public.username_changes (user_id, old_username, new_username, changed_at)
-            VALUES (${user.id}, ${currentUsername}, ${username}, now())
-          `,
-        ]);
-        finalUsername = username;
-      } else {
-        const updated = await sql`
-          UPDATE public.profiles
-          SET username = ${username}
-          WHERE id = ${user.id}
-          RETURNING id, username
-        `;
-        finalUsername = updated[0].username;
+      if (!result.ok) {
+        return NextResponse.json(
+          { error: result.error },
+          { status: result.status, headers: { "X-Username-Backend": "neon-direct-v1" } }
+        );
       }
+
+      finalUsername = result.username;
     } else {
       const displayName = (user.name || "").trim() || username;
       const inserted = await sql`

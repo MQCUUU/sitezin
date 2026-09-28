@@ -382,26 +382,37 @@ create index if not exists watch_entries_library_item_idx
  
 create index if not exists watch_entries_media_idx
   on public.watch_entries (media_id, watched_at desc);
- 
+
+-- I1 — corrige IDOR de POST /api/account/import: o import nunca mais
+-- escreve usando o `id` vindo do arquivo de backup (evitava sequestro de
+-- linha alheia via ON CONFLICT(id)). Esta chave natural, escopada por
+-- user_id, é o novo alvo de ON CONFLICT para deduplicar reimportações
+-- sem nunca poder colidir com uma linha de outro usuário.
+create unique index if not exists watch_entries_user_dedup_idx
+  on public.watch_entries (user_id, library_item_id, watched_at, is_rewatch);
+
  
 create table if not exists public.activity_events (
   id              uuid primary key default gen_random_uuid(),
   user_id         uuid not null references auth.users(id),
   library_item_id uuid references public.library_items(id),
   media_id        integer,            -- ver NOTA 2
+  -- I1 — 'watch_logged' estava em uso real (app/api/watch-history/route.ts)
+  -- e já era aceito pela constraint em produção/TEST; faltava só aqui no
+  -- schema.sql versionado (drift de documentação puro, sem migração).
   event_type      text not null
                     check (event_type in ('library_added', 'status_changed',
                                           'season_completed',
                                           'series_completed',
-                                          'rewatch_started')),
+                                          'rewatch_started',
+                                          'watch_logged')),
   metadata        jsonb not null default '{}',
   occurred_at     timestamptz not null default now()
 );
  
 create index if not exists activity_events_user_occurred_idx
   on public.activity_events (user_id, occurred_at desc);
- 
- 
+
 create table if not exists public.user_hidden_titles (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid not null references auth.users(id),

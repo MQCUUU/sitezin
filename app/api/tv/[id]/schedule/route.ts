@@ -3,6 +3,8 @@ import {
   NextResponse,
 } from "next/server";
 
+import { BRAZIL_TIME_ZONE, dateKeyInTimeZone } from "@/lib/date-only";
+
 const TMDB_BASE =
   "https://api.themoviedb.org/3";
 
@@ -24,13 +26,15 @@ function dateOnly(
   );
 }
 
+/*
+ * I1 — `todayKey` ancorava em UTC (`toISOString().slice(0,10)`), o que
+ * inclui/exclui episódios do cronograma até 3h errado para o horário de
+ * Brasília. Ancorado explicitamente em America/Sao_Paulo (fuso do
+ * público-alvo do produto), independente do fuso do processo (Vercel
+ * roda em UTC).
+ */
 function todayKey() {
-  return new Date()
-    .toISOString()
-    .slice(
-      0,
-      10
-    );
+  return dateKeyInTimeZone(new Date(), BRAZIL_TIME_ZONE);
 }
 
 export async function GET(

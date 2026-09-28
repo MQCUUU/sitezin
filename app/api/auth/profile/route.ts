@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { isValidUsername, normalizeUsername } from "@/lib/username";
+import { applyUsernameChange } from "@/lib/username-change";
 
 export async function POST(request: Request) {
   try {
@@ -79,12 +80,24 @@ export async function POST(request: Request) {
         )
       `;
     } else {
-      // Profile já existente: UPDATE
+      // Profile já existente: display_name sempre pode ser atualizado;
+      // username passa pela mesma checagem de cooldown (2/30 dias) de
+      // POST /api/profile/username — antes deste fix, este endpoint
+      // trocava o username direto, permitindo burlar o limite (I1).
+      const result = await applyUsernameChange(
+        sql,
+        user.id,
+        cleanUsername,
+        myProfile[0].username
+      );
+
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: result.status });
+      }
+
       await sql`
         UPDATE public.profiles
-        SET
-          display_name = COALESCE(NULLIF(${name}, ''), display_name),
-          username = ${cleanUsername}
+        SET display_name = COALESCE(NULLIF(${name}, ''), display_name)
         WHERE id = ${user.id}
       `;
     }

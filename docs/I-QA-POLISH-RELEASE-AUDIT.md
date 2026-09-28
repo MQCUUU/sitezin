@@ -9,10 +9,14 @@ do checkpoint; usuário commitou manualmente (`477e4af perf(quality):
 complete mobile accessibility and performance`); checkpoint confirmado
 limpo antes de retomar.
 
-> **Status: I0 = AUDIT DONE. I1 = NEXT.** Esta fase **não** declara
-> release pronto — isso é decisão da I1, depois que os bloqueadores
-> abaixo forem endereçados. Todo o conteúdo abaixo é diagnóstico, não
-> implementação.
+> **Status: I0 = AUDIT DONE. I1 = DONE.** A implementação da I1
+> (correção dos 2 BLOQUEADORES, dos HIGH/MEDIUM confirmados, e o
+> polish de metadata/favicon) está documentada em
+> [`docs/PREMIUM-UI-V2.md` § 32](./PREMIUM-UI-V2.md#32-fase-i1--final-fixesqarelease-readiness-done)
+> e no [`docs/RELEASE-RUNBOOK.md`](./RELEASE-RUNBOOK.md). As seções
+> abaixo permanecem como registro fiel do estado encontrado **antes**
+> da I1. O RELATÓRIO FINAL da I1 está no fechamento da conversa desta
+> fase.
 
 ---
 

@@ -458,13 +458,21 @@ fase de fechamento (B5) — apenas esta documentação.
     adicionado, formulários de Settings e botão do ReviewPanel com nome
     acessível, foco/setas/restore no menu de status, touch targets
     ampliados, safe-area no Dialog).
-- **I — QA/Polish/Release** = EM ANDAMENTO (I0 auditoria = DONE — ver
-  [`docs/I-QA-POLISH-RELEASE-AUDIT.md`](./I-QA-POLISH-RELEASE-AUDIT.md);
-  I1 = NEXT, escopo definido no documento: 2 achados BLOQUEADOR — IDOR
-  em `account/import`, segredo HMAC hardcoded duplicado — mais itens
-  ALTO/MÉDIO de hidratação, fuso horário e saúde de pacotes).
+- **I — QA/Polish/Release** = DONE (I0 auditoria + I1 implementação
+  consolidada — ver [`docs/I-QA-POLISH-RELEASE-AUDIT.md`](./I-QA-POLISH-RELEASE-AUDIT.md)
+  e [`docs/RELEASE-RUNBOOK.md`](./RELEASE-RUNBOOK.md) para o detalhe
+  completo de ambas as subfases).
   - **I0 — Auditoria** = DONE.
-  - **I1 — Consolidação** = NEXT.
+  - **I1 — Consolidação** = DONE (IDOR de `account/import` corrigido e
+    validado com ataque real em TEST, segredo HMAC hardcoded removido
+    com fail-closed, hidratação do `viewMode` da Library corrigida,
+    viés de fuso horário UTC-vs-Brasil corrigido em episódios/schedule
+    de TV, bypass de cooldown de username corrigido, drift de schema
+    de `activity_events` resolvido, metadata de `/u/[username]` e
+    `/collection/[id]` adicionada, vazamento de `bio` em perfil
+    trancado corrigido).
+
+**PREMIUM UI V2 = RELEASE READY** (todas as fases A–I concluídas).
 
 ## 21. Fase C — Nota de handoff (histórico)
 
@@ -1629,3 +1637,162 @@ apagada. `DB SCHEMA DIFF` = só o índice documentado acima.
 **Resultado da fase: H1 DONE. FASE H — MOBILE / ACCESSIBILITY /
 PERFORMANCE ENCERRADA. Próxima fase: I — QA/Polish/Release (nome
 definido no roadmap, escopo ainda não detalhado).**
+
+## 32. Fase I1 — Final Fixes/QA/Release Readiness (DONE)
+
+### Objetivo
+
+Corrigir todos os achados da auditoria I0
+([`docs/I-QA-POLISH-RELEASE-AUDIT.md`](./I-QA-POLISH-RELEASE-AUDIT.md))
+que bloqueavam release, na ordem de prioridade determinada:
+bloqueadores de segurança → HIGH de integridade/runtime → MEDIUM
+confirmado → schema drift → polish de release. Única fase de
+implementação da I — sem I1.1/I1.2/I2, sem features novas.
+
+### BLOQUEADOR #1 — IDOR em `POST /api/account/import` (corrigido)
+
+O import de backup usava o `id` do próprio arquivo JSON como chave de
+`ON CONFLICT` em `watch_entries`/`activity_events`, permitindo
+sequestrar um registro de outro usuário (cujo `id` é exposto
+publicamente em diário/atividade visíveis) reatribuindo-o via UPSERT.
+Corrigido em `app/api/account/import/route.ts`:
+
+- `id` do backup **nunca** mais é usado como chave de escrita — sempre
+  gerado no servidor (`crypto.randomUUID()`).
+- `watch_entries`: dedupe de reimportação por chave natural escopada em
+  `user_id` (nova migration `watch_entries_user_dedup_idx`, `unique
+  (user_id, library_item_id, watched_at, is_rewatch)` — aplicada e
+  validada em TEST).
+- `activity_events`: dedupe por checagem explícita (`SELECT` antes do
+  `INSERT`), não por índice único — a tabela real já tem linhas
+  legítimas duplicadas na mesma chave natural (achado novo, não
+  relacionado a este fix: `season_completed` inserido várias vezes com
+  timestamp idêntico para o mesmo usuário/mídia; root cause não
+  investigada, registrada como dívida em
+  [`docs/RELEASE-RUNBOOK.md`](./RELEASE-RUNBOOK.md)). Um índice único
+  ali quebraria escritas reais do app.
+- Validado em runtime contra TEST (dois usuários reais criados via
+  signup, ataque reproduzido literalmente): registro da vítima
+  permaneceu intacto (mesmo rating/comment/user_id), o atacante não
+  conseguiu se apropriar do registro roubado, e o import normal
+  (não malicioso) continuou funcionando. Import malformado segue
+  retornando 400.
+
+### BLOQUEADOR #2 — segredo HMAC hardcoded (corrigido)
+
+Fallback hardcoded de `NEON_AUTH_COOKIE_SECRET`, duplicado em
+`proxy.ts` e `lib/auth/server.ts`, removido dos dois arquivos.
+Consolidado numa fonte única (`lib/auth/cookie-secret.ts`,
+`getAuthCookieSecret()`) que falha explicitamente (fail-closed, sem
+fallback) se a env var estiver ausente — mesmo padrão já usado por
+`lib/db/neon.ts` para `DATABASE_URL`. `OLD SECRET REFERENCES = 0`
+(rebuscado após a remoção). Nome de variável mantido (já existia em
+`.env.example`, nenhum nome novo criado). Rotação do valor exposto
+documentada como pré-requisito de deploy em
+[`docs/RELEASE-RUNBOOK.md`](./RELEASE-RUNBOOK.md) — não executada por
+código, decisão de ambiente.
+
+### HIGH — hidratação do `viewMode` da Library (corrigido)
+
+`app/library/page.tsx`: `viewMode` agora nasce sempre `"grid"` (igual
+ao SSR); a preferência real do `localStorage` é lida num `useEffect`
+pós-mount, com uma ref (`isFirstViewModeRender`) evitando que o efeito
+de persistência reescreva o valor real antes da leitura terminar.
+Validado em runtime (Playwright, usuário com preferência `"compact"`
+salva navegando para `/library`): zero mensagens de erro/hidratação no
+console.
+
+### HIGH — fuso horário UTC vs. local em episódios (corrigido)
+
+Dois pontos usavam `new Date().toISOString().slice(0,10)` (data em
+UTC) para decidir "hoje", causando um episódio aparecer como lançado
+até 3h antes do horário real de Brasília. Criado
+`lib/date-only.ts` (`dateKeyInTimeZone`, `BRAZIL_TIME_ZONE`), ancorado
+explicitamente em `America/Sao_Paulo` via `Intl` — funciona
+corretamente tanto em client (browser) quanto em server (Vercel roda
+em UTC, então só ancorar no fuso do processo não seria suficiente).
+Aplicado em:
+- `lib/title-seasons.ts` (`getEpisodeReleaseStatus`) — usado tanto na
+  validação server-side de `watched=true` quanto na UI.
+- `app/api/tv/[id]/schedule/route.ts` (`todayKey`).
+- Também aplicado ao MÉDIO correlato: o default de "assistido em" em
+  `app/title/tv/[id]/season/[season]/episode/[episode]/page.tsx`.
+
+### MEDIUM — bypass do cooldown de username (corrigido)
+
+`POST /api/auth/profile` trocava `username` sem aplicar o cooldown de
+2 trocas/30 dias que `POST /api/profile/username` já aplicava.
+Consolidado numa fonte única (`lib/username-change.ts`,
+`applyUsernameChange()`), usada pelos dois endpoints. Validado em
+runtime: 1ª e 2ª troca aceitas, 3ª bloqueada (429) em ambos os
+endpoints, incluindo o que antes tinha o bypass.
+
+### MEDIUM — schema drift `activity_events.event_type` (resolvido, classificação A)
+
+Introspecção real (TEST) confirmou que a constraint do banco **já**
+aceitava `'watch_logged'` — só o `schema.sql` versionado estava
+desatualizado. Corrigida a documentação do schema, sem migração (a
+constraint real nunca precisou mudar).
+
+### Achado novo, corrigido proativamente durante a I1 (fora da lista original da I0)
+
+`GET /api/public-profile/[username]` devolvia o campo `bio` (texto
+livre do usuário) mesmo com o perfil trancado (`canView=false`) — as
+demais seções (`activity`/`lists`/`likes`/etc.) já eram corretamente
+ocultadas como arrays vazios, mas `bio` escapava disso por estar dentro
+do objeto `profile` bruto. Encontrado ao implementar metadata de
+`/u/[username]` (que precisava decidir o que é seguro expor a um
+visitante anônimo) e corrigido no mesmo commit lógico: a resposta agora
+sempre zera `bio` quando `!canView`.
+
+### Polish de release
+
+- Metadata dedicada (title/description/OG/Twitter/robots) para
+  `/u/[username]` (`app/u/[username]/layout.tsx`, condicional a
+  `visibility`/`is_public` — nunca indexa nem expõe bio de perfil
+  privado) e `/collection/[id]` (`app/collection/[id]/layout.tsx`,
+  usando só o endpoint leve do TMDB, não a rota interna pesada de
+  N+1). Mesmo padrão já usado por `app/title/[type]/[id]/layout.tsx`.
+- Favicon: nenhum asset de marca existe no projeto hoje
+  (`public/placeholder.svg` é só o placeholder genérico do Next) —
+  **não foi inventado um design novo nesta fase**, documentado como
+  dívida em `docs/RELEASE-RUNBOOK.md`.
+- UI em inglês / typos: zero achados na I0, nada para corrigir.
+- Console warnings conhecidos (CSP inline-style) seguem pré-existentes
+  e não relacionados às mudanças desta fase — reconfirmado em runtime.
+
+### Fora do escopo, deliberadamente adiado (I1)
+
+Ver lista completa em `docs/RELEASE-RUNBOOK.md` § "Dívida
+deliberadamente adiada" — inclui upgrade de `@neondatabase/auth`,
+dependência transitiva `auth-ui` não usada, consolidação dos `.sql`
+avulsos de `supabase/` num sistema de migração formal, resíduo de
+nomenclatura "Supabase", os 3 pontos residuais de hidratação de baixa
+frequência (`new Date()`/`getFullYear()` em `app/page.tsx`/
+`discover`/`retrospective`, mesma classe do fix da Library mas não
+nomeados no escopo desta fase), `loading.tsx` de segmento, e o bug de
+duplicação de `activity_events` descoberto durante esta fase.
+
+### QA em runtime
+
+Servidor dev isolado (porta 3999) contra `TEST_DATABASE_URL`/
+`TEST_NEON_AUTH_BASE_URL`. Contas descartáveis criadas via `/signup`
+Playwright real. Cenário de ataque do IDOR reproduzido literalmente
+com dois usuários reais (não simulado). Cooldown de username validado
+com 4 tentativas reais de troca. Hidratação validada com preferência
+real salva em `localStorage`. `npm run check`/`npm run build`/`git diff
+--check` verdes ao final. Servidor finalizado só pelo PID próprio.
+Scripts `.mjs` de QA e `.env.development.local` removidos ao final.
+
+### Banco de dados
+
+Uma migration nova (`watch_entries_user_dedup_idx`), criada e **já
+aplicada em TEST** (validada com dados reais, zero conflito). Não
+aplicada em produção — ordem documentada em
+`docs/RELEASE-RUNBOOK.md`. Nenhuma tabela apagada. `DB SCHEMA DIFF` =
+o índice novo + a correção de documentação do CHECK de
+`activity_events` (sem mudança de constraint real).
+
+**Resultado da fase: I1 DONE. FASE I — QA/POLISH/RELEASE ENCERRADA.**
+**PREMIUM UI V2 = RELEASE READY** (ver RELATÓRIO FINAL da I1 para o
+detalhamento completo de todos os campos do release gate).

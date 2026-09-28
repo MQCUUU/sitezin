@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { validateSessionData } from "@neondatabase/auth/server";
 
+import { getAuthCookieSecret } from "@/lib/auth/cookie-secret";
+
 /*
  * ==========================================
  * ROTAS PRIVADAS DO MYCATALOG
@@ -82,10 +84,7 @@ function safeNextPath(raw: string | null): string | null {
   }
 }
 
-const cookieSecret =
-  process.env.NEON_AUTH_COOKIE_SECRET?.trim() ||
-  "d890bfa3f80c45169a6efd019f394c8e7b3017a58e23f99e43681726a8f15d2a";
-const secret = cookieSecret.length >= 32 ? cookieSecret : cookieSecret.padEnd(32, "0");
+const secret = getAuthCookieSecret();
 
 const baseUrl = (
   process.env.NEON_AUTH_BASE_URL?.trim() ||

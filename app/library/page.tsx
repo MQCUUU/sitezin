@@ -333,30 +333,38 @@ function LibraryContent() {
       false
     );
 
+  /*
+   * I1 — `viewMode` nasce sempre "grid" (igual ao SSR) para não causar
+   * mismatch de hidratação; a preferência real do localStorage só é lida
+   * depois do mount, num useEffect. `isFirstViewModeRender` evita que o
+   * efeito de persistência reescreva "grid" por cima do valor real
+   * salvo antes da leitura acima terminar.
+   */
   const [
     viewMode,
     setViewMode,
   ] =
-    useState<
-      ViewMode
-    >(
-      () => {
-        if (typeof window === "undefined") return "grid";
+    useState<ViewMode>("grid");
 
-        try {
-          const stored = window.localStorage.getItem("mycatalog_library_view_mode");
-          if (stored === "grid" || stored === "compact" || stored === "list") {
-            return stored;
-          }
-        } catch {
-          // localStorage indisponível — usa o padrão.
-        }
-
-        return "grid";
-      }
-    );
+  const isFirstViewModeRender = useRef(true);
 
   useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem("mycatalog_library_view_mode");
+      if (stored === "grid" || stored === "compact" || stored === "list") {
+        setViewMode(stored);
+      }
+    } catch {
+      // localStorage indisponível — mantém o padrão "grid".
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isFirstViewModeRender.current) {
+      isFirstViewModeRender.current = false;
+      return;
+    }
+
     try {
       window.localStorage.setItem("mycatalog_library_view_mode", viewMode);
     } catch {

@@ -388,9 +388,6 @@ export async function POST(
       }
 
       const payload = {
-        id:
-          entry.id,
-
         user_id:
           user.id,
 
@@ -401,7 +398,7 @@ export async function POST(
           newMediaId,
 
         watched_at:
-          entry.watched_at,
+          entry.watched_at || new Date().toISOString(),
 
         rating:
           entry.rating ??
@@ -425,13 +422,20 @@ export async function POST(
 
       try {
 
+        // O `id` do backup nunca é usado como chave de escrita: um
+        // atacante poderia colocar o id de um watch_entry alheio (exposto
+        // publicamente em diário/atividade) para sequestrar aquele
+        // registro via ON CONFLICT(id). O id é sempre gerado no servidor;
+        // a deduplicação em reimportações usa uma chave natural escopada
+        // por user_id (watch_entries_user_dedup_idx), que nunca pode
+        // apontar para uma linha de outro usuário.
         await sql`
           INSERT INTO public.watch_entries (
             id, user_id, library_item_id, media_id, watched_at,
             rating, comment, is_rewatch, created_at, updated_at
           )
           VALUES (
-            ${payload.id},
+            ${crypto.randomUUID()},
             ${user.id},
             ${payload.library_item_id},
             ${payload.media_id},
@@ -442,15 +446,11 @@ export async function POST(
             ${payload.created_at || new Date().toISOString()},
             ${payload.updated_at || new Date().toISOString()}
           )
-          ON CONFLICT (id)
+          ON CONFLICT (user_id, library_item_id, watched_at, is_rewatch)
           DO UPDATE SET
-            user_id = EXCLUDED.user_id,
-            library_item_id = EXCLUDED.library_item_id,
             media_id = EXCLUDED.media_id,
-            watched_at = EXCLUDED.watched_at,
             rating = EXCLUDED.rating,
             comment = EXCLUDED.comment,
-            is_rewatch = EXCLUDED.is_rewatch,
             updated_at = EXCLUDED.updated_at
         `;
         watchCount++;
@@ -501,29 +501,46 @@ export async function POST(
 
             try {
 
-        await sql`
-          INSERT INTO public.activity_events (
-            id, user_id, media_id, library_item_id, event_type, metadata, occurred_at, created_at
-          )
-          VALUES (
-            ${event.id || crypto.randomUUID()},
-            ${user.id},
-            ${newMediaId},
-            ${newLibraryId},
-            ${event.event_type},
-            ${JSON.stringify(event.metadata || {})},
-            ${event.occurred_at || new Date().toISOString()},
-            ${new Date().toISOString()}
-          )
-          ON CONFLICT (id)
-          DO UPDATE SET
-            user_id = EXCLUDED.user_id,
-            media_id = EXCLUDED.media_id,
-            library_item_id = EXCLUDED.library_item_id,
-            event_type = EXCLUDED.event_type,
-            metadata = EXCLUDED.metadata,
-            occurred_at = EXCLUDED.occurred_at
+        // O `id` do backup nunca é usado como chave de escrita (evita
+        // sequestro de activity_event alheio via ON CONFLICT(id) — mesma
+        // classe de IDOR do watch_entries acima). Id sempre gerado no
+        // servidor. Diferente do watch_entries, aqui a dedupe é feita por
+        // uma checagem explícita (não por unique index): a tabela real já
+        // tem linhas legítimas duplicadas na chave natural
+        // (user_id, media_id, event_type, occurred_at) — achado de
+        // integridade pré-existente e não relacionado a este fix,
+        // registrado no relatório desta fase — então um índice único
+        // quebraria escritas reais do app. A checagem evita reimportação
+        // duplicada sem exigir uma constraint que a tabela hoje viola.
+        const occurredAt =
+          event.occurred_at || new Date().toISOString();
+
+        const already = await sql`
+          SELECT 1 FROM public.activity_events
+          WHERE user_id = ${user.id}
+            AND media_id = ${newMediaId}
+            AND event_type = ${event.event_type}
+            AND occurred_at = ${occurredAt}
+          LIMIT 1
         `;
+
+        if (already.length === 0) {
+          await sql`
+            INSERT INTO public.activity_events (
+              id, user_id, media_id, library_item_id, event_type, metadata, occurred_at, created_at
+            )
+            VALUES (
+              ${crypto.randomUUID()},
+              ${user.id},
+              ${newMediaId},
+              ${newLibraryId},
+              ${event.event_type},
+              ${JSON.stringify(event.metadata || {})},
+              ${occurredAt},
+              ${new Date().toISOString()}
+            )
+          `;
+        }
         activityCount++;
       } catch (err: any) {
         console.error("Erro ao importar activity event:", err?.message);

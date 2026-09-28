@@ -8,6 +8,7 @@ import { ArrowLeft, Check, Clock, Eye, Loader2, RotateCcw, Save, Star } from "lu
 import { Search } from "@/components/Search";
 import { img } from "@/lib/tmdb";
 import { getEpisodeReleaseStatus, type EpisodeSummary } from "@/lib/title-seasons";
+import { BRAZIL_TIME_ZONE, dateKeyInTimeZone } from "@/lib/date-only";
 import type { LibraryItem, LooseTitleDetails } from "@/components/title";
 
 type EpisodeProgressRow = {
@@ -41,7 +42,12 @@ export default function EpisodePage() {
   const [library, setLibrary] = useState<LibraryItem | null>(null);
   const [progress, setProgress] = useState<EpisodeProgressRow | null>(null);
   const [comment, setComment] = useState("");
-  const [watchedAt, setWatchedAt] = useState(new Date().toISOString().slice(0, 10));
+  // I1 — usava toISOString().slice(0,10) (UTC); trocado pelo mesmo fuso
+  // de referência do produto usado em getEpisodeReleaseStatus, evitando
+  // que o default de "assistido em" caia no dia errado perto da meia-noite.
+  const [watchedAt, setWatchedAt] = useState(() =>
+    dateKeyInTimeZone(new Date(), BRAZIL_TIME_ZONE)
+  );
   const [rewatch, setRewatch] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
