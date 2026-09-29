@@ -2959,6 +2959,16 @@ button div > span {
 }
 
 .fy-poster {
+  /*
+   * HOTFIX V2.2-A — `.fy-poster` é um <a> (inline por padrão). Com o <img> em
+   * fluxo o box inline "envolvia" a imagem; o `Poster` (next/image `fill`)
+   * é position:absolute e não dá tamanho a um inline, e `aspect-ratio` não
+   * vale para inline → o poster colapsava para ~2×22 px (invisível, mesmo
+   * com a imagem carregada). Bloco + largura total reserva o 2:3 de verdade.
+   */
+  display: block;
+  width: 100%;
+
   position: relative;
 
   aspect-ratio: 2 / 3;

@@ -47,6 +47,38 @@ import { WatchProviderList } from "@/components/media/preview/WatchProviderList"
 import { fromLooseMediaItem } from "@/components/media/preview/adapters";
 import { normalizeWatchProviders } from "@/components/media/providers";
 
+/*
+ * Cache do Para você (sessionStorage). `v2`: a v1 foi gravada por versões
+ * anteriores; qualquer entrada v1 é ignorada e removida (AccountMenu limpa
+ * tudo que começa com `mycatalog:foryou:` fora do prefixo atual).
+ */
+const FOR_YOU_CACHE_PREFIX = "mycatalog:foryou:v2:";
+
+/*
+ * Nunca reaproveita um cache cujo formato não seja exatamente o que a tela
+ * consome: prateleiras com `results` de objetos que têm id e tipo de mídia.
+ * Campos de imagem ausentes/nulos são OK (o Poster usa o placeholder).
+ */
+function isValidForYouPayload(data: any): boolean {
+  return (
+    !!data &&
+    Array.isArray(data.shelves) &&
+    data.shelves.every(
+      (shelf: any) =>
+        shelf &&
+        typeof shelf.id === "string" &&
+        Array.isArray(shelf.results) &&
+        shelf.results.every(
+          (item: any) =>
+            item &&
+            (typeof item.id === "number" || typeof item.id === "string") &&
+            (item.media_type === "movie" || item.media_type === "tv") &&
+            (item.poster_path === undefined || item.poster_path === null || typeof item.poster_path === "string")
+        )
+    )
+  );
+}
+
 const STATUS_OPTIONS = [
   ["want", "Quero assistir"],
   ["watching", "Assistindo"],
@@ -729,7 +761,7 @@ export default function ForYouPage() {
 
     const cacheKey =
       userId && !append
-        ? `mycatalog:foryou:v1:${userId}:${queryFor(nextPage).toString()}`
+        ? `${FOR_YOU_CACHE_PREFIX}${userId}:${queryFor(nextPage).toString()}`
         : null;
 
     try {
@@ -751,7 +783,7 @@ export default function ForYouPage() {
               Date.now() - cached.savedAt < 10 * 60 * 1000 &&
               // Só vale se nada na Library/ocultos mudou desde que foi gravado.
               cached.version === getLibraryVersion() &&
-              Array.isArray(cached.data?.shelves)
+              isValidForYouPayload(cached.data)
             ) {
               applyData(cached.data, nextPage, false);
               seeded = true;

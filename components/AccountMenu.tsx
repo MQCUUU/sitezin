@@ -177,7 +177,7 @@ export function AccountMenu(): React.ReactElement {
       const email = session?.user?.email;
 
       for (const key of Object.keys(sessionStorage)) {
-        if (key.startsWith("mycatalog:foryou:v1:") && !key.startsWith(`mycatalog:foryou:v1:${sessionUserId}:`)) {
+        if (key.startsWith("mycatalog:foryou:") && !key.startsWith(`mycatalog:foryou:v2:${sessionUserId}:`)) {
           sessionStorage.removeItem(key);
         }
 
