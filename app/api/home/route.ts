@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { naoAutenticado, respostaDeErro } from "@/lib/api-error";
+import {
+  computeTvProgress,
+  groupWatchedByMedia,
+  tvStructureFromRaw,
+} from "@/lib/tv-progress";
 
 /*
  * ==========================================
@@ -114,6 +119,39 @@ export async function GET() {
         [userId]
       ),
     ]);
+
+    /*
+     * V2.1-E — próximo episódio das séries em andamento. UMA query batched
+     * para todas as séries da prateleira (≤ HOME_SHELF_LIMIT), agrupada em
+     * memória: nunca uma query por série.
+     */
+    const tvRows = (watching as Record<string, any>[]).filter(
+      (row) => row.media?.media_type === "tv"
+    );
+
+    if (tvRows.length > 0) {
+      const mediaIds = tvRows.map((row) => Number(row.media.id));
+      const progressRows = (await sql`
+        SELECT media_id, season_number, episode_number
+        FROM public.episodes_progress
+        WHERE user_id = ${userId}
+          AND watched = true
+          AND media_id = ANY(${mediaIds}::int[])
+      `) as { media_id: number; season_number: number; episode_number: number }[];
+
+      const byMedia = groupWatchedByMedia(progressRows);
+
+      for (const row of tvRows) {
+        row.progress = computeTvProgress(
+          tvStructureFromRaw(row.media.raw, {
+            seasons_count: row.media.seasons_count,
+            episodes_count: row.media.episodes_count,
+          }),
+          byMedia.get(Number(row.media.id)) ?? [],
+          { rewatching: row.status === "rewatching" }
+        );
+      }
+    }
 
     const dbMs = performance.now() - dbStartedAt;
     const totals = (totalsRows[0] || {}) as Record<string, unknown>;

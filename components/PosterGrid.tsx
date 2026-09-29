@@ -1,5 +1,6 @@
 "use client";
 
+import { TvNextEpisode } from "@/components/TvNextEpisode";
 import Link from "next/link";
 import {
   Heart,
@@ -1646,6 +1647,7 @@ function Card({ item, ...actionProps }: CardActionProps & { item: LibraryItem })
           </span>
         )}
       </MediaCardMeta>
+      <TvNextEpisode progress={item.progress} />
     </MediaCard>
   );
 }

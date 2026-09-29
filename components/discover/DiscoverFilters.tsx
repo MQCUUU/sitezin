@@ -118,6 +118,7 @@ export function DiscoverFilters({
               onChange={(event) => onChange({ provider: event.target.value })}
             >
               <option value="">Qualquer streaming</option>
+              <option value="mine">Nos meus serviços</option>
               {filters.providers.map((item) => (
                 <option key={item.provider_id} value={item.provider_id}>
                   {item.provider_name}

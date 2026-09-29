@@ -1,3 +1,4 @@
+import type { TvProgress } from "@/lib/tv-progress";
 export type MediaType =
   | "movie"
   | "tv";
@@ -44,6 +45,8 @@ export type LibraryItem = Media & {
   rewatch_count: number;
   added_at: string;
   updated_at: string;
+  /** V2.1-E: só na prateleira "Continuar assistindo" da Home (séries). */
+  progress?: TvProgress | null;
 };
 
 export const STATUS_LABELS: Record<

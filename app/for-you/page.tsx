@@ -1,5 +1,6 @@
 "use client";
 
+import { SmartQueue } from "@/components/SmartQueue";
 import {
   useEffect,
   useMemo,
@@ -241,6 +242,13 @@ export default function ForYouPage() {
     setProvider,
   ] =
     useState("");
+
+  /* V2.1-E — "Nos meus serviços" ativo sem serviços configurados. */
+  const [
+    needsStreamingSetup,
+    setNeedsStreamingSetup,
+  ] =
+    useState(false);
 
   const [
     minRating,
@@ -721,6 +729,12 @@ export default function ForYouPage() {
               : [],
         });
       }
+
+      setNeedsStreamingSetup(
+        Boolean(
+          data.needs_streaming_setup
+        )
+      );
 
       setPage(
         nextPage
@@ -1425,6 +1439,8 @@ export default function ForYouPage() {
           </Link>
         </section>
 
+        <SmartQueue genres={filters.genres} />
+
         <section className="fy-toolbar">
           <div className="fy-tabs">
             <button
@@ -1613,6 +1629,10 @@ export default function ForYouPage() {
                 >
                   <option value="">
                     Qualquer um
+                  </option>
+
+                  <option value="mine">
+                    Nos meus serviços
                   </option>
 
                   {filters.providers.map(
@@ -1815,6 +1835,22 @@ export default function ForYouPage() {
             </button>
           </section>
         )}
+
+        {needsStreamingSetup &&
+          provider === "mine" && (
+            <section className="fy-error" role="status">
+              <Sparkles size={26} />
+              <strong>
+                Você ainda não escolheu seus serviços de streaming.
+              </strong>
+              <Link
+                className="btn primary"
+                href="/settings?tab=general"
+              >
+                Escolher meus serviços
+              </Link>
+            </section>
+          )}
 
         {loading ? (
           <FeedSkeleton />

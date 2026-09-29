@@ -11904,3 +11904,48 @@ svg{vertical-align:middle}.btn>svg,button>svg,a>svg,.section-head svg,.title-sec
 .fy-assistant-cta>div{flex:1}
 .fy-assistant-cta .btn{flex:none}
 @media(max-width:640px){.fy-assistant-cta{flex-wrap:wrap}.fy-assistant-cta .btn{width:100%}}
+
+/* V2.1-E — Meus serviços de streaming */
+.streaming-settings { display: grid; gap: 14px; }
+.streaming-grid { display: flex; flex-wrap: wrap; gap: 8px; border: 0; padding: 0; margin: 0; max-height: 280px; overflow: auto; }
+.streaming-chip { position: relative; display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04); cursor: pointer; font-size: .9rem; }
+.streaming-chip input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.streaming-chip.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.streaming-chip:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.streaming-search input { width: 100%; max-width: 360px; }
+.streaming-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* V2.1-E — próximo episódio / progresso de série */
+.tv-next-episode { display: grid; gap: 4px; margin-top: 6px; }
+.tv-next-episode-label { font-size: .75rem; color: var(--muted, rgba(255,255,255,.7)); }
+.tv-next-episode-bar { display: block; height: 3px; border-radius: 999px; background: rgba(255,255,255,.12); overflow: hidden; }
+.tv-next-episode-bar > span { display: block; height: 100%; background: var(--accent); }
+.next-episode-callout { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 16px; margin-bottom: 12px; }
+.next-episode-callout > div { display: grid; gap: 2px; flex: 1 1 200px; }
+
+/* V2.1-E — O que assistir agora? */
+.fy-smart-queue-cta { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 18px; margin-bottom: 14px; }
+.fy-smart-queue-cta > div:nth-child(2) { flex: 1 1 220px; }
+.smart-queue-overlay { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 16px; background: rgba(0,0,0,.66); }
+.smart-queue-dialog { width: min(640px, 100%); max-height: min(90dvh, 820px); overflow: auto; display: grid; gap: 14px; padding: 18px; }
+.smart-queue-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.smart-queue-head h2 { margin: 0; font-size: 1.15rem; }
+.smart-queue-filters { display: grid; gap: 12px; }
+.smart-queue-filters fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 6px; }
+.smart-queue-filters legend { font-size: .82rem; color: var(--muted, rgba(255,255,255,.7)); margin-bottom: 4px; }
+.smart-queue-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.smart-queue-genre { display: grid; gap: 4px; max-width: 260px; }
+.smart-queue-mine { display: flex; align-items: center; gap: 8px; }
+.smart-queue-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.smart-queue-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.smart-queue-card { display: flex; gap: 12px; padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.03); }
+.smart-queue-poster { position: relative; flex: 0 0 64px; width: 64px; aspect-ratio: 2 / 3; border-radius: 8px; overflow: hidden; }
+.smart-queue-info { display: grid; gap: 3px; min-width: 0; align-content: start; }
+.smart-queue-title { font-weight: 700; }
+.smart-queue-reason { margin: 4px 0 0; font-size: .88rem; }
+@media (prefers-reduced-motion: reduce) { .smart-queue-dialog { scroll-behavior: auto; } }
+
+/* V2.1-E — card compartilhável da Retrospectiva */
+.retrospective-share-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+.retrospective-share-canvas { width: min(360px, 100%); height: auto; aspect-ratio: 1080 / 1350; border-radius: 16px; border: 1px solid rgba(255,255,255,.12); }
+.smart-queue-availability-note { font-size: .78rem; margin: 0; }

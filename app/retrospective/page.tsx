@@ -1,5 +1,6 @@
 "use client";
 
+import { RetrospectiveShare } from "@/components/RetrospectiveShare";
 import {
   useEffect,
   useMemo,
@@ -914,6 +915,20 @@ export default function RetrospectivePage() {
             </p>
 
           </section>
+
+          <RetrospectiveShare
+            data={{
+              year,
+              watchLogged: watchLoggedEvents.length,
+              markedWatched: statusWatchedFallbackEvents.length,
+              seriesCompleted: completedEvents.length,
+              seasonsCompleted: seasonEvents.length,
+              rewatches: rewatchEvents.length,
+              topGenre: topGenre?.name ?? null,
+              topMonth: topMonth?.name ?? null,
+              highlightTitle: highlights[0]?.media.title ?? null,
+            }}
+          />
 
           {/* DESTAQUES */}
 

@@ -359,7 +359,12 @@ function DiscoverContent() {
               }
             : payloads[0];
 
-        if (!cancelled) setData(result);
+        if (!cancelled)
+          setData(
+            payloads.some((entry) => entry?.needs_streaming_setup)
+              ? { ...result, needs_streaming_setup: true }
+              : result
+          );
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
@@ -811,6 +816,7 @@ function DiscoverContent() {
         <DiscoverEmptyState
           hasActiveFilters={activeFilters > 0}
           onClearFilters={handleClearFilters}
+          needsStreamingSetup={Boolean(data?.needs_streaming_setup)}
         />
       ) : (
         <>

@@ -8,6 +8,7 @@ import { DataBackup } from '@/components/DataBackup';
 import { AccountPrivacy } from '@/components/AccountPrivacy';
 import { SocialSettings } from '@/components/SocialSettings';
 import { NotificationSettings } from '@/components/NotificationSettings';
+import { StreamingServicesSettings } from '@/components/StreamingServicesSettings';
 
 import {
   ACCENT_OPTIONS,
@@ -164,6 +165,8 @@ export default function Settings() {
         </nav>
 
         {activeSettingsTab === 'general' && <section className="panel settings-profile-moved"><div><span className="eyebrow">PERFIL</span><h2>Edite diretamente na sua página</h2><p className="muted">Avatar, biografia, @, visibilidade e Top 5 agora ficam juntos no seu perfil.</p></div><a className="btn primary" href="/profile">Abrir meu perfil</a></section>}
+
+        {activeSettingsTab === 'general' && <StreamingServicesSettings />}
 
         {activeSettingsTab === 'appearance' && <>
 

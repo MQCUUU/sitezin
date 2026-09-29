@@ -36,7 +36,7 @@ function buildChips(params: DiscoverParams, filters: FilterResponse): Chip[] {
   }
 
   if (params.provider) {
-    const name = filters.providers.find(
+    const name = params.provider === "mine" ? "Nos meus serviços" : filters.providers.find(
       (item) => String(item.provider_id) === params.provider
     )?.provider_name;
     chips.push({

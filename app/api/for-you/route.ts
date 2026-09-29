@@ -1,3 +1,7 @@
+import {
+  getUserProviderFilter,
+  MY_SERVICES_SENTINEL,
+} from "@/lib/streaming-services-server";
 import { getDb } from "@/lib/db/neon";
 import {
   NextRequest,
@@ -275,6 +279,19 @@ export async function GET(
    */
   const MAX_SEEDS = 60;
   const userId: string = user.id;
+
+  /*
+   * V2.1-E — `provider=mine` ("Nos meus serviços"): opt-in explícito,
+   * resolvido por UMA query nos serviços do usuário. Sem serviços
+   * configurados as prateleiras de descoberta não são filtradas com um
+   * valor inválido: elas são omitidas e o client mostra o CTA.
+   */
+  const providerFilter =
+    provider === MY_SERVICES_SENTINEL
+      ? await getUserProviderFilter(userId)
+      : provider;
+  const needsStreamingSetup =
+    provider === MY_SERVICES_SENTINEL && providerFilter === "";
   const sql = getDb();
 
   const SEED_SELECT = `
@@ -1120,14 +1137,23 @@ export async function GET(
         ...params,
       };
 
+    if (needsStreamingSetup) {
+      return null;
+    }
+
     if (
-      provider
+      providerFilter
     ) {
       finalParams.watch_region =
         "BR";
 
+      if (provider === MY_SERVICES_SENTINEL) {
+        finalParams.with_watch_monetization_types =
+          "flatrate|free|ads";
+      }
+
       finalParams.with_watch_providers =
-        provider;
+        providerFilter;
     }
 
     if (
@@ -1622,6 +1648,8 @@ export async function GET(
       genres,
       providers,
     },
+
+    needs_streaming_setup: needsStreamingSetup,
 
     shelves:
       shelves.filter(

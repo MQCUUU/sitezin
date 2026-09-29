@@ -34,6 +34,7 @@ export type DiscoverResponse = {
   total_results: number;
   per_page?: number;
   personal_filters?: boolean;
+  needs_streaming_setup?: boolean;
 
   results: DiscoverItem[];
 };

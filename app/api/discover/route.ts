@@ -10,6 +10,10 @@ import {
 import { respostaDeErro } from "@/lib/api-error";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
+import {
+  getUserProviderFilter,
+  MY_SERVICES_SENTINEL,
+} from "@/lib/streaming-services-server";
 
 const TMDB_BASE =
   "https://api.themoviedb.org/3";
@@ -156,7 +160,7 @@ function buildTmdbParams({
 
   if (
     provider &&
-    /^\d+$/.test(
+    /^\d+(\|\d+)*$/.test(
       provider
     )
   ) {
@@ -360,6 +364,25 @@ export async function GET(
       ) || ""
     ).trim();
 
+  /*
+   * V2.1-E — `provider=mine` ("Nos meus serviços"): resolvido no servidor
+   * a partir dos serviços do usuário logado. Nunca é padrão — só age
+   * quando o usuário escolhe essa opção explicitamente.
+   */
+  let providerFilter = provider;
+  let needsStreamingSetup = false;
+
+  if (provider === MY_SERVICES_SENTINEL) {
+    const session = await auth.getSession().catch(() => null);
+    const sessionUserId = session?.data?.user?.id;
+
+    providerFilter = sessionUserId
+      ? await getUserProviderFilter(sessionUserId)
+      : "";
+
+    needsStreamingSetup = providerFilter === "";
+  }
+
   const hideWatched =
     url.searchParams.get(
       "hide_watched"
@@ -375,6 +398,20 @@ export async function GET(
     "pt-BR";
 
   try {
+    if (needsStreamingSetup) {
+      return NextResponse.json(
+        {
+          page,
+          total_pages: 1,
+          total_results: 0,
+          results: [],
+          per_page: ITEMS_PER_PAGE,
+          needs_streaming_setup: true,
+        },
+        { headers: { "Cache-Control": "private, no-store" } }
+      );
+    }
+
     const globalStartIndex =
       (page - 1) *
       ITEMS_PER_PAGE;
@@ -408,7 +445,7 @@ export async function GET(
       year,
       rating,
       country,
-      provider,
+      provider: providerFilter,
     };
 
     const firstData =
