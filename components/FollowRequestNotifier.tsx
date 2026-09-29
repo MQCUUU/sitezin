@@ -1,4 +1,5 @@
 "use client";
+import { fetchProfileMe } from "@/lib/profile-me";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ToastProvider";
@@ -67,11 +68,9 @@ export function FollowRequestNotifier() {
     };
 
     // Verificar se usuário está logado e obter o username do perfil
-    fetch("/api/profile/username", { cache: "force-cache" })
-      .then(async (response) => {
-        if (cancelled || !response.ok) return;
-        const data = await response.json();
-        if (!data?.authenticated) return;
+    fetchProfileMe()
+      .then((data) => {
+        if (cancelled || !data?.authenticated) return;
         profileUsername = data.username || "";
 
         // Carga inicial

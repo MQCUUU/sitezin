@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Globe, Loader2, Lock, Pencil, Plus, Search as SearchIcon, Trash2, X } from "lucide-react";
 
@@ -38,6 +38,7 @@ type Estado = "carregando" | "privada" | "nao-encontrada" | "erro" | "pronto";
 
 export default function ListDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const listId = params?.id;
   const toast = useToast();
   const confirmAction = useConfirm();
@@ -176,7 +177,7 @@ export default function ListDetailPage() {
       }
 
       toast.success("Lista excluída.");
-      window.location.href = "/lists";
+      router.push("/lists");
     } catch (error) {
       console.error(error);
       toast.error("Não foi possível excluir a lista.");

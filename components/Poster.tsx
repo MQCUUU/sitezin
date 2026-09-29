@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 import { img } from "@/lib/tmdb";
 
 /*
@@ -69,25 +70,48 @@ export function Poster({
   className,
   priority = false,
 }: PosterProps) {
-  const src = img(path, tmdbSize);
+  const imageRef = useRef<HTMLImageElement>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  // Novo poster (ex.: troca de página/filtro): recomeça o ciclo de carregamento.
+  useEffect(() => {
+    setLoaded(false);
+    setFailed(false);
+  }, [path]);
+
+  // Imagem que já estava em cache/hidratada antes do onLoad do React.
+  useEffect(() => {
+    const element = imageRef.current;
+
+    if (element?.complete && element.naturalWidth > 0) setLoaded(true);
+  });
 
   /*
-   * O placeholder é um SVG local. Mandá-lo pelo otimizador de
-   * imagens é desperdício (SVG já é vetorial e minúsculo), daí
-   * o unoptimized.
+   * V2.2-A — dois problemas percebidos pelo usuário:
+   *  1. o poster "aparecia aos pedaços" (imagem entra de uma vez sobre o
+   *     fundo do card): agora entra com fade curto (`mc-poster-fade`,
+   *     sem transição em reduced-motion). O espaço já é reservado pelo
+   *     container (aspect-ratio) — não há layout shift;
+   *  2. poster inexistente no TMDB (404) mostrava imagem quebrada: cai no
+   *     mesmo placeholder local usado quando não há `poster_path`.
    */
-  const isPlaceholder = !path;
+  const usePlaceholder = !path || failed;
+  const src = usePlaceholder ? img(null, tmdbSize) : img(path, tmdbSize);
 
   return (
     <Image
+      ref={imageRef}
       src={src}
       alt={alt}
       fill
       sizes={sizes}
-      className={className}
+      className={`mc-poster-fade${className ? ` ${className}` : ""}`}
       priority={priority}
-      unoptimized={isPlaceholder}
-      style={{ objectFit: "cover" }}
+      unoptimized={usePlaceholder}
+      onLoad={() => setLoaded(true)}
+      onError={() => setFailed(true)}
+      style={{ objectFit: "cover", opacity: loaded || usePlaceholder || priority ? 1 : 0 }}
     />
   );
 }

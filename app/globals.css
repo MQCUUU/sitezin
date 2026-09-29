@@ -11949,3 +11949,7 @@ svg{vertical-align:middle}.btn>svg,button>svg,a>svg,.section-head svg,.title-sec
 .retrospective-share-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
 .retrospective-share-canvas { width: min(360px, 100%); height: auto; aspect-ratio: 1080 / 1350; border-radius: 16px; border: 1px solid rgba(255,255,255,.12); }
 .smart-queue-availability-note { font-size: .78rem; margin: 0; }
+
+/* V2.2-A — poster entra com fade curto (sem layout shift: o container já reserva o espaço) */
+.mc-poster-fade { transition: opacity .22s ease; }
+@media (prefers-reduced-motion: reduce) { .mc-poster-fade { transition: none; } }

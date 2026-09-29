@@ -1,5 +1,6 @@
 "use client";
 
+import { fetchProfileMe } from "@/lib/profile-me";
 import { FormEvent, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { AtSign, Loader2 } from "lucide-react";
@@ -16,8 +17,7 @@ export function UsernameGate() {
   useEffect(() => {
     if (AUTH_PATHS.some((path) => pathname.startsWith(path))) return;
     let cancelled = false;
-    fetch("/api/profile/username", { cache: "no-store" })
-      .then(async (response) => response.ok ? response.json() : null)
+    fetchProfileMe()
       .then((data) => { if (!cancelled) setRequired(Boolean(data?.authenticated && !data?.username)); })
       .catch(() => null);
     return () => { cancelled = true; };

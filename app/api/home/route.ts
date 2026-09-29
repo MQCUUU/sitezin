@@ -49,7 +49,10 @@ const ITEM_COLUMNS = `
   li.stopped_season,
   li.added_at,
   li.updated_at,
-  to_jsonb(m.*) AS media
+  to_jsonb(m.*) - 'raw' AS media,
+  m.raw->'seasons' AS _seasons,
+  m.raw->'last_episode_to_air' AS _last_episode,
+  m.raw->'status' AS _series_status
 `;
 
 export async function GET() {
@@ -143,13 +146,33 @@ export async function GET() {
 
       for (const row of tvRows) {
         row.progress = computeTvProgress(
-          tvStructureFromRaw(row.media.raw, {
-            seasons_count: row.media.seasons_count,
-            episodes_count: row.media.episodes_count,
-          }),
+          tvStructureFromRaw(
+            {
+              seasons: row._seasons,
+              last_episode_to_air: row._last_episode,
+              status: row._series_status,
+            },
+            {
+              seasons_count: row.media.seasons_count,
+              episodes_count: row.media.episodes_count,
+            }
+          ),
           byMedia.get(Number(row.media.id)) ?? [],
           { rewatching: row.status === "rewatching" }
         );
+      }
+    }
+
+    /*
+     * V2.2-A — `raw` (payload bruto do TMDB, ~10-20 KB por título) nunca é
+     * enviado ao client (nenhuma tela o usa); as colunas auxiliares só
+     * existem para calcular o progresso e são removidas antes da resposta.
+     */
+    for (const shelf of [watching, want, best, recent] as Record<string, any>[][]) {
+      for (const row of shelf) {
+        delete row._seasons;
+        delete row._last_episode;
+        delete row._series_status;
       }
     }
 

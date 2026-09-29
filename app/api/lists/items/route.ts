@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
         li.rewatch_count,
         li.added_at,
         li.updated_at,
-        to_jsonb(m.*) as media
+        to_jsonb(m.*) - 'raw' as media
       FROM public.custom_list_items cli
       JOIN public.library_items li ON li.id = cli.library_item_id
       JOIN public.media m ON m.id = li.media_id

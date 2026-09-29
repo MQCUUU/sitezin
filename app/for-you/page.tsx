@@ -1,5 +1,8 @@
 "use client";
 
+import { getLibraryVersion } from "@/lib/library-cache";
+import { authClient } from "@/lib/auth/client";
+import { Poster } from "@/components/Poster";
 import { SmartQueue } from "@/components/SmartQueue";
 import {
   useEffect,
@@ -236,6 +239,9 @@ export default function ForYouPage() {
     setGenre,
   ] =
     useState("");
+
+  const { data: sessionData, isPending: sessionPending } = authClient.useSession();
+  const userId: string | undefined = sessionData?.user?.id;
 
   const [
     provider,
@@ -623,12 +629,109 @@ export default function ForYouPage() {
     });
   }
 
+  /*
+   * V2.2-A — aplica uma resposta de /api/for-you ao estado. Extraído de
+   * `load` para poder pintar a última resposta em cache imediatamente
+   * (stale-while-revalidate) e depois aplicar a resposta fresca.
+   */
+  function applyData(
+    data: any,
+    nextPage: number,
+    append: boolean
+  ) {
+    const incoming =
+      Array.isArray(
+        data.shelves
+      )
+        ? data.shelves
+        : [];
+
+    mergeLibraryFromShelves(incoming);
+
+    setShelves(
+      (
+        current
+      ) =>
+        append
+          ? [
+              ...current,
+              ...incoming,
+            ]
+          : incoming
+    );
+
+    setBasedOn(
+      Array.isArray(
+        data.based_on
+      )
+        ? data.based_on
+        : []
+    );
+
+    setProfileGenres(
+      Array.isArray(
+        data.profile
+          ?.favorite_genres
+      )
+        ? data.profile
+            .favorite_genres
+        : []
+    );
+
+    if (
+      data.filters
+    ) {
+      setFilters({
+        genres:
+          Array.isArray(
+            data.filters
+              .genres
+          )
+            ? data.filters
+                .genres
+            : [],
+        providers:
+          Array.isArray(
+            data.filters
+              .providers
+          )
+            ? data.filters
+                .providers
+            : [],
+      });
+    }
+
+    setNeedsStreamingSetup(
+      Boolean(
+        data.needs_streaming_setup
+      )
+    );
+
+    setPage(
+      nextPage
+    );
+
+    setHasMore(
+      Boolean(
+        data.has_more
+      )
+    );
+  }
+
   async function load(
     nextPage:
       number,
     append:
       boolean
   ) {
+    // Versão vista quando a requisição COMEÇA (mutação em voo invalida o resultado).
+    const versionAtStart = getLibraryVersion();
+
+    const cacheKey =
+      userId && !append
+        ? `mycatalog:foryou:v1:${userId}:${queryFor(nextPage).toString()}`
+        : null;
+
     try {
       if (
         append
@@ -637,9 +740,29 @@ export default function ForYouPage() {
           true
         );
       } else {
-        setLoading(
-          true
-        );
+        let seeded = false;
+
+        if (cacheKey) {
+          try {
+            const cached = JSON.parse(sessionStorage.getItem(cacheKey) || "null");
+
+            if (
+              cached &&
+              Date.now() - cached.savedAt < 10 * 60 * 1000 &&
+              // Só vale se nada na Library/ocultos mudou desde que foi gravado.
+              cached.version === getLibraryVersion() &&
+              Array.isArray(cached.data?.shelves)
+            ) {
+              applyData(cached.data, nextPage, false);
+              seeded = true;
+            }
+          } catch {
+            /* cache inválido é ignorado */
+          }
+        }
+
+        // Com cache: mostra o conteúdo já e revalida em segundo plano.
+        setLoading(!seeded);
 
         setError(
           ""
@@ -668,83 +791,15 @@ export default function ForYouPage() {
         );
       }
 
-      const incoming =
-        Array.isArray(
-          data.shelves
-        )
-          ? data.shelves
-          : [];
+      applyData(data, nextPage, append);
 
-      mergeLibraryFromShelves(incoming);
-
-      setShelves(
-        (
-          current
-        ) =>
-          append
-            ? [
-                ...current,
-                ...incoming,
-              ]
-            : incoming
-      );
-
-      setBasedOn(
-        Array.isArray(
-          data.based_on
-        )
-          ? data.based_on
-          : []
-      );
-
-      setProfileGenres(
-        Array.isArray(
-          data.profile
-            ?.favorite_genres
-        )
-          ? data.profile
-              .favorite_genres
-          : []
-      );
-
-      if (
-        data.filters
-      ) {
-        setFilters({
-          genres:
-            Array.isArray(
-              data.filters
-                .genres
-            )
-              ? data.filters
-                  .genres
-              : [],
-          providers:
-            Array.isArray(
-              data.filters
-                .providers
-            )
-              ? data.filters
-                  .providers
-              : [],
-        });
+      if (cacheKey && !append) {
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify({ savedAt: Date.now(), version: versionAtStart, data }));
+        } catch {
+          /* cota/indisponível: cache é só otimização */
+        }
       }
-
-      setNeedsStreamingSetup(
-        Boolean(
-          data.needs_streaming_setup
-        )
-      );
-
-      setPage(
-        nextPage
-      );
-
-      setHasMore(
-        Boolean(
-          data.has_more
-        )
-      );
     } catch (
       err
     ) {
@@ -765,6 +820,9 @@ export default function ForYouPage() {
   }
 
   useEffect(() => {
+    // Espera a sessão resolver para saber de quem é o cache.
+    if (sessionPending) return;
+
     const timer =
       setTimeout(
         () => {
@@ -789,6 +847,8 @@ export default function ForYouPage() {
     sort,
     hideWatched,
     onlyNew,
+    userId,
+    sessionPending,
   ]);
 
   function getLibraryItem(
@@ -2294,14 +2354,10 @@ function MovieCard({
           className="fy-poster"
         >
           {item.poster_path ? (
-            <img
-              src={img(
-                item.poster_path
-              )}
-              alt={
-                title
-              }
-              loading="lazy"
+            <Poster
+              path={item.poster_path}
+              alt={title}
+              sizes="(max-width: 700px) 45vw, 190px"
             />
           ) : (
             <div className="fy-no-poster">

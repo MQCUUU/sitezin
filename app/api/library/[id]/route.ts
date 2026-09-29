@@ -35,7 +35,7 @@ export async function PATCH(
         li.current_season,
         li.completed_seasons,
         li.stopped_season,
-        to_jsonb(m.*) as media
+        to_jsonb(m.*) - 'raw' as media
       FROM public.library_items li
       JOIN public.media m ON m.id = li.media_id
       WHERE li.id = ${id} AND li.user_id = ${userId}

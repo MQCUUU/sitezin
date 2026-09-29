@@ -1,5 +1,6 @@
 "use client";
 
+import { fetchProfileMe, invalidateProfileMe } from "@/lib/profile-me";
 import {
   useEffect,
   useRef,
@@ -122,6 +123,7 @@ export function AccountMenu(): React.ReactElement {
     display_name?: string;
   }>({});
   const [open, setOpen] = useState(false);
+  const [brokenAvatar, setBrokenAvatar] = useState("");
   const ref = useRef<HTMLDivElement | null>(null);
 
   /*
@@ -140,19 +142,88 @@ export function AccountMenu(): React.ReactElement {
 
   const ready = mounted && !isPending;
 
+  const sessionUserId = session?.user?.id;
+
+  // Troca de usuário na mesma aba (sessão expirou e outra conta entrou):
+  // nunca reaproveitar o perfil em cache do usuário anterior.
+  const previousUserId = useRef<string | undefined>(undefined);
+
   useEffect(() => {
-    if (!session?.user?.id) {
+    if (previousUserId.current && previousUserId.current !== sessionUserId) {
+      invalidateProfileMe();
+    }
+    previousUserId.current = sessionUserId;
+
+    if (!sessionUserId) {
       setProfileMeta({});
       return;
     }
 
     let active = true;
+    const cacheKey = `mycatalog:account-meta:v1:${sessionUserId}`;
 
-    fetch("/api/profile/username")
-      .then((r) => r.json())
+    /*
+     * Higiene entre contas no mesmo navegador: caches locais de OUTROS
+     * usuários (avatar/nome no localStorage; Para você/Home no
+     * sessionStorage) são removidos assim que esta conta é a ativa. As
+     * chaves já incluem o usuário, então nunca seriam lidas — isto só evita
+     * que dados pessoais alheios fiquem guardados.
+     */
+    try {
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith("mycatalog:account-meta:v1:") && key !== cacheKey) localStorage.removeItem(key);
+      }
+
+      const email = session?.user?.email;
+
+      for (const key of Object.keys(sessionStorage)) {
+        if (key.startsWith("mycatalog:foryou:v1:") && !key.startsWith(`mycatalog:foryou:v1:${sessionUserId}:`)) {
+          sessionStorage.removeItem(key);
+        }
+
+        if (key.startsWith("mycatalog:home:") && email && !key.endsWith(`:${email}`)) {
+          sessionStorage.removeItem(key);
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+
+    /*
+     * Pinta o último avatar/nome conhecido JÁ na hidratação (depois do
+     * `mounted`, então sem mismatch) e revalida em seguida — evita o
+     * "iniciais → foto" a cada carregamento completo. Só dados de exibição
+     * do próprio usuário; a fonte da verdade continua sendo o perfil.
+     */
+    try {
+      const cached = JSON.parse(localStorage.getItem(cacheKey) || "null");
+      if (cached && typeof cached === "object") {
+        setProfileMeta((prev) => ({
+          username: cached.username || prev.username,
+          avatar_url: cached.avatar_url || prev.avatar_url,
+          display_name: cached.display_name || prev.display_name,
+        }));
+      }
+    } catch {
+      /* cache é só otimização */
+    }
+
+    fetchProfileMe()
       .then((d) => {
-        if (active && d?.username) {
-          setProfileMeta((prev) => ({ ...prev, username: d.username }));
+        if (!active || !d?.authenticated) return;
+
+        const next = {
+          username: d.username || "",
+          avatar_url: d.avatar_url || "",
+          display_name: d.display_name || "",
+        };
+
+        setProfileMeta(next);
+
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify(next));
+        } catch {
+          /* storage indisponível */
         }
       })
       .catch(() => {});
@@ -160,7 +231,7 @@ export function AccountMenu(): React.ReactElement {
     return () => {
       active = false;
     };
-  }, [session?.user?.id]);
+  }, [sessionUserId]);
 
   useEffect(() => {
     function refreshAccount(event: Event): void {
@@ -170,6 +241,22 @@ export function AccountMenu(): React.ReactElement {
         username?: string | null;
       }>;
       if (custom.detail) {
+        try {
+          const key = `mycatalog:account-meta:v1:${session?.user?.id}`;
+          const cached = JSON.parse(localStorage.getItem(key) || "{}");
+          localStorage.setItem(
+            key,
+            JSON.stringify({
+              ...cached,
+              ...(custom.detail.avatar_url !== undefined ? { avatar_url: custom.detail.avatar_url || "" } : {}),
+              ...(custom.detail.display_name !== undefined ? { display_name: custom.detail.display_name || "" } : {}),
+              ...(custom.detail.username !== undefined ? { username: custom.detail.username || "" } : {}),
+            })
+          );
+        } catch {
+          /* cache é só otimização */
+        }
+
         setProfileMeta((prev) => ({
           ...prev,
           ...(custom.detail.avatar_url !== undefined
@@ -188,7 +275,7 @@ export function AccountMenu(): React.ReactElement {
     window.addEventListener("mycatalog:account-updated", refreshAccount);
     return () =>
       window.removeEventListener("mycatalog:account-updated", refreshAccount);
-  }, []);
+  }, [session?.user?.id]);
 
   const user: AccountUser | null = session?.user
     ? {
@@ -207,6 +294,21 @@ export function AccountMenu(): React.ReactElement {
     : null;
 
   async function signOut(): Promise<void> {
+    try {
+      if (session?.user?.id) {
+        localStorage.removeItem(`mycatalog:account-meta:v1:${session.user.id}`);
+      }
+
+      // Caches de sessão da aba (Home / Para você) nunca sobrevivem ao logout.
+      for (const key of Object.keys(sessionStorage)) {
+        if (key.startsWith("mycatalog:home:") || key.startsWith("mycatalog:foryou:")) {
+          sessionStorage.removeItem(key);
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+
     try {
       await authClient.signOut();
     } catch {
@@ -254,12 +356,15 @@ export function AccountMenu(): React.ReactElement {
     );
   }
 
-  const avatar: string =
+  const rawAvatar: string =
     user.user_metadata
       ?.avatar_url ||
     user.user_metadata
       ?.picture ||
     "";
+
+  // Imagem quebrada nunca aparece: cai nas iniciais.
+  const avatar: string = rawAvatar && rawAvatar !== brokenAvatar ? rawAvatar : "";
 
   return (
     <div
@@ -293,11 +398,12 @@ export function AccountMenu(): React.ReactElement {
       >
         <span className="account-avatar">
           {avatar ? (
-            <img loading="lazy" decoding="async"
+            <img decoding="async"
               src={
                 avatar
               }
               alt=""
+              onError={() => setBrokenAvatar(avatar)}
             />
           ) : (
             <span>
@@ -317,11 +423,12 @@ export function AccountMenu(): React.ReactElement {
           <div className="account-dropdown-user">
             <span className="account-avatar large">
               {avatar ? (
-                <img loading="lazy" decoding="async"
+                <img decoding="async"
                   src={
                     avatar
                   }
                   alt=""
+                  onError={() => setBrokenAvatar(avatar)}
                 />
               ) : (
                 <span>

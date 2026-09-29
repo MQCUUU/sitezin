@@ -24,7 +24,7 @@ export async function GET() {
         LIMIT 1
       `,
       sql`
-        SELECT pf.media_id, pf.media_type, pf.position, row_to_json(m.*) as media
+        SELECT pf.media_id, pf.media_type, pf.position, (to_jsonb(m.*) - 'raw') as media
         FROM public.profile_favorites pf
         JOIN public.media m ON m.id = pf.media_id
         WHERE pf.user_id = ${user.id}

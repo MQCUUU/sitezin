@@ -16,6 +16,7 @@ import { ConfirmProvider } from "@/components/ConfirmProvider";
 import { PopoverCollisionGuard } from "@/components/PopoverCollisionGuard";
 import { FollowRequestNotifier } from "@/components/FollowRequestNotifier";
 import { SeriesSeasonSync } from "@/components/SeriesSeasonSync";
+import { LibraryMutationWatcher } from "@/components/LibraryMutationWatcher";
 
 export function AppProviders({
   children,
@@ -30,6 +31,7 @@ export function AppProviders({
         <PopoverCollisionGuard />
         <FollowRequestNotifier />
         <SeriesSeasonSync />
+        <LibraryMutationWatcher />
         <UsernameGate />
         {children}
       </ConfirmProvider>

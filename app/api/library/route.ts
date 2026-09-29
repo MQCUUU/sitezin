@@ -174,7 +174,7 @@ export async function GET(
           li.stopped_season,
           li.added_at,
           li.updated_at,
-          to_jsonb(m.*) as media
+          to_jsonb(m.*) - 'raw' as media
         FROM public.library_items li
         JOIN public.media m ON m.id = li.media_id
         WHERE li.user_id = ${userId}
@@ -302,7 +302,7 @@ export async function GET(
         li.stopped_season,
         li.added_at,
         li.updated_at,
-        to_jsonb(m.*) as media
+        to_jsonb(m.*) - 'raw' as media
       FROM public.library_items li
       JOIN public.media m ON m.id = li.media_id
       WHERE ${whereClause}
@@ -337,11 +337,56 @@ export async function GET(
       ? Math.min(100, Math.max(1, Math.floor(requestedLimit)))
       : 27;
 
-    // 1. Contagem total FILTRADA — decide totalPages/clamping antes de buscar a página.
-    const countRows = await sql.query(
-      `SELECT count(*)::int AS total FROM public.library_items li JOIN public.media m ON m.id = li.media_id WHERE ${whereClause}`,
-      params
-    );
+    /*
+     * V2.2-A — antes eram 4 queries SEQUENCIAIS (contagem, página, contagens
+     * por status, gêneros/anos) = 4 idas ao banco em fila a cada troca de
+     * página/filtro da Biblioteca. A contagem filtrada, as contagens por status
+     * e as opções de filtro são independentes entre si → rodam JUNTAS; só a
+     * página depende da contagem (clamp de página/offset). 4 → 2 idas.
+     * Gêneros/anos agora são agregados no SQL (antes: 1 linha por item da
+     * biblioteca inteira trafegava só para montar dois conjuntos).
+     */
+    const [countRows, countsRows, filterOptionRows] = await Promise.all([
+      // 1. Contagem total FILTRADA — decide totalPages/clamping antes de buscar a página.
+      sql.query(
+        `SELECT count(*)::int AS total FROM public.library_items li JOIN public.media m ON m.id = li.media_id WHERE ${whereClause}`,
+        params
+      ),
+      // 3. Contagens por status + favoritos — agregado, sem filtro (conta a biblioteca inteira do usuário, não a página filtrada).
+      sql`
+        SELECT
+          count(*)::int AS all,
+          count(*) FILTER (WHERE status = 'want')::int AS want,
+          count(*) FILTER (WHERE status = 'watching')::int AS watching,
+          count(*) FILTER (WHERE status = 'watched')::int AS watched,
+          count(*) FILTER (WHERE status = 'paused')::int AS paused,
+          count(*) FILTER (WHERE status = 'dropped')::int AS dropped,
+          count(*) FILTER (WHERE status = 'rewatching')::int AS rewatching,
+          count(*) FILTER (WHERE status = 'rewatched')::int AS rewatched,
+          count(*) FILTER (WHERE favorite)::int AS favorites
+        FROM public.library_items
+        WHERE user_id = ${userId}
+      `,
+      // 4. Opções de filtro (gêneros/anos) — agregado no SQL, biblioteca inteira do usuário.
+      sql`
+        SELECT
+          COALESCE((
+            SELECT array_agg(DISTINCT btrim(g))
+            FROM public.library_items li
+            JOIN public.media m ON m.id = li.media_id
+            CROSS JOIN LATERAL unnest(m.genres) AS g
+            WHERE li.user_id = ${userId} AND btrim(g) <> ''
+          ), '{}') AS genres,
+          COALESCE((
+            SELECT array_agg(DISTINCT extract(year FROM (CASE WHEN m.media_type = 'tv' THEN m.first_air_date ELSE m.release_date END))::int)
+            FROM public.library_items li
+            JOIN public.media m ON m.id = li.media_id
+            WHERE li.user_id = ${userId}
+              AND (CASE WHEN m.media_type = 'tv' THEN m.first_air_date ELSE m.release_date END) IS NOT NULL
+          ), '{}') AS years
+      `,
+    ]);
+
     const totalResults = Number((countRows[0] as { total: number } | undefined)?.total || 0);
     const totalPages = Math.max(1, Math.ceil(totalResults / limit));
     const safePage = Math.min(page, totalPages);
@@ -355,50 +400,16 @@ export async function GET(
       params
     );
 
-    // 3. Contagens por status + favoritos — agregado, sem filtro (mesmo significado de antes: conta a biblioteca inteira do usuário, não a página filtrada).
-    const countsRows = await sql`
-      SELECT
-        count(*)::int AS all,
-        count(*) FILTER (WHERE status = 'want')::int AS want,
-        count(*) FILTER (WHERE status = 'watching')::int AS watching,
-        count(*) FILTER (WHERE status = 'watched')::int AS watched,
-        count(*) FILTER (WHERE status = 'paused')::int AS paused,
-        count(*) FILTER (WHERE status = 'dropped')::int AS dropped,
-        count(*) FILTER (WHERE status = 'rewatching')::int AS rewatching,
-        count(*) FILTER (WHERE status = 'rewatched')::int AS rewatched,
-        count(*) FILTER (WHERE favorite)::int AS favorites
-      FROM public.library_items
-      WHERE user_id = ${userId}
-    `;
     const counts = (countsRows[0] as Record<string, number> | undefined) || {
       all: 0, want: 0, watching: 0, watched: 0, paused: 0, dropped: 0, rewatching: 0, rewatched: 0, favorites: 0,
     };
 
-    // 4. Opções de filtro (gêneros/anos) — projeção leve (só 2 colunas), biblioteca inteira do usuário, sem o payload completo de `media`.
-    const genreYearRows = await sql`
-      SELECT
-        m.genres,
-        (CASE WHEN m.media_type = 'tv' THEN m.first_air_date ELSE m.release_date END) as date
-      FROM public.library_items li
-      JOIN public.media m ON m.id = li.media_id
-      WHERE li.user_id = ${userId}
-    `;
-    const genreSet = new Set<string>();
-    const yearSet = new Set<string>();
-    for (const row of genreYearRows as { genres: unknown; date: string | null }[]) {
-      const genres = Array.isArray(row.genres) ? row.genres : [];
-      for (const itemGenre of genres) {
-        if (typeof itemGenre === "string" && itemGenre.trim()) {
-          genreSet.add(itemGenre.trim());
-        }
-      }
-      if (row.date) {
-        const parsedYear = new Date(row.date).getFullYear();
-        if (Number.isFinite(parsedYear)) {
-          yearSet.add(String(parsedYear));
-        }
-      }
-    }
+    const genreSet = new Set<string>(
+      ((filterOptionRows[0] as { genres?: string[] } | undefined)?.genres ?? []).filter(Boolean)
+    );
+    const yearSet = new Set<string>(
+      ((filterOptionRows[0] as { years?: number[] } | undefined)?.years ?? []).map((year) => String(year))
+    );
 
     return NextResponse.json(
       {

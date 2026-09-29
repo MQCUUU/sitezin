@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
             ae.event_type,
             ae.metadata,
             ae.occurred_at,
-            to_jsonb(m.*) AS media
+            to_jsonb(m.*) - 'raw' AS media
           FROM public.activity_events ae
           LEFT JOIN public.library_items li ON li.id = ae.library_item_id
           LEFT JOIN public.media m ON m.id = COALESCE(ae.media_id, li.media_id)
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
             ae.event_type,
             ae.metadata,
             ae.occurred_at,
-            to_jsonb(m.*) AS media
+            to_jsonb(m.*) - 'raw' AS media
           FROM public.activity_events ae
           LEFT JOIN public.library_items li ON li.id = ae.library_item_id
           LEFT JOIN public.media m ON m.id = COALESCE(ae.media_id, li.media_id)

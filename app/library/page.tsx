@@ -1,5 +1,6 @@
 "use client";
 
+import { PosterSkeleton } from "@/components/AsyncState";
 import {
   Suspense,
   useEffect,
@@ -172,9 +173,8 @@ export default function Library() {
   return (
     <Suspense
       fallback={
-        <div className="empty library-page-loading" role="status" aria-live="polite">
-          <Loader2 size={25} className="spin" />
-          <span>Carregando biblioteca...</span>
+        <div role="status" aria-live="polite" aria-label="Carregando biblioteca">
+          <PosterSkeleton count={12} />
         </div>
       }
     >
@@ -1929,17 +1929,8 @@ function LibraryContent() {
       {/* GRID */}
 
       {loading ? (
-        <div className="empty library-page-loading" role="status" aria-live="polite">
-
-          <Loader2
-            size={25}
-            className="spin"
-          />
-
-          <span>
-            Carregando biblioteca...
-          </span>
-
+        <div role="status" aria-live="polite" aria-label="Carregando biblioteca">
+          <PosterSkeleton count={12} />
         </div>
       ) : authRequired ? (
         <div className="empty" role="alert">

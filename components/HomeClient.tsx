@@ -1,5 +1,6 @@
 "use client";
 
+import { getLibraryVersion } from "@/lib/library-cache";
 import {
   useEffect,
   useMemo,
@@ -708,7 +709,12 @@ export default function HomeClient() {
     let hasActivityCache = false;
     try {
       const cached = JSON.parse(sessionStorage.getItem(homeCacheKey) || "null");
-      if (cached && Date.now() - cached.savedAt < 5 * 60 * 1000) {
+      if (
+        cached &&
+        Date.now() - cached.savedAt < 5 * 60 * 1000 &&
+        // Não pinta estado que já se sabe desatualizado (mutação em outra tela).
+        (cached.version ?? 0) === getLibraryVersion()
+      ) {
         hasLibraryCache = isHomeData(cached.home);
         hasCalendarCache = Array.isArray(cached.calendar);
         hasActivityCache = Array.isArray(cached.activity);
@@ -721,8 +727,10 @@ export default function HomeClient() {
       }
     } catch { /* cache é apenas uma otimização */ }
 
+    const versionAtStart = getLibraryVersion();
+
     function saveHomeCache(partial: Record<string, unknown>) {
-      try { const current = JSON.parse(sessionStorage.getItem(homeCacheKey) || "{}"); sessionStorage.setItem(homeCacheKey, JSON.stringify({ ...current, ...partial, savedAt: Date.now() })); } catch { /* storage pode estar indisponível */ }
+      try { const current = JSON.parse(sessionStorage.getItem(homeCacheKey) || "{}"); sessionStorage.setItem(homeCacheKey, JSON.stringify({ ...current, ...partial, version: versionAtStart, savedAt: Date.now() })); } catch { /* storage pode estar indisponível */ }
     }
 
     async function loadLibrary() {

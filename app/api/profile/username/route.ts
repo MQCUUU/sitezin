@@ -14,16 +14,25 @@ export async function GET() {
 
     const sql = getDb();
     const rows = await sql`
-      SELECT username
+      SELECT username, avatar_url, display_name
       FROM public.profiles
       WHERE id = ${user.id}
       LIMIT 1
     `;
 
+    /*
+     * V2.2-A — o cabeçalho (AccountMenu) só lia `username` daqui e o avatar
+     * vinha de `session.user.image`, que o upload de foto NUNCA atualiza
+     * (a foto vive em `profiles.avatar_url`). Resultado: a foto aparecia logo
+     * após o upload (evento local) e sumia no refresh/login. Agora a mesma
+     * query devolve a fonte canônica (perfil) — sem request extra.
+     */
     return NextResponse.json(
       {
         authenticated: true,
         username: rows.length > 0 ? rows[0].username || null : null,
+        avatar_url: rows.length > 0 ? rows[0].avatar_url || null : null,
+        display_name: rows.length > 0 ? rows[0].display_name || null : null,
       },
       {
         headers: {
