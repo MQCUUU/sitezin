@@ -1,0 +1,735 @@
+/*
+ * V2.2-B — Visual depth & Home richness.
+ *
+ * Aditivo e ESCOPADO (`.home-smart`, `.home-*`, `.mc-spot`, `.mc-reveal`,
+ * `.tv-next-episode`): nada aqui muda outras telas, exceto o brilho
+ * `.mc-spot` do CTA "O que assistir agora?" em /for-you.
+ * Usa só tokens/`--accent` do tema (segue a cor de destaque escolhida).
+ * Efeitos: sem animação infinita; hover-only e desligados com
+ * `prefers-reduced-motion: reduce`.
+ */
+
+/* ---------- Fundo: separação entre página / painéis / superfícies especiais ---------- */
+
+.home-smart {
+  position: relative;
+  isolation: isolate;
+}
+
+/* "Aurora" estática, só na zona do topo — quebra o preto contínuo sem animar. */
+.home-smart::before {
+  content: "";
+  position: absolute;
+  inset: -28px -34px auto -34px;
+  height: 560px;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 70% at 88% 0%, color-mix(in srgb, var(--accent) 17%, transparent), transparent 70%),
+    radial-gradient(45% 60% at 8% 12%, color-mix(in srgb, #4ea8de 8%, transparent), transparent 70%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent);
+  mask-image: linear-gradient(to bottom, #000 55%, transparent);
+}
+
+.home-smart .panel {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--text) 4.5%, var(--panel)), var(--panel));
+  border-color: color-mix(in srgb, var(--text) 9%, var(--line));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+
+/* ---------- Topbar mais equilibrada ---------- */
+
+.home-smart .home-topbar {
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.home-smart .home-topbar .search {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  max-width: 720px;
+}
+
+/* Desktop largo: nunca quebra a linha (a quebra inicial empurrava a página ~33px ao hidratar → CLS).
+   Abaixo de 1100px a coluna útil é estreita (sidebar fixa) e a busca precisa poder quebrar. */
+@media (min-width: 1100px) {
+  .home-smart .home-topbar {
+    flex-wrap: nowrap;
+    min-height: 50px;
+  }
+
+  .home-smart .home-top-actions {
+    flex: 0 0 auto;
+  }
+}
+
+/* ---------- Cabeçalho: números legíveis, ritmo mais compacto ---------- */
+
+.home-smart .home-smart-intro {
+  margin-bottom: 16px;
+  align-items: flex-end;
+}
+
+.home-smart .home-smart-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.home-smart .home-smart-summary span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 7px 12px;
+  font-size: 12.5px;
+  color: var(--muted);
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--text) 10%, var(--line));
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+}
+
+.home-smart .home-smart-summary strong {
+  font-size: 15px;
+  font-weight: 750;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Spotlight (padrão 1): brilho que segue o ponteiro ---------- */
+
+.mc-spot {
+  position: relative;
+}
+
+.mc-spot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  background: radial-gradient(
+    340px circle at var(--spot-x, 50%) var(--spot-y, 40%),
+    color-mix(in srgb, var(--accent) 20%, transparent),
+    transparent 62%
+  );
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .mc-spot:hover::after {
+    opacity: 1;
+  }
+}
+
+/* ---------- Hero ---------- */
+
+.home-smart .mc-home-hero {
+  min-height: 220px;
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--line));
+  box-shadow:
+    0 18px 48px -24px color-mix(in srgb, var(--accent) 45%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.home-smart .mc-home-hero-scrim {
+  background:
+    linear-gradient(100deg, rgba(var(--mc-color-scrim), 0.95) 14%, rgba(var(--mc-color-scrim), 0.62) 50%, rgba(var(--mc-color-scrim), 0.2) 82%),
+    linear-gradient(0deg, rgba(var(--mc-color-scrim), 0.7), transparent 65%);
+}
+
+.home-smart .home-focus-side {
+  border-color: color-mix(in srgb, var(--text) 14%, transparent);
+  background: color-mix(in srgb, var(--panel) 62%, transparent);
+}
+
+@media (min-width: 761px) {
+  .home-smart .home-focus-side {
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+}
+
+.home-side-loading {
+  color: var(--muted);
+}
+
+.home-hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 2px 0 12px;
+  font-size: 12.5px;
+  color: var(--mc-color-text-secondary, var(--muted));
+}
+
+.home-hero-bar,
+.tv-next-episode-bar {
+  position: relative;
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--text) 14%, transparent);
+}
+
+.home-hero-bar {
+  flex: 0 1 180px;
+  min-width: 90px;
+}
+
+.home-hero-bar > span,
+.tv-next-episode-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #ff6fb5));
+}
+
+/* ---------- Faixa de resumo + CTA "O que assistir agora?" ---------- */
+
+.home-smart .home-summary-section {
+  margin-top: 14px;
+}
+
+.home-summary-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1.75fr) repeat(4, minmax(0, 1fr));
+  grid-auto-rows: 165px;
+  gap: 12px;
+}
+
+.home-summary-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px 14px 12px;
+  min-height: 132px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--text) 9%, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--text) 5%, var(--panel)), var(--panel));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+  overflow: hidden;
+  --tone: var(--accent);
+}
+
+.home-tone-queue {
+  --tone: #4ea8de;
+}
+.home-tone-liked {
+  --tone: #ff5c83;
+}
+.home-tone-rated {
+  --tone: #f6c65b;
+}
+
+.home-summary-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.home-summary-icon {
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 16%, transparent);
+}
+
+.home-summary-label {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.home-summary-body {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.home-summary-value {
+  font-size: 34px;
+  line-height: 1;
+  font-weight: 780;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-stack {
+  display: inline-flex;
+  padding-right: 12px;
+}
+
+.home-stack-poster {
+  position: relative;
+  width: 30px;
+  height: 45px;
+  margin-right: -12px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 2px solid var(--panel);
+  background: var(--panel2);
+  box-shadow: 0 6px 14px -6px rgba(0, 0, 0, 0.7);
+}
+
+.home-summary-sub {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.home-queue-cta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: 1fr auto;
+  gap: 8px 12px;
+  padding: 16px;
+  min-height: 132px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  background:
+    radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--accent) 34%, transparent), transparent 62%),
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, var(--panel)), var(--panel));
+  box-shadow: 0 16px 40px -22px color-mix(in srgb, var(--accent) 70%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+
+.home-queue-icon {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  color: #fff;
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.home-queue-copy {
+  display: grid;
+  gap: 3px;
+  align-content: start;
+}
+
+.home-queue-eyebrow {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--accent) 60%, white);
+}
+
+.home-queue-copy strong {
+  font-size: 18px;
+  letter-spacing: -0.01em;
+}
+
+.home-queue-copy small {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--mc-color-text-secondary, var(--muted));
+}
+
+.home-queue-action {
+  grid-column: 1 / -1;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 650;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+}
+
+/* varredura de luz única ao passar o mouse (não é loop) */
+.home-queue-cta::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.1) 50%, transparent 60%);
+  transform: translateX(-120%);
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .home-summary-card:hover,
+  .home-queue-cta:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+    box-shadow: 0 16px 36px -20px color-mix(in srgb, var(--accent) 55%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  }
+
+  .home-queue-cta:hover::before {
+    transform: translateX(120%);
+    transition: transform 0.9s ease;
+  }
+}
+
+.home-summary-card:focus-visible,
+.home-queue-cta:focus-visible,
+.home-empty-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---------- Continuar assistindo: próximo episódio / progresso ---------- */
+
+.tv-next-episode {
+  display: grid;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.tv-next-episode-label {
+  font-size: 12px;
+  font-weight: 650;
+  color: color-mix(in srgb, var(--accent) 55%, var(--text));
+}
+
+.tv-next-episode-detail {
+  font-size: 11.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Agenda: pôster ao lado ---------- */
+
+.home-smart .home-agenda-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.home-agenda-thumb {
+  position: relative;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 66px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--panel2);
+}
+
+.home-agenda-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+/* ---------- Atividade: agora ocupa a linha inteira ---------- */
+
+.home-smart .home-two-columns {
+  display: block;
+}
+
+@media (min-width: 900px) {
+  .home-smart .home-activity-panel {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 18px;
+  }
+}
+
+/* ---------- Estado vazio (usuário novo) ---------- */
+
+.home-empty {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.home-empty-card {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 35%, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, var(--panel)), var(--panel));
+  transition: transform 0.16s ease, border-color 0.16s ease;
+}
+
+.home-empty-icon {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.home-empty-card small {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.home-empty-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--accent);
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .home-empty-card:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
+  }
+}
+
+/* ---------- Reveal (padrão 2): seções abaixo da dobra ---------- */
+
+.mc-reveal {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+
+.mc-reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- Skeleton com as alturas da composição real ---------- */
+
+.home-skeleton {
+  display: grid;
+  gap: 18px;
+  margin-top: 40px; /* iguala o topo do hero real (margens colapsam com o cabeçalho): sem deslocamento */
+}
+
+.home-skel-hero {
+  height: 220px;
+  border-radius: 22px;
+}
+
+.home-skel-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1.75fr) repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.home-skel-card {
+  height: 165px;
+  border-radius: 16px;
+}
+
+.home-skel-title {
+  height: 22px;
+  width: 220px;
+  border-radius: 8px;
+}
+
+.home-skel-rail {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.home-skel-poster {
+  aspect-ratio: 2 / 3;
+  border-radius: 14px;
+}
+
+/* ---------- Responsivo ---------- */
+
+@media (max-width: 1100px) {
+  .home-summary-strip,
+  .home-skel-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .home-summary-strip {
+    grid-auto-rows: auto;
+  }
+
+  .home-summary-strip > .home-queue-cta,
+  .home-skel-strip > :first-child {
+    grid-column: 1 / -1;
+    min-height: 0;
+  }
+
+  .home-skel-strip > :first-child {
+    height: 118px;
+  }
+
+  .home-skel-card {
+    height: 140px;
+  }
+
+  .home-skel-rail {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .home-empty {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) and (min-width: 701px) {
+  /* Tablet com sidebar: coluna útil ~460px → 2 × 2 em vez de 4 cards espremidos. */
+  .home-summary-strip,
+  .home-skel-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-skel-card {
+    height: 132px;
+  }
+
+  .home-smart .home-topbar {
+    flex-wrap: wrap;
+    align-content: flex-start;
+    min-height: 108px; /* reserva as 2 linhas (busca + ações): a quebra não desloca a página ao hidratar */
+  }
+
+  .home-smart .home-topbar .search {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+
+  /* As duas ações cabem numa linha: sem quebrar o texto dos botões (antes gerava 3 linhas ao carregar). */
+  .home-smart .home-top-actions {
+    flex-wrap: nowrap;
+  }
+
+  .home-smart .home-top-actions .btn {
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 700px) {
+  .home-summary-strip {
+    grid-auto-rows: auto;
+  }
+
+  /* Cards-resumo viram carrossel compacto; CTA continua acessível na 1ª posição. */
+  .home-summary-strip {
+    display: flex;
+    gap: 10px;
+    margin-inline: -14px;
+    padding: 2px 14px 6px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .home-summary-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .home-summary-strip > * {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+
+  .home-summary-strip > .home-queue-cta {
+    width: min(86vw, 340px);
+  }
+
+  .home-summary-card {
+    width: 168px;
+    min-height: 124px;
+  }
+
+  .home-smart .home-smart-summary span {
+    padding: 6px 10px;
+  }
+
+  .home-smart .mc-home-hero {
+    min-height: 0;
+  }
+
+  .home-skel-hero {
+    height: 300px;
+  }
+
+  .home-skel-strip {
+    display: flex;
+    overflow: hidden;
+  }
+
+  .home-skel-strip > * {
+    flex: 0 0 auto;
+    width: 168px;
+  }
+
+  .home-skel-strip > :first-child {
+    width: min(86vw, 340px);
+  }
+
+  .home-skel-rail {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .home-empty {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* sem blur no mobile (custo) */
+  .home-smart .home-focus-side {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-summary-card,
+  .home-queue-cta,
+  .home-empty-card {
+    transition: none;
+  }
+}
+
+/* ---------- Tipografia: nada de texto minúsculo (antes 7–10px em vários blocos) ---------- */
+
+.home-smart .home-focus-copy p {
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.home-smart .home-focus-side span {
+  font-size: 11.5px;
+}
+
+.home-smart .home-focus-side small {
+  font-size: 12.5px;
+}
+
+.home-smart .home-section-head p.muted {
+  font-size: 12.5px;
+}
+
+.home-smart .home-activity-item strong {
+  font-size: 13px;
+}
+
+.home-smart .home-activity-item small {
+  font-size: 11.5px;
+}
+
+.home-smart .card-status {
+  font-size: 10px;
+}

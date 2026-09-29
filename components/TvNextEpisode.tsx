@@ -23,7 +23,14 @@ export function tvProgressLabel(progress: TvProgress | null | undefined): string
   return null;
 }
 
-export function TvNextEpisode({ progress }: { progress?: TvProgress | null }) {
+export function TvNextEpisode({
+  progress,
+  runtime,
+}: {
+  progress?: TvProgress | null;
+  /** Duração ESTIMADA de um episódio (min), quando conhecida. */
+  runtime?: number | null;
+}) {
   const label = tvProgressLabel(progress);
 
   if (!progress || !label) return null;
@@ -33,6 +40,11 @@ export function TvNextEpisode({ progress }: { progress?: TvProgress | null }) {
   return (
     <div className="tv-next-episode">
       <span className="tv-next-episode-label">{label}</span>
+      {progress.total ? (
+        <span className="tv-next-episode-detail">
+          {progress.watched}/{progress.total} episódios{runtime ? ` · ~${runtime} min` : ""}
+        </span>
+      ) : null}
       {percent !== null && progress.total ? (
         <span
           className="tv-next-episode-bar"

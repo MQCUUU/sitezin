@@ -1647,7 +1647,7 @@ function Card({ item, ...actionProps }: CardActionProps & { item: LibraryItem })
           </span>
         )}
       </MediaCardMeta>
-      <TvNextEpisode progress={item.progress} />
+      <TvNextEpisode progress={item.progress} runtime={item.episode_runtime} />
     </MediaCard>
   );
 }

@@ -7,6 +7,7 @@ import "@/styles/shell.css";
 import "@/styles/topbar.css";
 import "@/styles/media-card.css";
 import "@/styles/home.css";
+import "@/styles/home-depth.css";
 import "@/styles/discover.css";
 import "@/styles/search.css";
 import "@/styles/title.css";

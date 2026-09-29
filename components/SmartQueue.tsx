@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useSpotlight } from "@/components/ui/premium";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Clock3, Loader2, Shuffle, Sparkles, X } from "lucide-react";
 import { useModal } from "@/hooks/useModal";
@@ -78,7 +79,24 @@ export function SmartQueue({ genres }: { genres: string[] }) {
   const [error, setError] = useState("");
   const [response, setResponse] = useState<QueueResponse | null>(null);
 
+  const { ref: spotRef, onPointerMove: spotMove } = useSpotlight<HTMLElement>();
   const ref = useModal(open, () => setOpen(false));
+
+  /*
+   * V2.2-B — o CTA "O que assistir agora?" da Home leva a `/for-you?queue=open`
+   * e abre o painel. Lê `window.location` (não `useSearchParams`, que exigiria
+   * Suspense na página) e limpa o parâmetro para não reabrir ao voltar.
+   */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get("queue") === "open") {
+      setOpen(true);
+      params.delete("queue");
+      const query = params.toString();
+      window.history.replaceState(null, "", window.location.pathname + (query ? `?${query}` : ""));
+    }
+  }, []);
 
   async function run(surprise: boolean) {
     setLoading(true);
@@ -107,7 +125,7 @@ export function SmartQueue({ genres }: { genres: string[] }) {
 
   return (
     <>
-      <section className="fy-smart-queue-cta panel">
+      <section className="fy-smart-queue-cta panel mc-spot" ref={spotRef} onPointerMove={spotMove}>
         <div className="fy-assistant-cta-icon">
           <Clock3 size={22} strokeWidth={2} aria-hidden="true" />
         </div>

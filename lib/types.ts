@@ -47,6 +47,8 @@ export type LibraryItem = Media & {
   updated_at: string;
   /** V2.1-E: só na prateleira "Continuar assistindo" da Home (séries). */
   progress?: TvProgress | null;
+  /** V2.2-B: duração ESTIMADA (min) de um episódio — só séries da prateleira "Continuar assistindo". */
+  episode_runtime?: number | null;
 };
 
 export const STATUS_LABELS: Record<

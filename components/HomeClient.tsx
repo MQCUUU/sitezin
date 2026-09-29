@@ -45,6 +45,8 @@ import {
 } from "@/components/PickForMe";
 
 import { authClient } from "@/lib/auth/client";
+import { Reveal } from "@/components/ui/premium";
+import { HomeEmpty, HomeHero, HomeSkeleton, SummaryStrip } from "@/components/home/HomeParts";
 
 import type {
   LibraryItem,
@@ -444,7 +446,7 @@ type HomeData = {
   watching: LibraryItem[];
   want: LibraryItem[];
   best: LibraryItem[];
-  recent: LibraryItem[];
+  liked: LibraryItem[];
 };
 
 const EMPTY_HOME_DATA: HomeData = {
@@ -461,7 +463,7 @@ const EMPTY_HOME_DATA: HomeData = {
   watching: [],
   want: [],
   best: [],
-  recent: [],
+  liked: [],
 };
 
 function flattenHomeItem(item: any): LibraryItem {
@@ -481,7 +483,7 @@ function normalizeHomeData(raw: any): HomeData {
     watching: shelf(raw?.watching),
     want: shelf(raw?.want),
     best: shelf(raw?.best),
-    recent: shelf(raw?.recent),
+    liked: shelf(raw?.liked),
   };
 }
 
@@ -499,7 +501,7 @@ function isHomeData(value: any): value is HomeData {
     Array.isArray(value.watching) &&
     Array.isArray(value.want) &&
     Array.isArray(value.best) &&
-    Array.isArray(value.recent)
+    Array.isArray(value.liked)
   );
 }
 
@@ -533,7 +535,6 @@ export default function HomeClient() {
       CalendarEvent[]
     >([]);
 
-  const [nextProgressEpisode, setNextProgressEpisode] = useState<any>(null);
 
   const [
     calendarLoading,
@@ -703,7 +704,7 @@ export default function HomeClient() {
     let cancelled =
       false;
 
-    const homeCacheKey = `mycatalog:home:v3:${user.email}`;
+    const homeCacheKey = `mycatalog:home:v4:${user.email}`;
     let hasLibraryCache = false;
     let hasCalendarCache = false;
     let hasActivityCache = false;
@@ -1008,7 +1009,7 @@ export default function HomeClient() {
   const watching = homeData.watching;
   const want = homeData.want;
   const best = homeData.best;
-  const recent = homeData.recent;
+  const liked = homeData.liked;
 
   const librarySize = homeData.totals.library;
   const watchingCount = homeData.totals.watching;
@@ -1048,29 +1049,18 @@ export default function HomeClient() {
     ] ||
     null;
 
-  useEffect(() => {
-    let cancelled = false;
-    async function loadNextEpisode() {
-      if (!primaryWatching || primaryWatching.media_type !== "tv" || !(primaryWatching as any).library_id) {
-        setNextProgressEpisode(null);
-        return;
-      }
-      const season = Number((primaryWatching as any).current_season || 1);
-      const [seasonResponse, progressResponse] = await Promise.all([
-        fetch(`/api/tv/${primaryWatching.tmdb_id}/season/${season}`),
-        fetch(`/api/episodes?library_id=${(primaryWatching as any).library_id}&season=${season}`, { cache: "no-store" }),
-      ]);
-      const [seasonData, progressData] = await Promise.all([seasonResponse.json(), progressResponse.json()]);
-      const watched = new Set((Array.isArray(progressData) ? progressData : []).filter((item: any) => item.watched).map((item: any) => Number(item.episode_number)));
-      const next = (Array.isArray(seasonData?.episodes) ? seasonData.episodes : []).find((item: any) =>
-        !watched.has(Number(item.episode_number)) && (!item.air_date || new Date(`${item.air_date}T23:59:59`) <= new Date())
-      );
-      if (!cancelled) setNextProgressEpisode(next ? { ...next, season_number: season } : null);
-    }
-    loadNextEpisode().catch(() => { if (!cancelled) setNextProgressEpisode(null); });
-    return () => { cancelled = true; };
-  }, [primaryWatching?.tmdb_id, (primaryWatching as any)?.library_id, (primaryWatching as any)?.current_season]);
+  /*
+   * V2.2-B — o próximo episódio agora vem de `/api/home` (`progress.next`,
+   * regra da V2.1-E: primeiro exibido e não assistido). Antes: 2 requests em
+   * cascata no client (temporada + progresso) só para o hero.
+   */
+  const nextProgressEpisode = useMemo(() => {
+    const next = primaryWatching?.progress?.next;
 
+    return primaryWatching && primaryWatching.media_type === "tv" && next
+      ? { season_number: next.season, episode_number: next.episode, name: null as string | null }
+      : null;
+  }, [primaryWatching]);
   const primaryWant =
     want[
       0
@@ -1144,7 +1134,7 @@ export default function HomeClient() {
 
             description:
               nextProgressEpisode
-                ? `Próximo: T${nextProgressEpisode.season_number} · E${nextProgressEpisode.episode_number} · ${nextProgressEpisode.name}`
+                ? `Próximo episódio: T${nextProgressEpisode.season_number} · E${nextProgressEpisode.episode_number}`
                 : primaryWatching.media_type ===
                 "tv" &&
               (primaryWatching as any)
@@ -1248,6 +1238,18 @@ export default function HomeClient() {
         : smartAction.kind === "queue"
           ? (primaryWant as any)?.backdrop_path || null
           : null;
+
+  // Sem cache e sem dados ainda: skeleton com as alturas da composição real.
+  const showHomeSkeleton = loading && librarySize === 0;
+
+  // Linha de contexto do hero "continue de onde parou" (dados já vindos de /api/home).
+  const heroProgress = smartAction.kind === "watching" ? primaryWatching?.progress : null;
+  const heroRuntime = smartAction.kind === "watching" ? primaryWatching?.episode_runtime : null;
+  const heroMeta =
+    heroProgress && heroProgress.total
+      ? `${heroProgress.watched}/${heroProgress.total} episódios${heroRuntime ? ` · ~${heroRuntime} min` : ""}`
+      : null;
+  const heroProgressPct = heroProgress && heroProgress.total ? heroProgress.percent : null;
 
   /*
    * ==========================================
@@ -1430,13 +1432,11 @@ export default function HomeClient() {
           <div className="eyebrow">
             SUA HOME
           </div>
-
           <h1>
             {user?.name
               ? `Olá, ${user.name.split(" ")[0]}.`
               : "Sua Home."}
           </h1>
-
           <p className="muted">
             Aqui fica só o que merece sua atenção agora.
           </p>
@@ -1445,254 +1445,73 @@ export default function HomeClient() {
         {!loading &&
           librarySize >
             0 && (
-          <div className="home-smart-summary">
+          <div className="home-smart-summary" aria-label="Resumo da sua biblioteca">
             <span>
-              <strong>
-                {
-                  librarySize
-                }
-              </strong>
-              na biblioteca
+              <strong>{librarySize}</strong>
+              títulos
             </span>
-
             <span>
-              <strong>
-                {
-                  watchingCount
-                }
-              </strong>
-              em andamento
+              <strong>{progress}%</strong>
+              concluído
             </span>
-
+            {averageRating !== "—" && (
+              <span>
+                <strong>★ {averageRating}</strong>
+                nota média
+              </span>
+            )}
             <span>
-              <strong>
-                {
-                  calendar.length
-                }
-              </strong>
+              <strong>{calendar.length}</strong>
               próximos
             </span>
           </div>
         )}
       </section>
 
-      {/* ====================================== */}
-      {/* O QUE IMPORTA AGORA */}
-      {/* ====================================== */}
+      {showHomeSkeleton ? (
+        <HomeSkeleton />
+      ) : (
+        <>
+          <section className="section home-hero-section">
+            <HomeHero
+              kind={smartAction.kind}
+              eyebrow={smartAction.eyebrow}
+              title={smartAction.title}
+              description={smartAction.description}
+              href={smartAction.href}
+              action={smartAction.action}
+              backdropPath={heroBackdropPath}
+              meta={heroMeta}
+              progressPct={heroProgressPct}
+              side={
+                nextEvent
+                  ? { loading: calendarLoading, label: "Próximo na agenda", value: relativeDate(nextEvent.date), small: nextEvent.title }
+                  : { loading: calendarLoading, label: "Seu progresso", value: `${progress}%`, small: `${watched} concluídos` }
+              }
+            />
+          </section>
 
-      <section className="section">
-        <div
-          className={
-            `home-focus-card mc-home-hero ${heroBackdropPath ? "mc-home-hero--photo" : ""} panel home-focus-${smartAction.kind}`
-          }
-        >
-          {heroBackdropPath && (
-            <div className="mc-home-hero-backdrop">
-              <Poster
-                path={heroBackdropPath}
-                alt=""
-                sizes="(max-width:760px) 100vw, 1100px"
-                tmdbSize="w1280"
+          {!loading && librarySize === 0 && <HomeEmpty />}
+
+          {librarySize > 0 && (
+            <section className="section home-summary-section" aria-label="Seu resumo">
+              <SummaryStrip
+                watching={watching}
+                want={want}
+                liked={liked}
+                best={best}
+                totals={{
+                  watching: watchingCount,
+                  want: wantCount,
+                  favorites,
+                  rated: ratedCount,
+                }}
+                averageRating={averageRating}
               />
-              <div className="mc-home-hero-scrim" />
-            </div>
+            </section>
           )}
-
-          <div className="home-focus-icon mc-home-hero-layer">
-            {smartAction.kind ===
-            "calendar" ? (
-              <CalendarDays
-                size={23}
-              />
-            ) : smartAction.kind ===
-              "watching" ? (
-              <Play
-                size={23}
-              />
-            ) : smartAction.kind ===
-              "queue" ? (
-              <Clock
-                size={23}
-              />
-            ) : (
-              <Sparkles
-                size={23}
-              />
-            )}
-          </div>
-
-          <div className="home-focus-copy mc-home-hero-layer">
-            <div className="eyebrow">
-              {
-                smartAction.eyebrow
-              }
-            </div>
-
-            <h2>
-              {
-                smartAction.title
-              }
-            </h2>
-
-            <p>
-              {
-                smartAction.description
-              }
-            </p>
-
-            <div className="home-focus-actions">
-              <Link
-                href={
-                  smartAction.href
-                }
-                className="btn primary"
-              >
-                {smartAction.kind ===
-                "watching" ? (
-                  <Play
-                    size={15}
-                  />
-                ) : (
-                  <ArrowRight
-                    size={15}
-                  />
-                )}
-
-                {
-                  smartAction.action
-                }
-              </Link>
-
-              {smartAction.kind !==
-                "discover" && (
-                <Link
-                  href="/discover"
-                  className="btn"
-                >
-                  <Compass
-                    size={15}
-                  />
-
-                  Quero outra coisa
-                </Link>
-              )}
-            </div>
-          </div>
-
-          <div className="home-focus-side mc-home-hero-layer">
-            {calendarLoading ||
-            loading ? (
-              <Loader2
-                size={20}
-                className="spin"
-              />
-            ) : nextEvent ? (
-              <>
-                <span>
-                  Próximo na agenda
-                </span>
-
-                <strong>
-                  {relativeDate(
-                    nextEvent.date
-                  )}
-                </strong>
-
-                <small>
-                  {
-                    nextEvent.title
-                  }
-                </small>
-              </>
-            ) : (
-              <>
-                <span>
-                  Seu progresso
-                </span>
-
-                <strong>
-                  {
-                    progress
-                  }%
-                </strong>
-
-                <small>
-                  {watched} concluídos
-                </small>
-              </>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* ====================================== */}
-      {/* ATALHOS */}
-      {/* ====================================== */}
-
-      <section className="section home-shortcuts smart">
-        <QuickLink
-          href="/library?status=watching"
-          icon={
-            <Play
-              size={18}
-            />
-          }
-          label="Em andamento"
-          value={
-            watchingCount
-          }
-        />
-
-        <QuickLink
-          href="/library?status=want"
-          icon={
-            <Clock
-              size={18}
-            />
-          }
-          label="Quero assistir"
-          value={
-            wantCount
-          }
-        />
-
-        <QuickLink
-          href="/favorites"
-          icon={
-            <Heart
-              size={18}
-            />
-          }
-          label="Curtidos"
-          value={
-            favorites
-          }
-        />
-
-        <QuickLink
-          href="/ranking"
-          icon={
-            <Star
-              size={18}
-            />
-          }
-          label="Avaliados"
-          value={
-            ratedCount
-          }
-        />
-
-        <QuickLink
-          href="/for-you"
-          icon={
-            <Sparkles
-              size={18}
-            />
-          }
-          label="Para você"
-          value="→"
-        />
-      </section>
+        </>
+      )}
 
       {/* ====================================== */}
       {/* CONTINUAR ASSISTINDO */}
@@ -1715,7 +1534,8 @@ export default function HomeClient() {
       {/* AGENDA DA SEMANA */}
       {/* ====================================== */}
 
-      {(calendarLoading ||
+      {!showHomeSkeleton &&
+        (calendarLoading ||
         calendar.length >
           0) && (
         <section className="section">
@@ -1767,6 +1587,10 @@ export default function HomeClient() {
                       href={`/title/${event.media_type}/${event.tmdb_id}`}
                       className="panel home-agenda-card"
                     >
+                      <span className="home-agenda-thumb" aria-hidden="true">
+                        <Poster path={event.poster_path || event.backdrop_path} alt="" sizes="48px" tmdbSize="w185" />
+                      </span>
+                      <div className="home-agenda-main">
                       <div
                         className={
                           "home-agenda-when " +
@@ -1823,6 +1647,7 @@ export default function HomeClient() {
                         </span>
                       )}
 
+                      </div>
                       <ArrowRight
                         size={14}
                       />
@@ -1835,82 +1660,11 @@ export default function HomeClient() {
       )}
 
       {/* ====================================== */}
-      {/* PARA VOCÊ / DESCOBRIR */}
-      {/* ====================================== */}
-
-      <section className="section">
-        <div className="home-discovery-grid">
-          <Link
-            href="/for-you"
-            className="panel home-discovery-card featured"
-          >
-            <div>
-              <span className="home-discovery-icon">
-                <Sparkles
-                  size={20}
-                />
-              </span>
-
-              <div className="eyebrow">
-                PERSONALIZADO
-              </div>
-
-              <h2>
-                Para você
-              </h2>
-
-              <p>
-                Recomendações aprendidas a partir das suas notas, curtidos e histórico.
-              </p>
-            </div>
-
-            <span className="home-discovery-cta">
-              Abrir recomendações
-              <ArrowRight
-                size={14}
-              />
-            </span>
-          </Link>
-
-          <Link
-            href="/discover"
-            className="panel home-discovery-card"
-          >
-            <div>
-              <span className="home-discovery-icon">
-                <Compass
-                  size={20}
-                />
-              </span>
-
-              <div className="eyebrow">
-                EXPLORAR
-              </div>
-
-              <h2>
-                Descobrir
-              </h2>
-
-              <p>
-                Navegue por gênero, streaming, país, nota e outros filtros.
-              </p>
-            </div>
-
-            <span className="home-discovery-cta">
-              Explorar
-              <ArrowRight
-                size={14}
-              />
-            </span>
-          </Link>
-        </div>
-      </section>
-
-      {/* ====================================== */}
       {/* ATIVIDADE + RESUMO */}
       {/* ====================================== */}
 
-      <section className="section home-two-columns">
+      {librarySize > 0 && (
+      <Reveal as="section" className="section home-two-columns home-activity-section">
         <div>
           <SectionHead
             eyebrow="DIÁRIO"
@@ -1990,85 +1744,8 @@ export default function HomeClient() {
           </div>
         </div>
 
-        <div>
-          <SectionHead
-            eyebrow="RESUMO"
-            title="Seu catálogo agora"
-            href="/stats"
-            linkLabel="Estatísticas"
-          />
-
-          <div className="home-overview-card panel">
-            <OverviewStat
-              label="Biblioteca"
-              value={
-                loading
-                  ? "—"
-                  : librarySize
-              }
-              icon={
-                <Library
-                  size={17}
-                />
-              }
-            />
-
-            <OverviewStat
-              label="Concluídos"
-              value={
-                loading
-                  ? "—"
-                  : watched
-              }
-              icon={
-                <Check
-                  size={17}
-                />
-              }
-            />
-
-            <OverviewStat
-              label="Nota média"
-              value={
-                loading
-                  ? "—"
-                  : averageRating
-              }
-              icon={
-                <Star
-                  size={17}
-                />
-              }
-            />
-
-            <div className="home-overview-progress">
-              <div>
-                <span>
-                  Progresso
-                </span>
-
-                <strong>
-                  {
-                    progress
-                  }%
-                </strong>
-              </div>
-
-              <div className="home-progress-bar">
-                <span
-                  style={{
-                    width:
-                      `${Math.min(
-                        100,
-                        progress
-                      )}%`,
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      </Reveal>
+      )}
 
       {/* ====================================== */}
       {/* FILA */}
@@ -2105,111 +1782,10 @@ export default function HomeClient() {
       )}
 
       {/* ====================================== */}
-      {/* RECENTES */}
-      {/* ====================================== */}
-
-      {recent.length >
-        0 && (
-        <LibrarySection
-          eyebrow="BIBLIOTECA"
-          title="Adicionados recentemente"
-          href="/library"
-          items={
-            recent
-          }
-        />
-      )}
-
-      {/* ====================================== */}
       {/* VAZIO */}
       {/* ====================================== */}
 
-      {!loading &&
-        librarySize ===
-          0 && (
-        <section className="section">
-          <div className="panel home-empty-state">
-            <Library
-              size={35}
-            />
-
-            <div>
-              <h2>
-                Sua biblioteca ainda está vazia.
-              </h2>
-
-              <p className="muted">
-                Comece procurando um título ou explore o Descobrir.
-              </p>
-            </div>
-
-            <Link
-              href="/discover"
-              className="btn primary"
-            >
-              <Compass
-                size={16}
-              />
-
-              Descobrir títulos
-            </Link>
-          </div>
-        </section>
-      )}
     </div>
-  );
-}
-
-function QuickLink({
-  href,
-  icon,
-  label,
-  value,
-}: {
-  href:
-    string;
-
-  icon:
-    React.ReactNode;
-
-  label:
-    string;
-
-  value:
-    number |
-    string;
-}) {
-  return (
-    <Link
-      href={
-        href
-      }
-      className="panel home-quick-link"
-    >
-      <span className="home-quick-icon">
-        {
-          icon
-        }
-      </span>
-
-      <div>
-        <span>
-          {
-            label
-          }
-        </span>
-
-        <strong>
-          {
-            value
-          }
-        </strong>
-      </div>
-
-      <ArrowRight
-        size={14}
-      />
-    </Link>
   );
 }
 
@@ -2301,7 +1877,7 @@ function LibrarySection({
     LibraryItem[];
 }) {
   return (
-    <section className="section">
+    <Reveal as="section" className="section">
       <SectionHead
         eyebrow={
           eyebrow
@@ -2323,46 +1899,6 @@ function LibrarySection({
         }
         carousel
       />
-    </section>
-  );
-}
-
-function OverviewStat({
-  label,
-  value,
-  icon,
-}: {
-  label:
-    string;
-
-  value:
-    number |
-    string;
-
-  icon:
-    React.ReactNode;
-}) {
-  return (
-    <div className="home-overview-stat">
-      <span>
-        {
-          icon
-        }
-      </span>
-
-      <div>
-        <small>
-          {
-            label
-          }
-        </small>
-
-        <strong>
-          {
-            value
-          }
-        </strong>
-      </div>
-    </div>
+    </Reveal>
   );
 }

@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db/neon";
 import { naoAutenticado, respostaDeErro } from "@/lib/api-error";
 import {
   computeTvProgress,
+  estimateEpisodeRuntime,
   groupWatchedByMedia,
   tvStructureFromRaw,
 } from "@/lib/tv-progress";
@@ -36,6 +37,13 @@ import {
 
 const HOME_SHELF_LIMIT = 12;
 
+/*
+ * V2.2-B — "Curtidos" (mini-stack de posters no card-resumo): só os 4 mais
+ * recentes. Substitui a prateleira "recentes" (12 itens) que a Home deixou de
+ * usar: mesma contagem fixa de queries (5), payload menor.
+ */
+const HOME_LIKED_LIMIT = 4;
+
 const ITEM_COLUMNS = `
   li.id,
   li.status,
@@ -52,7 +60,8 @@ const ITEM_COLUMNS = `
   to_jsonb(m.*) - 'raw' AS media,
   m.raw->'seasons' AS _seasons,
   m.raw->'last_episode_to_air' AS _last_episode,
-  m.raw->'status' AS _series_status
+  m.raw->'status' AS _series_status,
+  m.raw->'episode_run_time' AS _run_time
 `;
 
 export async function GET() {
@@ -71,7 +80,7 @@ export async function GET() {
 
     const dbStartedAt = performance.now();
 
-    const [totalsRows, watching, want, best, recent] = await Promise.all([
+    const [totalsRows, watching, want, best, liked] = await Promise.all([
       sql`
         SELECT
           count(*)::int AS library,
@@ -116,9 +125,9 @@ export async function GET() {
         `SELECT ${ITEM_COLUMNS}
          FROM public.library_items li
          JOIN public.media m ON m.id = li.media_id
-         WHERE li.user_id = $1
-         ORDER BY li.added_at DESC
-         LIMIT ${HOME_SHELF_LIMIT}`,
+         WHERE li.user_id = $1 AND li.favorite = true
+         ORDER BY li.updated_at DESC
+         LIMIT ${HOME_LIKED_LIMIT}`,
         [userId]
       ),
     ]);
@@ -145,6 +154,13 @@ export async function GET() {
       const byMedia = groupWatchedByMedia(progressRows);
 
       for (const row of tvRows) {
+        // Duração ESTIMADA de um episódio (média do TMDB) — só um número; o
+        // `raw` continua sem ir ao client.
+        row.episode_runtime = estimateEpisodeRuntime({
+          episode_run_time: row._run_time,
+          last_episode_to_air: row._last_episode,
+        });
+
         row.progress = computeTvProgress(
           tvStructureFromRaw(
             {
@@ -168,11 +184,12 @@ export async function GET() {
      * enviado ao client (nenhuma tela o usa); as colunas auxiliares só
      * existem para calcular o progresso e são removidas antes da resposta.
      */
-    for (const shelf of [watching, want, best, recent] as Record<string, any>[][]) {
+    for (const shelf of [watching, want, best, liked] as Record<string, any>[][]) {
       for (const row of shelf) {
         delete row._seasons;
         delete row._last_episode;
         delete row._series_status;
+        delete row._run_time;
       }
     }
 
@@ -196,7 +213,7 @@ export async function GET() {
       watching,
       want,
       best,
-      recent,
+      liked,
     };
 
     const totalMs = performance.now() - startedAt;
