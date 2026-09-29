@@ -112,14 +112,12 @@ automação de rollback própria neste projeto) se, após o deploy:
 
 React Bits (não adotado), Sharing, Achievements, Email notifications,
 Social feed, Friends/block/mute/report, Tags UI, Bulk Library actions,
-TV progress badge na Library, índices trigram (ainda sem evidência de
+TV progress badge na Library (a Home já mostra o próximo episódio desde a V2.1-E), índices trigram (ainda sem evidência de
 necessidade real), instrumentação de web vitals, reescritas de
 arquitetura, upgrade de `@neondatabase/auth` para fora do beta,
 consolidação dos `.sql` avulsos de `supabase/` num sistema de migração
 formal, resíduo de nomenclatura "Supabase" em comentários/testes,
-duplicidade `NEON_AUTH_URL`/`NEON_AUTH_BASE_URL`, favicon/ícone PWA
-(nenhum asset de marca existe hoje — não foi inventado um novo nesta
-fase), `loading.tsx` de segmento nas rotas que ainda não têm, os 3
+duplicidade `NEON_AUTH_URL`/`NEON_AUTH_BASE_URL`, `loading.tsx` de segmento nas rotas que ainda não têm, os 3
 pontos residuais de `new Date()`/`getFullYear()` no corpo de componente
 em `app/page.tsx`/`discover`/`retrospective` (mesma classe do fix de
 hidratação da Library, mas não nomeados no escopo explícito desta
@@ -144,6 +142,22 @@ Regra operacional:
   `DATABASE_URL` da Vercel Production aponta para a branch `import`.
 - Não usar a branch `production` apenas pelo nome ou por estar marcada
   como default no Neon.
+
+## Estado da V2.1 (A–E) e migrations
+
+- V2.1-A, B, C, D e E **concluídas** (gate final da E aprovado). Favicon/ícone PWA e
+  manifest **já existem** (`app/icon.svg`, `app/manifest.ts`, V2.1-C) — não são mais dívida.
+- **Migration da V2.1-E já aplicada em PROD** (branch `import`): tabela
+  `public.user_streaming_services` (PK `(user_id, provider_id)`, FK
+  `neon_auth."user"(id)` `ON DELETE CASCADE`, RLS ligada, 0 rows na aplicação). Arquivo:
+  `supabase/v2.1-e-streaming-services.sql`. Ela era **pré-deploy obrigatória**: sem a
+  tabela, `/api/streaming-services`, `provider=mine` (Discover/Para você) e
+  `/api/smart-queue` retornam 500. Como já está aplicada, o código da V2.1-E pode ser
+  publicado sem esse risco.
+- Fechamento da V2.1: `DELETE /api/watch-history/[id]` deixou de recalcular
+  `personal_rating`/`rewatch_count` (ver `V2.1-A-DATA-INTEGRITY.md` §9). **Sem migration.**
+- Este documento não registra se o deploy do código da V2.1 já ocorreu: confirmar na Vercel
+  antes de assumir.
 
 ## Segurança pós-release
 

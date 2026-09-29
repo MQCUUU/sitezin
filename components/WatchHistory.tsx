@@ -1487,7 +1487,10 @@ export function WatchHistory({
               </h3>
 
               <p className="muted">
-                Só esta sessão será apagada. O título continua na biblioteca.
+                Só este registro do Diário será apagado. O título continua na
+                biblioteca e sua nota, status e contagem de reassistidas não
+                mudam. Para alterar esses dados, use a biblioteca ou a página
+                do título.
               </p>
             </div>
 

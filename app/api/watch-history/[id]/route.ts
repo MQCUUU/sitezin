@@ -221,28 +221,41 @@ export async function DELETE(
       console.error("Erro ao deletar activity_event do diário:", e?.message);
     }
 
-    // Recalcular library_items
-    const remaining = await sql`
-      SELECT watched_at, rating, is_rewatch
+    /*
+     * V2.1 (fechamento) — DELETE = "excluir este registro do Diário".
+     *
+     * Antes: recalculava `personal_rating` e `rewatch_count` da Library
+     * SÓ a partir dos watch_entries restantes. Isso sobrescrevia em
+     * silêncio valores definidos por outros fluxos (nota pela Library/página
+     * do título, "começar reassistida" no dropdown, import, Letterboxd) —
+     * ex.: nota 9 da Library virava NULL ao apagar o último registro.
+     *
+     * Não existe proveniência (não sabemos qual fluxo originou cada valor),
+     * então a exclusão é NÃO-destrutiva: `personal_rating`, `rewatch_count`
+     * e `status` da Library ficam intactos. Só a data da última visualização
+     * (`watched_at`, que POST/PATCH já sincronizam com o registro mais
+     * recente) acompanha o histórico — e apenas quando ainda sobra algum
+     * registro; sem registros restantes, é preservada.
+     * Proveniência/ciclos de rewatch: dívida de V3 (docs/V2.1-A-DATA-INTEGRITY.md).
+     */
+    const latestRemaining = await sql`
+      SELECT watched_at
       FROM public.watch_entries
       WHERE user_id = ${user.id}
         AND library_item_id = ${current.library_item_id}
       ORDER BY watched_at DESC
+      LIMIT 1
     `;
 
-    const latest = remaining[0] || null;
-    const rewatchCount = remaining.filter((item: any) => item.is_rewatch).length;
-    const now = new Date().toISOString();
-
-    await sql`
-      UPDATE public.library_items
-      SET
-        watched_at = ${latest?.watched_at || null},
-        rewatch_count = ${rewatchCount},
-        personal_rating = ${latest?.rating ?? null},
-        updated_at = ${now}
-      WHERE id = ${current.library_item_id} AND user_id = ${user.id}
-    `;
+    if (latestRemaining.length > 0) {
+      await sql`
+        UPDATE public.library_items
+        SET
+          watched_at = ${latestRemaining[0].watched_at},
+          updated_at = ${new Date().toISOString()}
+        WHERE id = ${current.library_item_id} AND user_id = ${user.id}
+      `;
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
