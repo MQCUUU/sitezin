@@ -48,7 +48,7 @@ export function MediaPreviewContent({ data, actions, providers, extraActions, ti
           <Poster
             path={data.posterPath}
             alt={data.title}
-            sizes="(max-width: 700px) 96px, 140px"
+            sizes="(max-width: 480px) 112px, 180px"
           />
 
           {data.libraryState?.libraryId && (

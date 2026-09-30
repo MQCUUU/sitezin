@@ -70,16 +70,26 @@
   );
 }
 
+/*
+ * HOTFIX — o corpo era `display: flex` (align-items implícito = stretch): o
+ * pôster tinha largura fixa de 96px e `aspect-ratio: 2/3`, mas o stretch
+ * SOBRESCREVE a altura e o esticava até a altura da coluna de texto
+ * (medido: 96×463 = razão 4,8 com sinopse longa; `object-fit: cover` recortava
+ * o miolo). Agora: grid com coluna do pôster de 150–180px, `align-items: start`
+ * e o pôster deriva a altura da largura (2:3) — nunca da linha.
+ */
 .mc-preview-body {
-  display: flex;
-  gap: var(--mc-space-16);
+  display: grid;
+  grid-template-columns: minmax(150px, 180px) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--mc-space-20);
   padding: var(--mc-space-20);
 }
 
 .mc-preview-poster {
   position: relative;
-  flex-shrink: 0;
-  width: 96px;
+  width: 100%;
+  align-self: start;
   aspect-ratio: 2 / 3;
   border-radius: var(--mc-radius-md);
   overflow: hidden;
@@ -247,12 +257,14 @@
 
 @media (max-width: 480px) {
   .mc-preview-body {
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--mc-space-16);
     padding: var(--mc-space-16);
   }
 
+  /* Compacto (112px, 2:3) à esquerda acima do texto — visível, sem ocupar a tela. */
   .mc-preview-poster {
-    width: 76px;
+    width: 112px;
   }
 
   .mc-preview-footer {
