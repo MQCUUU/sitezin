@@ -4,6 +4,7 @@ import { respostaDeErro } from "@/lib/api-error";
 
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
+import { todayIn } from "@/lib/calendar/dates";
 
 import {
   calendarTMDB,
@@ -396,34 +397,19 @@ export async function GET(req: NextRequest) {
    * ==========================================
    */
 
-  const today =
-    new Date();
-
-  today.setHours(
-    0,
-    0,
-    0,
-    0
-  );
+  /*
+   * Calendário V2 — "hoje" é o dia civil em Brasília, comparado como string
+   * AAAA-MM-DD. Antes usava o relógio do servidor (UTC na Vercel): entre 21h
+   * e meia-noite os eventos do dia sumiam como se já tivessem passado.
+   */
+  const todayKey = todayIn();
 
   function isUpcoming(
     date:
       | string
       | null
   ) {
-    if (!date) {
-      return false;
-    }
-
-    const parsed =
-      new Date(
-        `${date}T00:00:00`
-      );
-
-    return (
-      parsed.getTime() >=
-      today.getTime()
-    );
+    return Boolean(date && String(date).slice(0, 10) >= todayKey);
   }
 
   /*

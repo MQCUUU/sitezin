@@ -397,7 +397,7 @@ export async function detailsTMDB(
  * e images. Usar detailsTMDB() nesses loops podia
  * multiplicar bastante o payload sem necessidade.
  */
-async function lightweightDetailsTMDB(
+export async function lightweightDetailsTMDB(
   type: "movie" | "tv",
   id: number | string
 ) {
@@ -1073,9 +1073,11 @@ function discoveryWindow(days = 120) {
  */
 export async function upcomingMoviesTMDB(
   days = 120,
-  page = 1
+  page = 1,
+  /** Intervalo explícito (AAAA-MM-DD) — usado pelo Calendário para qualquer mês. */
+  range?: { start: string; end: string }
 ): Promise<CalendarDiscoveryItem[]> {
-  const { start, end } = discoveryWindow(days);
+  const { start, end } = range ?? discoveryWindow(days);
 
   const data = await tmdb(
     `/discover/movie?language=${getLanguage()}` +
@@ -1127,9 +1129,11 @@ export async function upcomingMoviesTMDB(
  */
 export async function upcomingSeriesTMDB(
   days = 120,
-  page = 1
+  page = 1,
+  /** Intervalo explícito (AAAA-MM-DD) — usado pelo Calendário para qualquer mês. */
+  range?: { start: string; end: string }
 ): Promise<CalendarDiscoveryItem[]> {
-  const { start, end } = discoveryWindow(days);
+  const { start, end } = range ?? discoveryWindow(days);
 
   const data = await tmdb(
     `/discover/tv?language=${getLanguage()}` +
