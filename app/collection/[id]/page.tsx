@@ -1,5 +1,8 @@
 "use client";
 
+import { MediaPosterActions } from "@/components/media/MediaPosterActions";
+import { MediaPosterTags } from "@/components/media/MediaBadges";
+import { Poster } from "@/components/Poster";
 import { chunkLibraryStateIds } from "@/lib/library-state-batches";
 import {
   useEffect,
@@ -2008,14 +2011,10 @@ function CollectionCard({
           href={`/title/movie/${movie.id}`}
         >
           {movie.poster_path ? (
-            <img
-              src={img(
-                movie.poster_path
-              )}
-              alt={
-                movie.title
-              }
-              loading="lazy"
+            <Poster
+              path={movie.poster_path}
+              alt={movie.title}
+              sizes="(max-width: 700px) 45vw, 190px"
             />
           ) : (
             <div className="collection-no-poster">
@@ -2030,212 +2029,20 @@ function CollectionCard({
           #{index + 1}
         </span>
 
-        <span className="badge">
-          FILME
-        </span>
-
-        {libraryItem && (
-          <span className="collection-status-badge">
-            {statusLabel(
-              libraryItem.status
-            )}
-          </span>
-        )}
-
-        <div className="collection-card-actions">
-          <button
-            type="button"
-            title="Ver rápido"
-            onClick={() =>
-              setPreviewItem(
-                movie
-              )
-            }
-          >
-            <Eye
-              size={16}
-            />
-          </button>
-
-          {libraryItem ? (
-            <button
-              type="button"
-              className="active collection-status-trigger"
-              title="Alterar status"
-              disabled={
-                busy
-              }
-              onMouseDown={(
-                event
-              ) =>
-                event.preventDefault()
-              }
-              onClick={() =>
-                setOpenMenu(
-                  menuOpen
-                    ? null
-                    : key
-                )
-              }
-            >
-              {busy ? (
-                <Loader2
-                  size={15}
-                  className="spin"
-                />
-              ) : (
-                <>
-                  <Check
-                    size={15}
-                  />
-                  <ChevronDown
-                    size={11}
-                  />
-                </>
-              )}
-            </button>
-          ) : (
-            <button
-              type="button"
-              title="Adicionar como Quero assistir"
-              disabled={
-                busy
-              }
-              onClick={() =>
-                addToLibrary(
-                  movie,
-                  "want"
-                )
-              }
-            >
-              {busy ? (
-                <Loader2
-                  size={15}
-                  className="spin"
-                />
-              ) : (
-                <Plus
-                  size={17}
-                />
-              )}
-            </button>
-          )}
-
-          {libraryItem && (
-            <button
-              type="button"
-              className={
-                libraryItem.favorite
-                  ? "active"
-                  : ""
-              }
-              title={
-                libraryItem.favorite
-                  ? "Remover dos curtidos"
-                  : "Curtir"
-              }
-              disabled={
-                busy
-              }
-              onClick={() =>
-                toggleFavorite(
-                  movie
-                )
-              }
-            >
-              <Heart
-                size={15}
-                fill={
-                  libraryItem.favorite
-                    ? "currentColor"
-                    : "none"
-                }
-              />
-            </button>
-          )}
-        </div>
-
-        {libraryItem &&
-          menuOpen && (
-          <div className="collection-status-menu">
-            <div className="collection-status-menu-head">
-              <span>
-                Status
-              </span>
-
-              <strong>
-                {statusLabel(
-                  libraryItem.status
-                )}
-              </strong>
-            </div>
-
-            {STATUS_OPTIONS.map(
-              (
-                [
-                  value,
-                  label,
-                ]
-              ) => (
-                <button
-                  type="button"
-                  key={
-                    value
-                  }
-                  className={
-                    libraryItem.status ===
-                    value
-                      ? "active"
-                      : ""
-                  }
-                  onMouseDown={(
-                    event
-                  ) =>
-                    event.preventDefault()
-                  }
-                  onClick={() =>
-                    updateStatus(
-                      movie,
-                      value
-                    )
-                  }
-                >
-                  <span>
-                    {
-                      label
-                    }
-                  </span>
-
-                  {libraryItem.status ===
-                    value && (
-                    <Check
-                      size={13}
-                    />
-                  )}
-                </button>
-              )
-            )}
-
-            <div className="collection-status-divider" />
-
-            <button
-              type="button"
-              className="remove"
-              onClick={() =>
-                requestRemove(
-                  movie
-                )
-              }
-            >
-              <Trash2
-                size={14}
-              />
-              Remover da biblioteca
-            </button>
-          </div>
-        )}
+        <MediaPosterTags type="movie" status={libraryItem ? libraryItem.status : null} />
+        <MediaPosterActions
+          title={movie.title}
+          inLibrary={Boolean(libraryItem)}
+          status={libraryItem?.status}
+          favorite={Boolean(libraryItem?.favorite)}
+          busy={busy}
+          onPreview={() => setPreviewItem(movie)}
+          onAdd={() => addToLibrary(movie, "want")}
+          onChangeStatus={(status: string) => updateStatus(movie, status)}
+          onToggleFavorite={() => toggleFavorite(movie)}
+          onRemove={() => requestRemove(movie)}
+        />
       </div>
-
       <Link
         href={`/title/movie/${movie.id}`}
         className="collection-card-body"

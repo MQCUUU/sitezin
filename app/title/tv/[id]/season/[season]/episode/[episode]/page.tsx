@@ -125,6 +125,7 @@ export default function EpisodePage() {
         episode_number: episodeNumber,
         watched,
         watched_at: `${watchedAt}T12:00:00`,
+        watched_at_precision: "date",
         comment,
         is_rewatch: rewatch,
         released_episode_count: releasedCount,

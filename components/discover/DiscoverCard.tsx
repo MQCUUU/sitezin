@@ -1,3 +1,5 @@
+import { MediaPosterActions } from "@/components/media/MediaPosterActions";
+import { MediaPosterTags } from "@/components/media/MediaBadges";
 import Link from "next/link";
 import {
   Check,
@@ -59,125 +61,21 @@ export function DiscoverCard({
           />
         </Link>
 
-        <span className="badge">{item.media_type === "tv" ? "SÉRIE" : "FILME"}</span>
+        <MediaPosterTags type={item.media_type} status={item.in_library ? item.library_status : null} />
 
-        <MediaCardActions>
-          <button
-            type="button"
-            className="card-action"
-            title="Ver rápido"
-            aria-label={`Ver detalhes rápidos de ${title}`}
-            onClick={() => onPreview(item)}
-          >
-            <Eye size={17} />
-          </button>
-
-          {item.in_library ? (
-            <button
-              type="button"
-              className="card-action active discover-library-menu-button"
-              title="Alterar status da biblioteca"
-              disabled={isProcessing}
-              onMouseDown={(event) => {
-                event.preventDefault();
-              }}
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                onToggleStatusMenu(key);
-              }}
-            >
-              {isProcessing ? (
-                <Loader2 size={16} className="spin" />
-              ) : (
-                <>
-                  <Check size={16} />
-                  <ChevronDown size={12} />
-                </>
-              )}
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="card-action add"
-              title="Adicionar como Quero assistir"
-              disabled={isProcessing}
-              onClick={() => onAdd(item)}
-            >
-              {isProcessing ? (
-                <Loader2 size={17} className="spin" />
-              ) : (
-                <Plus size={18} />
-              )}
-            </button>
-          )}
-
-          {item.in_library && (
-            <button
-              type="button"
-              className={
-                "card-action discover-favorite-button " + (item.favorite ? "active" : "")
-              }
-              title={item.favorite ? "Remover dos curtidos" : "Curtir título"}
-              disabled={isProcessing}
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                onToggleFavorite(item);
-              }}
-            >
-              {isProcessing ? (
-                <Loader2 size={16} className="spin" />
-              ) : (
-                <Heart size={16} fill={item.favorite ? "currentColor" : "none"} />
-              )}
-            </button>
-          )}
-        </MediaCardActions>
-
-        {item.in_library && (
-          <span className="discover-status-badge">{getStatusLabel(item.library_status)}</span>
-        )}
+        <MediaPosterActions
+          title={title}
+          inLibrary={Boolean(item.in_library)}
+          status={item.library_status}
+          favorite={Boolean(item.favorite)}
+          busy={isProcessing}
+          onPreview={() => onPreview(item)}
+          onAdd={() => onAdd(item)}
+          onChangeStatus={(status) => onUpdateStatus(item, status)}
+          onToggleFavorite={() => onToggleFavorite(item)}
+          onRemove={() => onRequestRemove(item)}
+        />
       </MediaCardImage>
-
-      {item.in_library && isMenuOpen && (
-        <div
-          className="discover-library-status-menu"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <div className="discover-library-status-menu-head">
-            <span>Status</span>
-            <strong>{getStatusLabel(item.library_status)}</strong>
-          </div>
-
-          <div className="discover-library-status-options">
-            {DISCOVER_STATUS_OPTIONS.map(([value, label]) => (
-              <button
-                type="button"
-                key={value}
-                className={item.library_status === value ? "active" : ""}
-                disabled={isProcessing}
-                onClick={() => onUpdateStatus(item, value)}
-              >
-                <span>{label}</span>
-                {item.library_status === value && <Check size={14} />}
-              </button>
-            ))}
-          </div>
-
-          <div className="discover-library-status-divider" />
-
-          <button
-            type="button"
-            className="discover-library-remove"
-            disabled={isProcessing}
-            onClick={() => onRequestRemove(item)}
-          >
-            <Trash2 size={15} />
-            Remover da biblioteca
-          </button>
-        </div>
-      )}
 
       <Link href={`/title/${item.media_type}/${item.id}`} className="card-title">
         {title}
@@ -193,12 +91,6 @@ export function DiscoverCard({
           </span>
         )}
 
-        {item.in_library && (
-          <span className="in-library">
-            <Check size={12} />
-            {getStatusLabel(item.library_status)}
-          </span>
-        )}
       </MediaCardMeta>
     </MediaCard>
   );

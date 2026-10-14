@@ -9,12 +9,16 @@
 export const CARD_WIDTH = 1080;
 export const CARD_HEIGHT = 1350;
 
+/**
+ * V2.3 — mesmos números da página Insights (motor lib/insights): consumo
+ * real do ano, nunca "Quero assistir". Horas são estimativa.
+ */
 export type RetrospectiveCardData = {
   year: number;
-  watchLogged: number;
-  markedWatched: number;
-  seriesCompleted: number;
-  seasonsCompleted: number;
+  hours: number;
+  movies: number;
+  episodes: number;
+  series: number;
   rewatches: number;
   topGenre: string | null;
   topMonth: string | null;
@@ -31,10 +35,10 @@ export function retrospectiveFileName(year: number): string {
 export function retrospectiveCardAlt(data: RetrospectiveCardData): string {
   const parts = [
     `Retrospectiva ${data.year} no MyCatalog`,
-    `${data.watchLogged} visualizações registradas`,
-    `${data.markedWatched} marcados como assistidos`,
-    `${data.seriesCompleted} séries concluídas`,
-    `${data.seasonsCompleted} temporadas concluídas`,
+    `${data.hours} horas assistidas (estimativa)`,
+    `${data.movies} filmes`,
+    `${data.episodes} episódios`,
+    `${data.series} séries`,
     `${data.rewatches} reassistidas`,
   ];
 
@@ -129,10 +133,10 @@ export function drawRetrospectiveCard(
 
   // Métricas (2 colunas × 3 linhas, só as reais da página).
   const stats: [string, number][] = [
-    ["Visualizações registradas", data.watchLogged],
-    ["Marcados como assistidos", data.markedWatched],
-    ["Séries concluídas", data.seriesCompleted],
-    ["Temporadas concluídas", data.seasonsCompleted],
+    ["Horas assistidas", data.hours],
+    ["Filmes", data.movies],
+    ["Episódios", data.episodes],
+    ["Séries", data.series],
     ["Reassistidas", data.rewatches],
   ];
 
@@ -155,7 +159,7 @@ export function drawRetrospectiveCard(
   // Destaques (só os que existem).
   const highlights: [string, string][] = [];
 
-  if (data.highlightTitle) highlights.push(["TÍTULO MARCANTE", data.highlightTitle]);
+  if (data.highlightTitle) highlights.push(["SUA MAIOR NOTA", data.highlightTitle]);
   if (data.topGenre) highlights.push(["GÊNERO PRINCIPAL", data.topGenre]);
   if (data.topMonth) highlights.push(["MÊS MAIS ATIVO", data.topMonth]);
 

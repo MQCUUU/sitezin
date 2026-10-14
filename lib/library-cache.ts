@@ -44,7 +44,7 @@ export function bumpLibraryVersion(): void {
  * é POST só de LEITURA e `library/sync-seasons` tem evento próprio.
  */
 const MUTATING_PATH =
-  /^\/api\/(library(?!\/state|\/sync-seasons)(\/|$)|watch-history|episodes|not-interested|account\/hidden-titles|account\/import)/;
+  /^\/api\/(library(?!\/state|\/sync-seasons|\/repair-media)(\/|$)|watch-history|episodes|not-interested|account\/hidden-titles|account\/import)/;
 
 export function isLibraryMutation(input: RequestInfo | URL, init?: RequestInit): boolean {
   const method = (

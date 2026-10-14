@@ -1,3 +1,10 @@
+import {
+  genreNameMap,
+  loadUserTaste,
+  seedRecommendations,
+  type UserTaste,
+} from "@/lib/taste-server";
+import { personalBonus, tasteKey } from "@/lib/taste-profile";
 import { getDb } from "@/lib/db/neon";
 import {
   NextRequest,
@@ -1166,6 +1173,64 @@ export async function GET(
   );
 
   /*
+   * V2.3 — PERSONALIZAÇÃO. Antes a escolha era "bom e popular" no TMDB
+   * (só excluía a biblioteca): por isso quase nada combinava com o gosto.
+   * Agora o score soma o perfil do usuário (gêneros que ele avalia bem,
+   * penaliza os que abandona) e injeta recomendações do TMDB dos títulos
+   * que ele mais curtiu — um candidato recomendado por VÁRIOS títulos
+   * curtidos ganha mais. Filtros explícitos do usuário continuam mandando
+   * (as recomendações só entram sem gênero/país/época/streaming/duração).
+   */
+  let taste: UserTaste | null = null;
+
+  if (user) {
+    try {
+      taste = await loadUserTaste(user.id);
+    } catch (tasteError) {
+      console.error("[pick-for-me] perfil de gosto indisponível:", tasteError);
+    }
+  }
+
+  if (taste && taste.profile.size >= 3 && apiKey) {
+    const genreMap = await genreNameMap({ apiKey, language });
+    const hasExplicitFilters =
+      hasStandardGenreFilter ||
+      Boolean(String(effectiveProviders || "").length) ||
+      Boolean(effectiveCountry) ||
+      Boolean(effectiveDecadeStart) ||
+      effectiveDuration !== "any";
+
+    if (!hasExplicitFilters) {
+      const seeded = await seedRecommendations(taste, { apiKey, language }, types);
+
+      for (const [key, entry] of seeded) {
+        if (excludedFromSession.has(key) || hiddenSet.has(key)) continue;
+
+        candidates.push({
+          ...entry.item,
+          media_type: entry.media_type,
+          _score: confidenceScore(entry.item, mode),
+          _because: entry.because,
+          _genres: entry.genres,
+        });
+      }
+    }
+
+    for (const candidate of candidates) {
+      const genres: string[] =
+        candidate._genres ??
+        ((candidate.genre_ids ?? []) as number[])
+          .map((id) => genreMap.get(Number(id)))
+          .filter(Boolean) as string[];
+
+      const bonus = personalBonus(taste.profile, { genres }, candidate._because ?? []);
+
+      candidate._score += bonus.points;
+      candidate._reasons = bonus.reasons;
+    }
+  }
+
+  /*
    * Dedup.
    */
   const unique =
@@ -1242,6 +1307,33 @@ export async function GET(
       0,
       poolSize
     );
+
+  /*
+   * V2.3 — "dá pra assistir?": para o topo da cesta consulta onde está
+   * disponível (BR, em cache) e favorece o que está nos serviços do usuário.
+   */
+  const userServiceIds = new Set((taste?.services ?? []).map((service) => service.provider_id));
+
+  if (userServiceIds.size > 0 && apiKey) {
+    const head = ranked.slice(0, 14);
+
+    await Promise.all(
+      head.map(async (item) => {
+        const data = await tmdb(`/${item.media_type}/${item.id}/watch/providers`);
+        const region = data?.results?.BR;
+        const ids = [...(region?.flatrate ?? []), ...(region?.free ?? []), ...(region?.ads ?? [])];
+        const match = ids.find((provider: any) => userServiceIds.has(Number(provider.provider_id)));
+
+        if (match) {
+          item._score += 18;
+          item._service = String(match.provider_name || "");
+          item._reasons = [...(item._reasons ?? []), `Está no ${item._service}, que você assina`];
+        }
+      })
+    );
+
+    ranked = ranked.sort((a: any, b: any) => b._score - a._score);
+  }
 
   const minScore =
     ranked[
@@ -1407,9 +1499,12 @@ export async function GET(
           const {
             _score,
             _weight,
+            _reasons,
+            _because,
+            _genres,
+            _service,
             ...clean
-          } =
-            item;
+          } = item;
 
           return clean;
         }
@@ -1422,9 +1517,17 @@ export async function GET(
   const {
     _score,
     _weight,
+    _reasons,
+    _because,
+    _genres,
+    _service,
     ...cleanWinner
-  } =
-    winner as any;
+  } = winner as any;
+
+  const personalReasons: string[] = Array.isArray((winnerBasic as any)._reasons)
+    ? (winnerBasic as any)._reasons
+    : [];
+  const qualityReason = `Nota ${Number(winner.vote_average || 0).toFixed(1)} com ${Number(winner.vote_count || 0).toLocaleString("pt-BR")} votos`;
 
   return NextResponse.json({
     winner:
@@ -1434,8 +1537,10 @@ export async function GET(
 
     pool_size:
       ranked.length,
-
     mode,
+    personalized: personalReasons.length > 0,
+    reasons: personalReasons.length > 0 ? personalReasons.slice(0, 3) : [qualityReason],
+    because: Array.isArray((winnerBasic as any)._because) ? (winnerBasic as any)._because : [],
 
     quality: {
       score:

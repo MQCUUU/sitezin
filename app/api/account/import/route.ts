@@ -214,6 +214,13 @@ export async function POST(
             item.watched_at ??
             null,
 
+          // V2.3 — proveniência só se o backup trouxer; senão desconhecida.
+          watched_at_precision:
+            item.watched_at &&
+            (item.watched_at_precision === "date" || item.watched_at_precision === "datetime")
+              ? item.watched_at_precision
+              : null,
+
           rewatch_count:
             Number(
               item.rewatch_count ||
@@ -253,11 +260,11 @@ export async function POST(
       const savedLibraryRows = await sql`
         INSERT INTO public.library_items (
           user_id, media_id, status, favorite, personal_rating, review,
-          watched_at, rewatch_count, current_season, completed_seasons, stopped_season, added_at, updated_at
+          watched_at, watched_at_precision, rewatch_count, current_season, completed_seasons, stopped_season, added_at, updated_at
         )
         VALUES (
           ${user.id}, ${savedMedia.id}, ${payload.status}, ${payload.favorite},
-          ${payload.personal_rating ?? null}, ${payload.review ?? null}, ${payload.watched_at ?? null},
+          ${payload.personal_rating ?? null}, ${payload.review ?? null}, ${payload.watched_at ?? null}, ${payload.watched_at_precision ?? null},
           ${payload.rewatch_count ?? 0}, ${payload.current_season ?? null}, ${payload.completed_seasons ?? []},
           ${payload.stopped_season ?? null}, ${payload.added_at || new Date().toISOString()}, ${payload.updated_at || new Date().toISOString()}
         )
@@ -268,6 +275,7 @@ export async function POST(
           personal_rating = EXCLUDED.personal_rating,
           review = EXCLUDED.review,
           watched_at = EXCLUDED.watched_at,
+          watched_at_precision = EXCLUDED.watched_at_precision,
           rewatch_count = EXCLUDED.rewatch_count,
           current_season = EXCLUDED.current_season,
           completed_seasons = EXCLUDED.completed_seasons,
@@ -400,6 +408,13 @@ export async function POST(
         watched_at:
           entry.watched_at || new Date().toISOString(),
 
+        // sem data no backup = agora (relógio do servidor); com data, só a do backup
+        watched_at_precision: !entry.watched_at
+          ? "datetime"
+          : entry.watched_at_precision === "date" || entry.watched_at_precision === "datetime"
+            ? entry.watched_at_precision
+            : null,
+
         rating:
           entry.rating ??
           null,
@@ -431,7 +446,7 @@ export async function POST(
         // apontar para uma linha de outro usuário.
         await sql`
           INSERT INTO public.watch_entries (
-            id, user_id, library_item_id, media_id, watched_at,
+            id, user_id, library_item_id, media_id, watched_at, watched_at_precision,
             rating, comment, is_rewatch, created_at, updated_at
           )
           VALUES (
@@ -440,6 +455,7 @@ export async function POST(
             ${payload.library_item_id},
             ${payload.media_id},
             ${payload.watched_at},
+            ${payload.watched_at_precision},
             ${payload.rating},
             ${payload.comment},
             ${payload.is_rewatch},

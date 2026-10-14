@@ -1,5 +1,6 @@
 "use client";
 
+import { MediaPosterTags } from "@/components/media/MediaBadges";
 import {
   useEffect,
   useMemo,
@@ -1146,12 +1147,7 @@ function PersonCreditCard({
           </div>
         )}
 
-        <span className="badge">
-          {item.media_type ===
-          "tv"
-            ? "SÉRIE"
-            : "FILME"}
-        </span>
+        <MediaPosterTags type={item.media_type} />
       </div>
 
       <div className="person-work-body">

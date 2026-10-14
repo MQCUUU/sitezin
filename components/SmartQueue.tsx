@@ -1,18 +1,22 @@
 "use client";
 
-import { useSpotlight } from "@/components/ui/premium";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Clock3, Loader2, Shuffle, Sparkles, X } from "lucide-react";
+import { Check, Clock3, EyeOff, Loader2, Play, Plus, Shuffle, Sparkles, Star, X } from "lucide-react";
 import { useModal } from "@/hooks/useModal";
 import { Poster } from "@/components/Poster";
+import { useSpotlight } from "@/components/ui/premium";
+import { MediaStatusTag, MediaTypeTag } from "@/components/media/MediaBadges";
+import { useToast } from "@/components/ToastProvider";
 
 /*
- * V2.1-E — "O que assistir agora?" (dentro de /for-you; sem item novo na
- * navegação). Painel acessível (role=dialog, foco preso, Escape). Todo o
- * cálculo é servidor (`/api/smart-queue`), determinístico, sem IA; o
- * client só manda os filtros e mostra ≤ 3 resultados (ou 1 no
- * "Surpreenda-me") — nunca baixa a biblioteca.
+ * "O que assistir agora?" (dentro de /for-you; sem item novo na navegação).
+ * Painel acessível (role=dialog, foco preso, Escape). O cálculo é no
+ * servidor (`/api/smart-queue`, determinístico, sem IA); o client só manda os
+ * filtros e mostra ≤ 3 resultados — nunca baixa a biblioteca.
+ *
+ * V2.3: origem (fila × novidades), motivo pessoal, onde assistir e ações
+ * diretas (começar / adicionar à fila / não tenho interesse).
  */
 
 type QueueResult = {
@@ -26,9 +30,14 @@ type QueueResult = {
   runtime_estimated: boolean;
   next_episode: { season: number; episode: number } | null;
   services: string[];
+  where_to_watch?: string[];
   reason: string;
   source: "library" | "discover";
   availability_source: "library_snapshot" | "tmdb_live";
+  overview?: string | null;
+  year?: number | null;
+  vote_average?: number | null;
+  genres?: string[];
 };
 
 type QueueResponse = {
@@ -37,6 +46,7 @@ type QueueResponse = {
   surprise: boolean;
   used_fallback: boolean;
   has_services: boolean;
+  personalized?: boolean;
 };
 
 const TIME_OPTIONS: [string, string][] = [
@@ -52,12 +62,11 @@ const TYPE_OPTIONS: [string, string][] = [
   ["tv", "Séries"],
 ];
 
-const STATUS_LABEL: Record<string, string> = {
-  want: "Na sua lista",
-  watching: "Assistindo",
-  rewatching: "Reassistindo",
-  paused: "Pausado",
-};
+const SOURCE_OPTIONS: [string, string][] = [
+  ["all", "Fila + novidades"],
+  ["queue", "Só da minha fila"],
+  ["new", "Só novidades"],
+];
 
 function durationLabel(result: QueueResult): string | null {
   if (result.runtime_minutes === null) return null;
@@ -66,25 +75,31 @@ function durationLabel(result: QueueResult): string | null {
   const text =
     minutes >= 60 ? `${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(2, "0")}` : `${minutes} min`;
 
-  return result.media_type === "tv" ? `~${text} por episódio (estimativa)` : text;
+  return result.media_type === "tv" ? `~${text} por episódio` : text;
 }
 
+const resultKey = (result: QueueResult) => `${result.media_type}-${result.tmdb_id}`;
+
 export function SmartQueue({ genres }: { genres: string[] }) {
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [minutes, setMinutes] = useState("60");
   const [type, setType] = useState("all");
+  const [source, setSource] = useState("all");
   const [genre, setGenre] = useState("");
   const [mine, setMine] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [response, setResponse] = useState<QueueResponse | null>(null);
-
+  const [acting, setActing] = useState<string | null>(null);
+  const [added, setAdded] = useState<Record<string, string>>({});
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const { ref: spotRef, onPointerMove: spotMove } = useSpotlight<HTMLElement>();
   const ref = useModal(open, () => setOpen(false));
 
   /*
-   * V2.2-B — o CTA "O que assistir agora?" da Home leva a `/for-you?queue=open`
-   * e abre o painel. Lê `window.location` (não `useSearchParams`, que exigiria
+   * O CTA "O que assistir agora?" da Home leva a `/for-you?queue=open` e abre
+   * o painel. Lê `window.location` (não `useSearchParams`, que exigiria
    * Suspense na página) e limpa o parâmetro para não reabrir ao voltar.
    */
   useEffect(() => {
@@ -101,9 +116,10 @@ export function SmartQueue({ genres }: { genres: string[] }) {
   async function run(surprise: boolean) {
     setLoading(true);
     setError("");
+    setDismissed(new Set());
 
     try {
-      const params = new URLSearchParams({ type });
+      const params = new URLSearchParams({ type, source });
       if (minutes) params.set("minutes", minutes);
       if (genre) params.set("genre", genre);
       if (mine) params.set("mine", "1");
@@ -123,6 +139,87 @@ export function SmartQueue({ genres }: { genres: string[] }) {
     }
   }
 
+  async function startWatching(result: QueueResult) {
+    if (!result.library_id) return;
+
+    setActing(resultKey(result));
+
+    try {
+      const patch = await fetch(`/api/library/${result.library_id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "watching" }),
+      });
+
+      if (!patch.ok) throw new Error();
+
+      setAdded((current) => ({ ...current, [resultKey(result)]: "watching" }));
+      toast.success(`${result.title}: marcado como Assistindo`);
+    } catch {
+      toast.error("Não foi possível atualizar o status");
+    } finally {
+      setActing(null);
+    }
+  }
+
+  async function addToQueue(result: QueueResult) {
+    setActing(resultKey(result));
+
+    try {
+      // Mesmo caminho do "+" das outras telas: detalhes completos do TMDB e depois a biblioteca.
+      const detailsResponse = await fetch(`/api/tmdb/${result.media_type}/${result.tmdb_id}`).catch(() => null);
+      const details = detailsResponse?.ok ? await detailsResponse.json() : {};
+
+      const post = await fetch("/api/library", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          media: {
+            ...details,
+            id: result.tmdb_id,
+            media_type: result.media_type,
+            title: details.title || details.name || result.title,
+            original_title: details.original_title || details.original_name || result.title,
+            genres: details.genres || [],
+          },
+          status: "want",
+        }),
+      });
+
+      if (!post.ok) throw new Error();
+
+      setAdded((current) => ({ ...current, [resultKey(result)]: "want" }));
+      toast.success(`${result.title} entrou na sua fila`);
+    } catch {
+      toast.error("Não foi possível adicionar à fila");
+    } finally {
+      setActing(null);
+    }
+  }
+
+  async function notInterested(result: QueueResult) {
+    setActing(resultKey(result));
+
+    try {
+      const post = await fetch("/api/not-interested", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tmdb_id: result.tmdb_id, media_type: result.media_type, reason: "smart_queue" }),
+      });
+
+      if (!post.ok) throw new Error();
+
+      setDismissed((current) => new Set(current).add(resultKey(result)));
+      toast.success("Não vamos mais sugerir esse título");
+    } catch {
+      toast.error("Não foi possível ocultar o título");
+    } finally {
+      setActing(null);
+    }
+  }
+
+  const visible = (response?.results ?? []).filter((result) => !dismissed.has(resultKey(result)));
+
   return (
     <>
       <section className="fy-smart-queue-cta panel mc-spot" ref={spotRef} onPointerMove={spotMove}>
@@ -132,7 +229,7 @@ export function SmartQueue({ genres }: { genres: string[] }) {
 
         <div>
           <strong>O que assistir agora?</strong>
-          <p className="muted">Diga quanto tempo você tem e receba até 3 sugestões.</p>
+          <p className="muted">Diga quanto tempo você tem e receba até 3 sugestões feitas para o seu gosto.</p>
         </div>
 
         <button type="button" className="btn primary" onClick={() => setOpen(true)}>
@@ -181,6 +278,18 @@ export function SmartQueue({ genres }: { genres: string[] }) {
                 </div>
               </fieldset>
 
+              <fieldset>
+                <legend>De onde sugerir</legend>
+                <div className="smart-queue-options">
+                  {SOURCE_OPTIONS.map(([value, label]) => (
+                    <label key={value} className={`streaming-chip ${source === value ? "active" : ""}`}>
+                      <input type="radio" name="sq-source" checked={source === value} onChange={() => setSource(value)} />
+                      <span>{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
               <label className="smart-queue-genre">
                 <span>Gênero</span>
                 <select value={genre} onChange={(event) => setGenre(event.target.value)}>
@@ -216,10 +325,10 @@ export function SmartQueue({ genres }: { genres: string[] }) {
               </button>
             </div>
 
-            <div className="smart-queue-results" aria-live="polite">
+            <div className="smart-queue-results" aria-live="polite" data-rec-tool="smart_queue">
               {error && <p role="alert">{error}</p>}
 
-              {response && response.results.length === 0 && (
+              {response && visible.length === 0 && (
                 <div className="empty">
                   <strong>Nada encontrado com esses filtros.</strong>
                   {mine && !response.has_services ? (
@@ -230,27 +339,36 @@ export function SmartQueue({ genres }: { genres: string[] }) {
                       </Link>
                     </>
                   ) : (
-                    <span>Tente um tempo maior ou remova algum filtro.</span>
+                    <span>Tente um tempo maior, outra origem ou remova algum filtro.</span>
                   )}
                 </div>
               )}
 
-              {response && response.results.length > 0 && (
+              {visible.length > 0 && (
                 <ol className="smart-queue-list">
-                  {response.results.map((result) => {
+                  {visible.map((result) => {
+                    const key = resultKey(result);
                     const duration = durationLabel(result);
+                    const addedStatus = added[key];
+                    const status = addedStatus || result.status;
+                    const busy = acting === key;
 
                     return (
-                      <li key={`${result.media_type}-${result.tmdb_id}`} className="smart-queue-card">
+                      <li key={key} className="smart-queue-card">
                         <Link
                           className="smart-queue-poster"
                           href={`/title/${result.media_type}/${result.tmdb_id}`}
                           onClick={() => setOpen(false)}
                         >
-                          <Poster path={result.poster_path} alt={result.title} sizes="80px" />
+                          <Poster path={result.poster_path} alt={result.title} sizes="88px" tmdbSize="w342" />
                         </Link>
 
                         <div className="smart-queue-info">
+                          <div className="smart-queue-tags">
+                            <MediaTypeTag type={result.media_type} />
+                            {status ? <MediaStatusTag status={status} /> : <span className="mc-tag mc-tag--info">Novidade</span>}
+                          </div>
+
                           <Link
                             className="smart-queue-title"
                             href={`/title/${result.media_type}/${result.tmdb_id}`}
@@ -258,23 +376,69 @@ export function SmartQueue({ genres }: { genres: string[] }) {
                           >
                             {result.title}
                           </Link>
-                          <span className="muted">
-                            {result.media_type === "tv" ? "Série" : "Filme"}
+
+                          <span className="muted smart-queue-meta">
+                            {result.year ? `${result.year}` : ""}
+                            {result.vote_average ? (
+                              <>
+                                {result.year ? " · " : ""}
+                                <Star size={11} fill="currentColor" aria-hidden="true" /> {Number(result.vote_average).toFixed(1)}
+                              </>
+                            ) : null}
                             {duration ? ` · ${duration}` : ""}
-                            {result.next_episode
-                              ? ` · próximo: S${result.next_episode.season} E${result.next_episode.episode}`
-                              : ""}
+                            {result.next_episode ? ` · próximo: S${result.next_episode.season} E${result.next_episode.episode}` : ""}
                           </span>
-                          <span className="muted">
-                            {result.status ? STATUS_LABEL[result.status] || "Na biblioteca" : "Fora da sua biblioteca"}
-                            {result.services.length > 0 ? ` · ${result.services.join(", ")}` : ""}
-                          </span>
+
+                          {(result.services.length > 0 || (result.where_to_watch ?? []).length > 0) && (
+                            <span className="muted smart-queue-meta">
+                              Onde assistir: {(result.services.length > 0 ? result.services : result.where_to_watch ?? []).join(", ")}
+                            </span>
+                          )}
+
+                          <p className="smart-queue-reason">{result.reason}</p>
+
                           {result.services.length > 0 && result.availability_source === "library_snapshot" && (
                             <span className="muted smart-queue-availability-note">
                               Segundo os dados do catálogo salvos com o título. A disponibilidade pode mudar.
                             </span>
                           )}
-                          <p className="smart-queue-reason">{result.reason}</p>
+
+                          <div className="smart-queue-card-actions">
+                            {result.source === "library" && result.library_id && status !== "watching" && status !== "rewatching" && (
+                              <button type="button" className="btn primary" disabled={busy} onClick={() => startWatching(result)}>
+                                {busy ? <Loader2 size={14} className="spin" /> : <Play size={14} />}
+                                Começar a assistir
+                              </button>
+                            )}
+
+                            {result.source === "discover" && !addedStatus && (
+                              <button type="button" className="btn primary" disabled={busy} onClick={() => addToQueue(result)}>
+                                {busy ? <Loader2 size={14} className="spin" /> : <Plus size={14} />}
+                                Adicionar à fila
+                              </button>
+                            )}
+
+                            {addedStatus && (
+                              <span className="smart-queue-done">
+                                <Check size={14} aria-hidden="true" /> {addedStatus === "watching" ? "Assistindo" : "Na sua fila"}
+                              </span>
+                            )}
+
+                            <Link
+                              className="btn"
+                              href={`/title/${result.media_type}/${result.tmdb_id}`}
+                              onClick={() => setOpen(false)}
+                            >
+                              Ver título
+                            </Link>
+
+                            {result.source === "discover" && !addedStatus && (
+                              <button type="button" className="btn ghost" disabled={busy} onClick={() => notInterested(result)}>
+                                <EyeOff size={14} />
+                                Não tenho interesse
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </li>
                     );

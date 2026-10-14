@@ -260,7 +260,22 @@ export default function DiaryPage() {
   ] =
     useState(0);
 
+  // V2.3 — `?date=AAAA-MM-DD` (vindo do mapa de atividade dos Insights)
+  // mostra só aquele dia. `undefined` = ainda não lido; `null` = sem filtro.
+  const [
+    focusDate,
+    setFocusDate,
+  ] = useState<string | null | undefined>(undefined);
+
   useEffect(() => {
+    const value = new URLSearchParams(window.location.search).get("date");
+
+    setFocusDate(value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null);
+  }, []);
+
+  useEffect(() => {
+    if (focusDate === undefined) return;
+
     async function load() {
       try {
         setLoading(
@@ -271,7 +286,9 @@ export default function DiaryPage() {
 
         const response =
           await fetch(
-            "/api/activity?limit=500",
+            focusDate
+              ? `/api/activity?year=${focusDate.slice(0, 4)}&limit=1000`
+              : "/api/activity?limit=500",
             {
               cache:
                 "no-store",
@@ -316,7 +333,7 @@ export default function DiaryPage() {
     }
 
     load();
-  }, [retryTick]);
+  }, [retryTick, focusDate]);
 
   const groupedEvents =
     useMemo(() => {
@@ -349,6 +366,8 @@ export default function DiaryPage() {
 
       return Object.entries(
         groups
+      ).filter(
+        ([key]) => !focusDate || key === focusDate
       ).sort(
         ([a], [b]) =>
           new Date(
@@ -360,6 +379,7 @@ export default function DiaryPage() {
       );
     }, [
       events,
+      focusDate,
     ]);
 
   return (
@@ -407,8 +427,27 @@ export default function DiaryPage() {
         </div>
       )}
 
+      {focusDate && !loading && !error && (
+        <div className="diary-focus" role="status">
+          <span>
+            Mostrando {new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${focusDate}T12:00:00Z`))}
+          </span>
+          <Link href="/diary" onClick={() => setFocusDate(null)}>
+            Ver o Diário completo
+          </Link>
+          {groupedEvents.length === 0 && (
+            <p className="muted">
+              Nenhuma atividade registrada no Diário nesse dia. Episódios marcados como assistidos
+              aparecem no mapa de atividade dos Insights; o Diário guarda avaliações, mudanças de
+              status, conclusões e registros de visualização.
+            </p>
+          )}
+        </div>
+      )}
+
       {!loading &&
         !error &&
+        !focusDate &&
         events.length ===
           0 && (
         <div className="empty diary-empty">

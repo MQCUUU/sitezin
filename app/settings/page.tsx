@@ -1,9 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { Search } from '@/components/Search';
+import { Suspense, useCallback, useEffect, useState, type ReactNode } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import {
+  Bell,
+  Database,
+  Palette,
+  RotateCcw,
+  ShieldCheck,
+  Star,
+  Tv,
+  Plus,
+  Trash2,
+  type LucideIcon,
+} from 'lucide-react';
 
+import { Search } from '@/components/Search';
 import { DataBackup } from '@/components/DataBackup';
 import { AccountPrivacy } from '@/components/AccountPrivacy';
 import { SocialSettings } from '@/components/SocialSettings';
@@ -18,766 +30,393 @@ import {
   savePreferences,
 } from '@/lib/preferences';
 
-import {
-  Check,
-  Moon,
-  Palette,
-  RotateCcw,
-  Sparkles,
-  Sun,
-  MonitorCog,
-  Circle,
-  Rows3,
-  ArrowDownUp,
-} from 'lucide-react';
+/*
+ * V2.3 — Configurações reorganizadas como um app:
+ *  - uma lista curta de seções à esquerda (chips roláveis no celular);
+ *  - cada seção mostra SÓ o que é dela, em linhas "rótulo + controle";
+ *  - preferências aplicam e salvam na hora (sem botão "salvar");
+ *  - a aba fica na URL (?tab=…), então atualizar a página não perde o lugar.
+ * `?tab=general` (links antigos para "Meus serviços") abre Streaming.
+ */
 
-export default function Settings() {
-  const searchParams = useSearchParams();
-  const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'account' | 'notifications' | 'appearance'>('general');
-  const [d, setD] = useState<any[]>([]);
-  const [name, setName] = useState('');
-  useEffect(() => { const tab = searchParams.get('tab'); if (['general','account','notifications','appearance'].includes(tab || '')) setActiveSettingsTab(tab as typeof activeSettingsTab); }, [searchParams]);
+type TabId = 'appearance' | 'streaming' | 'notifications' | 'account' | 'ratings' | 'data';
 
-  const [preferences, setPreferences] =
-    useState<AppearancePreferences>(DEFAULT_PREFERENCES);
+const TABS: { id: TabId; label: string; hint: string; icon: LucideIcon }[] = [
+  { id: 'appearance', label: 'Aparência', hint: 'Tema, cor e densidade', icon: Palette },
+  { id: 'streaming', label: 'Streaming', hint: 'Onde você assiste', icon: Tv },
+  { id: 'notifications', label: 'Notificações', hint: 'Avisos do site', icon: Bell },
+  { id: 'account', label: 'Conta e privacidade', hint: 'Perfil, @, visibilidade', icon: ShieldCheck },
+  { id: 'ratings', label: 'Critérios de avaliação', hint: 'Suas categorias de nota', icon: Star },
+  { id: 'data', label: 'Dados e backup', hint: 'Exportar e importar', icon: Database },
+];
+
+function tabFromQuery(value: string | null): TabId {
+  if (value === 'general') return 'streaming';
+
+  return TABS.some((tab) => tab.id === value) ? (value as TabId) : 'appearance';
+}
+
+function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  return (
+    <div className="set-row">
+      <div className="set-row-copy">
+        <strong>{label}</strong>
+        {hint ? <span>{hint}</span> : null}
+      </div>
+      <div className="set-row-control">{children}</div>
+    </div>
+  );
+}
+
+function Segmented<T extends string>({
+  value,
+  options,
+  onChange,
+  label,
+}: {
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (value: T) => void;
+  label: string;
+}) {
+  return (
+    <div className="set-segmented" role="radiogroup" aria-label={label}>
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          role="radio"
+          aria-checked={value === option.value}
+          className={value === option.value ? 'is-active' : ''}
+          onClick={() => onChange(option.value)}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Switch({ checked, onChange, label }: { checked: boolean; onChange: (value: boolean) => void; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      className={`set-switch${checked ? ' is-on' : ''}`}
+      onClick={() => onChange(!checked)}
+    >
+      <span />
+    </button>
+  );
+}
+
+function SectionHead({ title, description }: { title: string; description: string }) {
+  return (
+    <header className="set-section-head">
+      <h2>{title}</h2>
+      <p>{description}</p>
+    </header>
+  );
+}
+
+function AppearanceSection() {
+  const [preferences, setPreferences] = useState<AppearancePreferences>(DEFAULT_PREFERENCES);
 
   useEffect(() => {
-    fetch('/api/rating-categories')
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data: any[] | null) => {
-        setD(Array.isArray(data) ? data : []);
-      })
-      .catch(() => {});
-
     setPreferences(readPreferences());
   }, []);
 
-  const add = async () => {
-    if (!name.trim()) return;
+  const change = useCallback(
+    <K extends keyof AppearancePreferences>(key: K, value: AppearancePreferences[K]) => {
+      setPreferences((current) => {
+        const next = { ...current, [key]: value };
+        savePreferences(next);
+        return next;
+      });
+    },
+    []
+  );
+
+  return (
+    <section className="set-card" aria-labelledby="set-appearance">
+      <SectionHead title="Aparência" description="As mudanças aplicam na hora e ficam salvas neste navegador." />
+
+      <Row label="Tema">
+        <Segmented
+          label="Tema"
+          value={preferences.theme}
+          onChange={(value) => change('theme', value)}
+          options={[
+            { value: 'dark', label: 'Escuro' },
+            { value: 'light', label: 'Claro' },
+            { value: 'oled', label: 'OLED' },
+          ]}
+        />
+      </Row>
+
+      <Row label="Cor de destaque">
+        <div className="set-swatches" role="radiogroup" aria-label="Cor de destaque">
+          {ACCENT_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              role="radio"
+              aria-checked={preferences.accent === option.value}
+              aria-label={option.name}
+              title={option.name}
+              className={preferences.accent === option.value ? 'is-active' : ''}
+              style={{ background: option.value }}
+              onClick={() => change('accent', option.value)}
+            />
+          ))}
+        </div>
+      </Row>
+
+      <Row label="Densidade" hint="Compacta mostra mais títulos por tela.">
+        <Segmented
+          label="Densidade"
+          value={preferences.density}
+          onChange={(value) => change('density', value)}
+          options={[
+            { value: 'comfortable', label: 'Confortável' },
+            { value: 'compact', label: 'Compacta' },
+          ]}
+        />
+      </Row>
+
+      <Row label="Cantos">
+        <Segmented
+          label="Cantos"
+          value={preferences.radius}
+          onChange={(value) => change('radius', value)}
+          options={[
+            { value: 'rounded', label: 'Arredondados' },
+            { value: 'soft', label: 'Suaves' },
+            { value: 'square', label: 'Retos' },
+          ]}
+        />
+      </Row>
+
+      <Row label="Reduzir animações" hint="Menos movimento nas transições e efeitos.">
+        <Switch
+          label="Reduzir animações"
+          checked={preferences.motion === 'reduced'}
+          onChange={(value) => change('motion', value ? 'reduced' : 'full')}
+        />
+      </Row>
+
+      <Row label="Ordem da biblioteca" hint="Como a Biblioteca abre por padrão.">
+        <select
+          className="set-select"
+          aria-label="Ordem padrão da biblioteca"
+          value={preferences.defaultSort}
+          onChange={(event) => change('defaultSort', event.target.value as AppearancePreferences['defaultSort'])}
+        >
+          <option value="added">Adicionados recentemente</option>
+          <option value="updated">Atualizados recentemente</option>
+          <option value="rating">Minha nota</option>
+          <option value="tmdb">Nota do TMDB</option>
+          <option value="az">A–Z</option>
+        </select>
+      </Row>
+
+      <div className="set-footer">
+        <button
+          type="button"
+          className="btn"
+          onClick={() => {
+            setPreferences(DEFAULT_PREFERENCES);
+            savePreferences(DEFAULT_PREFERENCES);
+          }}
+        >
+          <RotateCcw size={15} />
+          Restaurar padrão
+        </button>
+      </div>
+    </section>
+  );
+}
+
+type RatingCategory = { id: string; name: string; weight: number; position?: number };
+
+function RatingsSection() {
+  const [items, setItems] = useState<RatingCategory[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetch('/api/rating-categories')
+      .then((response) => (response.ok ? response.json() : []))
+      .then((data) => setItems(Array.isArray(data) ? data : []))
+      .catch(() => undefined)
+      .finally(() => setLoaded(true));
+  }, []);
+
+  async function add() {
+    const value = name.trim();
+
+    if (!value) return;
+
+    setError('');
 
     try {
-      const res = await fetch('/api/rating-categories', {
+      const response = await fetch('/api/rating-categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: name.trim(),
-          weight: 0,
-          position: d.length,
-        }),
+        body: JSON.stringify({ name: value, weight: 0, position: items.length }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        setD([...d, data]);
-      }
-    } catch (err) {
-      console.error('Erro ao adicionar categoria:', err);
+      if (!response.ok) throw new Error();
+
+      setItems([...items, await response.json()]);
+      setName('');
+    } catch {
+      setError('Não foi possível adicionar a categoria.');
     }
+  }
 
-    setName('');
-  };
+  // Salva ao sair do campo (antes: uma requisição por tecla digitada).
+  async function patch(id: string, key: 'name' | 'weight', value: string | number) {
+    const current = items.find((item) => item.id === id);
 
-  const update = async (
-    id: string,
-    k: string,
-    v: any
-  ) => {
-    try {
-      const res = await fetch('/api/rating-categories', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id,
-          [k]: v,
-        }),
-      });
+    if (!current || current[key] === value) return;
 
-      if (res.ok) {
-        setD(
-          d.map((x) =>
-            x.id === id
-              ? {
-                  ...x,
-                  [k]: v,
-                }
-              : x
-          )
-        );
-      }
-    } catch (err) {
-      console.error('Erro ao atualizar categoria:', err);
-    }
-  };
+    setItems((list) => list.map((item) => (item.id === id ? { ...item, [key]: value } : item)));
 
-  const remove = async (id: string) => {
-    try {
-      const res = await fetch(`/api/rating-categories?id=${encodeURIComponent(id)}`, {
-        method: 'DELETE',
-      });
+    await fetch('/api/rating-categories', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, [key]: value }),
+    }).catch(() => undefined);
+  }
 
-      if (res.ok) {
-        setD(d.filter((x) => x.id !== id));
-      }
-    } catch (err) {
-      console.error('Erro ao remover categoria:', err);
-    }
-  };
+  async function remove(id: string) {
+    const response = await fetch(`/api/rating-categories?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(
+      () => null
+    );
 
-  const changePreference = <
-    K extends keyof AppearancePreferences
-  >(
-    key: K,
-    value: AppearancePreferences[K]
-  ) => {
-    const next = {
-      ...preferences,
-      [key]: value,
-    };
+    if (response?.ok) setItems((list) => list.filter((item) => item.id !== id));
+  }
 
-    setPreferences(next);
-    savePreferences(next);
-  };
+  return (
+    <section className="set-card" aria-labelledby="set-ratings">
+      <SectionHead
+        title="Critérios de avaliação"
+        description="Crie categorias próprias (roteiro, atuação…). O peso define quanto cada uma conta na nota final."
+      />
 
-  const resetAppearance = () => {
-    setPreferences(DEFAULT_PREFERENCES);
-    savePreferences(DEFAULT_PREFERENCES);
-  };
+      {loaded && items.length === 0 && <p className="set-empty">Nenhuma categoria ainda. Adicione a primeira abaixo.</p>}
+
+      {items.map((item) => (
+        <div className="set-row" key={item.id}>
+          <input
+            className="set-input"
+            defaultValue={item.name}
+            aria-label="Nome da categoria"
+            onBlur={(event) => patch(item.id, 'name', event.target.value.trim() || item.name)}
+          />
+          <label className="set-weight">
+            <span>Peso</span>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              defaultValue={item.weight}
+              aria-label={`Peso de ${item.name || 'categoria'}`}
+              onBlur={(event) => patch(item.id, 'weight', Math.max(0, Math.min(100, Number(event.target.value) || 0)))}
+            />
+          </label>
+          <button type="button" className="set-icon-btn" aria-label={`Excluir ${item.name}`} onClick={() => remove(item.id)}>
+            <Trash2 size={16} />
+          </button>
+        </div>
+      ))}
+
+      <div className="set-add">
+        <input
+          className="set-input"
+          placeholder="Nova categoria (ex.: Roteiro)"
+          aria-label="Nome da nova categoria"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          onKeyDown={(event) => event.key === 'Enter' && add()}
+        />
+        <button type="button" className="btn primary" onClick={add} disabled={!name.trim()}>
+          <Plus size={15} />
+          Adicionar
+        </button>
+      </div>
+      {error && <p className="set-error" role="alert">{error}</p>}
+    </section>
+  );
+}
+
+function SettingsContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const active = tabFromQuery(searchParams.get('tab'));
+
+  function select(tab: TabId) {
+    router.replace(`${pathname}?tab=${tab}`, { scroll: false });
+  }
 
   return (
     <>
       <Search />
 
-      <div className="section">
-        <div className="eyebrow">Do seu jeito</div>
+      <div className="set-page">
+        <h1 className="set-title">Configurações</h1>
 
-        <h1>Configurações</h1>
+        <div className="set-layout">
+          <nav className="set-nav" aria-label="Seções das configurações">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
 
-        <p className="muted">
-          Personalize a aparência do MyCatalog e ajuste
-          seus critérios de avaliação.
-        </p>
-      </div>
-
-      <div className="settings-layout">
-
-        <nav className="settings-tabs" aria-label="Seções das configurações">
-          {[['general','Geral'],['account','Conta e privacidade'],['notifications','Notificações'],['appearance','Aparência']] .map(([value,label]) => <button key={value} className={activeSettingsTab === value ? 'active' : ''} onClick={() => setActiveSettingsTab(value as typeof activeSettingsTab)}>{label}</button>)}
-        </nav>
-
-        {activeSettingsTab === 'general' && <section className="panel settings-profile-moved"><div><span className="eyebrow">PERFIL</span><h2>Edite diretamente na sua página</h2><p className="muted">Avatar, biografia, @, visibilidade e Top 5 agora ficam juntos no seu perfil.</p></div><a className="btn primary" href="/profile">Abrir meu perfil</a></section>}
-
-        {activeSettingsTab === 'general' && <StreamingServicesSettings />}
-
-        {activeSettingsTab === 'appearance' && <>
-
-        {/* ========================= */}
-        {/* PERSONALIZAÇÃO */}
-        {/* ========================= */}
-
-        <section className="panel settings-panel settings-appearance">
-
-          <div className="settings-panel-head">
-
-            <div className="settings-icon">
-              <Palette size={19} />
-            </div>
-
-            <div>
-              <h2>Personalização</h2>
-
-              <p className="muted">
-                Temas, aparência e preferências da interface.
-              </p>
-            </div>
-
-            <button
-              className="btn ghost settings-reset"
-              onClick={resetAppearance}
-            >
-              <RotateCcw size={15} />
-
-              Restaurar padrão
-            </button>
-
-          </div>
-
-          {/* TEMA */}
-
-          <div className="settings-group">
-
-            <div className="settings-group-title">
-
-              <MonitorCog size={17} />
-
-              <div>
-                <b>Tema</b>
-
-                <span>
-                  Escolha a base visual do catálogo.
-                </span>
-              </div>
-
-            </div>
-
-            <div className="theme-options">
-
-              {/* ESCURO */}
-
-              <button
-                className={`theme-card ${
-                  preferences.theme === 'dark'
-                    ? 'active'
-                    : ''
-                }`}
-                onClick={() =>
-                  changePreference('theme', 'dark')
-                }
-              >
-
-                <div className="theme-preview preview-dark">
-                  <span />
-                  <span />
-                  <span />
-                </div>
-
-                <div>
-                  <Moon size={15} />
-
-                  <b>Escuro</b>
-
-                  <small>
-                    Visual original
-                  </small>
-                </div>
-
-                {preferences.theme === 'dark' && (
-                  <Check
-                    className="theme-check"
-                    size={16}
-                  />
-                )}
-
-              </button>
-
-              {/* AMOLED */}
-
-              <button
-                className={`theme-card ${
-                  preferences.theme === 'oled'
-                    ? 'active'
-                    : ''
-                }`}
-                onClick={() =>
-                  changePreference('theme', 'oled')
-                }
-              >
-
-                <div className="theme-preview preview-oled">
-                  <span />
-                  <span />
-                  <span />
-                </div>
-
-                <div>
-                  <Sparkles size={15} />
-
-                  <b>AMOLED</b>
-
-                  <small>
-                    Preto profundo
-                  </small>
-                </div>
-
-                {preferences.theme === 'oled' && (
-                  <Check
-                    className="theme-check"
-                    size={16}
-                  />
-                )}
-
-              </button>
-
-              {/* CLARO */}
-
-              <button
-                className={`theme-card ${
-                  preferences.theme === 'light'
-                    ? 'active'
-                    : ''
-                }`}
-                onClick={() =>
-                  changePreference('theme', 'light')
-                }
-              >
-
-                <div className="theme-preview preview-light">
-                  <span />
-                  <span />
-                  <span />
-                </div>
-
-                <div>
-                  <Sun size={15} />
-
-                  <b>Claro</b>
-
-                  <small>
-                    Mais luminoso
-                  </small>
-                </div>
-
-                {preferences.theme === 'light' && (
-                  <Check
-                    className="theme-check"
-                    size={16}
-                  />
-                )}
-
-              </button>
-
-            </div>
-
-          </div>
-
-          {/* COR DE DESTAQUE */}
-
-          <div className="settings-group">
-
-            <div className="settings-group-title">
-
-              <Palette size={17} />
-
-              <div>
-                <b>Cor de destaque</b>
-
-                <span>
-                  Usada em botões, seleções e elementos
-                  principais da interface.
-                </span>
-              </div>
-
-            </div>
-
-            <div className="accent-options">
-
-              {ACCENT_OPTIONS.map((accent) => (
+              return (
                 <button
-                  key={accent.value}
-                  title={accent.name}
-                  aria-label={`Usar cor ${accent.name}`}
-                  className={`accent-swatch ${
-                    preferences.accent === accent.value
-                      ? 'active'
-                      : ''
-                  }`}
-                  style={{
-                    background: accent.value,
-                  }}
-                  onClick={() =>
-                    changePreference(
-                      'accent',
-                      accent.value
-                    )
-                  }
+                  key={tab.id}
+                  type="button"
+                  className={`set-nav-item${active === tab.id ? ' is-active' : ''}`}
+                  aria-current={active === tab.id ? 'page' : undefined}
+                  onClick={() => select(tab.id)}
                 >
-                  {preferences.accent ===
-                    accent.value && (
-                    <Check size={17} />
-                  )}
-                </button>
-              ))}
-
-            </div>
-
-          </div>
-
-          {/* PREFERÊNCIAS EXTRAS */}
-
-          <div className="settings-preference-grid">
-
-            {/* DENSIDADE */}
-
-            <div className="settings-group compact-group">
-
-              <div className="settings-group-title">
-
-                <Rows3 size={17} />
-
-                <div>
-                  <b>Densidade</b>
-
-                  <span>
-                    Controle o espaço entre elementos.
+                  <Icon size={18} aria-hidden="true" />
+                  <span className="set-nav-text">
+                    <strong>{tab.label}</strong>
+                    <small>{tab.hint}</small>
                   </span>
-                </div>
-
-              </div>
-
-              <div className="segmented-control">
-
-                <button
-                  className={
-                    preferences.density ===
-                    'comfortable'
-                      ? 'active'
-                      : ''
-                  }
-                  onClick={() =>
-                    changePreference(
-                      'density',
-                      'comfortable'
-                    )
-                  }
-                >
-                  Confortável
                 </button>
+              );
+            })}
+          </nav>
 
-                <button
-                  className={
-                    preferences.density ===
-                    'compact'
-                      ? 'active'
-                      : ''
-                  }
-                  onClick={() =>
-                    changePreference(
-                      'density',
-                      'compact'
-                    )
-                  }
-                >
-                  Compacta
-                </button>
-
-              </div>
-
-            </div>
-
-            {/* CANTOS */}
-
-            <div className="settings-group compact-group">
-
-              <div className="settings-group-title">
-
-                <Circle size={17} />
-
-                <div>
-                  <b>Cantos</b>
-
-                  <span>
-                    Formato de cards e painéis.
-                  </span>
-                </div>
-
-              </div>
-
-              <div className="segmented-control three">
-
-                <button
-                  className={
-                    preferences.radius ===
-                    'rounded'
-                      ? 'active'
-                      : ''
-                  }
-                  onClick={() =>
-                    changePreference(
-                      'radius',
-                      'rounded'
-                    )
-                  }
-                >
-                  Redondos
-                </button>
-
-                <button
-                  className={
-                    preferences.radius ===
-                    'soft'
-                      ? 'active'
-                      : ''
-                  }
-                  onClick={() =>
-                    changePreference(
-                      'radius',
-                      'soft'
-                    )
-                  }
-                >
-                  Suaves
-                </button>
-
-                <button
-                  className={
-                    preferences.radius ===
-                    'square'
-                      ? 'active'
-                      : ''
-                  }
-                  onClick={() =>
-                    changePreference(
-                      'radius',
-                      'square'
-                    )
-                  }
-                >
-                  Retos
-                </button>
-
-              </div>
-
-            </div>
-
-            {/* ANIMAÇÕES */}
-
-            <div className="settings-group compact-group">
-
-              <div className="settings-group-title">
-
-                <Sparkles size={17} />
-
-                <div>
-                  <b>Animações</b>
-
-                  <span>
-                    Controle transições e movimentos.
-                  </span>
-                </div>
-
-              </div>
-
-              <div className="segmented-control">
-
-                <button
-                  className={
-                    preferences.motion ===
-                    'full'
-                      ? 'active'
-                      : ''
-                  }
-                  onClick={() =>
-                    changePreference(
-                      'motion',
-                      'full'
-                    )
-                  }
-                >
-                  Ativadas
-                </button>
-
-                <button
-                  className={
-                    preferences.motion ===
-                    'reduced'
-                      ? 'active'
-                      : ''
-                  }
-                  onClick={() =>
-                    changePreference(
-                      'motion',
-                      'reduced'
-                    )
-                  }
-                >
-                  Reduzidas
-                </button>
-
-              </div>
-
-            </div>
-
-            {/* ORDEM DA BIBLIOTECA */}
-
-            <div className="settings-group compact-group">
-
-              <div className="settings-group-title">
-
-                <ArrowDownUp size={17} />
-
-                <div>
-                  <b id="settings-library-order-label">Ordem da biblioteca</b>
-
-                  <span>
-                    Escolha como sua coleção deve abrir.
-                  </span>
-                </div>
-
-              </div>
-
-              <select
-                className="settings-select"
-                aria-labelledby="settings-library-order-label"
-                value={preferences.defaultSort}
-                onChange={(event) =>
-                  changePreference(
-                    'defaultSort',
-                    event.target
-                      .value as AppearancePreferences['defaultSort']
-                  )
-                }
-              >
-
-                <option value="added">
-                  Adicionados recentemente
-                </option>
-
-                <option value="updated">
-                  Atualizados recentemente
-                </option>
-
-                <option value="rating">
-                  Minha nota
-                </option>
-
-                <option value="tmdb">
-                  Nota TMDB
-                </option>
-
-                <option value="az">
-                  A–Z
-                </option>
-
-              </select>
-
-            </div>
-
-          </div>
-
-        </section>
-
-        {/* ========================= */}
-        {/* CATEGORIAS DE AVALIAÇÃO */}
-        {/* ========================= */}
-
-        <section className="panel settings-panel">
-
-          <div className="settings-panel-head">
-
-            <div>
-              <h2>
-                Categorias de avaliação
-              </h2>
-
-              <p className="muted">
-                Crie critérios próprios. Os pesos podem
-                ser usados para calcular sua nota final.
-              </p>
-            </div>
-
-          </div>
-
-          <div className="rating-settings-list">
-
-            {d.length === 0 && (
-              <div
-                className="muted"
-                style={{
-                  padding: '20px 0',
-                }}
-              >
-                Nenhuma categoria criada ainda.
-              </div>
+          <div className="set-content">
+            {active === 'appearance' && <AppearanceSection />}
+            {active === 'streaming' && <StreamingServicesSettings />}
+            {active === 'notifications' && <NotificationSettings />}
+            {active === 'account' && (
+              <>
+                <AccountPrivacy />
+                <SocialSettings />
+              </>
             )}
-
-            {d.map((x) => (
-
-              <div
-                className="row"
-                key={x.id}
-              >
-
-                <input
-                  value={x.name}
-                  aria-label="Nome da categoria de avaliação"
-                  onChange={(e) =>
-                    update(
-                      x.id,
-                      'name',
-                      e.target.value
-                    )
-                  }
-                  style={{
-                    background: 'transparent',
-                    border: 0,
-                    color: 'var(--text)',
-                    flex: 1,
-                  }}
-                />
-
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={x.weight}
-                  aria-label={`Peso da categoria ${x.name || "sem nome"}`}
-                  onChange={(e) =>
-                    update(
-                      x.id,
-                      'weight',
-                      Number(e.target.value)
-                    )
-                  }
-                  style={{
-                    width: 80,
-                  }}
-                />
-
-                <button
-                  className="btn"
-                  onClick={() =>
-                    remove(x.id)
-                  }
-                >
-                  Excluir
-                </button>
-
-              </div>
-
-            ))}
-
+            {active === 'ratings' && <RatingsSection />}
+            {active === 'data' && <DataBackup />}
           </div>
-
-          <div className="actions">
-
-            <input
-              placeholder="Nova categoria"
-              value={name}
-              onChange={(e) =>
-                setName(e.target.value)
-              }
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  add();
-                }
-              }}
-            />
-
-            <button
-              className="btn primary"
-              onClick={add}
-            >
-              Adicionar
-            </button>
-
-          </div>
-
-        </section>
-
-        </>}
-
-        {/* ========================= */}
-        {/* CONTA / PRIVACIDADE */}
-        {/* ========================= */}
-
-        {activeSettingsTab === 'account' && <><AccountPrivacy /><SocialSettings /><DataBackup /></>}
-
-        {activeSettingsTab === 'notifications' && <NotificationSettings />}
-
-        {/* ========================= */}
-        {/* SEUS DADOS / BACKUP */}
-        {/* ========================= */}
-
+        </div>
       </div>
     </>
+  );
+}
+
+export default function Settings() {
+  return (
+    <Suspense fallback={null}>
+      <SettingsContent />
+    </Suspense>
   );
 }

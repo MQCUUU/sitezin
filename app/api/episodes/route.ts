@@ -117,6 +117,15 @@ export async function POST(request: Request) {
         ? new Date(body.watched_at).toISOString()
         : new Date().toISOString()
       : null;
+    // V2.3 — proveniência: sem data enviada = relógio do servidor ('datetime');
+    // com data enviada, só é 'datetime' se o cliente declarar a hora.
+    const watchedAtPrecision = body.watched
+      ? typeof body.watched_at === "string" && body.watched_at
+        ? (body as { watched_at_precision?: unknown }).watched_at_precision === "datetime"
+          ? "datetime"
+          : "date"
+        : "datetime"
+      : null;
     /*
      * `comment`/`is_rewatch` só devem sobrescrever o que já existe quando o
      * chamador realmente os envia (a página de episódio, no diário). O
@@ -207,6 +216,7 @@ export async function POST(request: Request) {
         episode_number,
         watched,
         watched_at,
+        watched_at_precision,
         comment,
         is_rewatch
       )
@@ -217,6 +227,7 @@ export async function POST(request: Request) {
         ${episodeNumber},
         ${body.watched},
         ${watchedAt},
+        ${watchedAtPrecision},
         ${comment},
         ${isRewatch}
       )
@@ -224,6 +235,7 @@ export async function POST(request: Request) {
       DO UPDATE SET
         watched = EXCLUDED.watched,
         watched_at = EXCLUDED.watched_at,
+        watched_at_precision = EXCLUDED.watched_at_precision,
         comment = CASE WHEN ${commentProvided} THEN EXCLUDED.comment ELSE public.episodes_progress.comment END,
         is_rewatch = CASE WHEN ${isRewatchProvided} THEN EXCLUDED.is_rewatch ELSE public.episodes_progress.is_rewatch END
       RETURNING *
@@ -236,7 +248,7 @@ export async function POST(request: Request) {
       if (libraryItem.media_type === "tv" && libraryItem.tmdb_id) {
         const [existingProgress, priorSeasons] = await Promise.all([
           sql`
-            SELECT season_number, episode_number, watched_at
+            SELECT season_number, episode_number, watched_at, watched_at_precision
             FROM public.episodes_progress
             WHERE user_id = ${user.id}
               AND media_id = ${libraryItem.media_id}
@@ -254,6 +266,12 @@ export async function POST(request: Request) {
           (existingProgress || []).map((item: any) => [
             `${item.season_number}-${item.episode_number}`,
             item.watched_at,
+          ]),
+        );
+        const watchedPrecisions = new Map(
+          (existingProgress || []).map((item: any) => [
+            `${item.season_number}-${item.episode_number}`,
+            item.watched_at ? item.watched_at_precision ?? null : null,
           ]),
         );
 
@@ -281,6 +299,10 @@ export async function POST(request: Request) {
               watched_at:
                 watchedDates.get(`${number}-${episodeNo}`) ||
                 new Date().toISOString(),
+              // data existente preserva a proveniência; data nova = relógio do servidor
+              watched_at_precision: watchedDates.get(`${number}-${episodeNo}`)
+                ? watchedPrecisions.get(`${number}-${episodeNo}`) ?? null
+                : "datetime",
             });
           }
         });
@@ -293,7 +315,8 @@ export async function POST(request: Request) {
               season_number,
               episode_number,
               watched,
-              watched_at
+              watched_at,
+              watched_at_precision
             )
             VALUES (
               ${row.user_id},
@@ -301,12 +324,14 @@ export async function POST(request: Request) {
               ${row.season_number},
               ${row.episode_number},
               ${row.watched},
-              ${row.watched_at}
+              ${row.watched_at},
+              ${row.watched_at_precision}
             )
             ON CONFLICT (user_id, media_id, season_number, episode_number)
             DO UPDATE SET
               watched = EXCLUDED.watched,
-              watched_at = EXCLUDED.watched_at
+              watched_at = EXCLUDED.watched_at,
+              watched_at_precision = EXCLUDED.watched_at_precision
           `;
         }
       }
@@ -563,7 +588,8 @@ export async function PUT(request: Request) {
           season_number,
           episode_number,
           watched,
-          watched_at
+          watched_at,
+          watched_at_precision
         )
         VALUES (
           ${user.id},
@@ -571,12 +597,14 @@ export async function PUT(request: Request) {
           ${seasonNumber},
           ${episodeNumber},
           ${body.watched},
-          ${watchedAt}
+          ${watchedAt},
+          ${body.watched ? "datetime" : null}
         )
         ON CONFLICT (user_id, media_id, season_number, episode_number)
         DO UPDATE SET
           watched = EXCLUDED.watched,
-          watched_at = EXCLUDED.watched_at
+          watched_at = EXCLUDED.watched_at,
+          watched_at_precision = EXCLUDED.watched_at_precision
         RETURNING *
       `;
       if (res.length > 0) rows.push(res[0]);

@@ -12,6 +12,9 @@ import "@/styles/discover.css";
 import "@/styles/search.css";
 import "@/styles/title.css";
 import "@/styles/media-preview.css";
+import "@/styles/media-unified.css";
+import "@/styles/settings-clean.css";
+import "@/styles/insights.css";
 
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";

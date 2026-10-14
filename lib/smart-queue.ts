@@ -7,6 +7,7 @@
  * Sem IA. Cada motivo exibido corresponde a um sinal realmente aplicado.
  */
 import type { TvProgress } from "@/lib/tv-progress";
+import { personalBonus, type TasteProfile } from "@/lib/taste-profile";
 
 export type QueueType = "all" | "movie" | "tv";
 
@@ -45,9 +46,19 @@ export type QueueCandidate = {
   /** Discover com `with_watch_providers`: disponibilidade garantida pela consulta. */
   provider_guaranteed: boolean;
   tv_progress: TvProgress | null;
+  /** V2.3: títulos curtidos cujas recomendações do TMDB incluíram este candidato. */
+  because?: string[];
+  /** V2.3: dias na biblioteca (fila "Quero assistir"). */
+  added_days?: number | null;
+  overview?: string | null;
+  year?: number | null;
+  vote_average?: number | null;
+  provider_names?: string[];
 };
 
 export type QueueContext = {
+  /** V2.3: perfil de gosto (gêneros, afinidade, o que abandona). Opcional. */
+  profile?: TasteProfile;
   /** Gêneros que o usuário mais gosta (nota ≥ 7 ou favoritos), já ordenados. */
   favoriteGenres: string[];
   /** provider_id → nome dos serviços do usuário. */
@@ -218,9 +229,26 @@ export function scoreCandidate(
     fragments.push("Você deixou em pausa");
   }
 
-  // Afinidade de gênero.
+  // V2.3 — gosto: afinidade por gênero (com penalidade pelo que abandona) e
+  // "parecido com o que você curtiu". Sem perfil, cai na regra antiga.
   const matchingGenres = candidate.genres.filter((genre) => context.favoriteGenres.includes(genre));
-  const genrePoints = Math.min(WEIGHTS.GENRE_MATCH_MAX, matchingGenres.length * WEIGHTS.GENRE_MATCH_EACH);
+  let genrePoints = Math.min(WEIGHTS.GENRE_MATCH_MAX, matchingGenres.length * WEIGHTS.GENRE_MATCH_EACH);
+
+  if (context.profile) {
+    const bonus = personalBonus(context.profile, { genres: candidate.genres }, candidate.because ?? []);
+
+    score += bonus.points;
+    fragments.push(...bonus.reasons.map((reason) => reason.charAt(0).toLowerCase() + reason.slice(1)));
+    genrePoints = 0;
+  }
+
+  // Fila antiga: lembra o que está esperando há tempo.
+  if (candidate.status === "want" && (candidate.added_days ?? 0) >= 30) {
+    const months = Math.floor((candidate.added_days ?? 0) / 30);
+
+    score += Math.min(10, months * 2);
+    fragments.push(`está na sua fila há ${months} ${months === 1 ? "mês" : "meses"}`);
+  }
 
   if (genrePoints > 0) {
     score += genrePoints;
@@ -295,4 +323,49 @@ export function pickSurprise(picks: QueuePick[], random: () => number = Math.ran
   const index = Math.min(picks.length - 1, Math.floor(random() * picks.length));
 
   return picks[index];
+}
+
+/**
+ * V2.3 — escolhe poucos resultados BONS e variados: nunca 3 do mesmo gênero
+ * principal e, com origem "all", garante ao menos 1 da fila e 1 descoberta
+ * (quando existem), para o usuário ter algo seguro e algo novo.
+ */
+export function pickDiverse(
+  ranked: QueuePick[],
+  limit: number,
+  source: "all" | "queue" | "new" = "all"
+): QueuePick[] {
+  const chosen: QueuePick[] = [];
+  const genreCount = new Map<string, number>();
+
+  const add = (pick: QueuePick | undefined): boolean => {
+    if (!pick || chosen.includes(pick) || chosen.length >= limit) return false;
+
+    const main = pick.candidate.genres[0] ?? "—";
+
+    if ((genreCount.get(main) ?? 0) >= 2) return false;
+
+    chosen.push(pick);
+    genreCount.set(main, (genreCount.get(main) ?? 0) + 1);
+
+    return true;
+  };
+
+  if (source === "all") {
+    add(ranked.find((pick) => pick.candidate.source === "library"));
+    add(ranked.find((pick) => pick.candidate.source === "discover"));
+  }
+
+  for (const pick of ranked) {
+    if (chosen.length >= limit) break;
+    add(pick);
+  }
+
+  // Se a regra de gênero deixou vagas, completa por score.
+  for (const pick of ranked) {
+    if (chosen.length >= limit) break;
+    if (!chosen.includes(pick)) chosen.push(pick);
+  }
+
+  return chosen.sort((a, b) => b.score - a.score);
 }

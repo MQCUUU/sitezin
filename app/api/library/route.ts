@@ -547,9 +547,12 @@ export async function POST(
         runtime = EXCLUDED.runtime,
         seasons_count = EXCLUDED.seasons_count,
         episodes_count = EXCLUDED.episodes_count,
-        creator_names = EXCLUDED.creator_names,
-        cast_names = EXCLUDED.cast_names,
-        raw = EXCLUDED.raw,
+        creator_names = CASE WHEN cardinality(EXCLUDED.creator_names) > 0 THEN EXCLUDED.creator_names ELSE media.creator_names END,
+        cast_names = CASE WHEN cardinality(EXCLUDED.cast_names) > 0 THEN EXCLUDED.cast_names ELSE media.cast_names END,
+        -- V2.3: mescla (novo vence nas chaves repetidas) — não apaga o
+        -- enriquecimento dos Insights (idioma, país, diretores) nem dados de
+        -- temporada salvos por outra tela.
+        raw = coalesce(media.raw, '{}'::jsonb) || EXCLUDED.raw,
         updated_at = NOW()
       RETURNING *;
     `;

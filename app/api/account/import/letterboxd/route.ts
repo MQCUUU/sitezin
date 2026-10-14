@@ -244,10 +244,10 @@ export async function POST(request: Request) {
           try {
             await sql`
               INSERT INTO public.watch_entries (
-                user_id, library_item_id, media_id, watched_at, rating, is_rewatch
+                user_id, library_item_id, media_id, watched_at, watched_at_precision, rating, is_rewatch
               )
               VALUES (
-                ${user.id}, ${library.id}, ${library.mediaId}, ${watchedAt}, ${ratingVal}, ${isRewatch}
+                ${user.id}, ${library.id}, ${library.mediaId}, ${watchedAt}, 'date', ${ratingVal}, ${isRewatch}
               )
             `;
             history++;

@@ -41,6 +41,7 @@ export async function PATCH(
         library_item_id,
         media_id,
         watched_at,
+        watched_at_precision,
         rating,
         comment,
         is_rewatch
@@ -60,7 +61,11 @@ export async function PATCH(
     const body = await req.json();
 
     let nextWatchedAt = current.watched_at;
+    // V2.3 — edição de data/hora vem do datetime-local → 'datetime', salvo
+    // quando o cliente declara que só tem a data.
+    let nextPrecision = current.watched_at_precision ?? null;
     if (body.watched_at !== undefined) {
+      nextPrecision = body.watched_at_precision === "date" ? "date" : "datetime";
       const date = new Date(String(body.watched_at));
       if (Number.isNaN(date.getTime())) {
         return NextResponse.json({ error: "Data inválida." }, { status: 400 });
@@ -91,6 +96,7 @@ export async function PATCH(
       UPDATE public.watch_entries
       SET
         watched_at = ${nextWatchedAt},
+        watched_at_precision = ${nextPrecision},
         rating = ${nextRating},
         comment = ${nextComment},
         is_rewatch = ${nextIsRewatch},
@@ -112,7 +118,7 @@ export async function PATCH(
 
     // Sincronizar com library_items se for a visualização mais recente
     const latestRows = await sql`
-      SELECT id, watched_at, rating, is_rewatch
+      SELECT id, watched_at, watched_at_precision, rating, is_rewatch
       FROM public.watch_entries
       WHERE user_id = ${user.id}
         AND library_item_id = ${current.library_item_id}
@@ -126,6 +132,7 @@ export async function PATCH(
         UPDATE public.library_items
         SET
           watched_at = ${latest.watched_at},
+          watched_at_precision = ${latest.watched_at_precision ?? null},
           personal_rating = COALESCE(${latest.rating}, personal_rating),
           updated_at = ${now}
         WHERE id = ${current.library_item_id} AND user_id = ${user.id}
@@ -239,7 +246,7 @@ export async function DELETE(
      * Proveniência/ciclos de rewatch: dívida de V3 (docs/V2.1-A-DATA-INTEGRITY.md).
      */
     const latestRemaining = await sql`
-      SELECT watched_at
+      SELECT watched_at, watched_at_precision
       FROM public.watch_entries
       WHERE user_id = ${user.id}
         AND library_item_id = ${current.library_item_id}
@@ -252,6 +259,7 @@ export async function DELETE(
         UPDATE public.library_items
         SET
           watched_at = ${latestRemaining[0].watched_at},
+          watched_at_precision = ${latestRemaining[0].watched_at_precision ?? null},
           updated_at = ${new Date().toISOString()}
         WHERE id = ${current.library_item_id} AND user_id = ${user.id}
       `;

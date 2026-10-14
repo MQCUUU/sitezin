@@ -1,4 +1,4 @@
-import { Film, Flame, Sparkles, Star, Tv } from "lucide-react";
+import { Flame, Sparkles, Star } from "lucide-react";
 
 import type { DiscoverParams } from "@/lib/discover/params";
 
@@ -13,8 +13,10 @@ const SHORTCUTS: DiscoverShortcut[] = [
   { key: "popular", label: "Mais populares", icon: Flame, patch: { sort: "popular" } },
   { key: "rating", label: "Mais bem avaliados", icon: Star, patch: { sort: "rating" } },
   { key: "newest", label: "Lançamentos", icon: Sparkles, patch: { sort: "newest" } },
-  { key: "movies", label: "Filmes", icon: Film, patch: { type: "movie" } },
-  { key: "tv", label: "Séries", icon: Tv, patch: { type: "tv" } },
+  /*
+   * "Filmes"/"Séries" saíram daqui: já existem nas abas Tudo/Filmes/Séries
+   * logo acima (DiscoverTabs) — o mesmo filtro aparecia duas vezes na tela.
+   */
 ];
 
 function isShortcutActive(shortcut: DiscoverShortcut, params: DiscoverParams) {

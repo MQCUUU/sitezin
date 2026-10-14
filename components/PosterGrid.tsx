@@ -1,5 +1,7 @@
 "use client";
 
+import { MediaPosterActions } from "@/components/media/MediaPosterActions";
+import { MediaPosterTags, MediaStatusTag } from "@/components/media/MediaBadges";
 import { TvNextEpisode } from "@/components/TvNextEpisode";
 import Link from "next/link";
 import {
@@ -225,61 +227,6 @@ useEffect(() => {
   ]);
 
 
-
-  useEffect(() => {
-    if (
-      openStatusMenu ===
-      null
-    ) {
-      return;
-    }
-
-    function handleOutsideClick(
-      event: MouseEvent
-    ) {
-      const target =
-        event.target;
-
-      if (
-        !(target instanceof Element)
-      ) {
-        return;
-      }
-
-      /*
-       * Se clicou no botão que abre o menu
-       * ou dentro do próprio menu, não fecha.
-       */
-      if (
-        target.closest(
-          ".library-status-action"
-        ) ||
-        target.closest(
-          ".library-card-status-menu"
-        )
-      ) {
-        return;
-      }
-
-      setOpenStatusMenu(
-        null
-      );
-    }
-
-    document.addEventListener(
-      "mousedown",
-      handleOutsideClick
-    );
-
-    return () => {
-      document.removeEventListener(
-        "mousedown",
-        handleOutsideClick
-      );
-    };
-  }, [
-    openStatusMenu,
-  ]);
 
   if (!localItems.length) {
     return (
@@ -1341,71 +1288,6 @@ useEffect(() => {
   );
 }
 
-/*
- * D1 — STATUS_LABELS (lib/types.ts) é a ÚNICA fonte do texto dos
- * status. Antes, este badge tinha seu próprio texto hardcoded em
- * maiúsculas ("ASSISTINDO" etc.), duplicado e independente de
- * STATUS_LABELS — mudar um não mudava o outro.
- */
-function statusLabel(status: LibraryItem["status"]) {
-  const label =
-    STATUS_LABELS[status as keyof typeof STATUS_LABELS] || String(status || "");
-  return label.toUpperCase();
-}
-
-function getStatus(item: LibraryItem) {
-  switch (item.status) {
-    case "watching":
-      return {
-        label: statusLabel(item.status),
-        icon: <Play size={11} fill="currentColor" />,
-        className: "status-watching",
-      };
-
-    case "watched":
-      return {
-        label: statusLabel(item.status),
-        icon: <Check size={11} />,
-        className: "status-watched",
-      };
-
-    case "want":
-      return {
-        label: statusLabel(item.status),
-        icon: <Clock size={11} />,
-        className: "status-want",
-      };
-
-    case "dropped":
-      return {
-        label: statusLabel(item.status),
-        icon: <Trash2 size={11} />,
-        className: "status-dropped",
-      };
-
-    case "rewatching":
-      return {
-        label: statusLabel(item.status),
-        icon: <Play size={11} fill="currentColor" />,
-        className: "status-rewatching",
-      };
-
-    case "rewatched":
-      return {
-        label: statusLabel(item.status),
-        icon: <Check size={11} />,
-        className: "status-rewatched",
-      };
-
-    default:
-      return {
-        label: statusLabel(item.status),
-        icon: null,
-        className: "status-default",
-      };
-  }
-}
-
 type CardActionProps = {
   processing: string | number | null;
   openStatusMenu: string | number | null;
@@ -1420,190 +1302,35 @@ type CardActionProps = {
 function ActionButtons({
   item,
   processing,
-  openStatusMenu,
   onPreview,
   onToggleFavorite,
-  onToggleStatusMenu,
   onChangeStatus,
   onRequestRemove,
   onAddToList,
-}: CardActionProps & { item: LibraryItem }) {
-  const busy = processing === item.library_id;
-  const menuOpen = openStatusMenu === item.library_id;
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
+  inline = false,
+}: CardActionProps & { item: LibraryItem; inline?: boolean }) {
   /*
-   * H1 — o menu já fechava com Escape e já era navegável por Tab, mas
-   * não movia o foco para dentro ao abrir nem o devolvia ao botão de
-   * disparo ao fechar (H0, achado). `ActionButtons` continua sendo um
-   * componente module-level (ver comentário acima de `cardActionProps`
-   * — identidade estável entre renders do pai); os hooks abaixo vivem
-   * dentro dele mesmo, sem afetar essa garantia.
+   * V2.3 — ações e menu de status vêm do componente PADRÃO do site
+   * (MediaPosterActions): portal + posição fixa + foco sem rolar.
    */
-  useEffect(() => {
-    if (!menuOpen) return;
-    const firstItem = menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]');
-    firstItem?.focus();
-  }, [menuOpen]);
-
-  function closeAndRestoreFocus() {
-    onToggleStatusMenu(item.library_id);
-    triggerRef.current?.focus();
-  }
-
-  function moveFocus(direction: 1 | -1) {
-    const items = Array.from(menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') || []);
-    if (!items.length) return;
-    const currentIndex = items.indexOf(document.activeElement as HTMLElement);
-    const nextIndex = (currentIndex + direction + items.length) % items.length;
-    items[nextIndex]?.focus();
-  }
-
   return (
-    <>
-      <MediaCardActions>
-        <button
-          type="button"
-          className="card-action"
-          title="Preview rápido"
-          aria-label="Preview rápido"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            onPreview(item);
-          }}
-        >
-          <Eye size={17} />
-        </button>
-
-        <button
-          type="button"
-          className={item.favorite ? "card-action active" : "card-action"}
-          title={item.favorite ? "Remover dos curtidos" : "Curtir"}
-          aria-label={item.favorite ? "Remover dos curtidos" : "Curtir"}
-          aria-pressed={item.favorite}
-          disabled={busy}
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            onToggleFavorite(item);
-          }}
-        >
-          <Heart size={17} fill={item.favorite ? "currentColor" : "none"} />
-        </button>
-
-        <button
-          ref={triggerRef}
-          type="button"
-          className="card-action active library-status-action"
-          title="Alterar status"
-          aria-label="Alterar status"
-          aria-haspopup="menu"
-          aria-expanded={menuOpen}
-          disabled={busy}
-          onMouseDown={(event) => {
-            event.preventDefault();
-          }}
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            onToggleStatusMenu(item.library_id);
-          }}
-        >
-          {busy ? (
-            <Loader2 size={16} className="spin" />
-          ) : (
-            <>
-              <Check size={15} />
-              <ChevronDown size={11} />
-            </>
-          )}
-        </button>
-      </MediaCardActions>
-
-      {menuOpen && (
-        <div
-          ref={menuRef}
-          className="library-card-status-menu"
-          role="menu"
-          aria-label="Alterar status"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              event.preventDefault();
-              event.stopPropagation();
-              closeAndRestoreFocus();
-            } else if (event.key === "ArrowDown") {
-              event.preventDefault();
-              moveFocus(1);
-            } else if (event.key === "ArrowUp") {
-              event.preventDefault();
-              moveFocus(-1);
-            }
-          }}
-        >
-          <div className="library-card-status-menu-title">Alterar status</div>
-
-          {Object.entries(STATUS_LABELS).map(([value, label]) => (
-            <button
-              type="button"
-              key={value}
-              role="menuitem"
-              className={item.status === value ? "active" : ""}
-              disabled={busy}
-              onMouseDown={(event) => {
-                event.preventDefault();
-              }}
-              onClick={() => onChangeStatus(item, value)}
-            >
-              <span>{label}</span>
-              {item.status === value && <Check size={14} />}
-            </button>
-          ))}
-
-          <div className="library-card-status-divider" />
-
-          {onAddToList && (
-            <button
-              type="button"
-              role="menuitem"
-              onMouseDown={(event) => {
-                event.preventDefault();
-              }}
-              onClick={() => onAddToList(item)}
-            >
-              <span>
-                <ListPlus size={14} style={{ marginRight: 6, verticalAlign: "-2px" }} />
-                Adicionar à lista...
-              </span>
-            </button>
-          )}
-
-          <button
-            type="button"
-            role="menuitem"
-            className="remove"
-            disabled={busy}
-            onMouseDown={(event) => {
-              event.preventDefault();
-            }}
-            onClick={() => onRequestRemove(item)}
-          >
-            <Trash2 size={14} />
-            Remover da biblioteca
-          </button>
-        </div>
-      )}
-    </>
+    <MediaPosterActions
+      inline={inline}
+      title={item.title}
+      inLibrary
+      status={item.status}
+      favorite={Boolean(item.favorite)}
+      busy={processing === item.library_id}
+      onPreview={() => onPreview(item)}
+      onToggleFavorite={() => onToggleFavorite(item)}
+      onChangeStatus={(status) => onChangeStatus(item, status)}
+      onRemove={() => onRequestRemove(item)}
+      onAddToList={onAddToList ? () => onAddToList(item) : undefined}
+    />
   );
 }
 
 function Card({ item, ...actionProps }: CardActionProps & { item: LibraryItem }) {
-  const status = getStatus(item);
   const date = item.media_type === "tv" ? item.first_air_date : item.release_date;
   const year = date ? new Date(date).getFullYear() : null;
 
@@ -1614,13 +1341,7 @@ function Card({ item, ...actionProps }: CardActionProps & { item: LibraryItem })
           <Poster path={item.poster_path} alt={item.title} sizes="(max-width:700px) 46vw, (max-width:1100px) 24vw, 170px" />
         </Link>
 
-        <span className="badge">{item.media_type === "tv" ? "SÉRIE" : "FILME"}</span>
-
-        <span className={`card-status mc-media-card-status ${status.className}`}>
-          {status.icon}
-          {status.label}
-        </span>
-
+        <MediaPosterTags type={item.media_type} status={item.status} />
         <ActionButtons item={item} {...actionProps} />
       </MediaCardImage>
 
@@ -1653,7 +1374,6 @@ function Card({ item, ...actionProps }: CardActionProps & { item: LibraryItem })
 }
 
 function ListItem({ item, ...actionProps }: CardActionProps & { item: LibraryItem }) {
-  const status = getStatus(item);
   const date = item.media_type === "tv" ? item.first_air_date : item.release_date;
   const year = date ? new Date(date).getFullYear() : null;
 
@@ -1673,14 +1393,11 @@ function ListItem({ item, ...actionProps }: CardActionProps & { item: LibraryIte
             </Link>
           </div>
 
-          <ActionButtons item={item} {...actionProps} />
+          <ActionButtons item={item} {...actionProps} inline />
         </div>
 
         <div className="library-list-meta">
-          <span className={`card-status ${status.className}`}>
-            {status.icon}
-            {status.label}
-          </span>
+          <MediaStatusTag status={item.status} />
 
           {year && <span>{year}</span>}
 

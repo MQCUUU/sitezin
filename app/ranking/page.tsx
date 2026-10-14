@@ -1,46 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Suspense, useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, Star } from "lucide-react";
+
 import { Search } from "@/components/Search";
-import { img } from "@/lib/tmdb";
-import { InsightsSubNav } from "@/components/InsightsSubNav";
+import { Poster } from "@/components/Poster";
+import { MediaTypeTag } from "@/components/media/MediaBadges";
+import { dec } from "@/components/insights/ui";
 
 /*
- * SUBSTITUI app/ranking/page.tsx
- *
- * H1 — antes buscava a biblioteca inteira via /api/library (sem
- * filtro/paginação) e aplicava a regra de elegibilidade
- * (nota pessoal preenchida + status != "quero assistir") inteira no
- * client. Agora consome /api/ranking, que já filtra e ordena no banco
- * — nunca mais busca a biblioteca inteira. Nota 0 continua contando
- * (checagem é `IS NOT NULL`, nunca "maior que zero").
- *
- * BUG CORRIGIDO (o usuário via isto)
- *   Os três botões de filtro nunca recebiam a classe `active`.
- *   Você clicava em "Filmes", a lista encolhia, e nada na tela
- *   indicava o porquê. Agora o botão selecionado fica marcado,
- *   e o aria-pressed comunica isso a leitores de tela.
- *
- * OUTRAS CORREÇÕES
- *   - fetch sem .catch() e sem checar r.ok -> tela branca
- *     eterna se a API falhasse. Agora tem erro e retry.
- *   - <img> sem alt e sem lazy. Como o título aparece ao lado,
- *     o correto é alt="" (decorativa) — assim o leitor de tela
- *     não anuncia a mesma coisa duas vezes.
- *   - width/height na imagem para o navegador reservar espaço
- *     e não haver salto de layout (CLS).
- *   - <ol> em vez de <div>: um ranking É uma lista ordenada, e
- *     leitores de tela anunciam a posição automaticamente.
- *
- * O QUE NÃO MUDOU
- *   Mesma regra de ranqueamento: itens com nota pessoal,
- *   excluindo "quero assistir", ordenados da maior para a
- *   menor.
+ * Ranking completo (a página Insights mostra só o Top 10).
+ * Mesma regra de sempre (GET /api/ranking, ordenado no banco): títulos com
+ * nota pessoal, exceto "Quero assistir"; nota 0 conta. V2.3: visual do
+ * Insights, pódio com pôsteres, filtro na URL (?type=movie|tv) e lista em
+ * lotes de 50 para continuar rápida com centenas de títulos.
  */
 
 type Filtro = "all" | "movie" | "tv";
-type Estado = "carregando" | "erro" | "pronto";
 
 type RankingItem = {
   library_id: string;
@@ -51,156 +29,159 @@ type RankingItem = {
   poster_path: string | null;
 };
 
-const FILTROS: { id: Filtro; label: string }[] = [
-  { id: "all", label: "Todos" },
-  { id: "movie", label: "Filmes" },
-  { id: "tv", label: "Séries" },
+const FILTROS: [Filtro, string][] = [
+  ["all", "Todos"],
+  ["movie", "Filmes"],
+  ["tv", "Séries"],
 ];
 
-export default function Ranking() {
-  const [ranking, setRanking] = useState<RankingItem[]>([]);
-  const [estado, setEstado] = useState<Estado>("carregando");
-  const [filtro, setFiltro] = useState<Filtro>("all");
-  const [retryTick, setRetryTick] = useState(0);
+const PAGE = 50;
+
+function RankingContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const search = useSearchParams();
+  const filtro: Filtro = search.get("type") === "movie" || search.get("type") === "tv" ? (search.get("type") as Filtro) : "all";
+
+  const [ranking, setRanking] = useState<RankingItem[] | null>(null);
+  const [error, setError] = useState(false);
+  const [retry, setRetry] = useState(0);
+  const [visible, setVisible] = useState(PAGE);
 
   useEffect(() => {
-    let vivo = true;
-    setEstado("carregando");
+    const controller = new AbortController();
 
-    const params = filtro !== "all" ? `?type=${filtro}` : "";
+    setRanking(null);
+    setError(false);
+    setVisible(PAGE);
 
-    fetch(`/api/ranking${params}`, { cache: "no-store" })
-      .then((r) => {
-        if (!r.ok) throw new Error(String(r.status));
-        return r.json();
-      })
-      .then((dados) => {
-        if (!vivo) return;
-        setRanking(Array.isArray(dados) ? dados : []);
-        setEstado("pronto");
-      })
-      .catch(() => {
-        if (vivo) setEstado("erro");
+    fetch(`/api/ranking${filtro !== "all" ? `?type=${filtro}` : ""}`, { cache: "no-store", signal: controller.signal })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((rows) => setRanking(Array.isArray(rows) ? rows : []))
+      .catch((reason: Error) => {
+        if (reason.name !== "AbortError") setError(true);
       });
 
-    return () => {
-      vivo = false;
-    };
-  }, [filtro, retryTick]);
+    return () => controller.abort();
+  }, [filtro, retry]);
+
+  const setFiltro = (value: Filtro) => router.replace(value === "all" ? pathname : `${pathname}?type=${value}`, { scroll: false });
+  const podium = (ranking ?? []).slice(0, 3);
+  const rest = (ranking ?? []).slice(3, visible);
 
   return (
     <>
       <Search />
 
-      <InsightsSubNav active="ranking" />
-
-      <div className="section-head section">
+      <header className="ins-header ins-header--sub">
         <div>
-          <div className="eyebrow">Seu gosto, suas regras</div>
-          <h1>Meu Ranking</h1>
+          <Link href="/insights#favoritos" className="ins-back">
+            <ArrowLeft size={15} aria-hidden="true" /> Insights
+          </Link>
+          <span className="ins-eyebrow">Ranking</span>
+          <h1>Suas maiores notas</h1>
+          {ranking && ranking.length ? (
+            <p className="ins-muted">
+              {ranking.length} {ranking.length === 1 ? "título avaliado" : "títulos avaliados"}, da maior para a menor nota.
+            </p>
+          ) : null}
         </div>
-
-        <div className="filters" role="group" aria-label="Filtrar por tipo">
-          {FILTROS.map(({ id, label }) => (
-            <button
-              key={id}
-              type="button"
-              className={`chip${filtro === id ? " active" : ""}`}
-              aria-pressed={filtro === id}
-              onClick={() => setFiltro(id)}
-            >
+        <div className="ins-seg" role="radiogroup" aria-label="Filtrar por tipo">
+          {FILTROS.map(([value, label]) => (
+            <button key={value} type="button" role="radio" aria-checked={filtro === value} className={filtro === value ? "is-active" : ""} onClick={() => setFiltro(value)}>
               {label}
             </button>
           ))}
         </div>
-      </div>
+      </header>
 
-      {estado === "carregando" && (
-        <div className="library-page-loading" role="status" aria-live="polite">
-          Montando seu ranking…
-        </div>
-      )}
-
-      {estado === "erro" && (
+      {error ? (
         <div className="empty" role="alert">
           <strong>Não foi possível carregar seu ranking.</strong>
-          <p className="muted">Verifique sua conexão e tente novamente.</p>
-          <button
-            type="button"
-            className="btn primary"
-            onClick={() => setRetryTick((tick) => tick + 1)}
-          >
+          <button type="button" className="btn primary" onClick={() => setRetry((n) => n + 1)}>
             Tentar de novo
           </button>
         </div>
-      )}
+      ) : null}
 
-      {estado === "pronto" && ranking.length === 0 && (
+      {!error && ranking === null ? (
+        <div className="ins-skeleton" role="status" aria-label="Montando seu ranking">
+          <div className="ins-skel-duo">
+            <div className="mc-skeleton ins-skel-card" />
+            <div className="mc-skeleton ins-skel-card" />
+          </div>
+        </div>
+      ) : null}
+
+      {ranking && ranking.length === 0 ? (
         <div className="empty">
           <strong>Nenhum título com nota ainda.</strong>
-          <p className="muted">
-            Avalie o que já assistiu e seu ranking aparece aqui.
-          </p>
-          <a className="btn primary" href="/library">
-            Ir para a biblioteca
-          </a>
+          <p className="muted">Avalie o que já assistiu e seu ranking aparece aqui.</p>
+          <Link className="btn primary" href="/library?status=watched">
+            Avaliar o que já assisti
+          </Link>
         </div>
-      )}
+      ) : null}
 
-      {estado === "pronto" && ranking.length > 0 && (
-        <div className="panel">
-          <ol className="ranking-list">
-            {ranking.map((item, indice) => (
-              <li key={item.library_id}>
-                <Link
-                  className="row"
-                  href={`/title/${item.media_type}/${item.tmdb_id}`}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 13,
-                      alignItems: "center",
-                      minWidth: 0,
-                    }}
-                  >
-                    <b style={{ fontSize: 22, width: 35, flexShrink: 0 }}>
-                      #{indice + 1}
-                    </b>
-
-                    <img
-                      src={img(item.poster_path, "w92")}
-                      alt=""
-                      loading="lazy"
-                      decoding="async"
-                      width={42}
-                      height={62}
-                      style={{
-                        width: 42,
-                        height: 62,
-                        objectFit: "cover",
-                        borderRadius: 7,
-                        flexShrink: 0,
-                      }}
-                    />
-
-                    <div style={{ minWidth: 0 }}>
-                      <b>{item.title}</b>
-                      <div className="muted">
-                        {item.media_type === "tv" ? "Série" : "Filme"}
-                      </div>
-                    </div>
-                  </div>
-
-                  <b className="rating">
-                    ★ {item.personal_rating?.toFixed(1)}
-                  </b>
+      {ranking && ranking.length > 0 ? (
+        <div className="ins-story">
+          <ol className="ins-podium" aria-label="Top 3">
+            {podium.map((item, i) => (
+              <li key={item.library_id} className={`is-${i + 1}`}>
+                <Link href={`/title/${item.media_type}/${item.tmdb_id}`} className="mc-focusable">
+                  <span className="ins-podium-poster">
+                    <Poster path={item.poster_path} alt="" sizes="(max-width: 700px) 30vw, 220px" />
+                    <span className="mc-tag-slot mc-tag-slot--top">
+                      <MediaTypeTag type={item.media_type} />
+                    </span>
+                    <span className="ins-podium-rank">{i + 1}</span>
+                  </span>
+                  <strong>{item.title}</strong>
+                  <span className="ins-top-rating">
+                    <Star size={13} fill="currentColor" aria-hidden="true" /> {item.personal_rating !== null ? dec(Number(item.personal_rating)) : "—"}
+                  </span>
                 </Link>
               </li>
             ))}
           </ol>
+
+          {rest.length ? (
+            <ol className="ins-top ins-top--list" start={4}>
+              {rest.map((item, i) => (
+                <li key={item.library_id}>
+                  <Link href={`/title/${item.media_type}/${item.tmdb_id}`} className="mc-focusable">
+                    <span className="ins-top-rank">{i + 4}</span>
+                    <span className="ins-top-poster">
+                      <Poster path={item.poster_path} alt="" sizes="60px" />
+                    </span>
+                    <span className="ins-top-text">
+                      <strong>{item.title}</strong>
+                      <small>{item.media_type === "tv" ? "Série" : "Filme"}</small>
+                    </span>
+                    <span className="ins-top-rating">
+                      <Star size={13} fill="currentColor" aria-hidden="true" /> {item.personal_rating !== null ? dec(Number(item.personal_rating)) : "—"}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          ) : null}
+
+          {ranking.length > visible ? (
+            <button type="button" className="ins-more ins-more--center" onClick={() => setVisible((v) => v + PAGE)}>
+              Mostrar mais ({ranking.length - visible} restantes)
+            </button>
+          ) : null}
         </div>
-      )}
+      ) : null}
     </>
+  );
+}
+
+export default function RankingPage() {
+  return (
+    <Suspense fallback={null}>
+      <RankingContent />
+    </Suspense>
   );
 }

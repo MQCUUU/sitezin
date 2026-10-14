@@ -25,6 +25,15 @@ function parseDate(value: unknown) {
   return date.toISOString();
 }
 
+/**
+ * V2.3 — proveniência do horário. Este endpoint recebe data E hora escolhidas
+ * pelo usuário (campo datetime-local) ou usa o relógio do servidor → 'datetime'.
+ * Quem só tem a data envia `watched_at_precision: "date"`.
+ */
+function parsePrecision(value: unknown): "date" | "datetime" {
+  return value === "date" ? "date" : "datetime";
+}
+
 export async function GET(req: NextRequest) {
   try {
     const session = await auth.getSession().catch(() => null);
@@ -121,6 +130,7 @@ export async function POST(req: NextRequest) {
 
     const libraryItem = itemRows[0];
     const watchedAt = parseDate(body.watched_at);
+    const precision = body.watched_at ? parsePrecision(body.watched_at_precision) : "datetime";
     const rating = parseRating(body.rating);
     const comment =
       typeof body.comment === "string"
@@ -145,6 +155,7 @@ export async function POST(req: NextRequest) {
         library_item_id,
         media_id,
         watched_at,
+        watched_at_precision,
         rating,
         comment,
         is_rewatch
@@ -154,6 +165,7 @@ export async function POST(req: NextRequest) {
         ${libraryItem.id},
         ${libraryItem.media_id},
         ${watchedAt},
+        ${precision},
         ${rating},
         ${comment},
         ${isRewatch}
@@ -183,6 +195,7 @@ export async function POST(req: NextRequest) {
       UPDATE public.library_items
       SET
         watched_at = ${watchedAt},
+        watched_at_precision = ${precision},
         status = ${nextStatus},
         rewatch_count = ${nextRewatchCount},
         personal_rating = ${nextRating},

@@ -1,5 +1,7 @@
 "use client";
 
+import { MediaPosterActions } from "@/components/media/MediaPosterActions";
+import { MediaPosterTags } from "@/components/media/MediaBadges";
 import { getLibraryVersion } from "@/lib/library-cache";
 import { authClient } from "@/lib/auth/client";
 import { Poster } from "@/components/Poster";
@@ -1404,7 +1406,7 @@ export default function ForYouPage() {
         <Search />
       </div>
 
-      <main className="fy-page">
+      <main className="fy-page" data-rec-tool="for_you">
 
         <section className="fy-hero">
           <div className="fy-hero-glow" />
@@ -2406,215 +2408,22 @@ function MovieCard({
             </div>
           )}
 
-          <span className="fy-type">
-            {type ===
-            "tv"
-              ? "SÉRIE"
-              : "FILME"}
-          </span>
-
-          {existing && (
-            <span className="fy-status-badge">
-              {getStatusLabel(
-                existing.status
-              )}
-            </span>
-          )}
+          <MediaPosterTags type={type} status={existing ? existing.status : null} />
         </Link>
 
-        <div className="fy-card-actions">
-          <button
-            type="button"
-            title="Ver rápido"
-            onClick={() =>
-              setPreviewItem(
-                item
-              )
-            }
-          >
-            <Eye
-              size={16}
-            />
-          </button>
-
-          {existing ? (
-            <button
-              type="button"
-              className="active fy-status-trigger"
-              title="Alterar status"
-              disabled={
-                busy
-              }
-              onMouseDown={(
-                event
-              ) =>
-                event.preventDefault()
-              }
-              onClick={() =>
-                setOpenMenu(
-                  menuOpen
-                    ? null
-                    : key
-                )
-              }
-            >
-              {busy ? (
-                <Loader2
-                  size={15}
-                  className="spin"
-                />
-              ) : (
-                <>
-                  <Check
-                    size={15}
-                  />
-                  <ChevronDown
-                    size={11}
-                  />
-                </>
-              )}
-            </button>
-          ) : (
-            <button
-              type="button"
-              title="Adicionar como Quero assistir"
-              disabled={
-                busy
-              }
-              onClick={() =>
-                addToLibrary(
-                  item
-                )
-              }
-            >
-              {busy ? (
-                <Loader2
-                  size={16}
-                  className="spin"
-                />
-              ) : (
-                <Plus
-                  size={17}
-                />
-              )}
-            </button>
-          )}
-
-          {existing && (
-            <button
-              type="button"
-              className={
-                existing.favorite
-                  ? "active"
-                  : ""
-              }
-              title={
-                existing.favorite
-                  ? "Remover dos curtidos"
-                  : "Curtir"
-              }
-              disabled={
-                busy
-              }
-              onClick={() =>
-                toggleFavorite(
-                  item
-                )
-              }
-            >
-              <Heart
-                size={15}
-                fill={
-                  existing.favorite
-                    ? "currentColor"
-                    : "none"
-                }
-              />
-            </button>
-          )}
-        </div>
-
-        {existing &&
-          menuOpen && (
-          <div className="fy-status-menu">
-            <div className="fy-status-menu-head">
-              <span>
-                Status
-              </span>
-
-              <strong>
-                {getStatusLabel(
-                  existing.status
-                )}
-              </strong>
-            </div>
-
-            {STATUS_OPTIONS.map(
-              (
-                [
-                  value,
-                  label,
-                ]
-              ) => (
-                <button
-                  type="button"
-                  key={
-                    value
-                  }
-                  className={
-                    existing.status ===
-                    value
-                      ? "active"
-                      : ""
-                  }
-                  onMouseDown={(
-                    event
-                  ) =>
-                    event.preventDefault()
-                  }
-                  onClick={() =>
-                    updateStatus(
-                      item,
-                      value
-                    )
-                  }
-                >
-                  <span>
-                    {
-                      label
-                    }
-                  </span>
-
-                  {existing.status ===
-                    value && (
-                    <Check
-                      size={13}
-                    />
-                  )}
-                </button>
-              )
-            )}
-
-            <div className="fy-status-divider" />
-
-            <button
-              type="button"
-              className="remove"
-              onClick={() =>
-                requestRemove(
-                  item
-                )
-              }
-            >
-              <Trash2
-                size={14}
-              />
-              Remover da biblioteca
-            </button>
-          </div>
-        )}
+        <MediaPosterActions
+          title={title}
+          inLibrary={Boolean(existing)}
+          status={existing?.status}
+          favorite={Boolean(existing?.favorite)}
+          busy={busy}
+          onPreview={() => setPreviewItem(item)}
+          onAdd={() => addToLibrary(item)}
+          onChangeStatus={(status: string) => updateStatus(item, status)}
+          onToggleFavorite={() => toggleFavorite(item)}
+          onRemove={() => requestRemove(item)}
+        />
       </div>
-
       <Link
         href={`/title/${type}/${item.id}`}
         className="fy-card-body"

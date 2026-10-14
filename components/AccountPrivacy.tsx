@@ -208,6 +208,9 @@ export function AccountPrivacy() {
       false
     );
 
+  // Lista de "Não tenho interesse" começa recolhida (pode ter centenas de títulos).
+  const [hiddenOpen, setHiddenOpen] = useState(false);
+
   const [
     hidden,
     setHidden,
@@ -1347,9 +1350,26 @@ export function AccountPrivacy() {
               }
             </span>
           )}
+
+          {!hiddenLoading && !hiddenError && hidden.length > 0 && (
+            <button
+              type="button"
+              className="btn"
+              aria-expanded={hiddenOpen}
+              aria-controls="hidden-titles-list"
+              onClick={() => setHiddenOpen((open) => !open)}
+            >
+              {hiddenOpen ? "Ocultar lista" : `Ver lista (${hidden.length})`}
+            </button>
+          )}
         </div>
 
-        {hiddenLoading ? (
+        {!hiddenOpen && !hiddenLoading && !hiddenError && hidden.length > 0 ? (
+          <p className="muted" style={{ margin: "4px 0 0" }}>
+            {hidden.length} {hidden.length === 1 ? "título oculto" : "títulos ocultos"}. Abra a lista só se quiser
+            reativar algum.
+          </p>
+        ) : hiddenLoading ? (
           <div className="account-settings-loading small">
             <Loader2
               size={17}
@@ -1394,7 +1414,7 @@ export function AccountPrivacy() {
             </div>
           </div>
         ) : (
-          <div className="account-hidden-list">
+          <div className="account-hidden-list" id="hidden-titles-list">
             {hidden.map(
               (
                 item

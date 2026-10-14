@@ -1387,9 +1387,11 @@ export function PickForMe() {
         }
       }
 
-      setWinner(
-        data.winner
-      );
+      setWinner({
+        ...data.winner,
+        _reasons: Array.isArray(data.reasons) ? data.reasons : [],
+        _personalized: Boolean(data.personalized),
+      });
 
       setRollingItem(
         data.winner
@@ -2006,6 +2008,7 @@ export function PickForMe() {
           <section
   ref={refSorteio as React.RefObject<HTMLElement>}
   className="pick-modal"
+  data-rec-tool="pick"
   role="dialog"
   aria-modal="true"
   aria-label="Escolher um título para assistir"
@@ -2770,6 +2773,21 @@ export function PickForMe() {
                         )}
                       </div>
 
+                      {Array.isArray(winner?._reasons) &&
+                        winner._reasons.length > 0 && (
+                        <div
+                          className={`pick-why ${winner._personalized ? "is-personal" : ""}`}
+                        >
+                          <strong>
+                            {winner._personalized ? "Por que este pra você" : "Por que este"}
+                          </strong>
+                          <ul>
+                            {winner._reasons.map((reason: string) => (
+                              <li key={reason}>{reason}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                       {winner
                         ?.genres &&
                         winner.genres

@@ -1,5 +1,7 @@
 "use client";
 
+import { Poster } from "@/components/Poster";
+import { MediaPosterTags } from "@/components/media/MediaBadges";
 import {
   useState,
 } from "react";
@@ -36,6 +38,12 @@ export default function AssistantPage() {
     useState("");
 
   const [
+    applied,
+    setApplied,
+  ] =
+    useState<any>(null);
+
+  const [
     results,
     setResults,
   ] =
@@ -57,6 +65,7 @@ export default function AssistantPage() {
       "gemini" |
       "fallback" |
       "cache" |
+      "library" |
       ""
     >("");
 
@@ -151,6 +160,8 @@ export default function AssistantPage() {
         data.mode ||
           ""
       );
+
+      setApplied(data.applied || null);
 
 
       setCacheHit(
@@ -288,7 +299,9 @@ export default function AssistantPage() {
             <div>
               <div className="ai-answer-title-row">
                 <strong>
-                  {mode ===
+                  {mode === "library"
+                    ? "Da sua biblioteca"
+                    : mode ===
                   "gemini"
                     ? "Recomendação da IA"
                     : mode ===
@@ -311,6 +324,24 @@ export default function AssistantPage() {
               <p>
                 {answer}
               </p>
+              {applied &&
+                (applied.library_excluded ||
+                  (applied.statuses?.length ?? 0) > 0 ||
+                  (applied.titles?.length ?? 0) > 0) && (
+                <small className="ai-applied">
+                  Não incluí:{" "}
+                  {[
+                    applied.library_excluded ? "nada da sua biblioteca" : null,
+                    !applied.library_excluded && applied.statuses?.length
+                      ? `títulos ${applied.statuses.join(", ")}`
+                      : null,
+                    applied.titles?.length ? applied.titles.join(", ") : null,
+                    "e os que você ocultou",
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </small>
+              )}
 
               {cacheHit && (
                 <small className="ai-cache-saving">
@@ -345,7 +376,7 @@ export default function AssistantPage() {
             </div>
           </div>
 
-          <div className="ai-result-grid">
+          <div className="ai-result-grid" data-rec-tool="assistant">
             {results.map(
               (
                 item
@@ -377,21 +408,15 @@ export default function AssistantPage() {
                     className="card ai-result-card"
                   >
                     <div className="poster">
-                      <img loading="lazy" decoding="async"
-                        src={img(
-                          item.poster_path
-                        )}
-                        alt={
-                          title
-                        }
+                      <Poster
+                        path={item.poster_path}
+                        alt={title}
+                        sizes="(max-width: 700px) 45vw, 190px"
                       />
-
-                      <span className="badge">
-                        {type ===
-                        "tv"
-                          ? "SÉRIE"
-                          : "FILME"}
-                      </span>
+                      <MediaPosterTags
+                        type={type}
+                        status={item.library_status}
+                      />
                     </div>
 
                     <strong className="card-title">

@@ -89,15 +89,15 @@ export function RetrospectiveShare({ data }: { data: RetrospectiveCardData }) {
   }
 
   return (
-    <section className="section retrospective-share" aria-labelledby="retrospective-share-title">
-      <div className="title-section-heading">
-        <span>Compartilhar</span>
+    <section className="ins-share" aria-labelledby="retrospective-share-title">
+      <div>
+        <span className="ins-kicker">Compartilhar</span>
         <h2 id="retrospective-share-title">Card do seu {data.year}</h2>
+        <p className="ins-muted">
+          Uma imagem 1080×1350 gerada no seu navegador com os números desta página. Nada é publicado: só você decide se
+          baixa ou compartilha.
+        </p>
       </div>
-      <p className="muted">
-        Gera uma imagem 1080×1350 no seu navegador com os números acima. Nada é publicado: só você decide se baixa
-        ou compartilha.
-      </p>
 
       <div className="retrospective-share-actions">
         <button type="button" className="btn primary" onClick={generate}>
@@ -114,7 +114,7 @@ export function RetrospectiveShare({ data }: { data: RetrospectiveCardData }) {
         </button>
       </div>
 
-      <p className="muted" role="status" aria-live="polite">
+      <p className="ins-muted ins-small" role="status" aria-live="polite">
         {message}
       </p>
 

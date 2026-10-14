@@ -74,6 +74,7 @@ export async function GET(
         li.personal_rating,
         li.review,
         li.watched_at,
+        li.watched_at_precision,
         li.rewatch_count,
         li.current_season,
         li.completed_seasons,

@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
               AND li.personal_rating IS NOT NULL
               AND li.status <> 'want'
               AND m.media_type = ${type}
-            ORDER BY li.personal_rating DESC, li.updated_at DESC
+            ORDER BY li.personal_rating DESC, li.updated_at DESC, li.id ASC
           `
         : await sql`
             SELECT
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
             WHERE li.user_id = ${userId}
               AND li.personal_rating IS NOT NULL
               AND li.status <> 'want'
-            ORDER BY li.personal_rating DESC, li.updated_at DESC
+            ORDER BY li.personal_rating DESC, li.updated_at DESC, li.id ASC
           `;
 
     return NextResponse.json(
