@@ -29,12 +29,15 @@ export type DiscoverPaginationProps = {
   page: number;
   totalPages: number;
   onGoToPage: (page: number) => void;
+  /* V2.9 — aviso honesto quando há mais títulos do que a navegação alcança */
+  depthNote?: string | null;
 };
 
 export function DiscoverPagination({
   page,
   totalPages,
   onGoToPage,
+  depthNote = null,
 }: DiscoverPaginationProps) {
   const isCompact = useIsCompactPagination();
   const pagination = buildPages(page, totalPages, isCompact ? 0 : 2);
@@ -90,6 +93,7 @@ export function DiscoverPagination({
           <ChevronRight size={17} />
         </button>
       </nav>
+      {depthNote ? <p className="mc-discover-depth-note muted">{depthNote}</p> : null}
     </section>
   );
 }

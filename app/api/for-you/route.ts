@@ -1,4 +1,5 @@
 import { getUserProviderFilter, MY_SERVICES_SENTINEL } from "@/lib/streaming-services-server";
+import { relevantBrProviders } from "@/lib/streaming/providers-br";
 import { getDb } from "@/lib/db/neon";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -518,20 +519,9 @@ export async function GET(req: NextRequest) {
       : undefined;
 
   /* ---------- filtros: streaming relevantes no Brasil ---------- */
-  const allProviders: { provider_id: number; provider_name: string; display_priorities?: Record<string, number> }[] = Array.isArray(providersData?.results)
-    ? providersData.results
-    : [];
-  const variant = /amazon channel|apple tv channel|plex channel|roku premium channel|with ads/i;
-  const providers = allProviders
-    .filter((p) => p.provider_id && p.provider_name && !variant.test(p.provider_name))
-    .sort((a, b) => (a.display_priorities?.BR ?? 999) - (b.display_priorities?.BR ?? 999))
-    .slice(0, 40);
-
-  if (/^\d+$/.test(provider) && !providers.some((p) => String(p.provider_id) === provider)) {
-    const chosen = allProviders.find((p) => String(p.provider_id) === provider);
-
-    if (chosen) providers.push(chosen);
-  }
+  const allProviders = Array.isArray(providersData?.results) ? providersData.results : [];
+  // regra compartilhada com Descobrir (lib/streaming/providers-br)
+  const providers = relevantBrProviders(allProviders, /^\d+$/.test(provider) ? provider : null);
 
   return NextResponse.json(
     {

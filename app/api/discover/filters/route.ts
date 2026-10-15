@@ -3,15 +3,11 @@ import {
   NextResponse,
 } from "next/server";
 
+import { relevantBrProviders, type RawProvider } from "@/lib/streaming/providers-br";
+
 const TMDB_BASE =
   "https://api.themoviedb.org/3";
 
-type Provider = {
-  provider_id?: unknown;
-  provider_name?: unknown;
-  logo_path?: unknown;
-  display_priority?: unknown;
-};
 
 export async function GET(
   request: NextRequest,
@@ -95,44 +91,17 @@ export async function GET(
       ? genresData.genres
       : [];
 
-    const rawProviders: Provider[] =
+    const rawProviders: RawProvider[] =
       Array.isArray(
         providersData?.results,
       )
         ? providersData.results
         : [];
-
-    const providers = rawProviders
-      .map((provider) => ({
-        provider_id: Number(
-          provider.provider_id,
-        ),
-        provider_name: String(
-          provider.provider_name || "",
-        ),
-        logo_path:
-          typeof provider.logo_path ===
-          "string"
-            ? provider.logo_path
-            : null,
-        display_priority: Number(
-          provider.display_priority ?? 9999,
-        ),
-      }))
-      .filter(
-        (provider) =>
-          provider.provider_id &&
-          provider.provider_name,
-      )
-      .sort(
-        (a, b) =>
-          a.display_priority -
-            b.display_priority ||
-          a.provider_name.localeCompare(
-            b.provider_name,
-          ),
-      );
-
+    // V2.9 — mesma regra de "Para você": relevantes no Brasil, sem variantes, até 40
+    const providers = relevantBrProviders(
+      rawProviders,
+      request.nextUrl.searchParams.get("keep"),
+    );
     return NextResponse.json(
       {
         genres,

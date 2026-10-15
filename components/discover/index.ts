@@ -1,7 +1,7 @@
 export { DiscoverHeader } from "./DiscoverHeader";
 export { DiscoverToolbar } from "./DiscoverToolbar";
 export { DiscoverTabs } from "./DiscoverTabs";
-export { DiscoverShortcuts } from "./DiscoverShortcuts";
+export { DiscoverSortControl } from "./DiscoverSortControl";
 export { DiscoverFilters } from "./DiscoverFilters";
 export { DiscoverActiveFilters } from "./DiscoverActiveFilters";
 export { DiscoverGrid } from "./DiscoverGrid";

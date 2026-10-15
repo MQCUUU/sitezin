@@ -58,7 +58,7 @@ export default function DiscoverPage() {
 
 function DiscoverContent() {
   const toast = useToast();
-  const { params, setParams } = useDiscoverParams();
+  const { params, setParams, replaceParams } = useDiscoverParams();
 
   const [showFilters, setShowFilters] = useState(false);
 
@@ -220,7 +220,9 @@ function DiscoverContent() {
           params.type === "all" ? ["movie", "tv"] : [params.type];
         const responses = await Promise.all(
           filterTypes.map((mediaType) =>
-            fetch(`/api/discover/filters?type=${mediaType}`)
+            fetch(
+              `/api/discover/filters?type=${mediaType}${/^\d+$/.test(params.provider) ? `&keep=${params.provider}` : ""}`
+            )
           )
         );
         const payloads = await Promise.all(
@@ -272,7 +274,7 @@ function DiscoverContent() {
     return () => {
       cancelled = true;
     };
-  }, [params.type]);
+  }, [params.type, params.provider]);
 
   /*
    * ==========================================
@@ -308,63 +310,25 @@ function DiscoverContent() {
         if (params.hideWatched) baseParams.set("hide_watched", "1");
         if (params.onlyNew) baseParams.set("only_new", "1");
 
-        const requestTypes: MediaType[] =
-          params.type === "all" ? ["movie", "tv"] : [params.type];
-        const responses = await Promise.all(
-          requestTypes.map((mediaType) => {
-            const requestParams = new URLSearchParams(baseParams);
-            requestParams.set("type", mediaType);
-            return fetch(`/api/discover?${requestParams.toString()}`, {
-              cache: "no-store",
-              signal: controller.signal,
-            });
-          })
-        );
-        const payloads = await Promise.all(
-          responses.map((response) => response.json())
-        );
+        // V2.9 — uma requisição: o servidor já intercala Filmes + Séries em "Todos"
+        const response = await fetch(`/api/discover?${baseParams.toString()}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const result = await response.json();
 
-        if (
-          responses.some((response) => !response.ok) ||
-          payloads.some((result) => result?.error)
-        ) {
-          throw new Error(
-            payloads.find((result) => result?.error)?.error ||
-              "Erro ao carregar títulos."
-          );
+        if (!response.ok || result?.error) {
+          throw new Error(result?.error || "Erro ao carregar títulos.");
         }
 
-        const result =
-          params.type === "all"
-            ? {
-                page: params.page,
-                total_pages: Math.max(
-                  ...payloads.map((entry) => Number(entry.total_pages || 1))
-                ),
-                total_results: payloads.reduce(
-                  (total, entry) => total + Number(entry.total_results || 0),
-                  0
-                ),
-                results: payloads
-                  .flatMap((entry) => entry.results || [])
-                  .sort((a: any, b: any) =>
-                    params.sort === "rating"
-                      ? Number(b.vote_average || 0) - Number(a.vote_average || 0)
-                      : params.sort === "newest"
-                        ? String(b.release_date || b.first_air_date || "").localeCompare(
-                            String(a.release_date || a.first_air_date || "")
-                          )
-                        : Number(b.popularity || 0) - Number(a.popularity || 0)
-                  ),
-              }
-            : payloads[0];
+        if (!cancelled) {
+          setData(result);
 
-        if (!cancelled)
-          setData(
-            payloads.some((entry) => entry?.needs_streaming_setup)
-              ? { ...result, needs_streaming_setup: true }
-              : result
-          );
+          // página fora do intervalo (ex.: page=999999) → última válida, sem novo histórico
+          if (Number(result.page) && Number(result.page) !== params.page) {
+            replaceParams({ page: Number(result.page) });
+          }
+        }
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
@@ -763,7 +727,7 @@ function DiscoverContent() {
       </div>
 
       <DiscoverHeader
-        totalLabel={data ? data.total_results.toLocaleString("pt-BR") : null}
+        totalLabel={data ? data.total_label ?? data.total_results.toLocaleString("pt-BR") : null}
       />
 
       <DiscoverToolbar
@@ -799,8 +763,10 @@ function DiscoverContent() {
       )}
 
       <h2 ref={resultsSummaryRef} tabIndex={-1} className="mc-discover-results-summary">
-        {loading
+        {loading && !data
           ? "Carregando resultados..."
+          : loading
+            ? "Atualizando resultados..."
           : error
             ? "Não foi possível carregar os resultados"
             : items.length === 0
@@ -808,22 +774,32 @@ function DiscoverContent() {
               : `${items.length} títulos nesta página`}
       </h2>
 
-      {loading ? (
+      {data?.unavailable_types?.length && !error ? (
+        <p className="mc-discover-scope-note muted" role="note">
+          {data.unavailable_types.includes("tv")
+            ? "Este gênero não existe para séries no TMDB — mostrando só filmes."
+            : "Este gênero não existe para filmes no TMDB — mostrando só séries."}
+        </p>
+      ) : null}
+
+      {/* V2.9 — skeleton só na primeira carga; depois o grid anterior fica (esmaecido) até chegar o novo */}
+      {loading && !data ? (
         <DiscoverGridSkeleton />
       ) : error ? (
         <DiscoverErrorState onRetry={handleRetry} />
-      ) : items.length === 0 ? (
+      ) : items.length === 0 && !loading ? (
         <DiscoverEmptyState
           hasActiveFilters={activeFilters > 0}
           onClearFilters={handleClearFilters}
           needsStreamingSetup={Boolean(data?.needs_streaming_setup)}
         />
       ) : (
-        <>
+        <div className={loading ? "mc-discover-results is-refreshing" : "mc-discover-results"} aria-busy={loading}>
           <DiscoverGrid
             items={items}
             personalFiltersNote={Boolean(data?.personal_filters)}
             perPage={data?.per_page}
+            hiddenCount={data?.hidden_by_personal_filters ?? 0}
             processingKey={processing}
             openLibraryMenu={openLibraryMenu}
             onPreview={setPreviewItem}
@@ -838,8 +814,17 @@ function DiscoverContent() {
             page={data?.page || params.page}
             totalPages={data?.total_pages || 1}
             onGoToPage={goToPage}
+            depthNote={
+              data?.depth_scope === "all"
+                ? "Em Todos, a navegação vai até a página 20 (400 títulos combinados). Para ir além, use Filmes ou Séries."
+                : data?.depth_scope === "personal"
+                  ? "Com “Ocultar assistidos” ou “Só fora da biblioteca” ativos, a navegação vai até a página 20. Desligue esses filtros para ir mais fundo."
+                  : data?.depth_scope === "tmdb"
+                    ? "O catálogo do TMDB permite navegar até a página 500 em cada consulta."
+                    : null
+            }
           />
-        </>
+        </div>
       )}
 
       <MediaPreviewDialog

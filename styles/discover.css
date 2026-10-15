@@ -226,6 +226,61 @@
   box-shadow: var(--mc-focus-ring);
 }
 
+/* V2.9 — ordenação única (grupo de rádio) + critério ativo explicado */
+.mc-discover-sort {
+  display: grid;
+  gap: var(--mc-space-6);
+  min-width: 0;
+}
+
+.mc-discover-sort-short {
+  display: none;
+}
+
+.mc-discover-sort-hint {
+  margin: 0;
+  font-size: var(--mc-text-caption-size);
+}
+
+@media (max-width: 520px) {
+  .mc-discover-sort-full {
+    display: none;
+  }
+
+  .mc-discover-sort-short {
+    display: inline;
+  }
+
+  .mc-discover-sort .mc-discover-shortcuts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    overflow: visible;
+  }
+
+  .mc-discover-sort .mc-discover-shortcut {
+    justify-content: center;
+    padding-inline: var(--mc-space-6);
+  }
+}
+
+/* V2.9 — grid anterior fica (esmaecido) enquanto a nova página carrega */
+.mc-discover-results.is-refreshing {
+  opacity: 0.55;
+  pointer-events: none;
+  transition: opacity var(--mc-duration-fast) var(--mc-ease-standard);
+}
+
+.mc-discover-scope-note,
+.mc-discover-depth-note {
+  margin: 0 0 var(--mc-space-12);
+  font-size: var(--mc-text-caption-size);
+}
+
+.mc-discover-depth-note {
+  margin-top: var(--mc-space-8);
+  text-align: center;
+}
+
 /* =====================================================================
    Filters panel
    ===================================================================== */
@@ -489,6 +544,7 @@
 @media (prefers-reduced-motion: reduce) {
   .mc-discover-tab,
   .mc-discover-shortcut,
+  .mc-discover-results,
   .mc-discover-toggle,
   .mc-discover-page-btn {
     transition: none;

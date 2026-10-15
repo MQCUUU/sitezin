@@ -10,6 +10,8 @@
  * parsed params and a normal re-render/re-fetch, no listener needed.
  */
 
+import { KNOWN_GENRES } from "./catalog";
+
 export type MediaType = "movie" | "tv";
 export type DiscoverType = "all" | MediaType;
 export type DiscoverSort = "popular" | "rating" | "newest";
@@ -40,20 +42,32 @@ export const DEFAULT_DISCOVER_PARAMS: DiscoverParams = {
   onlyNew: false,
 };
 
+/*
+ * V2.9 — valores inválidos vindos da URL são normalizados (nunca vão crus para a
+ * API): gênero desconhecido, ano fora de 1900…ano atual+3, nota fora de 5–9,
+ * país que não é código ISO de 2 letras, streaming que não é id nem "mine".
+ * O teto de página depende do total da consulta e é aplicado pela API.
+ */
 export function parseDiscoverParams(searchParams: URLSearchParams): DiscoverParams {
   const rawType = searchParams.get("type");
   const rawSort = searchParams.get("sort");
   const rawPage = Number(searchParams.get("page") || 1);
+  const genre = (searchParams.get("genre") || "").trim();
+  const year = (searchParams.get("year") || "").trim();
+  const rating = (searchParams.get("rating") || "").trim();
+  const country = (searchParams.get("country") || "").trim().toUpperCase();
+  const provider = (searchParams.get("provider") || "").trim();
+  const maxYear = new Date().getFullYear() + 3;
 
   return {
     type: rawType === "tv" || rawType === "movie" ? rawType : "all",
     sort: rawSort === "rating" || rawSort === "newest" ? rawSort : "popular",
     page: Number.isFinite(rawPage) && rawPage > 0 ? Math.floor(rawPage) : 1,
-    genre: searchParams.get("genre") || "",
-    year: searchParams.get("year") || "",
-    rating: searchParams.get("rating") || "",
-    country: searchParams.get("country") || "",
-    provider: searchParams.get("provider") || "",
+    genre: /^\d{1,6}$/.test(genre) && KNOWN_GENRES.has(Number(genre)) ? genre : "",
+    year: /^\d{4}$/.test(year) && Number(year) >= 1900 && Number(year) <= maxYear ? year : "",
+    rating: ["5", "6", "7", "8", "9"].includes(rating) ? rating : "",
+    country: /^[A-Z]{2}$/.test(country) ? country : "",
+    provider: provider === "mine" || /^\d{1,7}$/.test(provider) ? provider : "",
     hideWatched: searchParams.get("hide_watched") === "1",
     onlyNew: searchParams.get("only_new") === "1",
   };

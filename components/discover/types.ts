@@ -35,6 +35,16 @@ export type DiscoverResponse = {
   per_page?: number;
   personal_filters?: boolean;
   needs_streaming_setup?: boolean;
+  /* V2.9 — total honesto: "Mais de 20.000" quando o TMDB para de contar */
+  total_label?: string;
+  total_capped?: boolean;
+  /* há mais títulos do que a navegação alcança (limite do TMDB / de Todos) */
+  depth_limited?: boolean;
+  /* por que a navegação tem limite: Todos (20), filtros pessoais (20) ou TMDB (500) */
+  depth_scope?: "all" | "personal" | "tmdb" | null;
+  /* tipos sem o gênero escolhido no TMDB (ex.: Terror em séries) */
+  unavailable_types?: ("movie" | "tv")[];
+  hidden_by_personal_filters?: number;
 
   results: DiscoverItem[];
 };

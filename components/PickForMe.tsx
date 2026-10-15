@@ -66,6 +66,8 @@ const COUNTRIES = [
   ["MX", "México"],
   ["CA", "Canadá"],
   ["IN", "Índia"],
+  ["CN", "China"],
+  ["AU", "Austrália"],
 ] as const;
 
 const DECADES = [
@@ -293,7 +295,24 @@ async function safeJson(
   return response.json();
 }
 
-export function PickForMe() {
+/*
+ * V2.9 — em Descobrir, "Escolha pra mim" parte dos filtros da página (tipo,
+ * gênero, streaming, país, nota mínima, exclusões) em vez de pedir tudo de novo.
+ * Só o que o usuário DEFINIU em Descobrir é herdado; o resto mantém o padrão do
+ * modal. Exclusivos do modal: estilo, duração, época. Aplicado uma vez por
+ * abertura e mostrado no topo ("Usando seus filtros de Descobrir: …").
+ */
+export type PickInherit = {
+  type: "all" | "movie" | "tv";
+  genre: string;
+  provider: string;
+  country: string;
+  rating: string;
+  hideWatched: boolean;
+  onlyNew: boolean;
+};
+
+export function PickForMe({ inherit }: { inherit?: PickInherit } = {}) {
   const toast =
     useToast();
 
@@ -466,6 +485,9 @@ export function PickForMe() {
     setRemoveConfirm,
   ] =
     useState(false);
+
+  const [inheritedSummary, setInheritedSummary] = useState<string[]>([]);
+  const inheritAppliedRef = useRef(false);
 
   const [
     skipRemoveConfirm,
@@ -1109,6 +1131,64 @@ export function PickForMe() {
         excludeLibrary,
       ]
     );
+
+  /* V2.9 — herança dos filtros de Descobrir: uma vez por abertura, depois dos metadados */
+  useEffect(() => {
+    if (!open) {
+      inheritAppliedRef.current = false;
+      return;
+    }
+
+    if (!inherit || !filtersLoaded || inheritAppliedRef.current) return;
+
+    inheritAppliedRef.current = true;
+
+    const summary: string[] = [];
+
+    if (inherit.type !== "all") {
+      setType(inherit.type);
+      summary.push(inherit.type === "movie" ? "Filmes" : "Séries");
+    }
+
+    if (inherit.genre) {
+      const id = Number(inherit.genre);
+      const genre = filters.genres.find((item) => item.movie_id === id || item.tv_id === id);
+
+      if (genre) {
+        setGenres([genre.key]);
+        summary.push(genre.name);
+      }
+    }
+
+    if (/^\d+$/.test(inherit.provider)) {
+      const chosen = filters.providers.find((item) => String(item.provider_id) === inherit.provider);
+
+      setProviders([inherit.provider]);
+      summary.push(chosen?.provider_name || "streaming escolhido");
+    }
+
+    if (inherit.country) {
+      setCountry(inherit.country);
+      summary.push(COUNTRIES.find(([code]) => code === inherit.country)?.[1] ?? inherit.country);
+    }
+
+    if (inherit.rating) {
+      setMinRating(inherit.rating);
+      summary.push(`nota ${inherit.rating}+`);
+    }
+
+    if (inherit.hideWatched) {
+      setExcludeWatched(true);
+      summary.push("sem assistidos");
+    }
+
+    if (inherit.onlyNew) {
+      setExcludeLibrary(true);
+      summary.push("só fora da Biblioteca");
+    }
+
+    setInheritedSummary(summary);
+  }, [open, filtersLoaded, inherit, filters]);
 
   const selectedGenres =
     useMemo(
@@ -2053,6 +2133,12 @@ export function PickForMe() {
                     <p>
                       Você escolhe o clima. O MyCatalog elimina opções ruins e sorteia entre as melhores candidatas.
                     </p>
+
+                    {inheritedSummary.length > 0 ? (
+                      <p className="pick-inherited" role="note">
+                        Usando seus filtros de Descobrir: <strong>{inheritedSummary.join(" · ")}</strong>. Ajuste abaixo se quiser.
+                      </p>
+                    ) : null}
                   </div>
                 </div>
 
@@ -2251,6 +2337,10 @@ export function PickForMe() {
                         )
                       }
                     >
+                      <option value="5">
+                        5+
+                      </option>
+
                       <option value="6">
                         6+
                       </option>
@@ -2269,6 +2359,10 @@ export function PickForMe() {
 
                       <option value="8">
                         8+
+                      </option>
+
+                      <option value="9">
+                        9+
                       </option>
                     </select>
                   </label>
@@ -2593,6 +2687,10 @@ export function PickForMe() {
                       : "filtros ativos"}
                   </span>
                 </div>
+
+                <p className="pick-surprise-hint muted">
+                  “Surpreenda-me” ignora gênero, streaming, país, época e duração; mantém tipo, nota mínima e exclusões.
+                </p>
 
                 <div className="pick-main-actions">
                   <button

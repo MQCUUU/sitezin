@@ -1,9 +1,9 @@
 import { SlidersHorizontal } from "lucide-react";
 
 import { PickForMe } from "@/components/PickForMe";
-import type { DiscoverParams, DiscoverSort } from "@/lib/discover/params";
+import type { DiscoverParams } from "@/lib/discover/params";
 
-import { DiscoverShortcuts } from "./DiscoverShortcuts";
+import { DiscoverSortControl } from "./DiscoverSortControl";
 import { DiscoverTabs } from "./DiscoverTabs";
 
 export type DiscoverToolbarProps = {
@@ -27,7 +27,17 @@ export function DiscoverToolbar({
         <DiscoverTabs value={params.type} onChange={(type) => onChange({ type })} />
 
         <div className="discover-toolbar-actions mc-discover-toolbar-actions">
-          <PickForMe />
+          <PickForMe
+            inherit={{
+              type: params.type,
+              genre: params.genre,
+              provider: params.provider,
+              country: params.country,
+              rating: params.rating,
+              hideWatched: params.hideWatched,
+              onlyNew: params.onlyNew,
+            }}
+          />
 
           <button
             type="button"
@@ -43,22 +53,10 @@ export function DiscoverToolbar({
               <b className="discover-filter-count">{activeFilters}</b>
             )}
           </button>
-
-          <label className="discover-sort">
-            <span>Ordenar por</span>
-            <select
-              value={params.sort}
-              onChange={(event) => onChange({ sort: event.target.value as DiscoverSort })}
-            >
-              <option value="popular">Mais populares</option>
-              <option value="rating">Mais bem avaliados</option>
-              <option value="newest">Mais recentes</option>
-            </select>
-          </label>
         </div>
       </div>
 
-      <DiscoverShortcuts params={params} onApply={onChange} />
+      <DiscoverSortControl value={params.sort} onChange={(sort) => onChange({ sort })} />
     </section>
   );
 }

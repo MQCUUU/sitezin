@@ -4953,6 +4953,22 @@ button div > span {
   font-size: 22px;
 }
 
+/* V2.9 — filtros herdados de Descobrir e regra do "Surpreenda-me" */
+.pick-heading .pick-inherited {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.pick-heading .pick-inherited strong {
+  color: var(--accent);
+}
+
+.pick-surprise-hint {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+}
+
 .pick-heading p {
   max-width: 650px;
   margin: 0;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import {
@@ -54,5 +54,29 @@ export function useDiscoverParams() {
     [params, pathname, router]
   );
 
-  return { params, setParams };
+  /*
+   * V2.9 — URL inválida (gênero inexistente, ano/nota/página impossíveis…) vira a
+   * forma canônica com replace: não cria entrada nova no histórico.
+   */
+  const raw = searchParams.toString();
+
+  useEffect(() => {
+    if (!raw) return;
+
+    const canonical = serializeDiscoverParams(params).toString();
+
+    if (canonical !== raw) router.replace(`${pathname}?${canonical}`, { scroll: false });
+  }, [raw, params, pathname, router]);
+
+  /* troca sem histórico (ex.: página fora do intervalo normalizada pela API) */
+  const replaceParams = useCallback(
+    (patch: Partial<DiscoverParams>) => {
+      const nextQuery = serializeDiscoverParams({ ...params, ...patch }).toString();
+
+      if (nextQuery !== serializeDiscoverParams(params).toString()) router.replace(`${pathname}?${nextQuery}`, { scroll: false });
+    },
+    [params, pathname, router]
+  );
+
+  return { params, setParams, replaceParams };
 }

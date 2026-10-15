@@ -41,7 +41,7 @@ export function DiscoverEmptyState({
   return (
     <div className="empty mc-discover-empty">
       <Filter size={28} />
-      <span>Nenhum título encontrado com esses filtros.</span>
+      <span>Nenhum título corresponde a estes filtros.</span>
 
       {hasActiveFilters && (
         <>

@@ -5,6 +5,7 @@ export type DiscoverGridProps = {
   items: DiscoverItem[];
   personalFiltersNote: boolean;
   perPage?: number;
+  hiddenCount?: number;
   processingKey: string | null;
   openLibraryMenu: string | null;
   onPreview: (item: DiscoverItem) => void;
@@ -19,6 +20,7 @@ export function DiscoverGrid({
   items,
   personalFiltersNote,
   perPage,
+  hiddenCount = 0,
   processingKey,
   openLibraryMenu,
   onPreview,
@@ -30,11 +32,11 @@ export function DiscoverGrid({
 }: DiscoverGridProps) {
   return (
     <>
-      {personalFiltersNote && (
-        <div className="discover-personal-note mc-discover-personal-note muted">
-          {perPage
-            ? `Filtros pessoais podem esconder alguns dos ${perPage} resultados desta página.`
-            : "Filtros pessoais podem esconder alguns dos resultados desta página."}
+      {personalFiltersNote && hiddenCount > 0 && (
+        <div className="discover-personal-note mc-discover-personal-note muted" role="note">
+          {hiddenCount === 1
+            ? "1 título foi ocultado pelos seus filtros pessoais."
+            : `${hiddenCount} títulos foram ocultados pelos seus filtros pessoais.`}
         </div>
       )}
 
