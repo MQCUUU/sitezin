@@ -55,6 +55,12 @@ export type LibRow = {
   directors: string[];
   /** TMDB já consultado para idioma/país/diretor. */
   enriched: boolean;
+  /**
+   * V2.5 — linha só de HISTÓRICO: o título saiu da Biblioteca (ou voltou sem o
+   * status de assistido), mas o consumo aconteceu. Conta em consumo/horas/
+   * reassistidas/ano; nunca no estado atual (watchlist, assistindo, favoritos…).
+   */
+  removed?: boolean;
 };
 
 /** Episódios marcados agrupados por (dia, série). `regular` exclui especiais (temporada 0). */

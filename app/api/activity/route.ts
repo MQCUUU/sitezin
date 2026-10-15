@@ -60,6 +60,7 @@ export async function GET(request: NextRequest) {
           LEFT JOIN public.library_items li ON li.id = ae.library_item_id
           LEFT JOIN public.media m ON m.id = COALESCE(ae.media_id, li.media_id)
           WHERE ae.user_id = ${userId}
+            AND ae.event_type <> 'library_removed'
             AND ae.occurred_at >= ${start}::timestamptz
             AND ae.occurred_at < ${end}::timestamptz
           ORDER BY
@@ -90,6 +91,7 @@ export async function GET(request: NextRequest) {
           LEFT JOIN public.library_items li ON li.id = ae.library_item_id
           LEFT JOIN public.media m ON m.id = COALESCE(ae.media_id, li.media_id)
           WHERE ae.user_id = ${userId}
+            AND ae.event_type <> 'library_removed'
           ORDER BY
             ae.event_type,
             COALESCE(ae.media_id, li.media_id),

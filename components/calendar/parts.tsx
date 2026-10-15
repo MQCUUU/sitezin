@@ -256,6 +256,12 @@ export function DayDetails({ day, events, today, onClose }: { day: string; event
             <X size={18} />
           </button>
         </header>
+        {day <= today ? (
+          <Link href={`/diary?date=${day}`} className="cal-diary-link">
+            Ver o que você assistiu neste dia no Diário
+            <ChevronRight size={15} aria-hidden="true" />
+          </Link>
+        ) : null}
         {personal.length ? (
           <section>
             <h3 className="cal-sheet-sub">Para você · {personal.length}</h3>

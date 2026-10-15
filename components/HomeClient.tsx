@@ -389,7 +389,10 @@ function activityLabel(
       } concluída`;
 
     case "series_completed":
-      return `${title} foi concluída`;
+      // Legado: também gravado para filmes ao marcar "Assistido" (docs/V2.5-DIARY.md §1.4).
+      return event.media?.media_type === "movie"
+        ? `Você assistiu ${title}`
+        : `${title} foi concluída`;
 
     case "rewatch_started":
       return `Você começou a reassistir ${title}`;

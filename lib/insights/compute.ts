@@ -97,7 +97,10 @@ type Consumed = { row: LibRow; minutes: number; episodes: number };
 
 type Ctx = {
   input: InsightsInput;
+  /** Consumo: Biblioteca + linhas só de histórico (títulos removidos). */
   lib: LibRow[];
+  /** Estado atual: só a Biblioteca. */
+  state: LibRow[];
   byId: Map<number, LibRow>;
   eps: EpisodeDay[];
   /**
@@ -201,8 +204,8 @@ function core(ctx: Ctx, range: DayRange): Core {
     activeDays: active.size,
     rated: ratings.length,
     avgRating: ratings.length ? round1(mean(ratings) as number) : null,
-    dropped: ctx.lib.filter((r) => r.status === "dropped" && inRange(r.updated_day, range)).length,
-    added: ctx.lib.filter((r) => inRange(r.added_day, range)).length,
+    dropped: ctx.state.filter((r) => r.status === "dropped" && inRange(r.updated_day, range)).length,
+    added: ctx.state.filter((r) => inRange(r.added_day, range)).length,
   };
 }
 
@@ -268,8 +271,11 @@ export function buildInsights(input: InsightsInput, raw: Partial<InsightsParams>
   });
   const { range, prev } = resolveRanges(params, input.today);
   const typed = (row: { type: string }) => params.type === "all" || row.type === params.type;
-  const lib = input.library.filter(typed);
-  const byId = new Map(lib.map((row) => [row.media_id, row]));
+  // V2.5 — história × estado: remover um título da Biblioteca não muda o que foi
+  // consumido (`all`), só o estado atual (`lib`: watchlist, assistindo, favoritos…).
+  const all = input.library.filter(typed);
+  const lib = all.filter((row) => !row.removed);
+  const byId = new Map(all.map((row) => [row.media_id, row]));
   const firstDay = new Map<number, string | null>();
 
   for (const entry of input.entries) {
@@ -281,7 +287,7 @@ export function buildInsights(input: InsightsInput, raw: Partial<InsightsParams>
     if (!current || entry.day < current) firstDay.set(entry.media_id, entry.day);
   }
 
-  const ctx: Ctx = { input, lib, byId, eps: input.episodes.filter((ep) => byId.has(ep.media_id)), firstDay };
+  const ctx: Ctx = { input, lib: all, state: lib, byId, eps: input.episodes.filter((ep) => byId.has(ep.media_id)), firstDay };
   const failed: SectionKey[] = [];
 
   function guard<T>(key: SectionKey, run: () => T): T | null {
@@ -311,7 +317,7 @@ export function buildInsights(input: InsightsInput, raw: Partial<InsightsParams>
       return e;
     };
 
-    for (const row of lib) {
+    for (const row of all) {
       const first = row.type === "movie" ? firstViewDay(ctx, row) : null;
 
       if (row.type === "movie" && WATCHED_MOVIE.has(row.status) && first) {
@@ -476,7 +482,7 @@ export function buildInsights(input: InsightsInput, raw: Partial<InsightsParams>
     const yearRows = new Map<number, LibRow[]>();
     const seenYear = new Set<string>();
 
-    for (const row of lib) {
+    for (const row of all) {
       const first = row.type === "movie" ? firstViewDay(ctx, row) : null;
 
       if (row.type === "movie" && WATCHED_MOVIE.has(row.status) && first) {
@@ -619,6 +625,8 @@ export function buildInsights(input: InsightsInput, raw: Partial<InsightsParams>
     }
 
     const tv = lib.filter((r) => r.type === "tv");
+    // Conclusões são história: contam também títulos que saíram da Biblioteca.
+    const tvHistory = all.filter((r) => r.type === "tv");
     const progress: SeriesProgress[] = tv
       .filter((r) => r.status === "watching" || r.status === "rewatching" || r.status === "paused")
       .map((r) => {
@@ -641,7 +649,7 @@ export function buildInsights(input: InsightsInput, raw: Partial<InsightsParams>
 
     const movieRewatches = bounded(range)
       ? input.entries.filter((e) => e.is_rewatch && inRange(e.day, range) && byId.get(e.media_id)?.type === "movie").length
-      : lib.filter((r) => r.type === "movie").reduce((s, r) => s + Math.max(r.rewatch_count, r.status === "rewatched" ? 1 : 0), 0);
+      : all.filter((r) => r.type === "movie").reduce((s, r) => s + Math.max(r.rewatch_count, r.status === "rewatched" ? 1 : 0), 0);
 
     return {
       movies: {
@@ -657,10 +665,10 @@ export function buildInsights(input: InsightsInput, raw: Partial<InsightsParams>
       },
       series: {
         watching: tv.filter((r) => r.status === "watching" || r.status === "rewatching").length,
-        completed: tv.filter((r) => (r.seasons_count ?? 0) > 0 && r.completed_seasons >= (r.seasons_count as number)).length,
+        completed: tvHistory.filter((r) => (r.seasons_count ?? 0) > 0 && r.completed_seasons >= (r.seasons_count as number)).length,
         dropped: tv.filter((r) => r.status === "dropped").length,
         paused: tv.filter((r) => r.status === "paused").length,
-        seasonsCompleted: tv.reduce((s, r) => s + Math.max(0, r.completed_seasons), 0),
+        seasonsCompleted: tvHistory.reduce((s, r) => s + Math.max(0, r.completed_seasons), 0),
         episodes: cur.episodes,
         minutes: cur.seriesMinutes,
         inProgress: progress,
@@ -673,7 +681,7 @@ export function buildInsights(input: InsightsInput, raw: Partial<InsightsParams>
 
   /* ---------- Reassistidos ---------- */
   const rewatch = guard("rewatch", () => {
-    const rewatched = lib.filter((r) => r.rewatch_count > 0 || r.status === "rewatched");
+    const rewatched = all.filter((r) => r.rewatch_count > 0 || r.status === "rewatched");
     const consumedRewatched = consumed.filter((c) => c.row.rewatch_count > 0 || c.row.status === "rewatched");
     const genre = buckets(rewatched, (r) => r.genres, () => null)[0];
     const datesByMedia = new Map<number, string[]>();

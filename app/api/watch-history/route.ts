@@ -137,10 +137,12 @@ export async function POST(req: NextRequest) {
         ? body.comment.trim().slice(0, 4000) || null
         : null;
 
+    // Histórico é do TÍTULO (media_id), não do item: visualizações anteriores a
+    // uma remoção/readição continuam contando para "reassistida".
     const countRes = await sql`
       SELECT count(*)::int as count
       FROM public.watch_entries
-      WHERE user_id = ${user.id} AND library_item_id = ${libraryId}
+      WHERE user_id = ${user.id} AND media_id = ${libraryItem.media_id}
     `;
     const previousCount = Number(countRes[0]?.count || 0);
 

@@ -16,6 +16,7 @@ import "@/styles/media-unified.css";
 import "@/styles/settings-clean.css";
 import "@/styles/insights.css";
 import "@/styles/calendar.css";
+import "@/styles/diary.css";
 
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";

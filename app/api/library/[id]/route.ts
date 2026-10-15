@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
+import { removeLibraryItem } from "@/lib/library/remove";
 import { respostaDeErro } from "@/lib/api-error";
 
 export async function PATCH(
@@ -241,11 +242,8 @@ export async function DELETE(
       return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
     }
 
-    const sql = getDb();
-    await sql`
-      DELETE FROM public.library_items
-      WHERE id = ${id} AND user_id = ${user.id};
-    `;
+    // Remove o estado da Biblioteca; o histórico (Diário, Insights) fica — ver lib/library/remove.ts.
+    await removeLibraryItem(getDb(), user.id, id);
 
     return NextResponse.json({ ok: true });
   } catch (error) {

@@ -263,7 +263,8 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
         ) as library
       FROM public.watch_entries we
       LEFT JOIN public.library_items li ON li.id = we.library_item_id
-      LEFT JOIN public.media m ON m.id = li.media_id
+      -- V2.5: a visualização guarda o próprio media_id (sobrevive à remoção do item).
+      LEFT JOIN public.media m ON m.id = COALESCE(we.media_id, li.media_id)
       WHERE we.user_id = ${profile.id}
       ORDER BY we.watched_at DESC
       LIMIT 12

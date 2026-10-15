@@ -71,7 +71,7 @@ export async function GET(
   const offset = (page - 1) * limit;
 
   const [totalRows, items] = await Promise.all([
-    sql`SELECT count(*)::int as total FROM public.activity_events WHERE user_id = ${profile.id}`,
+    sql`SELECT count(*)::int as total FROM public.activity_events WHERE user_id = ${profile.id} AND event_type <> 'library_removed'`,
     sql`
       SELECT
         ae.id,
@@ -83,6 +83,8 @@ export async function GET(
       LEFT JOIN public.library_items li ON li.id = ae.library_item_id
       LEFT JOIN public.media m ON m.id = COALESCE(ae.media_id, li.media_id)
       WHERE ae.user_id = ${profile.id}
+        -- Remoções da Biblioteca são organização privada, não atividade pública.
+        AND ae.event_type <> 'library_removed'
       ORDER BY ae.occurred_at DESC
       LIMIT ${limit} OFFSET ${offset}
     `,

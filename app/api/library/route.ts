@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
+import { removeLibraryItem } from "@/lib/library/remove";
 import { respostaDeErro } from "@/lib/api-error";
 
 interface ErrorResponse {
@@ -711,6 +712,20 @@ export async function POST(
     item.media = existingMedia;
 
     /*
+     * V2.5 — readição: visualizações de uma passagem anterior pela Biblioteca
+     * (preservadas com library_item_id NULL ao remover) voltam a apontar para o
+     * item novo do MESMO título e usuário. Nada é duplicado nem recriado: a
+     * história é a mesma, só ganha de novo o vínculo com o estado atual.
+     */
+    if (!existingLibraryItem) {
+      await sql`
+        UPDATE public.watch_entries
+        SET library_item_id = ${item.id}
+        WHERE user_id = ${userId} AND media_id = ${existingMedia.id} AND library_item_id IS NULL
+      `;
+    }
+
+    /*
      * 5. Registrar no diário (safe / não-bloqueante)
      */
     try {
@@ -793,11 +808,8 @@ export async function DELETE(
       );
     }
 
-    const sql = getDb();
-    await sql`
-      DELETE FROM public.library_items
-      WHERE id = ${id} AND user_id = ${user.id};
-    `;
+    // Remove o estado da Biblioteca; o histórico (Diário, Insights) fica — ver lib/library/remove.ts.
+    await removeLibraryItem(getDb(), user.id, id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

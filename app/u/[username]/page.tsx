@@ -66,7 +66,7 @@ function ReviewList({ items }: { items: any[] }) {
  * fallback neutro (ícone genérico + metadata.title cru), sem quebrar
  * o render (item 37 da fase).
  */
-const ACTIVITY_LABELS: Record<string, { icon: typeof Activity; label: (metadata: any) => string }> = {
+const ACTIVITY_LABELS: Record<string, { icon: typeof Activity; label: (metadata: any, mediaType?: string) => string }> = {
   library_added: { icon: PlusCircle, label: () => "Adicionou à biblioteca" },
   status_changed: {
     icon: Check,
@@ -84,7 +84,9 @@ const ACTIVITY_LABELS: Record<string, { icon: typeof Activity; label: (metadata:
   },
   rewatch_started: { icon: Repeat, label: () => "Começou a reassistir" },
   season_completed: { icon: Trophy, label: () => "Completou uma temporada" },
-  series_completed: { icon: Trophy, label: () => "Completou a série" },
+  // Legado: `series_completed` era gravado em toda mudança para "Assistido", inclusive
+  // em filmes — para filme significa "assistiu" (docs/V2.5-DIARY.md §1.4).
+  series_completed: { icon: Trophy, label: (_metadata, mediaType) => (mediaType === "movie" ? "Assistiu" : "Completou a série") },
 };
 
 function ActivityFeed({ items, hasMore, loading, onLoadMore }: { items: any[]; hasMore: boolean; loading: boolean; onLoadMore: () => void }) {
@@ -103,7 +105,7 @@ function ActivityFeed({ items, hasMore, loading, onLoadMore }: { items: any[]; h
           <>
             <span className="profile-activity-icon"><Icon size={15} /></span>
             <div>
-              <strong>{config.label(event.metadata)}</strong>
+              <strong>{config.label(event.metadata, media?.media_type)}</strong>
               <small>{title} · {new Date(event.occurred_at).toLocaleDateString("pt-BR")}</small>
             </div>
           </>
