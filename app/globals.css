@@ -11907,13 +11907,15 @@ svg{vertical-align:middle}.btn>svg,button>svg,a>svg,.section-head svg,.title-sec
 .home-guest-trending-item .poster{position:relative;isolation:isolate;aspect-ratio:2/3;border-radius:10px;overflow:hidden;background:var(--panel2)}
 @media(max-width:820px){.home-guest-features{grid-template-columns:1fr}}
 
-/* V2.1-B — CTA do Assistente IA dentro de "Para você" */
-.fy-assistant-cta{display:flex;align-items:center;gap:16px;padding:18px 20px;margin-bottom:20px}
+/* V2.8 — atalho compacto do Assistente em "Para você" (a página funciona sem IA) */
+.fy-ai-entry{margin:6px 0 30px}
+.fy-ai-entry .fy-assistant-link{margin:10px 0 0}
+.fy-assistant-link{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:-6px 0 18px;color:var(--muted);font-size:13.5px}
+.fy-assistant-link svg{color:var(--accent);flex:none}
+.fy-assistant-link a{color:var(--accent);font-weight:650;text-decoration:none}
+.fy-assistant-link a:hover,.fy-assistant-link a:focus-visible{text-decoration:underline}
+/* ícone reaproveitado por "O que assistir agora?" (SmartQueue) */
 .fy-assistant-cta-icon{display:flex;align-items:center;justify-content:center;width:44px;height:44px;flex:none;border-radius:12px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
-.fy-assistant-cta strong{display:block;font-size:15px}
-.fy-assistant-cta>div{flex:1}
-.fy-assistant-cta .btn{flex:none}
-@media(max-width:640px){.fy-assistant-cta{flex-wrap:wrap}.fy-assistant-cta .btn{width:100%}}
 
 /* V2.1-E — Meus serviços de streaming */
 .streaming-settings { display: grid; gap: 14px; }

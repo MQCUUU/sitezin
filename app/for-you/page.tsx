@@ -7,10 +7,13 @@ import { authClient } from "@/lib/auth/client";
 import { Poster } from "@/components/Poster";
 import { SmartQueue } from "@/components/SmartQueue";
 import {
+  Fragment,
   useEffect,
   useMemo,
   useState,
 } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { DEFAULT_FOR_YOU_QUERY, parseForYouQuery, serializeForYouQuery, type ForYouQuery } from "@/lib/for-you/url";
 
 import {
   Bot,
@@ -93,6 +96,7 @@ const STATUS_OPTIONS = [
 
 type Shelf = {
   id: string;
+  kind?: string;
   title: string;
   subtitle?: string;
   icon:
@@ -258,30 +262,55 @@ export default function ForYouPage() {
   ] =
     useState(false);
 
-  const [
-    type,
-    setType,
-  ] =
-    useState<
-      "all" |
-      "movie" |
-      "tv"
-    >("all");
+  /*
+   * V2.8 — filtros na URL (fonte única): refresh, voltar e avançar mantêm o
+   * contexto. Mudança explícita (aba, select, toggle) = push; o campo de ano,
+   * digitado, usa replace e só grava quando o ano está completo.
+   */
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const query = useMemo(() => parseForYouQuery(searchParams), [searchParams]);
+  const { type, genre, provider, minRating, sort, hideWatched, onlyNew } = query;
+  const year = query.year;
 
-  const [
-    genre,
-    setGenre,
-  ] =
-    useState("");
+  function changeQuery(patch: Partial<ForYouQuery>, mode: "push" | "replace" = "push") {
+    const qs = serializeForYouQuery({ ...query, ...patch });
+
+    if (qs === searchParams.toString()) return;
+    router[mode](qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }
+
+  const setType = (value: ForYouQuery["type"]) => changeQuery({ type: value });
+  const setGenre = (value: string) => changeQuery({ genre: value });
+  const setProvider = (value: string) => changeQuery({ provider: value });
+  const setMinRating = (value: string) => changeQuery({ minRating: value });
+  const setSort = (value: string) => changeQuery({ sort: value as ForYouQuery["sort"] });
+  const setHideWatched = (value: boolean | ((current: boolean) => boolean)) =>
+    changeQuery({ hideWatched: typeof value === "function" ? value(hideWatched) : value });
+  const setOnlyNew = (value: boolean | ((current: boolean) => boolean)) =>
+    changeQuery({ onlyNew: typeof value === "function" ? value(onlyNew) : value });
+
+  /* ano digitado: rascunho local; vai para a URL (replace) quando completo ou vazio */
+  const [yearDraft, setYearDraft] = useState(year);
+
+  useEffect(() => {
+    setYearDraft(year);
+  }, [year]);
+
+  function setYear(value: string) {
+    setYearDraft(value);
+    if (value === "" || /^(19|20)\d{2}$/.test(value)) changeQuery({ year: value }, "replace");
+  }
+
+  /* V2.8 — nível do perfil (cold start honesto) */
+  const [profileLevel, setProfileLevel] = useState<"cold" | "warm" | "full" | null>(null);
+
+
 
   const { data: sessionData, isPending: sessionPending } = authClient.useSession();
   const userId: string | undefined = sessionData?.user?.id;
 
-  const [
-    provider,
-    setProvider,
-  ] =
-    useState("");
 
   /* V2.1-E — "Nos meus serviços" ativo sem serviços configurados. */
   const [
@@ -290,37 +319,10 @@ export default function ForYouPage() {
   ] =
     useState(false);
 
-  const [
-    minRating,
-    setMinRating,
-  ] =
-    useState("");
 
-  const [
-    year,
-    setYear,
-  ] =
-    useState("");
 
-  const [
-    sort,
-    setSort,
-  ] =
-    useState(
-      "recommended"
-    );
 
-  const [
-    hideWatched,
-    setHideWatched,
-  ] =
-    useState(true);
 
-  const [
-    onlyNew,
-    setOnlyNew,
-  ] =
-    useState(true);
 
   const [
     openMenu,
@@ -556,7 +558,8 @@ export default function ForYouPage() {
 
   function queryFor(
     nextPage:
-      number
+      number,
+    append = false
   ) {
     const q =
       new URLSearchParams({
@@ -615,6 +618,17 @@ export default function ForYouPage() {
       q.set(
         "only_new",
         "1"
+      );
+    }
+
+    if (append) {
+      q.set(
+        "exclude",
+        shelves
+          .flatMap((shelf) => shelf.results)
+          .map((item: any) => `${item.media_type === "tv" ? "t" : "m"}${item.id}`)
+          .slice(-600)
+          .join(",")
       );
     }
 
@@ -685,14 +699,20 @@ export default function ForYouPage() {
     setShelves(
       (
         current
-      ) =>
-        append
-          ? [
-              ...current,
-              ...incoming,
-            ]
-          : incoming
+      ) => {
+        if (!append) return incoming;
+
+        // V2.8 — nada já mostrado reaparece ao carregar mais (o servidor já exclui; isto é a garantia)
+        const shown = new Set(current.flatMap((shelf) => shelf.results.map((item: any) => `${item.media_type}-${item.id}`)));
+        const fresh = incoming
+          .map((shelf: Shelf) => ({ ...shelf, results: shelf.results.filter((item: any) => !shown.has(`${item.media_type}-${item.id}`)) }))
+          .filter((shelf: Shelf) => shelf.results.length >= 4 && !current.some((c) => c.id === shelf.id));
+
+        return [...current, ...fresh];
+      }
     );
+
+    setProfileLevel(data.profile?.level ?? null);
 
     setBasedOn(
       Array.isArray(
@@ -806,7 +826,8 @@ export default function ForYouPage() {
       const response =
         await fetch(
           `/api/for-you?${queryFor(
-            nextPage
+            nextPage,
+            append
           ).toString()}`
         );
 
@@ -1391,13 +1412,9 @@ export default function ForYouPage() {
   }
 
   function resetFilters() {
-    setGenre("");
-    setProvider("");
-    setMinRating("");
-    setYear("");
-    setSort("recommended");
-    setHideWatched(true);
-    setOnlyNew(true);
+    // uma navegação só (a aba atual é mantida)
+    setYearDraft("");
+    changeQuery({ ...DEFAULT_FOR_YOU_QUERY, type });
   }
 
   return (
@@ -1421,7 +1438,9 @@ export default function ForYouPage() {
             </h1>
 
             <p>
-              Recomendações que aprendem com suas notas, curtidos e com o que você já assistiu.
+              {profileLevel === "cold"
+                ? "Ainda estamos conhecendo seu gosto. Avalie, curta ou marque o que já assistiu e o feed se ajusta a você."
+                : "Recomendações que aprendem com suas notas, curtidos e com o que você já assistiu."}
             </p>
 
             {basedOn.length >
@@ -1509,31 +1528,6 @@ export default function ForYouPage() {
           </section>
         )}
 
-        {/*
-         * V2.1-B — Assistente IA saiu da navegação principal, mas
-         * continua acessível (/assistant intacto) — este é o atalho
-         * visível dentro de "Para você" (docs/V2.1-B-PRODUCT-
-         * ARCHITECTURE.md). Não é um redesign da página, só um card
-         * no mesmo padrão visual das demais seções "fy-*".
-         */}
-        <section className="fy-assistant-cta panel">
-          <div className="fy-assistant-cta-icon">
-            <Bot size={22} strokeWidth={2} aria-hidden="true" />
-          </div>
-
-          <div>
-            <strong>Não sabe o que assistir?</strong>
-            <p className="muted">
-              Peça uma recomendação ao MyCatalog AI.
-            </p>
-          </div>
-
-          <Link href="/assistant" className="btn primary">
-            Abrir Assistente
-          </Link>
-        </section>
-
-        <SmartQueue genres={filters.genres} />
 
         <section className="fy-toolbar">
           <div className="fy-tabs">
@@ -1797,7 +1791,7 @@ export default function ForYouPage() {
                   min="1900"
                   max="2100"
                   value={
-                    year
+                    yearDraft
                   }
                   onChange={(
                     event
@@ -2007,12 +2001,11 @@ export default function ForYouPage() {
             <div className="fy-feed">
               {shelves.map(
                 (
-                  shelf
+                  shelf,
+                  index
                 ) => (
+                  <Fragment key={shelf.id}>
                   <ShelfRow
-                    key={
-                      shelf.id
-                    }
                     shelf={
                       shelf
                     }
@@ -2044,6 +2037,24 @@ export default function ForYouPage() {
                       requestRemove
                     }
                   />
+
+                  {/*
+                   * V2.8 — IA como complemento: a entrada "O que assistir agora?" (usa o
+                   * tempo disponível) vem depois das primeiras prateleiras, não antes do feed;
+                   * o Assistente é só um atalho compacto. Para você funciona sem IA.
+                   */}
+                  {index === Math.min(1, shelves.length - 1) && (
+                    <div className="fy-ai-entry">
+                      <SmartQueue genres={filters.genres} />
+
+                      <p className="fy-assistant-link">
+                        <Bot size={15} strokeWidth={2} aria-hidden="true" />
+                        <span>Prefere conversar?</span>
+                        <Link href="/assistant">Abrir Assistente</Link>
+                      </p>
+                    </div>
+                  )}
+                  </Fragment>
                 )
               )}
             </div>
@@ -2249,7 +2260,7 @@ function ShelfRow({
   requestRemove,
 }: any) {
   return (
-    <section className="fy-shelf">
+    <section className="fy-shelf" data-rec-shelf={shelf.kind || undefined}>
       <div className="fy-shelf-head">
         <div className="fy-shelf-title">
           <div className="fy-shelf-icon">
