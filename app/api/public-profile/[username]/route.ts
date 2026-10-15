@@ -236,14 +236,27 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
       SELECT
         cl.id,
         cl.name,
-        cl.description,
+        NULLIF(NULLIF(btrim(cl.description), ''), 'null') AS description,
+        cl.is_public,
         cl.created_at,
         json_build_array(json_build_object('count', (
           SELECT count(*)::int FROM public.custom_list_items cli WHERE cli.list_id = cl.id
-        ))) as items
+        ))) as items,
+        COALESCE((
+          SELECT json_agg(c.poster_path ORDER BY c.rn)
+          FROM (
+            SELECT m.poster_path, row_number() OVER (ORDER BY i.position, i.added_at, i.media_id) AS rn
+            FROM public.custom_list_items i
+            JOIN public.media m ON m.id = i.media_id
+            WHERE i.list_id = cl.id AND m.poster_path IS NOT NULL
+            ORDER BY i.position, i.added_at, i.media_id
+            LIMIT 4
+          ) c
+        ), '[]'::json) AS covers
       FROM public.custom_lists cl
-      WHERE cl.user_id = ${profile.id}
-      ORDER BY cl.created_at DESC
+      -- V2.7: visitante só vê listas PÚBLICAS (antes, privadas apareciam no perfil).
+      WHERE cl.user_id = ${profile.id} AND (cl.is_public OR ${isOwner})
+      ORDER BY cl.updated_at DESC, cl.id
       LIMIT 20
     `,
     sql`

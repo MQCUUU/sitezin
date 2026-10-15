@@ -12,12 +12,18 @@ type ListOption = {
   in_list: boolean;
 };
 
+/*
+ * V2.7 — a lista guarda a MÍDIA (tmdb_id + tipo), não o item da Biblioteca:
+ * o título continua na lista mesmo se sair da Biblioteca.
+ */
 export function AddToListDialog({
-  libraryItemId,
+  tmdbId,
+  mediaType,
   title,
   onClose,
 }: {
-  libraryItemId: string;
+  tmdbId: number;
+  mediaType: "movie" | "tv";
   title: string;
   onClose: () => void;
 }) {
@@ -29,7 +35,7 @@ export function AddToListDialog({
   useEffect(() => {
     let alive = true;
 
-    fetch(`/api/lists?library_item_id=${encodeURIComponent(libraryItemId)}`, { cache: "no-store" })
+    fetch(`/api/lists?tmdb_id=${tmdbId}&media_type=${mediaType}`, { cache: "no-store" })
       .then((response) => {
         if (!response.ok) throw new Error(String(response.status));
         return response.json();
@@ -48,7 +54,7 @@ export function AddToListDialog({
     return () => {
       alive = false;
     };
-  }, [libraryItemId, toast]);
+  }, [tmdbId, mediaType, toast]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -65,7 +71,7 @@ export function AddToListDialog({
       const response = await fetch("/api/lists/items", {
         method: list.in_list ? "DELETE" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ list_id: list.id, library_item_id: libraryItemId }),
+        body: JSON.stringify({ list_id: list.id, tmdb_id: tmdbId, media_type: mediaType }),
       });
 
       if (!response.ok) {

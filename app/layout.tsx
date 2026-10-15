@@ -18,6 +18,7 @@ import "@/styles/insights.css";
 import "@/styles/calendar.css";
 import "@/styles/diary.css";
 import "@/styles/library.css";
+import "@/styles/lists.css";
 
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";

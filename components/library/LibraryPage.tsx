@@ -513,7 +513,7 @@ function LibraryContent() {
         </nav>
       ) : null}
 
-      {addToListTarget ? <AddToListDialog libraryItemId={addToListTarget.library_id} title={addToListTarget.title} onClose={() => setAddToListTarget(null)} /> : null}
+      {addToListTarget ? <AddToListDialog tmdbId={addToListTarget.tmdb_id} mediaType={addToListTarget.media_type === "tv" ? "tv" : "movie"} title={addToListTarget.title} onClose={() => setAddToListTarget(null)} /> : null}
     </>
   );
 }
