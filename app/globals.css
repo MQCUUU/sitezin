@@ -2329,6 +2329,11 @@ button div > span {
   line-height: 1.6;
 }
 
+/* "Personalizado" na cor de destaque escolhida em Aparência (mesmo padrão de "Minha coleção") */
+.fy-hero .eyebrow {
+  color: var(--accent);
+}
+
 .fy-based-on {
   margin-top: 15px;
 
