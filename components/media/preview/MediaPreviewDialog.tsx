@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 import { X } from "lucide-react";
 
 import { Dialog } from "@/components/ui/Dialog";
@@ -31,6 +31,8 @@ export type MediaPreviewDialogProps = {
    * only renders whatever's passed; it never knows what it does.
    */
   extraActions?: MediaPreviewExtraActionsSlot;
+  /** Estado pessoal opcional (ex.: progresso da série na Biblioteca — V2.6). */
+  personal?: ReactNode;
 };
 
 /**
@@ -44,7 +46,7 @@ export type MediaPreviewDialogProps = {
  * You, Collection, Home, Library and Favorites (via PosterGrid) all render
  * through this component (migrated across C2.2–C2.4).
  */
-export function MediaPreviewDialog({ open, onClose, data, actions, providers, extraActions }: MediaPreviewDialogProps) {
+export function MediaPreviewDialog({ open, onClose, data, actions, providers, extraActions, personal }: MediaPreviewDialogProps) {
   const titleId = useId();
 
   if (!data) return null;
@@ -55,7 +57,7 @@ export function MediaPreviewDialog({ open, onClose, data, actions, providers, ex
         <X size={18} />
       </button>
 
-      <MediaPreviewContent data={data} actions={actions} providers={providers} extraActions={extraActions} titleId={titleId} />
+      <MediaPreviewContent data={data} actions={actions} providers={providers} extraActions={extraActions} personal={personal} titleId={titleId} />
     </Dialog>
   );
 }

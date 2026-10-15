@@ -1,0 +1,376 @@
+/*
+ * Biblioteca V2.6 — escopo `.lib-*`. Complementa os estilos existentes da
+ * Biblioteca (globals.css: .library-quick-filter, .library-quick-sort,
+ * .library-filter-*, .library-pagination*) sem mudar o visual dos cards.
+ */
+
+.lib-head h1 {
+  margin: 5px 0;
+}
+
+/* ---------- barra: status | curtidos | ordenar + filtros ---------- */
+.lib-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  margin: 14px 0 18px;
+  min-width: 0;
+}
+
+/* As abas nunca encolhem para dar lugar a ordenar/filtros: esses descem de linha. */
+.lib-tabs-wrap {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  flex: 0 0 auto;
+}
+
+/* Rola na horizontal quando não cabe; a borda esmaecida mostra que há mais. */
+.lib-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 2px 6px;
+  scrollbar-width: thin;
+  scroll-padding-inline: 24px;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+}
+
+.lib-tabs > :last-child {
+  margin-right: 24px;
+}
+
+/* Curtidos: propriedade, não status — contorno tracejado próprio, fora do grupo de abas. */
+.lib-liked {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  margin-bottom: 4px;
+  padding: 0 12px 0 14px;
+  border: 1px dashed color-mix(in srgb, var(--text) 22%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.lib-liked:hover {
+  color: var(--text);
+}
+
+.lib-liked b {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(127, 127, 127, 0.14);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.lib-liked.active {
+  border-style: solid;
+  border-color: #ff6b8a;
+  color: #ff8aa2;
+  background: color-mix(in srgb, #ff6b8a 12%, transparent);
+}
+
+.lib-toolbar-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex: none;
+  margin-bottom: 4px;
+}
+
+.lib-filters-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  width: auto;
+}
+
+/* ---------- painel de filtros (sem ordenação, sem status) ---------- */
+.lib-filter-panel h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+.lib-filter-panel p {
+  margin: 0;
+}
+
+.lib-filter-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  margin: 16px 0 6px;
+}
+
+.lib-filter-field {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.lib-filter-field legend,
+.lib-filter-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--text) 85%, transparent);
+}
+
+.lib-filter-field select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border, var(--line));
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 13.5px;
+}
+
+.lib-rating-row {
+  margin-top: 14px;
+}
+
+.lib-rating-filter {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  background: transparent;
+}
+
+.lib-rating-filter legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--text) 85%, transparent);
+}
+
+.lib-rating-filter legend span {
+  font-weight: 500;
+  color: var(--muted);
+}
+
+/* ---------- resultados ---------- */
+.lib-results {
+  transition: opacity 0.15s ease;
+  min-height: 200px;
+}
+
+.lib-results.is-busy {
+  opacity: 0.55;
+}
+
+.lib-empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 44px 20px;
+  border-radius: 18px;
+  border: 1px dashed color-mix(in srgb, var(--text) 14%, transparent);
+  text-align: center;
+  color: var(--muted);
+}
+
+.lib-empty strong {
+  color: var(--text);
+  font-size: 16px;
+}
+
+.lib-empty svg {
+  color: var(--accent);
+}
+
+.lib-empty .btn {
+  width: auto;
+}
+
+.lib-inline-error {
+  margin: 0 0 12px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+.lib-search-busy {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--text) 20%, transparent);
+  border-top-color: var(--accent);
+  animation: lib-spin 0.8s linear infinite;
+}
+
+@keyframes lib-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- progresso de série ---------- */
+.lib-progress {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: color-mix(in srgb, var(--text) 82%, transparent);
+  min-width: 0;
+}
+
+.lib-progress span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lib-progress svg {
+  flex: none;
+  color: var(--accent);
+}
+
+.lib-progress--caught_up svg,
+.lib-progress--completed svg {
+  color: var(--good, #35d39a);
+}
+
+.lib-progress--legacy,
+.lib-progress--unknown,
+.lib-progress--not_started {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.lib-progress-panel {
+  display: grid;
+  gap: 4px;
+  margin: 2px 0 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.lib-progress-eyebrow {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.lib-progress-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 15.5px;
+  font-weight: 750;
+}
+
+.lib-progress-detail {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ---------- foco ---------- */
+.lib-toolbar :focus-visible,
+.lib-filter-panel :focus-visible,
+.library-pagination :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---------- tablet / celular ---------- */
+@media (max-width: 900px) {
+  .lib-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .lib-tabs-wrap {
+    flex: 1 1 100%;
+  }
+
+  .lib-toolbar-end {
+    flex: 1 1 auto;
+    margin-left: 0;
+    justify-content: flex-end;
+  }
+
+  .lib-toolbar-end .library-quick-sort {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+  }
+
+  .lib-toolbar-end .library-quick-sort select {
+    width: 100%;
+    min-width: 0;
+    text-overflow: ellipsis;
+  }
+
+  .lib-filter-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .lib-filter-grid > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .lib-sort-label {
+    display: none;
+  }
+
+  .lib-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lib-toolbar-end {
+    flex: 1 1 100%;
+  }
+
+  .lib-filters-btn {
+    flex: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lib-results {
+    transition: none;
+  }
+
+  .lib-search-busy {
+    animation: none;
+  }
+}

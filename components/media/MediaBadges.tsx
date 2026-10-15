@@ -1,4 +1,4 @@
-import { Check, Clock, Pause, Play, RotateCcw, XCircle, Film, Tv } from "lucide-react";
+import { Check, CircleMinus, Clock, Pause, Play, Repeat, RotateCcw, Film, Tv } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { mediaStatusLabel, mediaStatusTone } from "@/lib/media-status";
@@ -15,9 +15,9 @@ const STATUS_ICON: Record<string, ReactNode> = {
   watching: <Play size={11} fill="currentColor" aria-hidden="true" />,
   watched: <Check size={11} aria-hidden="true" />,
   rewatching: <RotateCcw size={11} aria-hidden="true" />,
-  rewatched: <Check size={11} aria-hidden="true" />,
+  rewatched: <Repeat size={11} aria-hidden="true" />,
   paused: <Pause size={11} fill="currentColor" aria-hidden="true" />,
-  dropped: <XCircle size={11} aria-hidden="true" />,
+  dropped: <CircleMinus size={11} aria-hidden="true" />,
 };
 
 export function MediaTypeTag({ type }: { type: "movie" | "tv" | string }) {

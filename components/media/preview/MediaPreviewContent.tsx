@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Film, Star, Tv } from "lucide-react";
 
 import { Poster } from "@/components/Poster";
@@ -15,6 +16,8 @@ export type MediaPreviewContentProps = {
   actions?: MediaPreviewActionsConfig;
   providers?: MediaPreviewProvidersSlot;
   extraActions?: MediaPreviewExtraActionsSlot;
+  /** Estado pessoal opcional (ex.: progresso da série na Biblioteca — V2.6). */
+  personal?: ReactNode;
   titleId: string;
 };
 
@@ -29,7 +32,7 @@ function formatRuntime(minutes: number) {
  * Purely presentational: it renders exactly the MediaPreviewData contract
  * it's given and never knows which of the four surfaces produced it.
  */
-export function MediaPreviewContent({ data, actions, providers, extraActions, titleId }: MediaPreviewContentProps) {
+export function MediaPreviewContent({ data, actions, providers, extraActions, personal, titleId }: MediaPreviewContentProps) {
   const year = (data.releaseDate || "").slice(0, 4);
   const rating = data.voteAverage && data.voteAverage > 0 ? data.voteAverage.toFixed(1) : null;
   const titleHref = `/title/${data.mediaType}/${data.id}`;
@@ -95,6 +98,8 @@ export function MediaPreviewContent({ data, actions, providers, extraActions, ti
           )}
 
           {data.overview && <p className="mc-preview-overview">{data.overview}</p>}
+
+          {personal}
 
           {providers}
 

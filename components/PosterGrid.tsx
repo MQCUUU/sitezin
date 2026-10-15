@@ -3,6 +3,7 @@
 import { MediaPosterActions } from "@/components/media/MediaPosterActions";
 import { MediaPosterTags, MediaStatusTag } from "@/components/media/MediaBadges";
 import { TvNextEpisode } from "@/components/TvNextEpisode";
+import { SeriesProgressLine, SeriesProgressPanel } from "@/components/library/SeriesProgress";
 import Link from "next/link";
 import {
   Heart,
@@ -1151,6 +1152,7 @@ useEffect(() => {
           onRating: (_, rating) => previewItem && updatePersonalRating(previewItem, rating),
           disabled: previewItem ? processing === previewItem.library_id : false,
         }}
+        personal={previewItem?.library_progress ? <SeriesProgressPanel progress={previewItem.library_progress} /> : null}
         providers={<WatchProviderList data={normalizeWatchProviders(previewDetails?.watch_providers, "BR")} loading={previewDetailsLoading} />}
         extraActions={
           previewItem && (
@@ -1205,8 +1207,7 @@ useEffect(() => {
               </h3>
 
               <p className="muted">
-                O título será removido da sua biblioteca.
-                Você poderá adicioná-lo novamente depois.
+                O título sai da sua Biblioteca. Seu histórico de visualizações continua no Diário.
               </p>
             </div>
 
@@ -1368,9 +1369,20 @@ function Card({ item, ...actionProps }: CardActionProps & { item: LibraryItem })
           </span>
         )}
       </MediaCardMeta>
-      <TvNextEpisode progress={item.progress} runtime={item.episode_runtime} />
+      {item.library_progress !== undefined ? (
+        <SeriesProgressLine progress={item.library_progress} />
+      ) : (
+        <TvNextEpisode progress={item.progress} runtime={item.episode_runtime} />
+      )}
     </MediaCard>
   );
+}
+
+/** `media.genres` é `text[]` no banco; objetos {id,name} (TMDB) também são aceitos. Vazios nunca viram chip. */
+function genreNames(genres: unknown): string[] {
+  if (!Array.isArray(genres)) return [];
+
+  return [...new Set(genres.map((g) => (typeof g === "string" ? g : (g as { name?: string })?.name || "").trim()).filter(Boolean))];
 }
 
 function ListItem({ item, ...actionProps }: CardActionProps & { item: LibraryItem }) {
@@ -1420,13 +1432,15 @@ function ListItem({ item, ...actionProps }: CardActionProps & { item: LibraryIte
           )}
         </div>
 
-        {item.overview && <p className="library-list-overview">{item.overview}</p>}
+        {item.library_progress ? <SeriesProgressLine progress={item.library_progress} /> : null}
 
-        {item.genres && item.genres.length > 0 && (
+        {item.overview && <p className="library-list-overview lib-clamp-2">{item.overview}</p>}
+
+        {genreNames(item.genres).length > 0 && (
           <div className="library-list-genres">
-            {item.genres.slice(0, 4).map((itemGenre) => (
-              <span key={itemGenre.id} className="chip">
-                {itemGenre.name}
+            {genreNames(item.genres).slice(0, 4).map((name) => (
+              <span key={name} className="chip">
+                {name}
               </span>
             ))}
           </div>

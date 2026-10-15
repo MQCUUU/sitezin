@@ -1,4 +1,5 @@
 import type { TvProgress } from "@/lib/tv-progress";
+import type { LibraryProgress } from "@/lib/library/progress";
 export type MediaType =
   | "movie"
   | "tv";
@@ -49,6 +50,8 @@ export type LibraryItem = Media & {
   progress?: TvProgress | null;
   /** V2.2-B: duração ESTIMADA (min) de um episódio — só séries da prateleira "Continuar assistindo". */
   episode_runtime?: number | null;
+  /** V2.6: séries na Biblioteca — "onde parei" (lib/library/progress.ts). */
+  library_progress?: LibraryProgress | null;
 };
 
 export const STATUS_LABELS: Record<

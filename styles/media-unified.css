@@ -76,6 +76,10 @@
 .mc-tag--violet {
   --tag: #a78bfa;
 }
+/* V2.6: "Abandonado" — neutro (decisão de consumo, não erro). */
+.mc-tag--neutral {
+  --tag: color-mix(in srgb, var(--text) 62%, var(--muted));
+}
 
 /* ---------- Ações do pôster ---------- */
 
@@ -269,6 +273,9 @@
 }
 .mc-pa-dot--violet {
   background: #a78bfa;
+}
+.mc-pa-dot--neutral {
+  background: color-mix(in srgb, var(--text) 55%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {

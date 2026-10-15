@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { removeLibraryItem } from "@/lib/library/remove";
+import { libraryProgress } from "@/lib/library/progress";
+import { computeTvProgress, groupWatchedByMedia, tvStructureFromRaw } from "@/lib/tv-progress";
 import { respostaDeErro } from "@/lib/api-error";
 
 interface ErrorResponse {
@@ -226,9 +228,10 @@ export async function GET(
     if (search) {
       // Escapa curingas do LIKE para preservar o match por substring literal de antes.
       const escaped = search.replace(/[%_\\]/g, (char) => `\\${char}`);
-      const term = `%${escaped}%`;
+      // V2.6: sem diferenciar acento nem maiúsculas ("obsessao" acha "Obsessão"); título e original.
+      const term = addParam(`%${escaped}%`);
       conditions.push(
-        `(m.title ILIKE ${addParam(term)} OR m.original_title ILIKE ${addParam(term)})`
+        `(extensions.unaccent(m.title) ILIKE extensions.unaccent(${term}) OR extensions.unaccent(coalesce(m.original_title, '')) ILIKE extensions.unaccent(${term}))`
       );
     }
 
@@ -236,7 +239,8 @@ export async function GET(
       conditions.push(`m.media_type = ${addParam(mediaType)}`);
     }
 
-    if (status && status !== "all") {
+    // Status fora do modelo é ignorado (URL inválida vira "Todos"), nunca vai cru para o SQL.
+    if (status && VALID_STATUSES.includes(status)) {
       conditions.push(`li.status = ${addParam(status)}`);
     }
 
@@ -285,7 +289,9 @@ export async function GET(
       updated: "li.updated_at DESC",
       added: "li.added_at DESC",
     };
-    const orderByClause = SORT_COLUMNS[sort] || SORT_COLUMNS.added;
+    // V2.6: desempate estável (id) — empates (ex.: import com a mesma data) nunca
+    // repetem nem pulam itens entre páginas.
+    const orderByClause = `${SORT_COLUMNS[sort] || SORT_COLUMNS.added}, li.id ASC`;
 
     const paginated = url.searchParams.get("paginated") === "true";
 
@@ -394,12 +400,58 @@ export async function GET(
     const offset = (safePage - 1) * limit;
 
     // 2. Página de dados FILTRADA — LIMIT/OFFSET reais, sem trazer o resto da biblioteca.
+    // V2.6: estrutura da série (só as chaves usadas) para o progresso; removida antes da resposta.
     const limitPlaceholder = addParam(limit);
     const offsetPlaceholder = addParam(offset);
-    const pageRows = await sql.query(
-      `${baseSelect} ORDER BY ${orderByClause} LIMIT ${limitPlaceholder} OFFSET ${offsetPlaceholder}`,
+    const pageRows = (await sql.query(
+      `${baseSelect.replace(
+        "to_jsonb(m.*) - 'raw' as media",
+        "to_jsonb(m.*) - 'raw' as media, CASE WHEN m.media_type = 'tv' THEN m.raw->'seasons' END AS _seasons, CASE WHEN m.media_type = 'tv' THEN m.raw->'last_episode_to_air' END AS _last_episode, CASE WHEN m.media_type = 'tv' THEN m.raw->>'status' END AS _series_status"
+      )} ORDER BY ${orderByClause} LIMIT ${limitPlaceholder} OFFSET ${offsetPlaceholder}`,
       params
-    );
+    )) as Record<string, any>[];
+
+    /*
+     * V2.6 — progresso das séries DESTA página: UMA query em lote (nunca uma por
+     * série) + regra canônica (lib/tv-progress.ts) + copy da Biblioteca
+     * (lib/library/progress.ts). Fonte: episodes_progress; legado sem episódios
+     * tratado sem inventar.
+     */
+    const tvRows = pageRows.filter((row) => row.media?.media_type === "tv");
+
+    if (tvRows.length > 0) {
+      const progressRows = (await sql`
+        SELECT media_id, season_number, episode_number
+        FROM public.episodes_progress
+        WHERE user_id = ${userId}
+          AND watched = true
+          AND media_id = ANY(${tvRows.map((row) => Number(row.media.id))}::int[])
+      `) as { media_id: number; season_number: number; episode_number: number }[];
+      const byMedia = groupWatchedByMedia(progressRows);
+
+      for (const row of tvRows) {
+        const structure = tvStructureFromRaw(
+          { seasons: row._seasons, last_episode_to_air: row._last_episode, status: row._series_status },
+          { seasons_count: row.media.seasons_count, episodes_count: row.media.episodes_count }
+        );
+        const watched = byMedia.get(Number(row.media.id)) ?? [];
+        const progress = computeTvProgress(structure, watched, { rewatching: row.status === "rewatching" });
+
+        row.library_progress = libraryProgress({
+          status: row.status,
+          progress,
+          structure,
+          watched,
+          completedSeasons: Number(row.completed_seasons || 0),
+        });
+      }
+    }
+
+    for (const row of pageRows) {
+      delete row._seasons;
+      delete row._last_episode;
+      delete row._series_status;
+    }
 
     const counts = (countsRows[0] as Record<string, number> | undefined) || {
       all: 0, want: 0, watching: 0, watched: 0, paused: 0, dropped: 0, rewatching: 0, rewatched: 0, favorites: 0,

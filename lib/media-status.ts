@@ -12,7 +12,7 @@ export type MediaStatus =
   | "rewatching"
   | "rewatched";
 
-export type StatusTone = "info" | "accent" | "success" | "warning" | "danger" | "violet";
+export type StatusTone = "info" | "accent" | "success" | "warning" | "danger" | "violet" | "neutral";
 
 export const MEDIA_STATUS_OPTIONS: { value: MediaStatus; label: string; tone: StatusTone }[] = [
   { value: "want", label: "Quero assistir", tone: "info" },
@@ -21,7 +21,8 @@ export const MEDIA_STATUS_OPTIONS: { value: MediaStatus; label: string; tone: St
   { value: "rewatching", label: "Reassistindo", tone: "violet" },
   { value: "rewatched", label: "Reassistido", tone: "success" },
   { value: "paused", label: "Pausado", tone: "warning" },
-  { value: "dropped", label: "Abandonado", tone: "danger" },
+  // V2.6: abandonar é uma decisão de consumo, não um erro — tom neutro, nunca vermelho.
+  { value: "dropped", label: "Abandonado", tone: "neutral" },
 ];
 
 const BY_VALUE = new Map(MEDIA_STATUS_OPTIONS.map((option) => [option.value as string, option]));
