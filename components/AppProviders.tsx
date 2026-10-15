@@ -19,6 +19,7 @@ import { SeriesSeasonSync } from "@/components/SeriesSeasonSync";
 import { LibraryMutationWatcher } from "@/components/LibraryMutationWatcher";
 import { MediaRepair } from "@/components/MediaRepair";
 import { InsightsTracker } from "@/components/InsightsTracker";
+import { PreferencesSync } from "@/components/PreferencesSync";
 
 export function AppProviders({
   children,
@@ -36,6 +37,7 @@ export function AppProviders({
         <LibraryMutationWatcher />
         <MediaRepair />
         <InsightsTracker />
+        <PreferencesSync />
         <UsernameGate />
         {children}
       </ConfirmProvider>

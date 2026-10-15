@@ -8,6 +8,11 @@
   margin: 5px 0;
 }
 
+/* "Minha coleção" na cor de destaque escolhida em Aparência (igual a Diário, Calendário e Insights). */
+.lib-head .eyebrow {
+  color: var(--accent);
+}
+
 /* ---------- barra: status | curtidos | ordenar + filtros ---------- */
 .lib-toolbar {
   display: flex;

@@ -125,7 +125,13 @@ function AppearanceSection() {
   const [preferences, setPreferences] = useState<AppearancePreferences>(DEFAULT_PREFERENCES);
 
   useEffect(() => {
-    setPreferences(readPreferences());
+    const sync = () => setPreferences(readPreferences());
+
+    sync();
+    // Preferências que chegam da conta (outro aparelho) atualizam a tela aberta.
+    window.addEventListener("mycatalog-preferences-updated", sync);
+
+    return () => window.removeEventListener("mycatalog-preferences-updated", sync);
   }, []);
 
   const change = useCallback(
