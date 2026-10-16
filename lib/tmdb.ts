@@ -375,7 +375,8 @@ export async function detailsTMDB(
   id: number | string
 ) {
   return tmdb(
-    `/${type}/${id}?language=${getLanguage()}&append_to_response=credits,videos,images,recommendations`,
+    // V3.1: vídeos em PT e EN (e sem idioma) — só pt-BR deixava muitos títulos sem trailer.
+    `/${type}/${id}?language=${getLanguage()}&append_to_response=credits,videos,images,recommendations&include_video_language=pt,en,null`,
     {
       revalidate:
         TMDB_CACHE.DETAILS,
@@ -387,6 +388,20 @@ export async function detailsTMDB(
   );
 }
 
+
+/**
+ * V3.1 — traduções do título (sinopse em outros idiomas). Só é chamado quando
+ * a sinopse em pt-BR vem vazia (lib/title-details.ts); mesmo cache dos detalhes.
+ */
+export async function translationsTMDB(
+  type: "movie" | "tv",
+  id: number | string
+) {
+  return tmdb(`/${type}/${id}/translations`, {
+    revalidate: TMDB_CACHE.DETAILS,
+    tags: [`tmdb:${type}:${id}`],
+  });
+}
 
 /*
  * ==========================================

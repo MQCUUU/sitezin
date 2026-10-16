@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { Search } from "@/components/Search";
 import { SmartBackButton } from "@/components/SmartBackButton";
@@ -8,6 +9,7 @@ import type { TitleDetails, TitleType } from "@/lib/title-details";
 import { groupEditorialCrew } from "@/lib/title-credits";
 import type { Status } from "@/lib/types";
 import { useToast } from "@/components/ToastProvider";
+import { LIBRARY_ACTION_COPY } from "@/lib/library/remove";
 
 import {
   TitleCastSection,
@@ -30,7 +32,10 @@ import {
   type LibraryItemUpdate,
   type PersonCredit,
   type RelatedItem,
+  CONTENT_TABS,
 } from "@/components/title";
+
+const TAB_VALUES = new Set<string>(CONTENT_TABS.map(([value]) => value));
 
 export type TitleViewProps = {
   type: TitleType;
@@ -61,7 +66,29 @@ export default function TitlePage({
 
   const [favorite, setFavorite] =
     useState(false);
-  const [contentTab, setContentTab] = useState<ContentTabValue>("info");
+  /*
+   * V3.1 — aba na URL (?tab=cast|reviews|related; "info" = sem parâmetro):
+   * refresh e link direto preservam a aba. `replace` (não push): trocar de
+   * aba não enche o histórico — voltar sai da página, como esperado.
+   */
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const contentTab: ContentTabValue = tabParam && TAB_VALUES.has(tabParam) ? (tabParam as ContentTabValue) : "info";
+  const setContentTab = useCallback(
+    (value: ContentTabValue) => {
+      const params = new URLSearchParams(searchParams.toString());
+
+      if (value === "info") params.delete("tab");
+      else params.set("tab", value);
+
+      const query = params.toString();
+
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
 
   const [loading, setLoading] =
     useState(() => !initialDetails);
@@ -72,13 +99,29 @@ export default function TitlePage({
   const [saving, setSaving] =
     useState(false);
 
-  const [episodeProgress, setEpisodeProgress] = useState<Record<number, { watched: number; released: number }>>({});
-  const handleEpisodeProgress = useCallback((value: { season: number; watched: number; released: number }) => {
-    setEpisodeProgress((current) => ({
-      ...current,
-      [value.season]: { watched: value.watched, released: value.released },
-    }));
-  }, []);
+  /*
+   * V3.1 — relê o item da biblioteca (com `library_progress`/`progress`, o
+   * mesmo progresso da Biblioteca/Home/Quick View). Usado depois de marcar
+   * episódios, mudar status ou adicionar/restaurar: o painel "Seu progresso"
+   * nunca calcula nada no client.
+   */
+  const reloadLibraryItem = useCallback(async () => {
+    try {
+      const response = await fetch(
+        `/api/library?tmdb_id=${encodeURIComponent(id)}&type=${encodeURIComponent(type)}`,
+        { cache: "no-store" }
+      );
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+
+      setLibraryItem(data || null);
+      if (data?.status) setStatus(data.status);
+    } catch {
+      /* mantém o estado atual */
+    }
+  }, [id, type]);
 
   /*
    * C1.1: `initialDetails` já veio pronto do Server Component
@@ -332,6 +375,7 @@ export default function TitlePage({
       setLibraryItem(
         result
       );
+      void reloadLibraryItem();
 
       toast.success(
         `${mediaTitle} adicionado à biblioteca`,
@@ -339,8 +383,9 @@ export default function TitlePage({
           description:
             "Status, curtida e nota foram salvos.",
 
+          // V3.1: a ação REMOVE (o Diário registra a remoção) — não é "desfazer".
           actionLabel:
-            "Desfazer",
+            LIBRARY_ACTION_COPY.addedRemoveLabel,
 
           onAction:
             async () => {
@@ -371,7 +416,7 @@ export default function TitlePage({
               );
 
               toast.info(
-                "Adição desfeita"
+                LIBRARY_ACTION_COPY.addedRemoved
               );
             },
         }
@@ -450,11 +495,12 @@ export default function TitlePage({
       toast.success(
         `${mediaTitle} removido da biblioteca`,
         {
+          // V3.1: readicionar é uma NOVA entrada (tags e notas por categoria não voltam) — não é "desfazer".
           description:
-            "Você pode recuperar o item por alguns segundos.",
+            LIBRARY_ACTION_COPY.removedDescription,
 
           actionLabel:
-            "Desfazer",
+            LIBRARY_ACTION_COPY.readdLabel,
 
           duration:
             8000,
@@ -646,6 +692,7 @@ export default function TitlePage({
                 snapshot.status ||
                 "want"
               );
+              void reloadLibraryItem();
 
               setFavorite(
                 Boolean(
@@ -670,7 +717,8 @@ export default function TitlePage({
               );
 
               toast.info(
-                "Título restaurado"
+                LIBRARY_ACTION_COPY.readded,
+                { description: LIBRARY_ACTION_COPY.readdedDescription }
               );
             },
         }
@@ -775,6 +823,9 @@ export default function TitlePage({
           ...result,
         })
       );
+
+      // Status muda o progresso exibido (ex.: Reassistindo): relê o canônico.
+      if (field === "status") void reloadLibraryItem();
 
       const labels:
         Record<
@@ -1003,6 +1054,8 @@ export default function TitlePage({
   function handleLibraryItemMerge(item: LibraryItemUpdate) {
     setLibraryItem((current) => ({ ...(current as any), ...item }));
     if (item?.status) setStatus(item.status);
+    // Episódios marcados mudam o progresso: relê a verdade do servidor.
+    void reloadLibraryItem();
   }
 
   /*
@@ -1114,6 +1167,18 @@ export default function TitlePage({
         <SmartBackButton />
       </div>
 
+      {/* V3.1: identidade e ações do título em TODAS as abas (antes só em "Visão geral" — as outras abas ficavam sem h1). */}
+      <TitleHero
+        type={type}
+        details={details}
+        libraryItem={libraryItem}
+        favorite={favorite}
+        saving={saving}
+        onAddToLibrary={addToLibrary}
+        onRemoveFromLibrary={removeFromLibrary}
+        onToggleFavorite={handleToggleFavorite}
+      />
+
       <TitleContentTabs
         contentTab={contentTab}
         onContentTabChange={setContentTab}
@@ -1126,32 +1191,18 @@ export default function TitlePage({
           id="title-tabpanel-info"
           aria-labelledby="title-tab-info"
         >
-          <TitleHero
-            type={type}
-            details={details}
-            libraryItem={libraryItem}
-            favorite={favorite}
-            saving={saving}
-            onAddToLibrary={addToLibrary}
-            onRemoveFromLibrary={removeFromLibrary}
-            onToggleFavorite={handleToggleFavorite}
-          />
-
           <TitleOverviewSection
             type={type}
             details={details}
             status={status}
             libraryItem={libraryItem}
             onStatusChange={handleStatusChange}
-            episodeProgress={episodeProgress}
-            onSeasonProgressChange={handleLibraryItemMerge}
           />
 
           {type === "tv" && (
             <TitleTvSections
               details={details}
               libraryItem={libraryItem}
-              onProgressChange={handleEpisodeProgress}
               onLibraryChange={handleLibraryItemMerge}
             />
           )}

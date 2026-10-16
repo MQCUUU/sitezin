@@ -1,5 +1,6 @@
-import { Globe2, MessageSquare, TrendingUp } from "lucide-react";
+import { Globe2, Languages, MessageSquare } from "lucide-react";
 
+import { countryNames, languageName } from "@/lib/title-locale";
 import type { LooseTitleDetails } from "./types";
 
 export type TitleStatsSectionProps = {
@@ -7,12 +8,22 @@ export type TitleStatsSectionProps = {
 };
 
 /**
- * Bloco de estatísticas rápidas (popularidade, votos, país de origem) da
- * aba "info". País só aparece quando `production_countries` existe.
+ * Informações da obra na aba "info" — só o que ajuda a entender o título,
+ * em PT-BR (lib/title-locale.ts): idioma original, país de origem e volume de
+ * votos do TMDB (contexto externo, nunca a sua nota). V3.1: a "popularidade"
+ * crua do TMDB (número sem unidade para o usuário) saiu.
  */
 export function TitleStatsSection({ details }: TitleStatsSectionProps) {
-  const popularity = Number(details.popularity || 0).toFixed(0);
-  const countries = details.production_countries || [];
+  const language = languageName(details.original_language);
+  const countries = countryNames(details.production_countries);
+  const votes = Number(details.vote_count || 0);
+  const facts = [
+    language ? { icon: <Languages size={20} aria-hidden="true" />, label: "Idioma original", value: language } : null,
+    countries.length ? { icon: <Globe2 size={20} aria-hidden="true" />, label: countries.length > 1 ? "Países de origem" : "País de origem", value: countries.join(", ") } : null,
+    votes > 0 ? { icon: <MessageSquare size={20} aria-hidden="true" />, label: "Votos no TMDB", value: votes.toLocaleString("pt-BR") } : null,
+  ].filter((fact): fact is { icon: React.JSX.Element; label: string; value: string } => fact !== null);
+
+  if (facts.length === 0) return null;
 
   return (
     <section className="section mc-title-section">
@@ -29,59 +40,19 @@ export function TitleStatsSection({ details }: TitleStatsSectionProps) {
           gap: "12px",
         }}
       >
-        <div className="panel" style={{ padding: "18px" }}>
-          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-            <TrendingUp size={20} />
-
-            <div>
-              <span className="muted">Popularidade</span>
-
-              <strong
-                style={{ display: "block", marginTop: "4px", fontSize: "18px" }}
-              >
-                {popularity}
-              </strong>
-            </div>
-          </div>
-        </div>
-
-        <div className="panel" style={{ padding: "18px" }}>
-          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-            <MessageSquare size={20} />
-
-            <div>
-              <span className="muted">Avaliações no TMDB</span>
-
-              <strong
-                style={{ display: "block", marginTop: "4px", fontSize: "18px" }}
-              >
-                {Number(details.vote_count || 0).toLocaleString("pt-BR")}
-              </strong>
-            </div>
-          </div>
-        </div>
-
-        {countries.length > 0 && (
-          <div className="panel" style={{ padding: "18px" }}>
+        {facts.map((fact) => (
+          <div key={fact.label} className="panel" style={{ padding: "18px" }}>
             <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-              <Globe2 size={20} />
+              {fact.icon}
 
               <div>
-                <span className="muted">País de origem</span>
+                <span className="muted">{fact.label}</span>
 
-                <strong
-                  style={{
-                    display: "block",
-                    marginTop: "4px",
-                    fontSize: "16px",
-                  }}
-                >
-                  {countries.map((country: any) => country.name).join(", ")}
-                </strong>
+                <strong style={{ display: "block", marginTop: "4px", fontSize: "16px" }}>{fact.value}</strong>
               </div>
             </div>
           </div>
-        )}
+        ))}
       </div>
     </section>
   );

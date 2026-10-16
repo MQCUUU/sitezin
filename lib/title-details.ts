@@ -1,4 +1,5 @@
-import { detailsTMDB } from "@/lib/tmdb";
+import { detailsTMDB, translationsTMDB } from "@/lib/tmdb";
+import { pickOverviewFallback } from "@/lib/title-locale";
 import type {
   CastCredit,
   CrewCredit,
@@ -262,9 +263,31 @@ export async function getTitleDetails(
     detailsTMDB(type, tmdbId),
     getTitleWatchProviders(type, tmdbId),
   ]);
+  const sanitized = sanitizeTitleDetails(details, type);
+
+  /*
+   * V3.1 — sinopse vazia em pt-BR: tenta as traduções do próprio TMDB
+   * (pt-PT → inglês → idioma original). `overview_language` diz à UI em que
+   * idioma está quando não é português. Falha aqui nunca derruba a página.
+   */
+  let overviewLanguage: string | null = null;
+
+  if (!String(sanitized.overview ?? "").trim()) {
+    try {
+      const fallback = pickOverviewFallback(await translationsTMDB(type, tmdbId), sanitized.original_language);
+
+      if (fallback) {
+        sanitized.overview = fallback.overview;
+        overviewLanguage = fallback.language === "pt" ? null : fallback.language;
+      }
+    } catch {
+      /* sem sinopse alternativa: segue sem */
+    }
+  }
 
   return {
-    ...sanitizeTitleDetails(details, type),
+    ...sanitized,
+    overview_language: overviewLanguage,
     watch_providers: providersResponse,
   };
 }

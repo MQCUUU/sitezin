@@ -1,3 +1,4 @@
+import { collapseProviderVariants } from "../../../lib/streaming/providers-br";
 import type {
   RawWatchProviderItem,
   RawWatchProviderRegion,
@@ -45,16 +46,20 @@ export function normalizeWatchProviders(
 
   // Streaming = flatrate + free + ads, in that order, deduped by provider id
   // (flatrate wins over free, free wins over ads — C3.1 spec §9/§10).
-  const streaming = dedupeById([
-    ...toItems(regionPayload.flatrate),
-    ...toItems(regionPayload.free),
-    ...toItems(regionPayload.ads),
-  ]);
+  // V3.1: variantes do mesmo serviço ("with Ads", "Amazon Channel") somem
+  // quando o serviço-base já está no grupo (lib/streaming/providers-br.ts).
+  const streaming = collapseProviderVariants(
+    dedupeById([
+      ...toItems(regionPayload.flatrate),
+      ...toItems(regionPayload.free),
+      ...toItems(regionPayload.ads),
+    ])
+  );
 
   // Rent/buy are never deduped against streaming or each other — matches
   // every audited renderer exactly (C3.1 spec §11).
-  const rent = toItems(regionPayload.rent);
-  const buy = toItems(regionPayload.buy);
+  const rent = collapseProviderVariants(toItems(regionPayload.rent));
+  const buy = collapseProviderVariants(toItems(regionPayload.buy));
 
   const groups: WatchProviderGroup[] = [];
   if (streaming.length > 0) groups.push({ kind: "streaming", providers: streaming });

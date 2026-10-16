@@ -6,7 +6,8 @@ import {
 } from "@/lib/api-error";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
-import { getEpisodeJournalWrite } from "@/lib/episode-progress";
+import { episodeRowsUpsertQuery, getEpisodeJournalWrite, type EpisodeUpsertRow } from "@/lib/episode-progress";
+import { planSeriesUpdate, type SeriesPlan } from "@/lib/library/episode-write";
 import { seasonTMDB } from "@/lib/tmdb";
 import {
   getEpisodeReleaseStatus,
@@ -25,6 +26,7 @@ type EpisodeBody = {
   comment?: unknown;
   is_rewatch?: unknown;
   episode_numbers?: unknown;
+  /** Legado: ignorados desde a V3.1 (o servidor decide pelo progresso canônico). */
   released_episode_count?: unknown;
   total_seasons?: unknown;
 };
@@ -42,6 +44,59 @@ function seasonLookupFailureResponse(error: unknown) {
     },
     { status: notFound ? 404 : 502 },
   );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Sql = ReturnType<typeof getDb> & ((strings: TemplateStringsArray, ...values: any[]) => any);
+
+/** Item + estrutura da série (media.raw) + status atual — uma consulta. */
+function loadItem(sql: Sql, libraryId: string, userId: string) {
+  return sql`
+    SELECT
+      li.id,
+      li.media_id,
+      li.status,
+      m.tmdb_id,
+      m.media_type,
+      m.seasons_count,
+      m.episodes_count,
+      CASE WHEN m.media_type = 'tv' THEN m.raw->'seasons' END AS _seasons,
+      CASE WHEN m.media_type = 'tv' THEN m.raw->'last_episode_to_air' END AS _last_episode,
+      CASE WHEN m.media_type = 'tv' THEN m.raw->>'status' END AS _series_status
+    FROM public.library_items li
+    JOIN public.media m ON m.id = li.media_id
+    WHERE li.id = ${libraryId} AND li.user_id = ${userId}
+    LIMIT 1
+  ` as unknown as Promise<Record<string, any>[]>;
+}
+
+/** Episódios regulares já registrados da série (vistos ou não) — uma consulta. */
+function loadEpisodes(sql: Sql, mediaId: number, userId: string) {
+  return sql`
+    SELECT season_number, episode_number, watched, watched_at, watched_at_precision
+    FROM public.episodes_progress
+    WHERE user_id = ${userId} AND media_id = ${mediaId} AND season_number >= 1
+  ` as unknown as Promise<{ season_number: number; episode_number: number; watched: boolean; watched_at: string | null; watched_at_precision: string | null }[]>;
+}
+
+/**
+ * Estado derivado da série, gravado NA MESMA transação dos episódios.
+ * Compare-and-set pelo status lido: se outra ação mudou o status no meio
+ * (ex.: o usuário escolheu um status manualmente), a escolha dele vence e o
+ * derivado não é aplicado (episódios continuam gravados — são fatos).
+ * Nunca gera status_changed: o Diário conta os episódios.
+ */
+function seriesStateUpdate(sql: Sql, input: { libraryId: string; userId: string; previous: string; plan: SeriesPlan }) {
+  return sql`
+    UPDATE public.library_items
+    SET
+      status = ${input.plan.status},
+      completed_seasons = ${input.plan.completed_seasons},
+      current_season = ${input.plan.current_season},
+      stopped_season = CASE WHEN ${input.plan.status} = 'dropped' THEN stopped_season ELSE NULL END
+    WHERE id = ${input.libraryId} AND user_id = ${input.userId} AND status = ${input.previous}
+    RETURNING id, status, completed_seasons, current_season, stopped_season, rewatch_count
+  `;
 }
 
 export async function POST(request: Request) {
@@ -88,21 +143,10 @@ export async function POST(request: Request) {
       return entradaInvalida("is_rewatch deve ser verdadeiro ou falso.");
     }
 
-    const sql = getDb();
+    const sql = getDb() as Sql;
 
-    // 1. Obter library_item garantindo que pertence ao usuário autenticado
-    const libraryRows = await sql`
-      SELECT
-        li.id,
-        li.media_id,
-        m.tmdb_id,
-        m.media_type,
-        m.seasons_count
-      FROM public.library_items li
-      JOIN public.media m ON m.id = li.media_id
-      WHERE li.id = ${libraryId} AND li.user_id = ${user.id}
-      LIMIT 1
-    `;
+    // 1. Item (do usuário da sessão) + estrutura da série + status atual
+    const libraryRows = await loadItem(sql, libraryId, user.id);
 
     if (libraryRows.length === 0) {
       return NextResponse.json(
@@ -112,6 +156,7 @@ export async function POST(request: Request) {
     }
 
     const libraryItem = libraryRows[0];
+    const isSeries = libraryItem.media_type === "tv" && Boolean(libraryItem.tmdb_id);
     const watchedAt = body.watched
       ? typeof body.watched_at === "string" && body.watched_at
         ? new Date(body.watched_at).toISOString()
@@ -127,31 +172,23 @@ export async function POST(request: Request) {
         : "datetime"
       : null;
     /*
-     * `comment`/`is_rewatch` só devem sobrescrever o que já existe quando o
-     * chamador realmente os envia (a página de episódio, no diário). O
-     * toggle rápido do EpisodeBrowser não manda nenhum dos dois — antes
-     * disso, um simples marcar/desmarcar apagava silenciosamente o
-     * comentário e o "foi reassistida" já salvos (C5.2 §18). O CASE WHEN
-     * abaixo preserva o valor atual quando o campo não foi enviado.
+     * `comment`/`is_rewatch` só sobrescrevem o que já existe quando o chamador
+     * os envia (página de episódio). O toggle rápido não manda nenhum dos dois
+     * (C5.2 §18): o CASE WHEN abaixo preserva o valor atual.
      */
-    const journalWrite = getEpisodeJournalWrite(body);
     const {
       commentProvided,
       comment,
       isRewatchProvided,
       isRewatch,
-    } = journalWrite;
+    } = getEpisodeJournalWrite(body);
+
+    // Episódios regulares já registrados (para a cascata e para o progresso resultante).
+    const existing = isSeries && seasonNumber >= 1 ? await loadEpisodes(sql, Number(libraryItem.media_id), user.id) : [];
 
     /*
-     * O cliente nunca é autoridade sobre air_date/release status. Só uma
-     * nova transição para watched=true consulta o season real, normaliza o
-     * payload e aplica a regra compartilhada (C5.2). Unwatch não faz fetch,
-     * permitindo limpar progresso antigo/futuro/desconhecido.
-     *
-     * A página de episódio salva comment/is_rewatch junto com watched=true.
-     * Se o registro já está watched, uma edição desses metadados não cria
-     * novo progresso e continua permitida mesmo se a data TMDB mudou desde
-     * então. O SELECT é sempre escopado ao usuário e à chave completa.
+     * O cliente nunca é autoridade sobre air_date (C5.2): só uma nova
+     * marcação watched=true consulta a temporada real. Desmarcar não faz fetch.
      */
     if (body.watched) {
       const existingEpisodeRows = await sql`
@@ -166,20 +203,13 @@ export async function POST(request: Request) {
       const existingEpisodeWatched = existingEpisodeRows[0]?.watched === true;
       const journalEdit = commentProvided || isRewatchProvided;
 
-      if (
-        requiresEpisodeReleaseValidation(
-          body.watched,
-          existingEpisodeWatched,
-          journalEdit,
-        )
-      ) {
-        if (libraryItem.media_type !== "tv" || !libraryItem.tmdb_id) {
+      if (requiresEpisodeReleaseValidation(body.watched, existingEpisodeWatched, journalEdit)) {
+        if (!isSeries) {
           return entradaInvalida("O progresso por episódio só está disponível para séries.");
         }
 
         let rawSeason: unknown;
         try {
-          // Busca somente a temporada pedida; seasonTMDB mantém cache/retry existentes.
           rawSeason = await seasonTMDB(libraryItem.tmdb_id, seasonNumber);
         } catch (error) {
           return seasonLookupFailureResponse(error);
@@ -207,226 +237,88 @@ export async function POST(request: Request) {
       }
     }
 
-    // 2. Upsert do episódio atual
-    const progressRows = await sql`
-      INSERT INTO public.episodes_progress (
-        user_id,
-        media_id,
-        season_number,
-        episode_number,
-        watched,
-        watched_at,
-        watched_at_precision,
-        comment,
-        is_rewatch
-      )
-      VALUES (
-        ${user.id},
-        ${libraryItem.media_id},
-        ${seasonNumber},
-        ${episodeNumber},
-        ${body.watched},
-        ${watchedAt},
-        ${watchedAtPrecision},
-        ${comment},
-        ${isRewatch}
-      )
-      ON CONFLICT (user_id, media_id, season_number, episode_number)
-      DO UPDATE SET
-        watched = EXCLUDED.watched,
-        watched_at = EXCLUDED.watched_at,
-        watched_at_precision = EXCLUDED.watched_at_precision,
-        comment = CASE WHEN ${commentProvided} THEN EXCLUDED.comment ELSE public.episodes_progress.comment END,
-        is_rewatch = CASE WHEN ${isRewatchProvided} THEN EXCLUDED.is_rewatch ELSE public.episodes_progress.is_rewatch END
-      RETURNING *
-    `;
+    /*
+     * 2. Cascata: marcar um episódio regular marca os ANTERIORES (temporadas
+     * 1..N) já exibidos e ainda não vistos. Nunca Especiais (T0), nunca
+     * episódio futuro/sem data (C5.2 §9), nunca episódio que não existe no
+     * TMDB. Episódio já visto mantém data e proveniência.
+     */
+    const cascadeRows: EpisodeUpsertRow[] = [];
 
-    const data = progressRows[0];
+    if (body.watched && seasonNumber >= 1 && isSeries) {
+      const priorSeasons = await Promise.all(
+        Array.from({ length: seasonNumber }, (_, index) => index + 1).map((number) =>
+          seasonTMDB(libraryItem.tmdb_id, number).catch(() => null),
+        ),
+      );
+      const alreadyWatched = new Set(existing.filter((e) => e.watched).map((e) => `${e.season_number}-${e.episode_number}`));
 
-    // 3. Progresso sequencial
-    if (body.watched && seasonNumber >= 1) {
-      if (libraryItem.media_type === "tv" && libraryItem.tmdb_id) {
-        const [existingProgress, priorSeasons] = await Promise.all([
-          sql`
-            SELECT season_number, episode_number, watched_at, watched_at_precision
-            FROM public.episodes_progress
-            WHERE user_id = ${user.id}
-              AND media_id = ${libraryItem.media_id}
-              AND season_number <= ${seasonNumber}
-          `,
-          Promise.all(
-            Array.from({ length: seasonNumber }, (_, index) => index + 1).map(
-              (number) =>
-                seasonTMDB(libraryItem.tmdb_id, number).catch(() => null),
-            ),
-          ),
-        ]);
+      priorSeasons.forEach((seasonData: any, index) => {
+        const number = index + 1;
+        const episodes = Array.isArray(seasonData?.episodes) ? seasonData.episodes : [];
 
-        const watchedDates = new Map(
-          (existingProgress || []).map((item: any) => [
-            `${item.season_number}-${item.episode_number}`,
-            item.watched_at,
-          ]),
-        );
-        const watchedPrecisions = new Map(
-          (existingProgress || []).map((item: any) => [
-            `${item.season_number}-${item.episode_number}`,
-            item.watched_at ? item.watched_at_precision ?? null : null,
-          ]),
-        );
+        for (const episode of episodes) {
+          const episodeNo = Number(episode.episode_number);
 
-        const cascadeRows: any[] = [];
-        priorSeasons.forEach((seasonData: any, index) => {
-          const number = index + 1;
-          const episodes = Array.isArray(seasonData?.episodes)
-            ? seasonData.episodes
-            : [];
-          for (const episode of episodes) {
-            const episodeNo = Number(episode.episode_number);
-            if (number === seasonNumber && episodeNo >= episodeNumber) continue;
-            /*
-             * Data futura/desconhecida nunca vira watched automaticamente
-             * pela cascata (C5.2 §9) — mesma semântica/helper da C5.1
-             * (lib/title-seasons.ts), sem duplicar o algoritmo.
-             */
-            if (getEpisodeReleaseStatus(episode.air_date) !== "released") continue;
-            cascadeRows.push({
-              user_id: user.id,
-              media_id: libraryItem.media_id,
-              season_number: number,
-              episode_number: episodeNo,
-              watched: true,
-              watched_at:
-                watchedDates.get(`${number}-${episodeNo}`) ||
-                new Date().toISOString(),
-              // data existente preserva a proveniência; data nova = relógio do servidor
-              watched_at_precision: watchedDates.get(`${number}-${episodeNo}`)
-                ? watchedPrecisions.get(`${number}-${episodeNo}`) ?? null
-                : "datetime",
-            });
-          }
-        });
+          if (!Number.isInteger(episodeNo) || episodeNo < 1) continue;
+          if (number === seasonNumber && episodeNo >= episodeNumber) continue;
+          if (alreadyWatched.has(`${number}-${episodeNo}`)) continue;
+          if (getEpisodeReleaseStatus(episode.air_date) !== "released") continue;
 
-        for (const row of cascadeRows) {
-          await sql`
-            INSERT INTO public.episodes_progress (
-              user_id,
-              media_id,
-              season_number,
-              episode_number,
-              watched,
-              watched_at,
-              watched_at_precision
-            )
-            VALUES (
-              ${row.user_id},
-              ${row.media_id},
-              ${row.season_number},
-              ${row.episode_number},
-              ${row.watched},
-              ${row.watched_at},
-              ${row.watched_at_precision}
-            )
-            ON CONFLICT (user_id, media_id, season_number, episode_number)
-            DO UPDATE SET
-              watched = EXCLUDED.watched,
-              watched_at = EXCLUDED.watched_at,
-              watched_at_precision = EXCLUDED.watched_at_precision
-          `;
+          cascadeRows.push({ season_number: number, episode_number: episodeNo, watched_at: new Date().toISOString(), watched_at_precision: "datetime" });
         }
-      }
+      });
     }
 
     /*
-     * 4. Sincronização com library_items
-     *
-     * `seasonNumber >= 1` — Especiais (season 0, C5.1) nunca deve tocar
-     * current_season/completed_seasons da série regular (C5.2 §27). Sem
-     * essa guarda, marcar/desmarcar um episódio de Especiais reescrevia
-     * current_season para 1 e, ao desmarcar, zerava completed_seasons —
-     * mesmo padrão de guarda que a cascata acima já usava para season 0,
-     * só que faltava aqui.
+     * 3. Estado derivado da série pelo progresso CANÔNICO depois da escrita
+     * (lib/library/episode-status.ts). Especiais (T0) nunca mudam o estado.
      */
-    const releasedCount = Number(body.released_episode_count || 0);
-    let updatedLibrary: any = null;
+    const plan =
+      isSeries && seasonNumber >= 1
+        ? planSeriesUpdate({
+            row: libraryItem as any,
+            watchedBefore: existing.filter((e) => e.watched),
+            changes: [
+              ...cascadeRows.map((r) => ({ season_number: r.season_number, episode_number: r.episode_number, watched: true })),
+              { season_number: seasonNumber, episode_number: episodeNumber, watched: body.watched },
+            ],
+            action: body.watched ? "watch" : "unwatch",
+          })
+        : null;
 
-    if (releasedCount > 0 && seasonNumber >= 1) {
-      const countRes = await sql`
-        SELECT count(*)::int as count
-        FROM public.episodes_progress
-        WHERE user_id = ${user.id}
-          AND media_id = ${libraryItem.media_id}
-          AND season_number = ${seasonNumber}
-          AND watched = true
-      `;
-      const watchedCount = Number(countRes[0]?.count || 0);
-      const seasonComplete = watchedCount >= releasedCount;
+    // 4. UMA transação: episódio + cascata + estado derivado (tudo ou nada).
+    const queries: any[] = [
+      sql`
+        INSERT INTO public.episodes_progress (
+          user_id, media_id, season_number, episode_number, watched, watched_at, watched_at_precision, comment, is_rewatch
+        )
+        VALUES (
+          ${user.id}, ${libraryItem.media_id}, ${seasonNumber}, ${episodeNumber}, ${body.watched},
+          ${watchedAt}, ${watchedAtPrecision}, ${comment}, ${isRewatch}
+        )
+        ON CONFLICT (user_id, media_id, season_number, episode_number)
+        DO UPDATE SET
+          watched = EXCLUDED.watched,
+          watched_at = EXCLUDED.watched_at,
+          watched_at_precision = EXCLUDED.watched_at_precision,
+          comment = CASE WHEN ${commentProvided} THEN EXCLUDED.comment ELSE public.episodes_progress.comment END,
+          is_rewatch = CASE WHEN ${isRewatchProvided} THEN EXCLUDED.is_rewatch ELSE public.episodes_progress.is_rewatch END
+        RETURNING *
+      `,
+    ];
 
-      const currentLibRes = await sql`
-        SELECT completed_seasons, status
-        FROM public.library_items
-        WHERE id = ${libraryId} AND user_id = ${user.id}
-        LIMIT 1
-      `;
-
-      if (currentLibRes.length > 0) {
-        const currentLibrary = currentLibRes[0];
-        const currentCompleted = Number(currentLibrary.completed_seasons || 0);
-        const previousSeasonsCompleted = Math.max(0, seasonNumber - 1);
-        const totalSeasons = Number(
-          body.total_seasons || libraryItem.seasons_count || 0,
-        );
-        const finishedSeries =
-          seasonComplete && totalSeasons > 0 && seasonNumber >= totalSeasons;
-        const activeStatus =
-          currentLibrary.status === "rewatching" ? "rewatching" : "watching";
-
-        let newCompletedSeasons: number;
-        let newCurrentSeason: number;
-        let newStatus: string;
-
-        if (seasonComplete) {
-          newCompletedSeasons = Math.max(currentCompleted, seasonNumber);
-          newCurrentSeason =
-            totalSeasons > 0
-              ? Math.min(seasonNumber + 1, totalSeasons)
-              : seasonNumber + 1;
-          newStatus = finishedSeries
-            ? currentLibrary.status === "rewatching"
-              ? "rewatched"
-              : "watched"
-            : activeStatus;
-        } else if (body.watched) {
-          newCompletedSeasons = Math.max(
-            currentCompleted,
-            previousSeasonsCompleted,
-          );
-          newCurrentSeason = Math.max(1, seasonNumber);
-          newStatus = activeStatus;
-        } else {
-          newCompletedSeasons = Math.min(
-            currentCompleted,
-            previousSeasonsCompleted,
-          );
-          newCurrentSeason = Math.max(1, seasonNumber);
-          newStatus =
-            currentLibrary.status === "watched"
-              ? "watching"
-              : currentLibrary.status;
-        }
-
-        const savedLibRes = await sql`
-          UPDATE public.library_items
-          SET
-            completed_seasons = ${newCompletedSeasons},
-            current_season = ${newCurrentSeason},
-            status = ${newStatus}
-          WHERE id = ${libraryId} AND user_id = ${user.id}
-          RETURNING id, status, completed_seasons, current_season, stopped_season, rewatch_count
-        `;
-        updatedLibrary = savedLibRes[0] || null;
-      }
+    if (cascadeRows.length) {
+      queries.push(episodeRowsUpsertQuery(sql, { userId: user.id, mediaId: Number(libraryItem.media_id), watched: true, rows: cascadeRows }));
     }
+
+    if (plan) {
+      queries.push(seriesStateUpdate(sql, { libraryId, userId: user.id, previous: String(libraryItem.status), plan }));
+    }
+
+    const results = (await sql.transaction(queries)) as Record<string, unknown>[][];
+    const data = results[0][0];
+    const updatedLibrary = plan ? results[results.length - 1][0] ?? null : null;
 
     return NextResponse.json({ ...data, library: updatedLibrary });
   } catch (error) {
@@ -518,15 +410,8 @@ export async function PUT(request: Request) {
       return entradaInvalida("Dados da temporada inválidos.");
     }
 
-    const sql = getDb();
-    const itemRows = await sql`
-      SELECT li.id, li.media_id, li.completed_seasons, li.current_season, li.status,
-             m.tmdb_id, m.media_type
-      FROM public.library_items li
-      JOIN public.media m ON m.id = li.media_id
-      WHERE li.id = ${libraryId} AND li.user_id = ${user.id}
-      LIMIT 1
-    `;
+    const sql = getDb() as Sql;
+    const itemRows = await loadItem(sql, libraryId, user.id);
 
     if (itemRows.length === 0) {
       return NextResponse.json(
@@ -536,15 +421,16 @@ export async function PUT(request: Request) {
     }
 
     const item = itemRows[0];
+    const isSeries = item.media_type === "tv" && Boolean(item.tmdb_id);
 
     /*
-     * PUT também aceita uma lista vinda do cliente. Antes de qualquer
-     * upsert watched=true, o servidor valida todos os números contra a
-     * única resposta normalizada da temporada. A UI filtrar a lista não é
-     * fronteira de confiança. Unwatch continua sem lookup TMDB.
+     * PUT aceita uma lista vinda do cliente. Antes de qualquer watched=true, o
+     * servidor valida todos os números contra a temporada real (não lançado →
+     * 409). A UI filtrar a lista não é fronteira de confiança. Desmarcar não
+     * consulta o TMDB.
      */
     if (body.watched) {
-      if (item.media_type !== "tv" || !item.tmdb_id) {
+      if (!isSeries) {
         return entradaInvalida("O progresso por episódio só está disponível para séries.");
       }
 
@@ -578,89 +464,35 @@ export async function PUT(request: Request) {
 
     const now = new Date().toISOString();
     const watchedAt = body.watched ? now : null;
+    const rows: EpisodeUpsertRow[] = numbers.map((episodeNumber) => ({
+      season_number: seasonNumber,
+      episode_number: episodeNumber,
+      watched_at: watchedAt,
+      watched_at_precision: body.watched ? "datetime" : null,
+    }));
 
-    const rows: any[] = [];
-    for (const episodeNumber of numbers) {
-      const res = await sql`
-        INSERT INTO public.episodes_progress (
-          user_id,
-          media_id,
-          season_number,
-          episode_number,
-          watched,
-          watched_at,
-          watched_at_precision
-        )
-        VALUES (
-          ${user.id},
-          ${item.media_id},
-          ${seasonNumber},
-          ${episodeNumber},
-          ${body.watched},
-          ${watchedAt},
-          ${body.watched ? "datetime" : null}
-        )
-        ON CONFLICT (user_id, media_id, season_number, episode_number)
-        DO UPDATE SET
-          watched = EXCLUDED.watched,
-          watched_at = EXCLUDED.watched_at,
-          watched_at_precision = EXCLUDED.watched_at_precision
-        RETURNING *
-      `;
-      if (res.length > 0) rows.push(res[0]);
-    }
+    // Estado derivado pelo progresso canônico (Especiais nunca mudam o estado da série regular).
+    const plan =
+      isSeries && seasonNumber >= 1
+        ? planSeriesUpdate({
+            row: item as any,
+            watchedBefore: (await loadEpisodes(sql, Number(item.media_id), user.id)).filter((e) => e.watched),
+            changes: numbers.map((n) => ({ season_number: seasonNumber, episode_number: n, watched: body.watched as boolean })),
+            action: body.watched ? "watch" : "unwatch",
+          })
+        : null;
 
-    /*
-     * Especiais (season 0, C5.1) nunca deve tocar current_season/
-     * completed_seasons da série regular (C5.2 §27) — o loop acima já
-     * salvou o progresso individual dos episódios de Especiais em
-     * episodes_progress; só os agregados regulares ficam de fora aqui.
-     */
-    let updatedLibrary: Record<string, unknown> | null = null;
+    // UMA transação: temporada inteira (uma consulta) + estado derivado.
+    const queries: any[] = [episodeRowsUpsertQuery(sql, { userId: user.id, mediaId: Number(item.media_id), watched: body.watched, rows })];
 
-    if (seasonNumber >= 1) {
-      const completed = Number(item.completed_seasons || 0);
-      const totalSeasons = Number(body.total_seasons || 0);
-      const finishingStatus =
-        item.status === "rewatching" ? "rewatched" : "watched";
-      const activeStatus =
-        item.status === "rewatching" ? "rewatching" : "watching";
+    if (plan) queries.push(seriesStateUpdate(sql, { libraryId, userId: user.id, previous: String(item.status), plan }));
 
-      const newCompleted = body.watched
-        ? Math.max(completed, seasonNumber)
-        : Math.min(completed, Math.max(0, seasonNumber - 1));
-
-      const newCurrent = body.watched
-        ? totalSeasons > 0
-          ? Math.min(seasonNumber + 1, totalSeasons)
-          : seasonNumber + 1
-        : Math.max(1, seasonNumber);
-
-      const newStatus = body.watched
-        ? totalSeasons > 0 && seasonNumber >= totalSeasons
-          ? finishingStatus
-          : activeStatus
-        : item.status === "rewatched"
-          ? "rewatching"
-          : item.status === "watched"
-            ? "watching"
-            : item.status;
-
-      const updateLibRes = await sql`
-        UPDATE public.library_items
-        SET
-          completed_seasons = ${newCompleted},
-          current_season = ${newCurrent},
-          status = ${newStatus}
-        WHERE id = ${libraryId} AND user_id = ${user.id}
-        RETURNING *
-      `;
-      updatedLibrary = updateLibRes[0] || null;
-    }
+    const results = (await sql.transaction(queries)) as Record<string, unknown>[][];
+    const progress = [...results[0]].sort((a, b) => Number(a.episode_number) - Number(b.episode_number));
 
     return NextResponse.json({
-      progress: rows,
-      library: updatedLibrary,
+      progress,
+      library: plan ? results[1][0] ?? null : null,
     });
   } catch (error) {
     return respostaDeErro(error, "PUT /api/episodes");

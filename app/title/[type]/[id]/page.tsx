@@ -39,6 +39,9 @@ export default async function TitlePage({
   try {
     initialDetails = await getTitleDetails(parsed.type, parsed.tmdbId);
   } catch (erro) {
+    // V3.1: título que não existe no TMDB é 404 de verdade (antes: tela de erro genérica com HTTP 200).
+    if (erro instanceof Error && erro.message.startsWith("TMDB 404")) notFound();
+
     console.error("[title] falha ao carregar do servidor:", erro);
   }
 

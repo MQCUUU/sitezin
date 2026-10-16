@@ -41,6 +41,7 @@ import { MediaPreviewDialog } from "@/components/media/preview/MediaPreviewDialo
 import { WatchProviderList } from "@/components/media/preview/WatchProviderList";
 import { fromLibraryItem } from "@/components/media/preview/adapters";
 import { normalizeWatchProviders } from "@/components/media/providers";
+import { LIBRARY_ACTION_COPY } from "@/lib/library/remove";
 
 type ViewMode =
   | "grid"
@@ -848,11 +849,12 @@ useEffect(() => {
       toast.success(
         `${item.title} removido da biblioteca`,
         {
+          // V3.1: readicionar é uma NOVA entrada (tags e notas por categoria não voltam) — não é "desfazer".
           description:
-            "Você pode restaurar o item por alguns segundos.",
+            LIBRARY_ACTION_COPY.removedDescription,
 
           actionLabel:
-            "Desfazer",
+            LIBRARY_ACTION_COPY.readdLabel,
 
           duration:
             8000,
@@ -940,6 +942,11 @@ useEffect(() => {
               );
 
               onChanged?.();
+
+              toast.info(
+                LIBRARY_ACTION_COPY.readded,
+                { description: LIBRARY_ACTION_COPY.readdedDescription }
+              );
             },
         }
       );

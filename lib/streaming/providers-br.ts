@@ -19,7 +19,26 @@ export type BrProvider = { provider_id: number; provider_name: string; logo_path
 const VARIANT = /amazon channel|apple tv channel|plex channel|roku premium channel|with ads/i;
 export const MAX_PROVIDERS = 40;
 
-const brPriority = (p: RawProvider) => Number(p.display_priorities?.BR ?? p.display_priority ?? 999);
+/**
+ * Disponibilidade de UM título (V3.1): uma variante ("Netflix Standard with
+ * Ads", "Amazon Prime Video with Ads", "X Amazon Channel") só some quando o
+ * serviço-base já está na lista — o nome da variante começa pelo nome dele.
+ * Variante sem o serviço-base fica (ex.: o título só existe via canal).
+ */
+export function collapseProviderVariants<T extends { name: string }>(items: T[]): T[] {
+  const bases = items.filter((item) => !VARIANT.test(item.name));
+  const startsWithBase = (variant: string) =>
+    bases.some((base) => {
+      const b = base.name.trim().toLowerCase();
+      const v = variant.trim().toLowerCase();
+
+      return v !== b && v.startsWith(`${b} `);
+    });
+
+  return items.filter((item) => !(VARIANT.test(item.name) && startsWithBase(item.name)));
+}
+
+const brPriority =(p: RawProvider) => Number(p.display_priorities?.BR ?? p.display_priority ?? 999);
 
 export function relevantBrProviders(raw: RawProvider[], keepId?: string | number | null): BrProvider[] {
   const valid = raw

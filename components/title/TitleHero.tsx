@@ -1,6 +1,8 @@
 import { Heart, Plus, Star, Trash2, Film, Tv } from "lucide-react";
 
 import { Poster } from "@/components/Poster";
+import { mediaStatusLabel } from "@/lib/media-status";
+import { languageName, runtimeLabel, workStatusLabel } from "@/lib/title-locale";
 import type { LibraryItem, LooseTitleDetails, TitleType } from "./types";
 
 export type TitleHeroProps = {
@@ -43,9 +45,14 @@ export function TitleHero({
     4
   );
 
-  const runtime = details.runtime || null;
+  const runtime = runtimeLabel(details.runtime);
 
-  const tmdbRating = Number(details.vote_average || 0).toFixed(1);
+  // V3.1: dados do TMDB apresentados em PT-BR (lib/title-locale.ts) — o cru não muda.
+  const workStatus = workStatusLabel(details.status, type);
+  const originalLanguage = languageName(details.original_language);
+
+  const voteCount = Number(details.vote_count || 0);
+  const tmdbRating = voteCount > 0 ? Number(details.vote_average || 0).toFixed(1) : null;
 
   return (
     <section className="mc-title-hero">
@@ -72,9 +79,9 @@ export function TitleHero({
             />
 
             {libraryItem && (
-              <div className="title-poster-status">
+              <div className="title-poster-status" title="Seu status na biblioteca">
                 <span className="status-dot" />
-                Na biblioteca
+                {mediaStatusLabel(libraryItem.status)}
               </div>
             )}
           </div>
@@ -108,14 +115,9 @@ export function TitleHero({
             )}
 
             <div className="title-quick-facts">
-              {details.status && <span>{details.status}</span>}
+              {workStatus && <span title={type === "tv" ? "Situação da série" : "Situação do filme"}>{workStatus}</span>}
 
-              {type === "movie" && runtime && (
-                <span>
-                  {Math.floor(Number(runtime) / 60)}h{" "}
-                  {Number(runtime) % 60}min
-                </span>
-              )}
+              {type === "movie" && runtime && <span>{runtime}</span>}
 
               {type === "tv" && details.number_of_seasons && (
                 <span>
@@ -126,23 +128,22 @@ export function TitleHero({
                 </span>
               )}
 
-              {details.original_language && (
-                <span>
-                  {String(details.original_language).toUpperCase()}
-                </span>
-              )}
+              {/* Idioma ORIGINAL da obra (não é classificação etária). */}
+              {originalLanguage && <span>Idioma original: {originalLanguage}</span>}
             </div>
 
             <div className="title-ratings mc-title-meta-row">
-              <div className="title-rating tmdb-rating">
-                <Star size={18} fill="currentColor" />
+              {tmdbRating && (
+                <div className="title-rating tmdb-rating" title={`Média de ${voteCount.toLocaleString("pt-BR")} votos no TMDB`}>
+                  <Star size={18} fill="currentColor" />
 
-                <div>
-                  <strong>{tmdbRating}</strong>
+                  <div>
+                    <strong>{tmdbRating}</strong>
 
-                  <span>TMDB</span>
+                    <span>Média TMDB</span>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {libraryItem &&
                 libraryItem.personal_rating !== null &&
@@ -155,7 +156,7 @@ export function TitleHero({
                         {Number(libraryItem.personal_rating).toFixed(1)}
                       </strong>
 
-                      <span>Minha nota</span>
+                      <span>Sua nota</span>
                     </div>
                   </div>
                 )}
@@ -185,6 +186,8 @@ export function TitleHero({
               )}
 
               <button
+                type="button"
+                aria-pressed={favorite}
                 className={
                   favorite ? "btn favorite-btn active" : "btn favorite-btn"
                 }

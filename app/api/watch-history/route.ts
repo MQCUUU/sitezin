@@ -151,108 +151,67 @@ export async function POST(req: NextRequest) {
         ? body.is_rewatch
         : previousCount > 0;
 
-    const entryRows = await sql`
-      INSERT INTO public.watch_entries (
-        user_id,
-        library_item_id,
-        media_id,
-        watched_at,
-        watched_at_precision,
-        rating,
-        comment,
-        is_rewatch
-      )
-      VALUES (
-        ${user.id},
-        ${libraryItem.id},
-        ${libraryItem.media_id},
-        ${watchedAt},
-        ${precision},
-        ${rating},
-        ${comment},
-        ${isRewatch}
-      )
-      RETURNING
-        id,
-        library_item_id,
-        media_id,
-        watched_at,
-        rating,
-        comment,
-        is_rewatch,
-        created_at,
-        updated_at
-    `;
-
-    const entry = entryRows[0];
     const nextRewatchCount = Math.max(
       Number(libraryItem.rewatch_count || 0),
       isRewatch ? previousCount : 0,
     );
-
     const nextStatus = isRewatch ? "rewatched" : "watched";
     const nextRating = rating !== null ? rating : libraryItem.personal_rating;
 
-    const updatedLibraryRows = await sql`
-      UPDATE public.library_items
-      SET
-        watched_at = ${watchedAt},
-        watched_at_precision = ${precision},
-        status = ${nextStatus},
-        rewatch_count = ${nextRewatchCount},
-        personal_rating = ${nextRating},
-        updated_at = ${new Date().toISOString()}
-      WHERE id = ${libraryId} AND user_id = ${user.id}
-      RETURNING
-        id,
-        status,
-        favorite,
-        personal_rating,
-        review,
-        watched_at,
-        rewatch_count,
-        current_season,
-        completed_seasons,
-        stopped_season,
-        added_at,
-        updated_at
-    `;
-
-    const updatedLibrary = updatedLibraryRows[0] || null;
-
-    try {
-      const metadata = JSON.stringify({
-        watch_entry_id: entry.id,
-        rating,
-        comment,
-        is_rewatch: isRewatch,
-        watch_number: previousCount + 1,
-      });
-
-      await sql`
-        INSERT INTO public.activity_events (
-          user_id,
-          media_id,
-          library_item_id,
-          event_type,
-          occurred_at,
-          metadata
+    /*
+     * V3.1 — UM comando (uma transação PostgreSQL): a visualização, o estado da
+     * Biblioteca que ela declara (Assistido/Reassistido, nota, contador) e o
+     * espelho `watch_logged` do Diário. Tudo ou nada — antes eram três
+     * escritas separadas e a do Diário engolia erro.
+     *
+     * Registrar uma visualização é uma DECLARAÇÃO explícita do usuário ("assisti"
+     * / "concluí a série", como diz o formulário) — por isso define o status como
+     * uma escolha manual, igual ao que já fazia; não é derivado de episódios.
+     */
+    const written = (await sql`
+      WITH entry AS (
+        INSERT INTO public.watch_entries (
+          user_id, library_item_id, media_id, watched_at, watched_at_precision, rating, comment, is_rewatch
         )
         VALUES (
-          ${user.id},
-          ${libraryItem.media_id},
-          ${libraryItem.id},
-          'watch_logged',
-          ${watchedAt},
-          ${metadata}::jsonb
+          ${user.id}, ${libraryItem.id}, ${libraryItem.media_id}, ${watchedAt}, ${precision}, ${rating}, ${comment}, ${isRewatch}
         )
-      `;
-    } catch (activityError: any) {
-      console.error(
-        "Erro ao registrar visualização no Diário:",
-        activityError?.message,
-      );
-    }
+        RETURNING id, library_item_id, media_id, watched_at, rating, comment, is_rewatch, created_at, updated_at
+      ),
+      library AS (
+        UPDATE public.library_items
+        SET
+          watched_at = ${watchedAt},
+          watched_at_precision = ${precision},
+          status = ${nextStatus},
+          rewatch_count = ${nextRewatchCount},
+          personal_rating = ${nextRating},
+          updated_at = now()
+        WHERE id = ${libraryId} AND user_id = ${user.id}
+        RETURNING id, status, favorite, personal_rating, review, watched_at, rewatch_count,
+                  current_season, completed_seasons, stopped_season, added_at, updated_at
+      ),
+      diary AS (
+        INSERT INTO public.activity_events (user_id, media_id, library_item_id, event_type, occurred_at, metadata)
+        SELECT
+          ${user.id}, entry.media_id, entry.library_item_id, 'watch_logged', entry.watched_at,
+          jsonb_build_object(
+            'watch_entry_id', entry.id,
+            'rating', entry.rating,
+            'comment', entry.comment,
+            'is_rewatch', entry.is_rewatch,
+            'watch_number', ${previousCount + 1}::int
+          )
+        FROM entry
+        RETURNING id
+      )
+      SELECT
+        (SELECT row_to_json(entry) FROM entry) AS entry,
+        (SELECT row_to_json(library) FROM library) AS library
+    `) as { entry: Record<string, unknown>; library: Record<string, unknown> | null }[];
+
+    const entry = written[0]?.entry;
+    const updatedLibrary = written[0]?.library ?? null;
 
     return NextResponse.json(
       {

@@ -1,620 +1,177 @@
 "use client";
 
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { CalendarDays, ChevronRight, Clock3, Radio, Tv } from "lucide-react";
 
-import {
-  CalendarDays,
-  ChevronRight,
-  Clock3,
-  Loader2,
-  Play,
-  Radio,
-  Tv,
-} from "lucide-react";
+import { img } from "@/lib/tmdb";
+import { longDate, relativeWhen, shortDate, todayIn } from "@/lib/calendar/dates";
 
-import {
-  img,
-} from "@/lib/tmdb";
+/*
+ * Agenda da série na página de título.
+ *
+ * V3.1 — mesma semântica de datas do Calendário (lib/calendar/dates.ts): data
+ * pura do TMDB, "hoje" = dia civil de Brasília, rótulos relativos iguais aos
+ * do Calendário. Sem progresso próprio (o "onde estou" é o painel "Seu
+ * progresso", canônico). Série encerrada sem nada anunciado não ganha bloco
+ * vazio; em produção sem data, uma linha compacta.
+ */
 
 type Episode = {
-  id:
-    number;
-
-  season_number:
-    number;
-
-  episode_number:
-    number;
-
-  name:
-    string;
-
-  overview:
-    string;
-
-  air_date:
-    string;
-
-  runtime:
-    number |
-    null;
-
-  still_path:
-    string |
-    null;
-
-  vote_average:
-    number |
-    null;
+  id: number;
+  season_number: number;
+  episode_number: number;
+  name: string;
+  overview: string;
+  air_date: string;
+  runtime: number | null;
+  still_path: string | null;
 };
 
-type Schedule = {
-  id:
-    number;
+type Schedule = { in_production: boolean; upcoming: Episode[] };
 
-  name:
-    string;
+const pad = (n: number) => String(n).padStart(2, "0");
+const code = (e: Episode) => `T${e.season_number}:E${pad(e.episode_number)}`;
 
-  status:
-    string |
-    null;
-
-  in_production:
-    boolean;
-
-  number_of_seasons:
-    number;
-
-  number_of_episodes:
-    number;
-
-  last_episode_to_air:
-    any;
-
-  next_episode_to_air:
-    any;
-
-  next_season:
-    any;
-
-  upcoming:
-    Episode[];
-};
-
-function formatDate(
-  value:
-    string
-) {
-  return new Intl.DateTimeFormat(
-    "pt-BR",
-    {
-      weekday:
-        "short",
-
-      day:
-        "2-digit",
-
-      month:
-        "short",
-
-      year:
-        "numeric",
-    }
-  )
-    .format(
-      new Date(
-        `${value}T12:00:00`
-      )
-    )
-    .replace(
-      ".",
-      ""
-    );
-}
-
-function daysUntil(
-  value:
-    string
-) {
-  const now =
-    new Date();
-
-  const today =
-    new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate()
-    );
-
-  const target =
-    new Date(
-      `${value}T12:00:00`
-    );
-
-  const targetDay =
-    new Date(
-      target.getFullYear(),
-      target.getMonth(),
-      target.getDate()
-    );
-
-  return Math.round(
-    (
-      targetDay.getTime() -
-      today.getTime()
-    ) /
-      86400000
-  );
-}
-
-function countdownLabel(
-  value:
-    string
-) {
-  const days =
-    daysUntil(
-      value
-    );
-
-  if (
-    days < 0
-  ) {
-    return "Já lançado";
-  }
-
-  if (
-    days ===
-    0
-  ) {
-    return "Hoje";
-  }
-
-  if (
-    days ===
-    1
-  ) {
-    return "Amanhã";
-  }
-
-  if (
-    days <=
-    7
-  ) {
-    return `Em ${days} dias`;
-  }
-
-  return `Em ${days} dias`;
-}
-
-export function SeriesSchedule({
-  tvId,
-  libraryItem,
-}: {
-  tvId:
-    number |
-    string;
-
-  libraryItem?:
-    any;
-}) {
-  const [
-    data,
-    setData,
-  ] =
-    useState<
-      Schedule |
-      null
-    >(null);
-
-  const [
-    loading,
-    setLoading,
-  ] =
-    useState(
-      true
-    );
-
-  const [
-    error,
-    setError,
-  ] =
-    useState("");
+export function SeriesSchedule({ tvId, inProduction }: { tvId: number | string; inProduction: boolean }) {
+  const [data, setData] = useState<Schedule | null>(null);
+  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
 
   useEffect(() => {
-    let cancelled =
-      false;
+    let cancelled = false;
 
-    async function load() {
-      try {
-        setLoading(
-          true
-        );
+    fetch(`/api/tv/${tvId}/schedule`)
+      .then(async (response) => {
+        const result = await response.json().catch(() => null);
 
-        setError(
-          ""
-        );
-
-        const response =
-          await fetch(
-            `/api/tv/${tvId}/schedule`
-          );
-
-        const result =
-          await response.json();
-
-        if (
-          !response.ok ||
-          result?.error
-        ) {
-          throw new Error(
-            result?.error ||
-              "Não foi possível carregar os próximos episódios."
-          );
+        if (!response.ok || result?.error) throw new Error("schedule");
+        if (!cancelled) {
+          setData({ in_production: Boolean(result?.in_production), upcoming: Array.isArray(result?.upcoming) ? result.upcoming : [] });
+          setState("ready");
         }
-
-        if (
-          !cancelled
-        ) {
-          setData(
-            result
-          );
-        }
-      } catch (
-        error
-      ) {
-        if (
-          !cancelled
-        ) {
-          setError(
-            error instanceof Error
-              ? error.message
-              : "Erro ao carregar episódios."
-          );
-        }
-      } finally {
-        if (
-          !cancelled
-        ) {
-          setLoading(
-            false
-          );
-        }
-      }
-    }
-
-    load();
+      })
+      .catch(() => {
+        if (!cancelled) setState("error");
+      });
 
     return () => {
-      cancelled =
-        true;
+      cancelled = true;
     };
-  }, [
-    tvId,
-  ]);
+  }, [tvId]);
 
-  const next =
-    data
-      ?.upcoming?.[
-        0
-      ] ||
-    null;
+  // Falha da agenda nunca derruba a página: some.
+  if (state === "error") return null;
 
-  const currentSeason =
-    Number(
-      libraryItem
-        ?.current_season ||
-        1
-    );
+  const today = todayIn();
+  const upcoming = (data?.upcoming ?? []).filter((e) => e.air_date && e.air_date >= today).slice(0, 8);
+  const next = upcoming[0] ?? null;
 
-  const relevantEpisodes =
-    useMemo(
-      () => {
-        if (
-          !data
-        ) {
-          return [];
-        }
+  if (state === "loading") {
+    // Série encerrada: nada a reservar enquanto carrega.
+    return inProduction ? (
+      <section className="section mc-title-section title-series-schedule-section" aria-busy="true">
+        <div className="mc-skeleton series-schedule-skeleton" />
+      </section>
+    ) : null;
+  }
 
-        return (
-          data.upcoming ||
-          []
-        ).slice(
-          0,
-          8
-        );
-      },
-      [
-        data,
-      ]
-    );
+  if (!next) {
+    if (!(data?.in_production ?? inProduction)) return null;
 
-  if (
-    loading
-  ) {
     return (
-      <section className="series-schedule panel">
-        <div className="series-schedule-loading">
-          <Loader2
-            size={20}
-            className="spin"
-          />
-
-          Buscando próximos episódios...
-        </div>
+      <section className="section mc-title-section title-series-schedule-section">
+        <p className="series-schedule-compact muted">
+          <CalendarDays size={15} aria-hidden="true" /> Em produção — sem data anunciada para o próximo episódio.
+        </p>
       </section>
     );
   }
 
-  if (
-    error
-  ) {
-    return null;
-  }
-
-  if (
-    !data
-  ) {
-    return null;
-  }
+  const when = relativeWhen(next.air_date, today);
 
   return (
-    <section className="series-schedule">
-      <div className="series-schedule-head">
-        <div>
-          <span className="eyebrow">
-            AGENDA DA SÉRIE
-          </span>
-
-          <h2>
-            Próximos episódios
-          </h2>
-
-          <p className="muted">
-            Datas informadas pelo TMDB para os próximos lançamentos da série.
-          </p>
-        </div>
-
-        <Link
-          href="/calendar"
-          className="btn"
-        >
-          <CalendarDays
-            size={15}
-          />
-
-          Ver calendário
-        </Link>
-      </div>
-
-      {next ? (
-        <>
-          <div className="series-next-episode panel">
-            <div className="series-next-visual">
-              {next.still_path ? (
-                <img loading="lazy" decoding="async"
-                  src={img(
-                    next.still_path,
-                    "w780"
-                  )}
-                  alt={
-                    next.name
-                  }
-                />
-              ) : (
-                <div className="series-next-placeholder">
-                  <Tv
-                    size={34}
-                  />
-                </div>
-              )}
-
-              <span className="series-next-countdown">
-                <Radio
-                  size={12}
-                />
-
-                {countdownLabel(
-                  next.air_date
-                )}
-              </span>
-            </div>
-
-            <div className="series-next-copy">
-              <div className="series-next-kicker">
-                PRÓXIMO LANÇAMENTO
-              </div>
-
-              <div className="series-next-code">
-                T{
-                  next.season_number
-                }
-                E{
-                  next.episode_number
-                }
-              </div>
-
-              <h3>
-                {
-                  next.name
-                }
-              </h3>
-
-              <div className="series-next-meta">
-                <span>
-                  <CalendarDays
-                    size={13}
-                  />
-
-                  {formatDate(
-                    next.air_date
-                  )}
-                </span>
-
-                {next.runtime && (
-                  <span>
-                    <Clock3
-                      size={13}
-                    />
-
-                    {
-                      next.runtime
-                    } min
-                  </span>
-                )}
-              </div>
-
-              {next.overview && (
-                <p>
-                  {
-                    next.overview
-                  }
-                </p>
-              )}
-
-              {libraryItem && (
-                <div className="series-progress-hint">
-                  <Play
-                    size={13}
-                  />
-
-                  Você está na temporada{" "}
-                  <strong>
-                    {
-                      currentSeason
-                    }
-                  </strong>
-
-                  {next.season_number >
-                    currentSeason && (
-                    <span>
-                      · Este episódio é de uma temporada futura para você
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
+    <section className="section mc-title-section title-series-schedule-section">
+      <div className="series-schedule">
+        <div className="series-schedule-head">
+          <div>
+            <span className="eyebrow">AGENDA DA SÉRIE</span>
+            <h2>Próximos episódios</h2>
+            <p className="muted">Datas informadas pelo TMDB para os próximos lançamentos.</p>
           </div>
 
-          {relevantEpisodes.length >
-            1 && (
-            <div className="series-episode-list">
-              {relevantEpisodes.map(
-                (
-                  episode,
-                  index
-                ) => (
-                  <article
-                    key={`${episode.season_number}-${episode.episode_number}-${episode.id}`}
-                    className={
-                      "series-episode-row panel " +
-                      (index ===
-                      0
-                        ? "next"
-                        : "")
-                    }
-                  >
-                    <div className="series-episode-date">
-                      <strong>
-                        {new Intl.DateTimeFormat(
-                          "pt-BR",
-                          {
-                            day:
-                              "2-digit",
-                          }
-                        ).format(
-                          new Date(
-                            `${episode.air_date}T12:00:00`
-                          )
-                        )}
-                      </strong>
+          <Link href="/calendar" className="btn">
+            <CalendarDays size={15} aria-hidden="true" />
+            Ver calendário
+          </Link>
+        </div>
 
-                      <span>
-                        {new Intl.DateTimeFormat(
-                          "pt-BR",
-                          {
-                            month:
-                              "short",
-                          }
-                        )
-                          .format(
-                            new Date(
-                              `${episode.air_date}T12:00:00`
-                            )
-                          )
-                          .replace(
-                            ".",
-                            ""
-                          )}
-                      </span>
-                    </div>
-
-                    <div className="series-episode-number">
-                      T{
-                        episode.season_number
-                      }
-                      E{
-                        episode.episode_number
-                      }
-                    </div>
-
-                    <div className="series-episode-info">
-                      <strong>
-                        {
-                          episode.name
-                        }
-                      </strong>
-
-                      <span>
-                        {formatDate(
-                          episode.air_date
-                        )}
-
-                        {episode.runtime
-                          ? ` · ${episode.runtime} min`
-                          : ""}
-                      </span>
-                    </div>
-
-                    <div className="series-episode-when">
-                      {countdownLabel(
-                        episode.air_date
-                      )}
-                    </div>
-
-                    <ChevronRight
-                      size={16}
-                    />
-                  </article>
-                )
-              )}
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="series-schedule-empty panel">
-          <CalendarDays
-            size={27}
-          />
-
-          <div>
-            <strong>
-              Nenhum próximo episódio com data
-            </strong>
-
-            <span>
-              {data.in_production
-                ? "A série ainda está em produção, mas o TMDB não possui um próximo episódio agendado no momento."
-                : "Não há novos episódios anunciados para esta série no momento."}
+        <div className="series-next-episode panel">
+          <div className="series-next-visual">
+            {next.still_path ? (
+              <img loading="lazy" decoding="async" src={img(next.still_path, "w780")} alt="" />
+            ) : (
+              <div className="series-next-placeholder">
+                <Tv size={34} aria-hidden="true" />
+              </div>
+            )}
+            <span className="series-next-countdown">
+              <Radio size={12} aria-hidden="true" />
+              {when}
             </span>
           </div>
+
+          <div className="series-next-copy">
+            <div className="series-next-kicker">PRÓXIMO LANÇAMENTO</div>
+            <div className="series-next-code">{code(next)}</div>
+            <h3>{next.name || `Episódio ${next.episode_number}`}</h3>
+            <div className="series-next-meta">
+              <span>
+                <CalendarDays size={13} aria-hidden="true" />
+                {longDate(next.air_date, today)}
+              </span>
+              {next.runtime ? (
+                <span>
+                  <Clock3 size={13} aria-hidden="true" />
+                  {next.runtime} min
+                </span>
+              ) : null}
+            </div>
+          </div>
         </div>
-      )}
+
+        {upcoming.length > 1 && (
+          <div className="series-episode-list">
+            {upcoming.map((episode, index) => {
+              const { day, month } = shortDate(episode.air_date);
+
+              return (
+                <Link
+                  key={`${episode.season_number}-${episode.episode_number}-${episode.id}`}
+                  href={`/title/tv/${tvId}/season/${episode.season_number}/episode/${episode.episode_number}`}
+                  className={`series-episode-row panel ${index === 0 ? "next" : ""}`}
+                >
+                  <div className="series-episode-date">
+                    <strong>{day}</strong>
+                    <span>{month}</span>
+                  </div>
+                  <div className="series-episode-number">{code(episode)}</div>
+                  <div className="series-episode-info">
+                    <strong>{episode.name || `Episódio ${episode.episode_number}`}</strong>
+                    <span>
+                      {longDate(episode.air_date, today)}
+                      {episode.runtime ? ` · ${episode.runtime} min` : ""}
+                    </span>
+                  </div>
+                  <div className="series-episode-when">
+                    {relativeWhen(episode.air_date, today)}
+                  </div>
+                  <ChevronRight size={16} aria-hidden="true" />
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </section>
   );
 }

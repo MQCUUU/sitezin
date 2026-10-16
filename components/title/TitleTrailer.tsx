@@ -1,3 +1,4 @@
+import { pickTrailer } from "@/lib/title-locale";
 import type { LooseTitleDetails } from "./types";
 
 export type TitleTrailerProps = {
@@ -5,21 +6,13 @@ export type TitleTrailerProps = {
 };
 
 /**
- * Seleciona o melhor trailer disponível (trailer oficial do YouTube >
- * trailer não-oficial > qualquer vídeo do YouTube) e renderiza o embed.
- * Não renderiza nada quando não há nenhum vídeo do YouTube.
+ * Melhor vídeo do YouTube (lib/title-locale.ts → pickTrailer: trailer oficial
+ * > trailer > teaser > qualquer; PT antes de EN). V3.1: o player só carrega
+ * quando chega perto da tela (`loading="lazy"`), sem autoplay, pelo domínio
+ * sem cookies do YouTube. Sem vídeo → nada.
  */
 export function TitleTrailer({ details }: TitleTrailerProps) {
-  const trailer =
-    details.videos?.results
-      ?.filter((video: any) => video.site === "YouTube")
-      ?.find(
-        (video: any) => video.type === "Trailer" && video.official === true
-      ) ||
-    details.videos?.results
-      ?.filter((video: any) => video.site === "YouTube")
-      ?.find((video: any) => video.type === "Trailer") ||
-    details.videos?.results?.find((video: any) => video.site === "YouTube");
+  const trailer = pickTrailer(details.videos);
 
   if (!trailer) return null;
 
@@ -43,9 +36,10 @@ export function TitleTrailer({ details }: TitleTrailerProps) {
           style={{ position: "relative", width: "100%", aspectRatio: "16 / 9" }}
         >
           <iframe
-            src={`https://www.youtube.com/embed/${trailer.key}`}
-            title={trailer.name || "Trailer"}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(trailer.key)}`}
+            title={trailer.name}
+            loading="lazy"
+            allow="clipboard-write; encrypted-media; picture-in-picture; web-share"
             allowFullScreen
             style={{
               position: "absolute",

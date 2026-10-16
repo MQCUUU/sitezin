@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { CalendarDays, Clock3, Layers3, Play } from "lucide-react";
 
-import { SeasonProgress } from "@/components/SeasonProgress";
+import { MEDIA_STATUS_OPTIONS } from "@/lib/media-status";
+import { languageName, runtimeLabel } from "@/lib/title-locale";
 import type { Status } from "@/lib/types";
-import { STATUS_LABELS } from "@/lib/types";
+import { TitleSeriesProgress } from "./TitleSeriesProgress";
 import type {
   LibraryItem,
-  LibraryItemUpdate,
   LooseTitleDetails,
   TitleType,
 } from "./types";
@@ -17,8 +17,6 @@ export type TitleOverviewSectionProps = {
   status: Status;
   libraryItem: LibraryItem | null;
   onStatusChange: (value: Status) => void;
-  episodeProgress: Record<number, { watched: number; released: number }>;
-  onSeasonProgressChange: (item: LibraryItemUpdate) => void;
 };
 
 /**
@@ -31,10 +29,9 @@ export function TitleOverviewSection({
   status,
   libraryItem,
   onStatusChange,
-  episodeProgress,
-  onSeasonProgressChange,
 }: TitleOverviewSectionProps) {
-  const runtime = details.runtime || null;
+  const runtime = runtimeLabel(details.runtime);
+  const overviewLanguage = details.overview_language ? languageName(details.overview_language) : null;
 
   const genres = (details.genres || [])
     .map((genre: any) => genre.name)
@@ -49,9 +46,13 @@ export function TitleOverviewSection({
           <h2>{type === "tv" ? "Sobre a série" : "Sobre o filme"}</h2>
         </div>
 
-        <p className="title-overview">
+        <p className="title-overview" lang={details.overview_language || undefined}>
           {details.overview || "Sem sinopse disponível."}
         </p>
+
+        {overviewLanguage && (
+          <p className="title-overview-note muted">Sinopse em {overviewLanguage.toLowerCase()} — ainda não há versão em português.</p>
+        )}
 
         {genres && (
           <div className="title-genres">
@@ -84,11 +85,7 @@ export function TitleOverviewSection({
               <div>
                 <span>Duração</span>
 
-                <strong>
-                  {Math.floor(runtime / 60) > 0
-                    ? `${Math.floor(runtime / 60)}h ${runtime % 60}min`
-                    : `${runtime}min`}
-                </strong>
+                <strong>{runtime}</strong>
               </div>
             </div>
           )}
@@ -139,14 +136,16 @@ export function TitleOverviewSection({
             <h3>Status</h3>
           </div>
 
+          {/* V3.1: lista canônica de status (lib/media-status.ts) — a mesma da Biblioteca. */}
           <select
             className="title-status-select"
+            aria-label="Status na sua biblioteca"
             value={status}
             onChange={(event) => onStatusChange(event.target.value as Status)}
           >
-            {Object.entries(STATUS_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
+            {MEDIA_STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
@@ -159,14 +158,10 @@ export function TitleOverviewSection({
         </div>
 
         {type === "tv" && libraryItem && (
-          <SeasonProgress
-            libraryItem={libraryItem}
-            totalSeasons={Number(
-              details.number_of_seasons || libraryItem?.media?.seasons_count || 0
-            )}
+          <TitleSeriesProgress
             tvId={Number(details.id)}
-            episodeProgress={episodeProgress}
-            onChange={onSeasonProgressChange}
+            progress={libraryItem.library_progress}
+            totals={libraryItem.progress}
           />
         )}
       </aside>

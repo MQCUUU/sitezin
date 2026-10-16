@@ -91,75 +91,58 @@ export async function PATCH(
       nextIsRewatch = Boolean(body.is_rewatch);
     }
 
-    const now = new Date().toISOString();
-    const updatedRows = await sql`
-      UPDATE public.watch_entries
-      SET
-        watched_at = ${nextWatchedAt},
-        watched_at_precision = ${nextPrecision},
-        rating = ${nextRating},
-        comment = ${nextComment},
-        is_rewatch = ${nextIsRewatch},
-        updated_at = ${now}
-      WHERE id = ${id} AND user_id = ${user.id}
-      RETURNING
-        id,
-        library_item_id,
-        media_id,
-        watched_at,
-        rating,
-        comment,
-        is_rewatch,
-        created_at,
-        updated_at
-    `;
-
-    const data = updatedRows[0];
-
-    // Sincronizar com library_items se for a visualização mais recente
-    const latestRows = await sql`
-      SELECT id, watched_at, watched_at_precision, rating, is_rewatch
-      FROM public.watch_entries
-      WHERE user_id = ${user.id}
-        AND library_item_id = ${current.library_item_id}
-      ORDER BY watched_at DESC
-      LIMIT 1
-    `;
-
-    if (latestRows.length > 0) {
-      const latest = latestRows[0];
-      await sql`
-        UPDATE public.library_items
+    /*
+     * V3.1 — UMA transação: a visualização editada, a data/nota da Biblioteca
+     * (só se esta for a mais recente; a nota nunca é apagada) e o espelho do
+     * Diário. Tudo ou nada — antes eram escritas soltas e a do Diário
+     * engolia erro.
+     */
+    const [updatedRows] = (await sql.transaction([
+      sql`
+        UPDATE public.watch_entries
         SET
-          watched_at = ${latest.watched_at},
-          watched_at_precision = ${latest.watched_at_precision ?? null},
-          personal_rating = COALESCE(${latest.rating}, personal_rating),
-          updated_at = ${now}
-        WHERE id = ${current.library_item_id} AND user_id = ${user.id}
-      `;
-    }
-
-    // Atualizar evento do Diário
-    try {
-      const updatedMetadata = JSON.stringify({
-        watch_entry_id: data.id,
-        rating: data.rating,
-        comment: data.comment,
-        is_rewatch: data.is_rewatch,
-      });
-
-      await sql`
+          watched_at = ${nextWatchedAt},
+          watched_at_precision = ${nextPrecision},
+          rating = ${nextRating},
+          comment = ${nextComment},
+          is_rewatch = ${nextIsRewatch},
+          updated_at = now()
+        WHERE id = ${id} AND user_id = ${user.id}
+        RETURNING id, library_item_id, media_id, watched_at, rating, comment, is_rewatch, created_at, updated_at
+      `,
+      sql`
+        UPDATE public.library_items li
+        SET
+          watched_at = latest.watched_at,
+          watched_at_precision = latest.watched_at_precision,
+          personal_rating = COALESCE(latest.rating, li.personal_rating),
+          updated_at = now()
+        FROM (
+          SELECT watched_at, watched_at_precision, rating
+          FROM public.watch_entries
+          WHERE user_id = ${user.id} AND library_item_id = ${current.library_item_id}
+          ORDER BY watched_at DESC
+          LIMIT 1
+        ) latest
+        WHERE li.id = ${current.library_item_id} AND li.user_id = ${user.id}
+      `,
+      sql`
         UPDATE public.activity_events
         SET
-          occurred_at = ${data.watched_at},
-          metadata = ${updatedMetadata}::jsonb
+          occurred_at = ${nextWatchedAt},
+          metadata = jsonb_build_object(
+            'watch_entry_id', ${id}::text,
+            'rating', ${nextRating}::numeric,
+            'comment', ${nextComment}::text,
+            'is_rewatch', ${nextIsRewatch}::boolean
+          )
         WHERE user_id = ${user.id}
           AND event_type = 'watch_logged'
           AND metadata->>'watch_entry_id' = ${id}
-      `;
-    } catch (e: any) {
-      console.error("Erro ao sincronizar evento de diário:", e?.message);
-    }
+      `,
+    ])) as Record<string, unknown>[][];
+
+    const data = updatedRows[0];
 
     return NextResponse.json(data);
   } catch (error) {
@@ -210,60 +193,43 @@ export async function DELETE(
 
     const current = currentRows[0];
 
-    // Deletar da watch_entries
-    await sql`
-      DELETE FROM public.watch_entries
-      WHERE id = ${id} AND user_id = ${user.id}
-    `;
-
-    // Deletar evento correspondente do Diário
-    try {
-      await sql`
+    /*
+     * V3.1 — UMA transação: apaga o registro e o espelho no Diário e acompanha
+     * só a data da última visualização restante.
+     *
+     * V2.1 (fechamento) — DELETE = "excluir este registro do Diário". É
+     * NÃO-destrutiva para o resto: `personal_rating`, `rewatch_count` e
+     * `status` da Library ficam intactos (não há proveniência para saber
+     * qual fluxo originou cada valor). Sem registros restantes, a data é
+     * preservada. Ver docs/V2.1-A-DATA-INTEGRITY.md.
+     */
+    await sql.transaction([
+      sql`
+        DELETE FROM public.watch_entries
+        WHERE id = ${id} AND user_id = ${user.id}
+      `,
+      sql`
         DELETE FROM public.activity_events
         WHERE user_id = ${user.id}
           AND event_type = 'watch_logged'
           AND metadata->>'watch_entry_id' = ${id}
-      `;
-    } catch (e: any) {
-      console.error("Erro ao deletar activity_event do diário:", e?.message);
-    }
-
-    /*
-     * V2.1 (fechamento) — DELETE = "excluir este registro do Diário".
-     *
-     * Antes: recalculava `personal_rating` e `rewatch_count` da Library
-     * SÓ a partir dos watch_entries restantes. Isso sobrescrevia em
-     * silêncio valores definidos por outros fluxos (nota pela Library/página
-     * do título, "começar reassistida" no dropdown, import, Letterboxd) —
-     * ex.: nota 9 da Library virava NULL ao apagar o último registro.
-     *
-     * Não existe proveniência (não sabemos qual fluxo originou cada valor),
-     * então a exclusão é NÃO-destrutiva: `personal_rating`, `rewatch_count`
-     * e `status` da Library ficam intactos. Só a data da última visualização
-     * (`watched_at`, que POST/PATCH já sincronizam com o registro mais
-     * recente) acompanha o histórico — e apenas quando ainda sobra algum
-     * registro; sem registros restantes, é preservada.
-     * Proveniência/ciclos de rewatch: dívida de V3 (docs/V2.1-A-DATA-INTEGRITY.md).
-     */
-    const latestRemaining = await sql`
-      SELECT watched_at, watched_at_precision
-      FROM public.watch_entries
-      WHERE user_id = ${user.id}
-        AND library_item_id = ${current.library_item_id}
-      ORDER BY watched_at DESC
-      LIMIT 1
-    `;
-
-    if (latestRemaining.length > 0) {
-      await sql`
-        UPDATE public.library_items
+      `,
+      sql`
+        UPDATE public.library_items li
         SET
-          watched_at = ${latestRemaining[0].watched_at},
-          watched_at_precision = ${latestRemaining[0].watched_at_precision ?? null},
-          updated_at = ${new Date().toISOString()}
-        WHERE id = ${current.library_item_id} AND user_id = ${user.id}
-      `;
-    }
+          watched_at = latest.watched_at,
+          watched_at_precision = latest.watched_at_precision,
+          updated_at = now()
+        FROM (
+          SELECT watched_at, watched_at_precision
+          FROM public.watch_entries
+          WHERE user_id = ${user.id} AND library_item_id = ${current.library_item_id}
+          ORDER BY watched_at DESC
+          LIMIT 1
+        ) latest
+        WHERE li.id = ${current.library_item_id} AND li.user_id = ${user.id}
+      `,
+    ]);
 
     return NextResponse.json({ ok: true });
   } catch (error) {

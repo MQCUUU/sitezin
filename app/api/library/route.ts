@@ -177,7 +177,10 @@ export async function GET(
           li.stopped_season,
           li.added_at,
           li.updated_at,
-          to_jsonb(m.*) - 'raw' as media
+          to_jsonb(m.*) - 'raw' as media,
+          CASE WHEN m.media_type = 'tv' THEN m.raw->'seasons' END AS _seasons,
+          CASE WHEN m.media_type = 'tv' THEN m.raw->'last_episode_to_air' END AS _last_episode,
+          CASE WHEN m.media_type = 'tv' THEN m.raw->>'status' END AS _series_status
         FROM public.library_items li
         JOIN public.media m ON m.id = li.media_id
         WHERE li.user_id = ${userId}
@@ -190,7 +193,10 @@ export async function GET(
         return NextResponse.json(null);
       }
 
-      return NextResponse.json(rows[0] as unknown as LibraryItem);
+      // V3.1: página de título/episódio = MESMO progresso da Biblioteca, Home e Quick View.
+      await attachSeriesProgress(sql, userId, rows as Record<string, any>[], { tvProgress: true });
+
+      return NextResponse.json(rows[0] as unknown as LibraryItem, { headers: { "Cache-Control": "private, no-store" } });
     }
 
     /*
