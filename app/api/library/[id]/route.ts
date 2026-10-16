@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { removeLibraryItem } from "@/lib/library/remove";
 import { respostaDeErro } from "@/lib/api-error";
+import { applyStatusTransition, statusTransition } from "@/lib/library/status-event";
 
 export async function PATCH(
   req: Request,
@@ -60,17 +61,9 @@ export async function PATCH(
     const oldStatus = currentItem.status;
     const newStatus = body.status !== undefined ? body.status : oldStatus;
 
-    let rewatchCount = Number(currentItem.rewatch_count || 0);
+    // Contador de reassistidas: incrementado na própria linha pela transição (rewatchEffect).
     const isStartingRewatch =
       newStatus === "rewatching" && oldStatus !== "rewatching";
-    const isDirectlyCompletingRewatch =
-      newStatus === "rewatched" &&
-      oldStatus !== "rewatching" &&
-      oldStatus !== "rewatched";
-
-    if (isStartingRewatch || isDirectlyCompletingRewatch) {
-      rewatchCount += 1;
-    }
 
     /*
      * 3. Temporadas e progresso
@@ -133,19 +126,39 @@ export async function PATCH(
       body.review !== undefined ? body.review : currentItem.review;
 
     /*
-     * 4. Executar UPDATE no Neon PostgreSQL
+     * V3.0 — transição de status = UM comando atômico (lib/library/status-event.ts):
+     * compare-and-set do status + temporadas + contador de reassistidas
+     * (incremento na linha) + `status_changed`/`rewatch_started`. Tudo ou nada;
+     * requisições concorrentes/retries não repetem nada. Mesma primitive do
+     * POST /api/library.
      */
+    const transition = statusTransition(oldStatus, body.status);
+
+    if (transition) {
+      await applyStatusTransition(sql, {
+        userId,
+        libraryItemId: id,
+        transition,
+        derived: { current_season: newCurrentSeason, completed_seasons: newCompletedSeasons, stopped_season: stoppedSeason },
+      });
+    }
+
+    /*
+     * 4. Executar UPDATE no Neon PostgreSQL — campos pessoais.
+     * Status e contador de reassistidas só mudam pela transição acima (nunca a
+     * partir desta leitura, que pode estar desatualizada). Temporadas: só
+     * quando o pedido as envia explicitamente e não há transição.
+     */
+    const explicitSeasons = !transition;
     const updatedRows = await sql`
       UPDATE public.library_items
       SET
-        status = ${newStatus},
         favorite = ${newFavorite},
         personal_rating = ${newPersonalRating},
         review = ${newReview},
-        rewatch_count = ${rewatchCount},
-        current_season = ${newCurrentSeason},
-        completed_seasons = ${newCompletedSeasons},
-        stopped_season = ${stoppedSeason},
+        current_season = CASE WHEN ${explicitSeasons && body.current_season !== undefined}::boolean THEN ${newCurrentSeason}::int ELSE current_season END,
+        completed_seasons = CASE WHEN ${explicitSeasons && body.completed_seasons !== undefined}::boolean THEN ${newCompletedSeasons}::int ELSE completed_seasons END,
+        stopped_season = CASE WHEN ${explicitSeasons && body.stopped_season !== undefined}::boolean THEN ${stoppedSeason}::int ELSE stopped_season END,
         updated_at = NOW()
       WHERE id = ${id} AND user_id = ${userId}
       RETURNING
@@ -173,55 +186,7 @@ export async function PATCH(
     const updatedItem = updatedRows[0];
     updatedItem.media = media;
 
-    /*
-     * 5. Registrar eventos de atividade (não-bloqueante)
-     */
-    try {
-      if (body.status !== undefined && newStatus !== oldStatus) {
-        await sql`
-          INSERT INTO public.activity_events (
-            user_id,
-            media_id,
-            library_item_id,
-            event_type,
-            metadata
-          )
-          VALUES (
-            ${userId},
-            ${currentItem.media_id},
-            ${currentItem.id},
-            'status_changed',
-            ${{
-              from: oldStatus,
-              to: newStatus,
-              current_season: newCurrentSeason,
-              stopped_season: stoppedSeason,
-            }}
-          );
-        `;
-      }
-      if (isStartingRewatch) {
-        await sql`
-          INSERT INTO public.activity_events (
-            user_id,
-            media_id,
-            library_item_id,
-            event_type,
-            metadata
-          )
-          VALUES (
-            ${userId},
-            ${currentItem.media_id},
-            ${currentItem.id},
-            'rewatch_started',
-            ${{ rewatch_count: rewatchCount }}
-          );
-        `;
-      }
-    } catch (actErr: any) {
-      console.warn("[activity_events] Registro de histórico não completado:", actErr?.message);
-    }
-
+    // Eventos de status/reassistida: gravados atomicamente pela transição (passo acima).
     return NextResponse.json(updatedItem);
   } catch (error) {
     console.error("Erro em PATCH /api/library/[id]:", error);

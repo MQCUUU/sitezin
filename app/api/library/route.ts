@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { removeLibraryItem } from "@/lib/library/remove";
-import { libraryProgress } from "@/lib/library/progress";
-import { computeTvProgress, groupWatchedByMedia, tvStructureFromRaw } from "@/lib/tv-progress";
+import { attachSeriesProgress } from "@/lib/library/attach-progress";
+import { applyStatusTransition, statusTransition } from "@/lib/library/status-event";
 import { respostaDeErro } from "@/lib/api-error";
 
 interface ErrorResponse {
@@ -417,41 +417,7 @@ export async function GET(
      * (lib/library/progress.ts). Fonte: episodes_progress; legado sem episódios
      * tratado sem inventar.
      */
-    const tvRows = pageRows.filter((row) => row.media?.media_type === "tv");
-
-    if (tvRows.length > 0) {
-      const progressRows = (await sql`
-        SELECT media_id, season_number, episode_number
-        FROM public.episodes_progress
-        WHERE user_id = ${userId}
-          AND watched = true
-          AND media_id = ANY(${tvRows.map((row) => Number(row.media.id))}::int[])
-      `) as { media_id: number; season_number: number; episode_number: number }[];
-      const byMedia = groupWatchedByMedia(progressRows);
-
-      for (const row of tvRows) {
-        const structure = tvStructureFromRaw(
-          { seasons: row._seasons, last_episode_to_air: row._last_episode, status: row._series_status },
-          { seasons_count: row.media.seasons_count, episodes_count: row.media.episodes_count }
-        );
-        const watched = byMedia.get(Number(row.media.id)) ?? [];
-        const progress = computeTvProgress(structure, watched, { rewatching: row.status === "rewatching" });
-
-        row.library_progress = libraryProgress({
-          status: row.status,
-          progress,
-          structure,
-          watched,
-          completedSeasons: Number(row.completed_seasons || 0),
-        });
-      }
-    }
-
-    for (const row of pageRows) {
-      delete row._seasons;
-      delete row._last_episode;
-      delete row._series_status;
-    }
+    await attachSeriesProgress(sql, userId, pageRows);
 
     const counts = (countsRows[0] as Record<string, number> | undefined) || {
       all: 0, want: 0, watching: 0, watched: 0, paused: 0, dropped: 0, rewatching: 0, rewatched: 0, favorites: 0,
@@ -698,7 +664,29 @@ export async function POST(
     }
 
     /*
+     * V3.0 — transição de status de item existente = UM comando atômico
+     * (lib/library/status-event.ts, a MESMA primitive do PATCH):
+     * compare-and-set + temporadas + contador de reassistidas (incremento na
+     * linha) + `status_changed`/`rewatch_started`. Tudo ou nada; retries e
+     * requisições concorrentes não repetem nada.
+     */
+    const transition = existingLibraryItem ? statusTransition(existingLibraryItem.status, body.status) : null;
+
+    if (transition) {
+      await applyStatusTransition(sql, {
+        userId,
+        libraryItemId: existingLibraryItem.id,
+        transition,
+        derived: { current_season: currentSeason, completed_seasons: completedSeasons, stopped_season: stoppedSeason },
+        rewatchMeta: { title: mediaTitle },
+      });
+    }
+
+    /*
      * 4. Salvar na biblioteca (Upsert)
+     * Item novo: tudo vem daqui. Item existente: só os campos pessoais —
+     * status, contador de reassistidas e temporadas mudam apenas pela
+     * transição acima, nunca a partir da leitura (possivelmente desatualizada).
      */
     const itemRows = await sql`
       INSERT INTO public.library_items (
@@ -729,14 +717,9 @@ export async function POST(
       )
       ON CONFLICT (user_id, media_id)
       DO UPDATE SET
-        status = EXCLUDED.status,
         favorite = EXCLUDED.favorite,
         personal_rating = EXCLUDED.personal_rating,
         review = EXCLUDED.review,
-        rewatch_count = EXCLUDED.rewatch_count,
-        current_season = EXCLUDED.current_season,
-        completed_seasons = EXCLUDED.completed_seasons,
-        stopped_season = EXCLUDED.stopped_season,
         updated_at = NOW()
       RETURNING
         id,
@@ -804,27 +787,7 @@ export async function POST(
         `;
       }
 
-      if (isStartingRewatch && existingLibraryItem) {
-        await sql`
-          INSERT INTO public.activity_events (
-            user_id,
-            media_id,
-            library_item_id,
-            event_type,
-            metadata
-          )
-          VALUES (
-            ${userId},
-            ${existingMedia.id},
-            ${item.id},
-            'rewatch_started',
-            ${{
-              rewatch_count: rewatchCount,
-              title: mediaTitle,
-            }}
-          );
-        `;
-      }
+      // `status_changed`/`rewatch_started` de item existente: gravados atomicamente pela transição (acima).
     } catch (actErr: any) {
       console.warn("[activity_events] Registro de atividade não pôde ser completado:", actErr?.message);
     }

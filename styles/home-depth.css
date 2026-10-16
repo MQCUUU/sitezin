@@ -733,3 +733,58 @@
 .home-smart .card-status {
   font-size: 10px;
 }
+
+/* ---------- V3.0 ---------- */
+
+/* Hero sem painel lateral (nada útil a mostrar ao lado): a cópia ocupa a largura. */
+@media (min-width: 761px) {
+  .home-focus-card.home-focus-card--no-side {
+    grid-template-columns: 54px minmax(0, 1fr);
+  }
+}
+
+/* Faixa de resumo: só os cards com conteúdo (lib/home/home.ts → summaryCards). */
+@media (min-width: 1101px) {
+  .home-summary-strip[data-count="0"] { grid-template-columns: minmax(0, 1fr); }
+  .home-summary-strip[data-count="1"] { grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); }
+  .home-summary-strip[data-count="2"] { grid-template-columns: minmax(0, 1.75fr) repeat(2, minmax(0, 1fr)); }
+  .home-summary-strip[data-count="3"] { grid-template-columns: minmax(0, 1.75fr) repeat(3, minmax(0, 1fr)); }
+}
+
+.home-empty.home-empty--compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 700px) {
+  .home-empty.home-empty--compact {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Atividade recente (momentos do Diário): título, o que aconteceu, quando. */
+.home-smart .home-activity-item .home-activity-what {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.86;
+}
+
+.home-activity-skeleton {
+  height: 49px;
+  margin: 2px 0;
+  border-radius: 8px;
+}
+
+@media (max-width: 1100px) and (min-width: 901px) {
+  .home-summary-strip[data-count="1"] { grid-template-columns: minmax(0, 1fr); }
+  .home-summary-strip[data-count="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-summary-strip[data-count="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) and (min-width: 701px) {
+  .home-summary-strip[data-count="1"] { grid-template-columns: minmax(0, 1fr); }
+}
