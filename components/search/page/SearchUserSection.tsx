@@ -19,7 +19,7 @@ export function SearchUserSection({ users }: SearchUserSectionProps) {
 
       <div className="search-users-grid">
         {users.map((user) => (
-          <Link className="search-user-card panel" href={`/u/${user.username}`} key={user.id}>
+          <Link className="search-user-card panel" href={`/u/${user.username}`} key={user.username}>
             <div className="search-user-avatar">
               {user.avatar_url ? (
                 <img

@@ -17,12 +17,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ users: [] });
   }
 
+  // V3.2: só dados públicos do perfil (@, nome, avatar) — nunca o id interno.
   const safeQuery = query.replace(/[,%()]/g, "");
   const sql = getDb();
 
   try {
     const data = await sql`
-      SELECT id, username, display_name, avatar_url
+      SELECT username, display_name, avatar_url
       FROM public.profiles
       WHERE username IS NOT NULL
         AND (

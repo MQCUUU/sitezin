@@ -41,7 +41,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(functi
         value={q}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={onKeyDown}
-        placeholder="Filme, série, ator ou @usuário..."
+        placeholder="Título, pessoa, personagem ou @usuário..."
         aria-label="Pesquisa universal"
         autoComplete="off"
         role="combobox"

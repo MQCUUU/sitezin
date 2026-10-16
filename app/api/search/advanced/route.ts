@@ -3,7 +3,11 @@ import {
   NextResponse,
 } from "next/server";
 
+import { AsyncLocalStorage } from "node:async_hooks";
 import { getDb } from "@/lib/db/neon";
+import { createUpstreamLog, sqlCallName, type UpstreamLog } from "@/lib/search/upstream";
+import { isExactTitle, isSelfPortrayal, resultCountLabel, titleMatchScore } from "@/lib/search/rank";
+import { PRIMARY_TIMEOUT_MS } from "@/lib/search/progressive";
 
 const TMDB_BASE =
   "https://api.themoviedb.org/3";
@@ -541,77 +545,17 @@ function characterNameScore(
   return score;
 }
 
+/*
+ * V3.2 — relevância de título compartilhada com o dropdown
+ * (lib/search/rank.ts): vale o melhor entre o título localizado e o ORIGINAL.
+ */
 function titleScore(
   query:
     string,
   item:
     any
 ) {
-  const title =
-    titleOf(
-      item
-    );
-
-  const q =
-    normalize(
-      query
-    );
-
-  const t =
-    normalize(
-      title
-    );
-
-  let score =
-    similarity(
-      q,
-      t
-    ) *
-    100;
-
-  if (
-    q ===
-    t
-  ) {
-    score +=
-      500;
-  } else if (
-    t.startsWith(
-      q
-    )
-  ) {
-    score +=
-      180;
-  } else if (
-    t.includes(
-      q
-    )
-  ) {
-    score +=
-      90;
-  }
-
-  score +=
-    Math.log10(
-      Number(
-        item?.popularity ||
-          0
-      ) +
-        1
-    ) *
-    8;
-
-  score +=
-    Math.log10(
-      Number(
-        item?.vote_count ||
-          0
-      ) +
-        1
-    ) *
-    4;
-
-  return score;
+  return titleMatchScore(query, item);
 }
 
 function cleanPersonPrefix(
@@ -843,7 +787,7 @@ async function localCharacterSearch(
   query: string
 ) {
   try {
-    const sql = getDb();
+    const sql = trackedDb();
     const rows = await sql`
       SELECT character_id, character_name, normalized_name, name_similarity, match_kind,
              media_count, max_media_popularity, avg_media_popularity, sum_media_popularity, entity_score
@@ -860,7 +804,7 @@ async function localPersonSearch(
   query: string
 ) {
   try {
-    const sql = getDb();
+    const sql = trackedDb();
     const rows = await sql`
       SELECT person_id, person_name, normalized_name, name_similarity, match_kind,
              media_count, important_credit_count, max_media_popularity, avg_media_popularity, sum_media_popularity, entity_score
@@ -877,7 +821,7 @@ async function loadCharacterMedia(
   characterId: number
 ) {
   try {
-    const sql = getDb();
+    const sql = trackedDb();
     const rows = await sql`
       SELECT media_type, tmdb_id, media_title, character_name, person_name, popularity
       FROM public.search_v4_character_media(${characterId})
@@ -893,7 +837,7 @@ async function loadPersonMedia(
   personId: number
 ) {
   try {
-    const sql = getDb();
+    const sql = trackedDb();
     const rows = await sql`
       SELECT media_type, tmdb_id, media_title, role, popularity
       FROM public.search_v4_person_media(${personId})
@@ -1710,7 +1654,32 @@ function parseNaturalFilters(
   };
 }
 
-export async function GET(
+/*
+ * V3.2 — cada chamada externa (TMDB) e local (SQL) desta requisição vai no
+ * Server-Timing (lib/search/upstream.ts): auditoria da busca fria/quente.
+ */
+const upstream = new AsyncLocalStorage<UpstreamLog>();
+
+function trackedDb() {
+  const sql = getDb();
+  const log = upstream.getStore();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return ((strings: TemplateStringsArray, ...values: any[]) =>
+    log ? log.track(sqlCallName(strings), () => sql(strings, ...values)) : sql(strings, ...values)) as typeof sql;
+}
+
+export async function GET(req: NextRequest) {
+  const log = createUpstreamLog();
+  const started = performance.now();
+  const response = await upstream.run(log, () => handle(req));
+
+  response.headers.set("Server-Timing", log.header(performance.now() - started));
+
+  return response;
+}
+
+async function handle(
   req:
     NextRequest
 ) {
@@ -1787,16 +1756,20 @@ export async function GET(
       });
 
     try {
-      const response =
-        await fetch(
+      const doFetch = () =>
+        fetch(
           `${TMDB_BASE}${path}?${search.toString()}`,
           {
             next: {
               revalidate:
                 21600,
             },
+            // V3.2: TMDB lento não segura a busca; timeout degrada para "sem resultado dessa fonte".
+            signal: AbortSignal.timeout(PRIMARY_TIMEOUT_MS),
           }
         );
+      const log = upstream.getStore();
+      const response = log ? await log.track(`tmdb:${path.replace(/\/\d+/g, "/:id")}`, doFetch) : await doFetch();
 
       if (
         !response.ok
@@ -1811,7 +1784,7 @@ export async function GET(
     }
   }
 
-  // Busca no índice PostgreSQL Neon direto via getDb()
+  // Busca no índice PostgreSQL Neon direto via trackedDb()
 /*
    * ========================================================
    * 1. COLEÇÃO / FRANQUIA
@@ -2122,30 +2095,42 @@ export async function GET(
       q
     );
 
+  const multiRequest = tmdb<any>("/search/multi", { query: original, include_adult: "false", page: "1" });
+
   const [
     multiSearch,
     characterRows,
     personRows,
+    tmdbPeople,
   ] =
     await Promise.all([
-      tmdb<any>(
-        "/search/multi",
-        {
-          query:
-            q,
-
-          include_adult:
-            "false",
-
-          page:
-            "1",
-        }
-      ),
+      multiRequest,
 
       localCharacterSearch(characterTerm),
 
       localPersonSearch(personTerm),
+
+      /*
+       * V3.2: pessoa conhecida com o nome exato da busca (ver isSelfPortrayal).
+       * Progressivo: usa as pessoas que o /search/multi já trouxe; só consulta
+       * /search/person se o multi não tiver ninguém com esse nome (corre
+       * enquanto o SQL local ainda responde — não serializa a resposta).
+       */
+      multiRequest.then((multi) => {
+        const fromMulti = (Array.isArray(multi?.results) ? multi.results : []).filter(
+          (item: any) => item.media_type === "person"
+        );
+
+        if (fromMulti.some((person: any) => normalize(person.name || "") === q)) return { results: fromMulti };
+
+        return tmdb<any>("/search/person", { query: original, include_adult: "false" }).then((people) => ({
+          results: [...fromMulti, ...(Array.isArray(people?.results) ? people.results : [])],
+        }));
+      }),
     ]);
+
+  const knownPeople = Array.isArray(tmdbPeople?.results) ? tmdbPeople.results : [];
+  const totalTitleResults = Number(multiSearch?.total_results || 0) || null;
 
   /*
    * ========================================================
@@ -2207,12 +2192,7 @@ export async function GET(
         item:
           any
       ) =>
-        exactNameMatch(
-          q,
-          titleOf(
-            item
-          )
-        )
+        isExactTitle(q, item)
     );
 
   /*
@@ -2235,6 +2215,15 @@ export async function GET(
     )[0] ||
     null;
 
+  /*
+   * V3.2 — personagem com o MESMO nome de uma pessoa conhecida que é
+   * exatamente a busca ("Tom Hanks" fazendo ele mesmo em Os Simpsons): a
+   * intenção é a pessoa; o personagem não pode vencer.
+   */
+  const selfPortrayal = bestCharacter
+    ? isSelfPortrayal(q, bestCharacter.character_name, knownPeople)
+    : false;
+
   const bestPerson =
     [...personRows].sort(
       (a, b) =>
@@ -2245,10 +2234,7 @@ export async function GET(
 
   const titleEntityScore =
     bestTitle
-      ? exactNameMatch(
-          q,
-          titleOf(bestTitle)
-        )
+      ? isExactTitle(q, bestTitle)
         ? 1200 +
           Math.min(
             100,
@@ -2264,7 +2250,7 @@ export async function GET(
       : 0;
 
   const characterEntityScore =
-    bestCharacter
+    bestCharacter && !selfPortrayal
       ? Number(bestCharacter.entity_score || 0) +
         (
           bestCharacter.match_kind === "exact" &&
@@ -2335,7 +2321,7 @@ export async function GET(
           const { _score, ...clean } = item;
           return {
             ...clean,
-            reason: exactNameMatch(q, titleOf(clean))
+            reason: isExactTitle(q, clean)
               ? "Título exato"
               : "Título relacionado",
           };
@@ -2346,8 +2332,8 @@ export async function GET(
       mode: "title",
       title: `Resultados para ${original}`,
       subtitle: exactTitle
-        ? "Correspondência direta de título."
-        : `${results.length} títulos encontrados.`,
+        ? `Correspondência direta de título. ${totalTitleResults && totalTitleResults > results.length ? resultCountLabel(results.length, totalTitleResults) : ""}`.trim()
+        : resultCountLabel(results.length, totalTitleResults),
       resolved_from: original,
       resolver: entityCandidates,
       results,
@@ -2441,6 +2427,7 @@ export async function GET(
    */
 
   const characterSafe =
+    !selfPortrayal &&
     character.results.length >
       0 &&
     (
@@ -3058,7 +3045,7 @@ export async function GET(
         `Resultados para ${original}`,
 
       subtitle:
-        `${safeTitleResults.length} títulos encontrados.`,
+        resultCountLabel(safeTitleResults.length, totalTitleResults),
 
       resolved_from:
         original,
@@ -3075,10 +3062,18 @@ export async function GET(
    *
    * A página /search pode seguir para o fallback
    * normal/IA que você já tiver configurado.
+   *
+   * V3.2: devolve o /search/multi que já foi consultado acima (`catalog`,
+   * mesmo universo do /api/search) — a página não repete a chamada ao TMDB.
    */
 
   return NextResponse.json({
     handled:
       false,
+
+    catalog:
+      Array.isArray(multiSearch?.results)
+        ? multiSearch.results
+        : [],
   });
 }

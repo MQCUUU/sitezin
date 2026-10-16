@@ -55,7 +55,9 @@ export function SearchMediaResult({
           {typeof item.vote_average === "number" && item.vote_average > 0 && (
             <>
               {" · "}
-              <Star size={11} fill="currentColor" /> {item.vote_average.toFixed(1)}
+              <span title="Média TMDB">
+                <Star size={11} fill="currentColor" aria-hidden="true" /> {item.vote_average.toFixed(1)} TMDB
+              </span>
             </>
           )}
         </div>

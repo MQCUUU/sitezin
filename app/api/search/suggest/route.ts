@@ -3,7 +3,11 @@ import {
   NextResponse,
 } from "next/server";
 
+import { AsyncLocalStorage } from "node:async_hooks";
 import { getDb } from "@/lib/db/neon";
+import { createUpstreamLog, sqlCallName, type UpstreamLog } from "@/lib/search/upstream";
+import { isSelfPortrayal, rankTitles } from "@/lib/search/rank";
+import { needsPersonVariants, personVariantsFor, PRIMARY_TIMEOUT_MS, SECONDARY_TIMEOUT_MS } from "@/lib/search/progressive";
 
 const TMDB_BASE =
   "https://api.themoviedb.org/3";
@@ -274,7 +278,8 @@ async function tmdb(
     Record<
       string,
       string
-    > = {}
+    > = {},
+  timeoutMs = PRIMARY_TIMEOUT_MS
 ) {
   const apiKey =
     process.env.TMDB_API_KEY;
@@ -296,27 +301,58 @@ async function tmdb(
       ...params,
     });
 
-  const response =
-    await fetch(
+  const log = upstream.getStore();
+  // V3.2: timeout por fonte; falha/timeout degrada para "sem resultados dessa fonte" (nunca 500).
+  const doFetch = async () => {
+    const response = await fetch(
       `${TMDB_BASE}${path}?${qs.toString()}`,
       {
         next: {
           revalidate:
             900,
         },
+        signal: AbortSignal.timeout(timeoutMs),
       }
     );
 
-  if (
-    !response.ok
-  ) {
+    if (!response.ok) throw new Error(`tmdb ${response.status}`);
+
+    return response.json();
+  };
+
+  try {
+    return log ? await log.track(`tmdb:${path}`, doFetch) : await doFetch();
+  } catch {
     return null;
   }
-
-  return response.json();
 }
 
-export async function GET(
+/*
+ * V3.2 — cada chamada externa (TMDB) e local (SQL) desta requisição vai no
+ * Server-Timing (lib/search/upstream.ts): auditoria da busca fria/quente.
+ */
+const upstream = new AsyncLocalStorage<UpstreamLog>();
+
+function trackedDb() {
+  const sql = getDb();
+  const log = upstream.getStore();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return ((strings: TemplateStringsArray, ...values: any[]) =>
+    log ? log.track(sqlCallName(strings), () => sql(strings, ...values)) : sql(strings, ...values)) as typeof sql;
+}
+
+export async function GET(req: NextRequest) {
+  const log = createUpstreamLog();
+  const started = performance.now();
+  const response = await upstream.run(log, () => handle(req));
+
+  response.headers.set("Server-Timing", log.header(performance.now() - started));
+
+  return response;
+}
+
+async function handle(
   req:
     NextRequest
 ) {
@@ -346,71 +382,13 @@ export async function GET(
     });
   }
 
-  const personVariants =
-    new Set<
-      string
-    >([
-      q,
-    ]);
-
-  const tokens =
-    normalize(
-      q
-    )
-      .split(
-        " "
-      )
-      .filter(
-        Boolean
-      );
-
-  if (
-    tokens.length >
-    1
-  ) {
-    personVariants.add(
-      tokens[
-        0
-      ]
-    );
-
-    personVariants.add(
-      tokens[
-        tokens.length -
-        1
-      ]
-    );
-  }
-
-  if (
-    normalize(
-      q
-    ).length >=
-    5
-  ) {
-    personVariants.add(
-      normalize(
-        q
-      ).slice(
-        0,
-        Math.max(
-          4,
-          normalize(
-            q
-          ).length -
-            1
-        )
-      )
-    );
-  }
-
-  // Busca via Neon PostgreSQL getDb()
+  // Busca via Neon PostgreSQL trackedDb()
 /*
    * @username e uma intencao explicita de procurar perfis. Nesse caso nao
    * fazemos nenhuma requisicao ao TMDB nem ao indice de personagens.
    */
   if (usersOnly) {
-    const sql = getDb();
+    const sql = trackedDb();
     const safeQuery = q.replace(/[,%()]/g, "");
     const pattern = `%${safeQuery}%`;
     const data = await sql`
@@ -436,7 +414,7 @@ export async function GET(
       })
       .map((profile: any) => ({
         kind: "user",
-        id: profile.id,
+        id: profile.username,
         name: profile.display_name || profile.username,
         username: profile.username,
         avatar_url: profile.avatar_url,
@@ -454,24 +432,38 @@ export async function GET(
     );
   }
 
+  /*
+   * V3.2 — estratégia progressiva (lib/search/progressive.ts). As fontes TMDB
+   * e as locais (personagens, usuários) correm em paralelo; a 2ª tentativa de
+   * pessoa (variantes) só dispara quando a 1ª não trouxe título exato, e
+   * corre enquanto o SQL ainda responde.
+   */
+  const tmdbSources = (async () => {
+    const [multi, primaryPeople] = await Promise.all([
+      tmdb("/search/multi", { query: q, include_adult: "false" }),
+      tmdb("/search/person", { query: q, include_adult: "false" }),
+    ]);
+    const multiResults = Array.isArray(multi?.results) ? multi.results : [];
+    const firstPeople = [
+      ...multiResults.filter((item: any) => item.media_type === "person"),
+      ...(Array.isArray(primaryPeople?.results) ? primaryPeople.results : []),
+    ];
+    const variants = needsPersonVariants(q, multiResults) ? personVariantsFor(q) : [];
+    const variantGroups = await Promise.all(
+      variants.map((query) => tmdb("/search/person", { query, include_adult: "false" }, SECONDARY_TIMEOUT_MS))
+    );
+
+    return { multi, personGroups: [{ results: firstPeople }, ...variantGroups] };
+  })();
+
   const [
-    multi,
+    { multi, personGroups },
     collectionSearch,
-    personGroups,
     characterSearch,
     userSearch,
   ] =
     await Promise.all([
-      tmdb(
-        "/search/multi",
-        {
-          query:
-            q,
-
-          include_adult:
-            "false",
-        }
-      ),
+      tmdbSources,
 
       tmdb(
         "/search/collection",
@@ -481,36 +473,13 @@ export async function GET(
 
           include_adult:
             "false",
-        }
-      ),
-
-      Promise.all(
-        Array.from(
-          personVariants
-        )
-          .slice(
-            0,
-            4
-          )
-          .map(
-            (
-              query
-            ) =>
-              tmdb(
-                "/search/person",
-                {
-                  query,
-
-                  include_adult:
-                    "false",
-                }
-              )
-          )
+        },
+        SECONDARY_TIMEOUT_MS
       ),
 
       (async () => {
         try {
-          const sql = getDb();
+          const sql = trackedDb();
           const rows = await sql`
             SELECT character_id, character_name, normalized_name, name_similarity, match_kind,
                    media_count, max_media_popularity, avg_media_popularity, sum_media_popularity, entity_score
@@ -523,7 +492,7 @@ export async function GET(
       })(),
       (async () => {
         try {
-          const sql = getDb();
+          const sql = trackedDb();
           const safeQuery = q.replace(/[,%()]/g, "");
           const pattern = `%${safeQuery}%`;
           const rows = await sql`
@@ -550,18 +519,22 @@ export async function GET(
     return score(b) - score(a);
   });
   for (const profile of sortedUsers) {
-    suggestions.push({ kind: "user", id: profile.id, name: profile.display_name || profile.username, username: profile.username, avatar_url: profile.avatar_url, href: `/u/${profile.username}` });
+    suggestions.push({ kind: "user", id: profile.username, name: profile.display_name || profile.username, username: profile.username, avatar_url: profile.avatar_url, href: `/u/${profile.username}` });
   }
 
   /*
    * 1. Títulos diretos.
    */
+  // V3.2: mesma relevância da página completa (lib/search/rank.ts) sobre a página do TMDB, sem duplicatas.
   const direct =
-    Array.isArray(
-      multi?.results
-    )
-      ? multi.results
-      : [];
+    rankTitles(
+      q,
+      Array.isArray(
+        multi?.results
+      )
+        ? multi.results
+        : []
+    ).map(({ _score, ...item }) => item);
 
   direct
     .filter(
@@ -706,7 +679,7 @@ export async function GET(
       ]
         .character_name;
 
-    const sql = getDb();
+    const sql = trackedDb();
     const mediaRows = await sql`
       SELECT media_type, tmdb_id, media_title, character_name, person_name, popularity
       FROM public.search_v4_character_media(${characterRows[0].character_id})
@@ -812,13 +785,23 @@ export async function GET(
         normalize(q)
     );
 
+  /*
+   * Personagem exato esconde pessoas homônimas obscuras ("Walter White"). V3.2:
+   * exceto quando é a PRÓPRIA pessoa conhecida fazendo ela mesma ("Tom
+   * Hanks" em Os Simpsons) — aí a pessoa fica e o personagem sai.
+   */
+  const knownPeople = personGroups.flatMap((group: any) => (Array.isArray(group?.results) ? group.results : []));
+  const selfPortrayal = characterRows.some((item: any) => isSelfPortrayal(q, item.character_name, knownPeople));
+
   const resolvedSuggestions =
-    hasExactCharacter
-      ? suggestions.filter(
-          (item) =>
-            item.kind !== "person"
-        )
-      : suggestions;
+    selfPortrayal
+      ? suggestions.filter((item) => item.kind !== "character" && !(item.reason && String(item.reason).startsWith("Com ")))
+      : hasExactCharacter
+        ? suggestions.filter(
+            (item) =>
+              item.kind !== "person"
+          )
+        : suggestions;
 
   return NextResponse.json(
     {

@@ -71,6 +71,13 @@ export async function POST(req: Request) {
       tmdbIds.push(tmdbId);
     }
 
+    /*
+     * V3.2 — custo proporcional aos títulos PEDIDOS, não ao tamanho da
+     * biblioteca: parte dos pares pedidos → media (único tmdb_id+tipo) →
+     * library_items pelo índice único (user_id, media_id). O LATERAL com
+     * LIMIT 1 (seguro: o par é único) impede o planner de trocar por um scan
+     * de todos os itens do usuário quando a biblioteca é grande.
+     */
     const sql = getDb();
     const rows = await sql.query(
       `SELECT
@@ -80,12 +87,17 @@ export async function POST(req: Request) {
          li.status,
          li.favorite,
          li.personal_rating
-       FROM public.library_items li
-       JOIN public.media m ON m.id = li.media_id
-       JOIN unnest($2::text[], $3::bigint[]) AS wanted(media_type, tmdb_id)
-         ON wanted.media_type = m.media_type
-        AND wanted.tmdb_id = m.tmdb_id
-       WHERE li.user_id = $1`,
+       FROM unnest($2::text[], $3::bigint[]) AS wanted(media_type, tmdb_id)
+       JOIN public.media m
+         ON m.media_type = wanted.media_type
+        AND m.tmdb_id = wanted.tmdb_id
+       JOIN LATERAL (
+         SELECT id, status, favorite, personal_rating
+         FROM public.library_items
+         WHERE user_id = $1
+           AND media_id = m.id
+         LIMIT 1
+       ) li ON true`,
       [user.id, mediaTypes, tmdbIds]
     );
 

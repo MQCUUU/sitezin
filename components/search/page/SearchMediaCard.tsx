@@ -89,9 +89,10 @@ export function SearchMediaCard({
         <span>{year || "—"}</span>
 
         {Number(item.vote_average || 0) > 0 && (
-          <span className="rating">
-            <Star size={12} fill="currentColor" />
+          <span className="rating" title="Média TMDB (não é a sua nota)">
+            <Star size={12} fill="currentColor" aria-hidden="true" />
             {Number(item.vote_average).toFixed(1)}
+            <span className="mc-visually-hidden"> de média no TMDB</span>
           </span>
         )}
       </MediaCardMeta>

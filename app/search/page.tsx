@@ -4,6 +4,8 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { Search } from "@/components/Search";
+import { isSearchable, MIN_QUERY_LENGTH } from "@/lib/search/rank";
+import { chunkLibraryStatePairs } from "@/lib/library-state-batches";
 import { useToast } from "@/components/ToastProvider";
 
 import {
@@ -28,6 +30,8 @@ import { MediaPreviewDialog } from "@/components/media/preview/MediaPreviewDialo
 import { WatchProviderList } from "@/components/media/preview/WatchProviderList";
 import { fromSearchItem } from "@/components/media/preview/adapters";
 import { normalizeWatchProviders } from "@/components/media/providers";
+import { SeriesProgressPanel } from "@/components/library/SeriesProgress";
+import type { LibraryProgress } from "@/lib/library/progress";
 
 function normalizeText(value: string) {
   return value
@@ -201,6 +205,11 @@ function SearchPageContent() {
   const [previewItem, setPreviewItem] = useState<SearchItem | null>(null);
   const [previewDetails, setPreviewDetails] = useState<any>(null);
   const [previewDetailsLoading, setPreviewDetailsLoading] = useState(false);
+  // V3.2: progresso canônico da série na Quick View (o mesmo da Biblioteca/Título).
+  const [previewProgressEntry, setPreviewProgressEntry] = useState<{
+    libraryId: string;
+    progress: LibraryProgress | null;
+  } | null>(null);
 
   const [removeTarget, setRemoveTarget] = useState<SearchItem | null>(null);
   const [skipRemoveConfirm, setSkipRemoveConfirm] = useState(false);
@@ -301,46 +310,97 @@ function SearchPageContent() {
   }, [previewItem?.id, previewItem?.media_type]);
 
   /*
-   * ==========================================
-   * CARREGAMENTO DA BIBLIOTECA
-   * ==========================================
+   * Série na biblioteca: progresso canônico do item individual (`library_progress`;
+   * sessão, nunca cacheado). Depende do library_id para também rodar quando o
+   * lote de estado pessoal chega depois de a Quick View abrir.
    */
+  const previewTvLibraryId =
+    previewItem?.media_type === "tv" ? getLibraryItem(previewItem)?.library_id : undefined;
+  const previewTvTmdbId = previewTvLibraryId ? Number(previewItem?.id) : null;
+  const previewProgress =
+    previewTvLibraryId && previewProgressEntry?.libraryId === previewTvLibraryId
+      ? previewProgressEntry.progress
+      : null;
+
   useEffect(() => {
+    if (!previewTvTmdbId || !previewTvLibraryId) return;
+
     const controller = new AbortController();
 
-    async function loadLibrary() {
+    fetch(`/api/library?tmdb_id=${previewTvTmdbId}&type=tv`, { cache: "no-store", signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) =>
+        setPreviewProgressEntry({ libraryId: previewTvLibraryId, progress: data?.library_progress ?? null })
+      )
+      .catch(() => {});
+
+    return () => controller.abort();
+  }, [previewTvTmdbId, previewTvLibraryId]);
+
+  /*
+   * ==========================================
+   * ESTADO PESSOAL DOS RESULTADOS
+   * ==========================================
+   *
+   * V3.2: a Busca não baixa mais a Biblioteca inteira. Depois que os
+   * resultados exibidos estão definidos, busca o estado pessoal (status,
+   * favorito, nota) SÓ desses títulos, em lote (POST /api/library/state:
+   * uma consulta por até 100 títulos — nunca uma por card). Títulos já
+   * consultados nesta página não são consultados de novo; ações locais
+   * (adicionar/status/remover) atualizam o estado direto.
+   */
+  const lookedUpRef = useRef(new Set<string>());
+
+  useEffect(() => {
+    const batches = chunkLibraryStatePairs(
+      results.filter((item) => !lookedUpRef.current.has(`${item.media_type}:${Number(item.id)}`))
+    );
+
+    if (batches.length === 0) return;
+
+    const controller = new AbortController();
+
+    async function lookup() {
       try {
-        const response = await fetch("/api/library", { cache: "no-store", signal: controller.signal });
-        if (!response.ok) return;
-
-        const data = await safeJson(response);
-        if (!Array.isArray(data)) return;
-
-        setLibrary(
-          data
-            .filter((item: any) => item.media?.tmdb_id && item.media?.media_type)
-            .map((item: any) => ({
-              library_id: String(item.id),
-              tmdb_id: Number(item.media.tmdb_id),
-              media_type: item.media.media_type,
-              favorite: Boolean(item.favorite),
-              status: item.status || null,
-              personal_rating:
-                item.personal_rating === null || item.personal_rating === undefined
-                  ? null
-                  : Number(item.personal_rating),
-            }))
+        const responses = await Promise.all(
+          batches.map((items) =>
+            fetch("/api/library/state", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ items }),
+              cache: "no-store",
+              signal: controller.signal,
+            }).then(async (response) => (response.ok ? { items, data: await safeJson(response) } : null))
+          )
         );
+        const found: LibraryState[] = [];
+
+        for (const entry of responses) {
+          if (!entry) continue;
+
+          for (const pair of entry.items) lookedUpRef.current.add(`${pair.media_type}:${pair.tmdb_id}`);
+          if (Array.isArray(entry.data?.items)) found.push(...entry.data.items);
+        }
+
+        if (found.length === 0) return;
+
+        // Não sobrescreve o que uma ação local já gravou enquanto o lote estava em voo.
+        setLibrary((current) => [
+          ...current,
+          ...found.filter(
+            (row) => !current.some((entry) => entry.tmdb_id === row.tmdb_id && entry.media_type === row.media_type)
+          ),
+        ]);
       } catch (error) {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
-          console.error("Biblioteca da pesquisa:", error);
+          console.error("Estado pessoal da pesquisa:", error);
         }
       }
     }
 
-    loadLibrary();
+    lookup();
     return () => controller.abort();
-  }, []);
+  }, [results]);
 
   /*
    * ==========================================
@@ -351,7 +411,8 @@ function SearchPageContent() {
     let cancelled = false;
     const controller = new AbortController();
 
-    if (!query) {
+    // V3.2: abaixo do mínimo (2 caracteres) não pesquisa — e a tela diz isso (não "nenhum resultado").
+    if (!query || !isSearchable(query)) {
       setResults([]);
       setUserResults([]);
       setLoading(false);
@@ -371,15 +432,29 @@ function SearchPageContent() {
 
         const usersOnly = query.startsWith("@");
         const catalogQuery = query.replace(/^@+/, "").trim();
-        const [searchData, advancedData, usersData] = await Promise.all([
-          usersOnly
-            ? Promise.resolve({ results: [] })
-            : cachedSearchJson(`/api/search?q=${encodeURIComponent(catalogQuery)}`, controller.signal),
+        const [advancedData, usersData] = await Promise.all([
           usersOnly
             ? Promise.resolve({ handled: false, results: [] })
             : cachedSearchJson(`/api/search/advanced?q=${encodeURIComponent(catalogQuery)}`, controller.signal),
           cachedSearchJson(`/api/search/users?q=${encodeURIComponent(query)}`, controller.signal),
         ]);
+
+        /*
+         * V3.2: o /search/multi do TMDB já vem no advanced (`catalog`) quando
+         * ele não resolve uma entidade — o /api/search (mesmo multi) só é
+         * chamado como reserva, se o advanced falhar ou não trouxer catálogo.
+         */
+        const advancedResolved =
+          advancedData?.handled &&
+          Array.isArray(advancedData.results) &&
+          advancedData.results.some((item: any) => item.media_type === "movie" || item.media_type === "tv");
+        const searchData = usersOnly
+          ? { results: [] }
+          : Array.isArray(advancedData?.catalog)
+            ? { results: advancedData.catalog }
+            : advancedResolved && !advancedData?.error
+              ? { results: [] }
+              : await cachedSearchJson(`/api/search?q=${encodeURIComponent(catalogQuery)}`, controller.signal);
 
         setUserResults(Array.isArray(usersData?.users) ? usersData.users : []);
 
@@ -757,6 +832,7 @@ function SearchPageContent() {
 
   const movies = results.filter((item) => item.media_type === "movie");
   const series = results.filter((item) => item.media_type === "tv");
+  const seriesFirst = results[0]?.media_type === "tv";
   const isBusy = loading || personLoading || advancedLoading;
 
   return (
@@ -779,7 +855,7 @@ function SearchPageContent() {
 
         {advancedMeta.used && <SearchAdvancedPanel meta={advancedMeta} />}
 
-        {query && !isBusy && (
+        {query && isSearchable(query) && !isBusy && (
           <h2 ref={resultsSummaryRef} tabIndex={-1} className="mc-discover-results-summary">
             {error
               ? "Não foi possível carregar os resultados"
@@ -791,6 +867,10 @@ function SearchPageContent() {
 
         {!query ? (
           <SearchPageIdleState />
+        ) : !isSearchable(query) ? (
+          <div className="empty mc-discover-empty" role="status">
+            <span>Digite pelo menos {MIN_QUERY_LENGTH} caracteres para pesquisar.</span>
+          </div>
         ) : isBusy ? (
           <SearchResultsSkeleton />
         ) : error ? (
@@ -801,6 +881,26 @@ function SearchPageContent() {
           <>
             <SearchUserSection users={userResults} />
 
+            {/* V3.2: a seção do resultado MAIS relevante vem primeiro (série exata não fica abaixo de todos os filmes). */}
+            {seriesFirst ? (
+              <>
+            {series.length > 0 && (
+              <SearchMediaSection
+                title={person ? `Séries com ${person.name}` : "Séries"}
+                items={series}
+                library={library}
+                processing={processing}
+                openLibraryMenu={openLibraryMenu}
+                onPreview={openPreview}
+                onAdd={addToLibrary}
+                onToggleStatusMenu={(key) =>
+                  setOpenLibraryMenu((current) => (current === key ? null : key))
+                }
+                onToggleFavorite={toggleFavorite}
+                onUpdateStatus={updateStatus}
+                onRequestRemove={requestRemove}
+              />
+            )}
             {movies.length > 0 && (
               <SearchMediaSection
                 title={
@@ -824,7 +924,32 @@ function SearchPageContent() {
                 onRequestRemove={requestRemove}
               />
             )}
-
+              </>
+            ) : (
+              <>
+            {movies.length > 0 && (
+              <SearchMediaSection
+                title={
+                  person
+                    ? `Filmes com ${person.name}`
+                    : advancedMeta.used && advancedMeta.mode === "collection"
+                      ? "Filmes da coleção"
+                      : "Filmes"
+                }
+                items={movies}
+                library={library}
+                processing={processing}
+                openLibraryMenu={openLibraryMenu}
+                onPreview={openPreview}
+                onAdd={addToLibrary}
+                onToggleStatusMenu={(key) =>
+                  setOpenLibraryMenu((current) => (current === key ? null : key))
+                }
+                onToggleFavorite={toggleFavorite}
+                onUpdateStatus={updateStatus}
+                onRequestRemove={requestRemove}
+              />
+            )}
             {series.length > 0 && (
               <SearchMediaSection
                 title={person ? `Séries com ${person.name}` : "Séries"}
@@ -842,6 +967,8 @@ function SearchPageContent() {
                 onRequestRemove={requestRemove}
               />
             )}
+              </>
+            )}
           </>
         )}
       </div>
@@ -856,6 +983,7 @@ function SearchPageContent() {
           onRating: (_, rating) => previewItem && updateRating(previewItem, rating),
           disabled: previewItem ? processing === `${previewItem.media_type}-${previewItem.id}` : false,
         }}
+        personal={previewProgress ? <SeriesProgressPanel progress={previewProgress} /> : null}
         providers={<WatchProviderList data={normalizeWatchProviders(previewDetails?.watch_providers, "BR")} loading={previewDetailsLoading} />}
       />
 

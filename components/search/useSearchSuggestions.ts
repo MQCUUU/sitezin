@@ -325,6 +325,15 @@ export function useSearchSuggestions() {
     return "no-results";
   }, [q, pending, loading, error, results.length]);
 
+  /*
+   * V3.2: digitar SEMPRE reabre as sugestões — depois de Esc a lista fechava
+   * e só voltava com um novo foco no campo, mesmo continuando a digitar.
+   */
+  function changeQuery(value: string) {
+    setQ(value);
+    setFocused(true);
+  }
+
   function clearSearch() {
     setSearchTab("all");
     setQ("");
@@ -472,7 +481,7 @@ export function useSearchSuggestions() {
     searchTab,
     setSearchTab,
     q,
-    setQ,
+    setQ: changeQuery,
     results,
     loading,
     error,

@@ -90,10 +90,13 @@ export function Search() {
       {focused && searchState === "error" && <SearchErrorState listboxId={listboxId} />}
 
       {focused && searchState === "results" && (
-        <div className="results universal-search-results mc-search-dropdown" role="listbox" id={listboxId}>
-          <div className="search-result-tabs" role="tablist">
+        <div className="results universal-search-results mc-search-dropdown">
+          {/* V3.2: abas e rodapé FORA do listbox (ARIA: listbox só contém opções). */}
+          <div className="search-result-tabs" role="tablist" aria-label="Tipo de resultado">
             <button
               type="button"
+              role="tab"
+              aria-selected={searchTab === "all"}
               className={searchTab === "all" ? "active" : ""}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => setSearchTab("all")}
@@ -102,22 +105,28 @@ export function Search() {
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={searchTab === "movies"}
               className={searchTab === "movies" ? "active" : ""}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => setSearchTab("movies")}
             >
-              Filmes
+              Títulos
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={searchTab === "actors"}
               className={searchTab === "actors" ? "active" : ""}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => setSearchTab("actors")}
             >
-              Atores
+              Pessoas
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={searchTab === "users"}
               className={searchTab === "users" ? "active" : ""}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => setSearchTab("users")}
@@ -126,6 +135,7 @@ export function Search() {
             </button>
           </div>
 
+          <div role="listbox" id={listboxId} aria-label="Sugestões">
           {userResults.length > 0 && (
             <SearchSuggestionGroup icon={<Users size={12} />} label="Usuários">
               {userResults.map((item) => (
@@ -217,6 +227,8 @@ export function Search() {
               ))}
             </SearchSuggestionGroup>
           )}
+
+          </div>
 
           <div className="mc-search-footer">
             <button type="submit" className="search-see-all">
