@@ -6,6 +6,7 @@ import {
 } from "react";
 
 import Link from "next/link";
+import { BrandLogo } from "@/components/brand/BrandMark";
 
 import {
   ArrowLeft,
@@ -103,8 +104,13 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main className="auth-page auth-centered-page">
+    <div className="auth-page auth-centered-page">
       <section className="auth-card auth-small-card">
+        {/* V3.5: a mesma marca de entrar/cadastrar — antes, cartão genérico sem identidade. */}
+        <Link href="/" className="auth-card-brand" aria-label="MyCatalog — página inicial">
+          <BrandLogo size={26} />
+        </Link>
+
         <Link
           href="/login"
           className="auth-back-link"
@@ -207,6 +213,6 @@ export default function ForgotPasswordPage() {
           </form>
         )}
       </section>
-    </main>
+    </div>
   );
 }

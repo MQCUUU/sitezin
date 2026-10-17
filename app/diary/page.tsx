@@ -1,3 +1,8 @@
+import type { Metadata } from "next";
+
+// V3.5: título da aba ("Diário · MyCatalog").
+export const metadata: Metadata = { title: "Diário" };
+
 import { DiaryPage } from "@/components/diary/DiaryPage";
 
 /*

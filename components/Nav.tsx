@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BrandLogo, BrandMark } from "@/components/brand/BrandMark";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -159,9 +160,9 @@ export function Nav() {
         <Link
           href="/"
           className="brand mc-focusable"
-          aria-label="Ir para o início"
+          aria-label="MyCatalog — página inicial"
         >
-          My<span>Catalog</span>
+          <BrandLogo size={28} />
         </Link>
 
         {/* NAVEGAÇÃO */}
@@ -201,6 +202,11 @@ export function Nav() {
         </nav>
 
       </aside>
+
+      {/* V3.5: no mobile a sidebar some — o símbolo (sem o nome, por espaço) leva ao início. */}
+      <Link href="/" className="mobile-brand mc-focusable" aria-label="MyCatalog — página inicial">
+        <BrandMark size={30} />
+      </Link>
 
       {/* ====================================== */}
       {/* MENU MOBILE */}

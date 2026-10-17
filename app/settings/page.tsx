@@ -456,7 +456,10 @@ function SettingsContent() {
 
   return (
     <>
-      <Search />
+      {/* V3.5: .topbar reserva o espaço do símbolo fixo (esq.) e das ações (dir.) no celular. */}
+      <div className="topbar">
+        <Search />
+      </div>
 
       <div className="set-page">
         <h1 className="set-title">Configurações</h1>

@@ -7,6 +7,7 @@ import {
 } from "react";
 
 import Link from "next/link";
+import { BrandLogo } from "@/components/brand/BrandMark";
 
 import {
   useRouter,
@@ -403,12 +404,14 @@ export function AuthPage({
   }
 
   return (
-    <main className="auth-page">
+    // V3.5: <div> — o <main> já é do layout raiz (antes havia um main dentro do outro).
+    <div className="auth-page">
       <Link
         href="/"
         className="auth-brand"
+        aria-label="MyCatalog — página inicial"
       >
-        My<span>Catalog</span>
+        <BrandLogo size={30} />
       </Link>
 
       <div className="auth-shell">
@@ -814,6 +817,6 @@ export function AuthPage({
           </div>
         </section>
       </div>
-    </main>
+    </div>
   );
 }

@@ -1,19 +1,24 @@
 import { ImageResponse } from "next/og";
 
+import { BRAND_ACCENT, brandMarkSvg } from "@/lib/brand";
+
 /*
- * V2.1-C — imagem OG de marca para páginas que não têm uma própria
- * (Home, Discover). Título/coleção/perfil já têm `images` dinâmicas
- * reais (pôster/backdrop do TMDB) no próprio `openGraph`, então não
- * usam este fallback. Gerada via `next/og` (nativo do Next, sem
- * dependência nova) — não reutiliza pôster de filme aleatório como
- * imagem de marca, como o enunciado pediu para evitar.
+ * Imagem social oficial (V2.1-C; marca V3.5) para páginas sem imagem
+ * própria (Home, Descobrir…). Título, coleção e perfil continuam com
+ * imagens reais (pôster/backdrop) no próprio openGraph.
+ *
+ * V3.5: símbolo da fonte única (lib/brand.ts — antes um SVG duplicado aqui),
+ * nome em cor fixa, uma frase, e um brilho discreto no destaque oficial.
+ * Tudo centralizado: sobrevive ao corte quadrado de WhatsApp/Telegram.
  */
 export const runtime = "edge";
-export const alt = "MyCatalog — Filmes, séries e seu histórico em um só lugar";
+export const alt = "MyCatalog — seu catálogo pessoal de filmes e séries";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 export default function OpengraphImage() {
+  const mark = `data:image/svg+xml;base64,${btoa(brandMarkSvg({ size: 176 }))}`;
+
   return new ImageResponse(
     (
       <div
@@ -24,29 +29,19 @@ export default function OpengraphImage() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "#090b10",
+          background: `radial-gradient(circle at 50% 38%, ${BRAND_ACCENT}33 0%, #090b10 58%)`,
           fontFamily: "sans-serif",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 24,
-          }}
-        >
-          <svg width="96" height="96" viewBox="0 0 64 64">
-            <rect width="64" height="64" rx="16" fill="#11151d" />
-            <path d="M24 18 L46 32 L24 46 Z" fill="#8b5cf6" />
-          </svg>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={mark} width={176} height={176} alt="" />
 
-          <div style={{ display: "flex", fontSize: 72, fontWeight: 900, color: "#f6f7fb" }}>
-            My<span style={{ color: "#8b5cf6" }}>Catalog</span>
-          </div>
+        <div style={{ display: "flex", marginTop: 34, fontSize: 84, fontWeight: 800, letterSpacing: -2, color: "#f6f7fb" }}>
+          MyCatalog
         </div>
 
-        <div style={{ marginTop: 28, fontSize: 28, color: "#929aaa" }}>
-          Filmes, séries e seu histórico em um só lugar
+        <div style={{ display: "flex", marginTop: 14, fontSize: 32, color: "#a3abba" }}>
+          Seu catálogo pessoal de filmes e séries.
         </div>
       </div>
     ),

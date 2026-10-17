@@ -19,6 +19,7 @@ import "@/styles/calendar.css";
 import "@/styles/diary.css";
 import "@/styles/library.css";
 import "@/styles/lists.css";
+import "@/styles/brand.css";
 
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
@@ -26,6 +27,7 @@ import { Suspense } from "react";
 
 import { Nav } from "@/components/Nav";
 import { AppearanceProvider } from "@/components/AppearanceProvider";
+import { DynamicFavicon } from "@/components/brand/DynamicFavicon";
 import { ScrollMemory } from "@/components/ScrollMemory";
 import { AppProviders } from "@/components/AppProviders";
 import { TopbarActions } from "@/components/TopbarActions";
@@ -146,6 +148,7 @@ export default function RootLayout({
 
   <AppProviders>
           <AppearanceProvider />
+          <DynamicFavicon />
 
           <Suspense fallback={null}>
             <ScrollMemory />

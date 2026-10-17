@@ -1,13 +1,13 @@
 import type { MetadataRoute } from "next";
 
 /*
- * V2.1-C — "icons" estava ausente (nenhum asset de marca existia no
- * projeto). "app/icon.svg" (novo) é um monograma geométrico simples
- * — quadrado arredondado + triângulo de "play", nas cores da marca —
- * que o Next já usa automaticamente para o favicon; referenciado aqui
- * também para o manifest do PWA. SVG único, sem gerar PNGs em
- * múltiplos tamanhos (evita instalar ferramenta de imagem só para
- * isso) — navegadores modernos aceitam SVG em `icons` do manifest.
+ * V3.5 — ícones oficiais da marca (gerados de lib/brand.ts, em public/brand/):
+ * SVG para "any" (nítido em qualquer tamanho), PNG 192/512 para quem não lê
+ * SVG no manifest e um PNG "maskable" próprio, com o desenho dentro da zona
+ * segura (antes o mesmo SVG servia de maskable e era cortado no Android).
+ *
+ * theme_color = base escura da marca (a mesma do tema padrão), não o
+ * destaque: a barra do app instalado não deve mudar de cor por usuário.
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -18,7 +18,7 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/",
     display: "standalone",
     background_color: "#090b10",
-    theme_color: "#8b5cf6",
+    theme_color: "#090b10",
     lang: "pt-BR",
     orientation: "any",
     categories: [
@@ -26,18 +26,10 @@ export default function manifest(): MetadataRoute.Manifest {
       "lifestyle",
     ],
     icons: [
-      {
-        src: "/icon.svg",
-        sizes: "any",
-        type: "image/svg+xml",
-        purpose: "any",
-      },
-      {
-        src: "/icon.svg",
-        sizes: "any",
-        type: "image/svg+xml",
-        purpose: "maskable",
-      },
+      { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+      { src: "/brand/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/brand/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/brand/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }

@@ -1,3 +1,8 @@
+import type { Metadata } from "next";
+
+// V3.5: título da aba ("Calendário · MyCatalog").
+export const metadata: Metadata = { title: "Calendário" };
+
 import { CalendarPage } from "@/components/calendar/CalendarPage";
 
 /*
