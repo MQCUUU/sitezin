@@ -364,6 +364,29 @@ export async function searchTMDB(
   );
 }
 
+/**
+ * V3.3 — busca SÓ de filmes, com o ano como filtro (não no texto). Usada pela
+ * importação do Letterboxd: "Interstellar 2014" no /search/multi devolve 0
+ * resultados; aqui é query="Interstellar" + year=2014.
+ */
+export async function searchMoviesTMDB(
+  q: string,
+  year?: number | null,
+  language: string = getLanguage()
+) {
+  const yearParam = year && Number.isInteger(year) ? `&year=${year}` : "";
+
+  return tmdb(
+    `/search/movie?query=${encodeURIComponent(
+      q
+    )}&include_adult=false&language=${encodeURIComponent(language)}${yearParam}`,
+    {
+      revalidate:
+        TMDB_CACHE.SEARCH,
+    }
+  );
+}
+
 /*
  * ==========================================
  * DETALHES

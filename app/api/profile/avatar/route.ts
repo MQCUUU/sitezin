@@ -98,7 +98,8 @@ export async function POST(request: Request) {
     }
 
     const ext = getExtension(avatar.type);
-    const blobPathname = `avatars/${user.id}/avatar-${crypto.randomUUID()}.${ext}`;
+    // V3.3: a URL do avatar é pública — o caminho não carrega o id interno da conta.
+    const blobPathname = `avatars/${crypto.randomUUID()}.${ext}`;
 
     // Upload seguro para o novo Vercel Blob Storage
     const blob = await put(blobPathname, buffer, {

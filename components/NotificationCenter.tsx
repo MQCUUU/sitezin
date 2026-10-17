@@ -74,12 +74,14 @@ export function NotificationCenter() {
     let cancelled = false;
     void load(true);
 
-    // Polling inteligente: a cada 20 segundos enquanto a aba estiver visível e online
+    // V3.3: a cada 60 s (antes 20 s) com a aba visível e online. As notificações só
+    // mudam quando o sync de séries roda (no máximo a cada 30 min) e esta aba já é
+    // avisada na hora pelo evento "mycatalog:notifications-updated".
     const interval = setInterval(() => {
       if (document.visibilityState === "visible" && navigator.onLine && !cancelled) {
         void load(true);
       }
-    }, 20 * 1000);
+    }, 60 * 1000);
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible" && navigator.onLine && !cancelled) {

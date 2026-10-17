@@ -14,7 +14,7 @@ import { ProfileShowcaseEditor } from "@/components/ProfileShowcaseEditor";
 import { AvatarSettings } from "@/components/AvatarSettings";
 
 type Tab = "activity" | "reviews" | "likes" | "lists" | "connections";
-type PersonRow = { follower_id?: string; following_id?: string; profile: { id: string; username: string; display_name: string; avatar_url?: string } };
+type PersonRow = { follower_id?: string; following_id?: string; profile: { id?: string; username: string; display_name: string; avatar_url?: string } };
 type ConnectionType = "followers" | "following" | "incoming" | "outgoing";
 type ConnectionList = { items: PersonRow[]; page: number; total: number; hasMore: boolean; loading: boolean; loaded: boolean };
 const CONNECTION_PAGE_SIZE = 24;
@@ -355,10 +355,14 @@ export default function PublicProfilePage() {
 
   async function toggleFollow() {
     if (busy || !data) return;
+    if (!data.social.viewer_username) {
+      router.push(`/login?next=${encodeURIComponent(`/u/${username}`)}`);
+      return;
+    }
     setBusy(true);
     const isFollowing = data.social.relationship === "accepted" || data.social.relationship === "pending";
     const response = await fetch("/api/follows", isFollowing
-      ? { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user_id: data.profile.id, mode: "unfollow" }) }
+      ? { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, mode: "unfollow" }) }
       : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username }) });
     const result = await response.json();
     if (response.ok) {
@@ -370,12 +374,16 @@ export default function PublicProfilePage() {
   }
 
   async function quickFollow(person: PersonRow) {
-    const followed = data.social.viewer_following_ids.includes(person.profile.id);
+    if (!data.social.viewer_username) {
+      router.push(`/login?next=${encodeURIComponent(`/u/${username}`)}`);
+      return;
+    }
+    const followed = data.social.viewer_following_usernames.includes(person.profile.username);
     const response = await fetch("/api/follows", followed
-      ? { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user_id: person.profile.id, mode: "unfollow" }) }
+      ? { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: person.profile.username, mode: "unfollow" }) }
       : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: person.profile.username }) });
     if (!response.ok) return toast.error("Não foi possível atualizar a conexão.");
-    setData((current: any) => ({ ...current, social: { ...current.social, viewer_following_ids: followed ? current.social.viewer_following_ids.filter((id: string) => id !== person.profile.id) : [...current.social.viewer_following_ids, person.profile.id] } }));
+    setData((current: any) => ({ ...current, social: { ...current.social, viewer_following_usernames: followed ? current.social.viewer_following_usernames.filter((name: string) => name !== person.profile.username) : [...current.social.viewer_following_usernames, person.profile.username] } }));
   }
 
   async function manageConnection(row: PersonRow, action: "accept" | "reject" | "unfollow" | "remove_follower" | "cancel") {
@@ -392,7 +400,7 @@ export default function PublicProfilePage() {
     }
     const response = action === "accept" || action === "reject"
       ? await fetch("/api/follows", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ follower_id: row.follower_id || targetId, action }) })
-      : await fetch("/api/follows", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user_id: targetId, mode: action === "remove_follower" ? "remove_follower" : "unfollow" }) });
+      : await fetch("/api/follows", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...(targetId ? { user_id: targetId } : { username: row.profile.username }), mode: action === "remove_follower" ? "remove_follower" : "unfollow" }) });
     if (!response.ok) return toast.error("Não foi possível atualizar a conexão.");
     refreshConnectionCounts();
     void loadConnectionList(connectionSubTab);
@@ -421,7 +429,7 @@ export default function PublicProfilePage() {
     {relationship === "self" && editingProfile && <section className="profile-inline-editor"><div className="profile-inline-editor-head"><div><span className="eyebrow">EDITAR PERFIL</span><h2>Personalize sua página</h2><p className="muted">Foto, informações e seus Top 5 ficam todos aqui.</p></div><Link className="btn" href="/settings">Configurações da conta</Link></div><AvatarSettings/><ProfileShowcaseEditor/></section>}
     {data.locked && <section className="panel profile-locked"><LockKeyhole size={30} /><h2>Este perfil é privado</h2><p>Comece a seguir e aguarde a aprovação para ver atividades, favoritos e listas.</p></section>}
 
-    {!data.locked && <section className="panel profile-top5-fold"><div><span className="eyebrow">TOP 5 FILMES</span><div className="profile-top5-row">{favoriteMovies.map((item:any)=><Link href={`/title/movie/${item.media.tmdb_id}`} key={`movie-${item.position}`}>{item.media.poster_path?<img loading="lazy" src={img(item.media.poster_path,"w342")} alt={item.media.title}/>:<Film/>}<small>{item.media.title}</small></Link>)}</div></div><div><span className="eyebrow">TOP 5 SÉRIES</span><div className="profile-top5-row">{favoriteSeries.map((item:any)=><Link href={`/title/tv/${item.media.tmdb_id}`} key={`tv-${item.position}`}>{item.media.poster_path?<img loading="lazy" src={img(item.media.poster_path,"w342")} alt={item.media.title}/>:<Film/>}<small>{item.media.title}</small></Link>)}</div></div></section>}
+    {/* V3.3: Top 5 vazio não vira duas linhas em branco — some para quem visita; o dono vê onde configurar. */}{!data.locked && (favoriteMovies.length > 0 || favoriteSeries.length > 0) && <section className="panel profile-top5-fold">{favoriteMovies.length > 0 && <div><span className="eyebrow">TOP 5 FILMES</span><div className="profile-top5-row">{favoriteMovies.map((item:any)=><Link href={`/title/movie/${item.media.tmdb_id}`} key={`movie-${item.position}`}>{item.media.poster_path?<img loading="lazy" src={img(item.media.poster_path,"w342")} alt={item.media.title}/>:<Film/>}<small>{item.media.title}</small></Link>)}</div></div>}{favoriteSeries.length > 0 && <div><span className="eyebrow">TOP 5 SÉRIES</span><div className="profile-top5-row">{favoriteSeries.map((item:any)=><Link href={`/title/tv/${item.media.tmdb_id}`} key={`tv-${item.position}`}>{item.media.poster_path?<img loading="lazy" src={img(item.media.poster_path,"w342")} alt={item.media.title}/>:<Film/>}<small>{item.media.title}</small></Link>)}</div></div>}</section>}{!data.locked && relationship === "self" && favoriteMovies.length === 0 && favoriteSeries.length === 0 && <section className="panel profile-top5-fold profile-top5-empty"><p className="muted">Seu Top 5 de filmes e séries aparece aqui. Escolha em <strong>Editar perfil</strong>, entre os títulos que você já assistiu.</p></section>}
 
     <nav className="profile-tabs" role="tablist" aria-label="Conteúdo do perfil">{([['activity','Atividade',BookOpen],['reviews','Reviews',MessageSquareText],['likes','Curtidos',Heart],['lists','Listas',List],['connections',relationship === "self" && connectionCounts?.incoming ? `Solicitações (${connectionCounts.incoming})` : 'Seguidores / Seguindo',Users]] as const).map(([value,label,Icon]) => <button key={value} type="button" role="tab" aria-selected={tab === value} className={tab === value ? "active" : ""} onClick={() => setTab(value)}><Icon size={15} />{label}</button>)}</nav>
     <section className="panel profile-tab-content">
@@ -476,7 +484,7 @@ export default function PublicProfilePage() {
                 <p className="muted">{emptyLabel[connectionSubTab]}</p>
               ) : (
                 currentList.items.map((row) => {
-                  const key = row.follower_id || row.following_id || row.profile.id;
+                  const key = row.follower_id || row.following_id || row.profile.id || row.profile.username;
                   return (
                     <div className="profile-own-connection" key={key}>
                       <Link href={`/u/${row.profile.username}`}>
@@ -513,6 +521,6 @@ export default function PublicProfilePage() {
     </section>
   </main>
 
-  {connectionModal && <div className="profile-connections-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setConnectionModal(null)}><section className="profile-connections-modal panel" role="dialog" aria-modal="true" aria-label={connectionModal === "followers" ? "Seguidores" : "Seguindo"}><header><div><h2>{connectionModal === "followers" ? "Seguidores" : "Seguindo"}</h2><span>{modalRows.length} pessoas</span></div><button type="button" title="Fechar" aria-label="Fechar" onClick={() => setConnectionModal(null)}><X /></button></header><label><SearchIcon size={16} /><input autoFocus value={connectionSearch} onChange={(e) => setConnectionSearch(e.target.value)} placeholder="Pesquisar nesta lista" /></label><div className="profile-connections-list">{filteredRows.map((row) => { const followed = data.social.viewer_following_ids.includes(row.profile.id); return <div key={row.profile.id}><Link href={`/u/${row.profile.username}`} onClick={() => setConnectionModal(null)}>{row.profile.avatar_url ? <img src={row.profile.avatar_url} alt="" /> : <span>{row.profile.display_name?.slice(0,2).toUpperCase()}</span>}<div><strong>{row.profile.display_name}</strong><small>@{row.profile.username}</small></div></Link>{relationship === "self" ? <button className="btn" onClick={() => manageConnection(row, connectionModal === "followers" ? "remove_follower" : "unfollow")}><UserMinus size={14}/>{connectionModal === "followers" ? "Remover" : "Deixar de seguir"}</button> : row.profile.id !== data.profile.id ? <button className={`btn ${followed ? "" : "primary"}`} onClick={() => quickFollow(row)}>{followed ? <><Check size={14} /> Seguindo</> : <><UserPlus size={14} /> Seguir</>}</button> : null}</div>; })}{!filteredRows.length && <div className="profile-tab-empty">Nenhum usuário encontrado.</div>}</div></section></div>}
+  {connectionModal && <div className="profile-connections-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setConnectionModal(null)}><section className="profile-connections-modal panel" role="dialog" aria-modal="true" aria-label={connectionModal === "followers" ? "Seguidores" : "Seguindo"}><header><div><h2>{connectionModal === "followers" ? "Seguidores" : "Seguindo"}</h2><span>{modalRows.length} pessoas</span></div><button type="button" title="Fechar" aria-label="Fechar" onClick={() => setConnectionModal(null)}><X /></button></header><label><SearchIcon size={16} /><input autoFocus value={connectionSearch} onChange={(e) => setConnectionSearch(e.target.value)} placeholder="Pesquisar nesta lista" /></label><div className="profile-connections-list">{filteredRows.map((row) => { const followed = data.social.viewer_following_usernames.includes(row.profile.username); return <div key={row.profile.username}><Link href={`/u/${row.profile.username}`} onClick={() => setConnectionModal(null)}>{row.profile.avatar_url ? <img src={row.profile.avatar_url} alt="" /> : <span>{row.profile.display_name?.slice(0,2).toUpperCase()}</span>}<div><strong>{row.profile.display_name}</strong><small>@{row.profile.username}</small></div></Link>{relationship === "self" ? <button className="btn" onClick={() => manageConnection(row, connectionModal === "followers" ? "remove_follower" : "unfollow")}><UserMinus size={14}/>{connectionModal === "followers" ? "Remover" : "Deixar de seguir"}</button> : row.profile.username !== data.social.viewer_username && row.profile.username !== data.profile.username ? <button className={`btn ${followed ? "" : "primary"}`} onClick={() => quickFollow(row)}>{followed ? <><Check size={14} /> Seguindo</> : <><UserPlus size={14} /> Seguir</>}</button> : null}</div>; })}{!filteredRows.length && <div className="profile-tab-empty">Nenhum usuário encontrado.</div>}</div></section></div>}
   </>;
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { entradaInvalida, naoAutenticado, respostaDeErro } from "@/lib/api-error";
+import { followStatusFor } from "@/lib/social/visibility";
 
 const CONNECTION_TYPES = ["followers", "following", "incoming", "outgoing"] as const;
 type ConnectionType = (typeof CONNECTION_TYPES)[number];
@@ -192,19 +193,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const automatic =
-      target.follow_policy === "profile" &&
-      (target.visibility === "public" || target.is_public === true);
-    const status = automatic ? "accepted" : "pending";
+    const status = followStatusFor(target);
 
-    await sql`
+    // V3.3: idempotente — repetir o pedido (retry/duplo clique) nunca rebaixa um
+    // follow já aceito para "pending"; só promove pending → accepted.
+    const saved = await sql`
       INSERT INTO public.follows (follower_id, following_id, status, created_at, updated_at)
       VALUES (${user.id}, ${target.id}, ${status}, now(), now())
       ON CONFLICT (follower_id, following_id)
-      DO UPDATE SET status = EXCLUDED.status, updated_at = now()
+      DO UPDATE SET
+        status = CASE WHEN follows.status = 'accepted' THEN 'accepted' ELSE EXCLUDED.status END,
+        updated_at = CASE WHEN follows.status = 'accepted' OR follows.status = EXCLUDED.status THEN follows.updated_at ELSE now() END
+      RETURNING status
     `;
 
-    return NextResponse.json({ status });
+    return NextResponse.json({ status: saved[0]?.status ?? status });
   } catch (error) {
     return respostaDeErro(error, "POST /api/follows");
   }
@@ -285,11 +288,23 @@ export async function DELETE(request: NextRequest) {
       mode = request.nextUrl.searchParams.get("mode") || mode;
     }
 
-    if (!userId || !["unfollow", "remove_follower", "cancel"].includes(mode)) {
-      return entradaInvalida("user_id e mode ('unfollow', 'remove_follower' ou 'cancel') são obrigatórios.");
+    const sql = getDb();
+
+    // V3.3: o perfil público não expõe ids — a outra ponta pode vir por @username.
+    const rawUsername = typeof body?.username === "string" ? body.username.replace(/^@+/, "").trim().toLowerCase() : "";
+
+    if (!userId && rawUsername) {
+      const target = await sql`SELECT id FROM public.profiles WHERE lower(username) = ${rawUsername} LIMIT 1`;
+
+      userId = target[0]?.id ?? null;
+
+      if (!userId) return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
     }
 
-    const sql = getDb();
+    if (!userId || !["unfollow", "remove_follower", "cancel"].includes(mode)) {
+      return entradaInvalida("user_id (ou username) e mode ('unfollow', 'remove_follower' ou 'cancel') são obrigatórios.");
+    }
+
     let res: any[] = [];
 
     if (mode === "unfollow" || mode === "cancel") {

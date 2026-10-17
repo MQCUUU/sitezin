@@ -5,6 +5,7 @@ import { removeLibraryItem } from "@/lib/library/remove";
 import { attachSeriesProgress } from "@/lib/library/attach-progress";
 import { applyStatusTransition, statusTransition } from "@/lib/library/status-event";
 import { respostaDeErro } from "@/lib/api-error";
+import { resolveCatalogMedia } from "@/lib/lists/media";
 
 interface ErrorResponse {
   error: string;
@@ -102,24 +103,6 @@ const VALID_STATUSES = [
   "rewatching",
   "rewatched",
 ];
-
-function normalizeGenres(genres: any[] | undefined): string[] {
-  if (!Array.isArray(genres)) {
-    return [];
-  }
-
-  return genres
-    .map((genre) => {
-      if (typeof genre === "string") {
-        return genre;
-      }
-      if (genre && typeof genre === "object") {
-        return genre.name || "";
-      }
-      return "";
-    })
-    .filter(Boolean);
-}
 
 /*
  * ==========================================
@@ -491,97 +474,39 @@ export async function POST(
       return NextResponse.json({ error: "Status inválido." }, { status: 400 });
     }
 
-    const mediaType = media.media_type === "tv" ? "tv" : "movie";
-    const mediaTitle = media.title ?? media.name ?? "Sem título";
-    const originalTitle = media.original_title ?? media.original_name ?? null;
-    const overview = media.overview ?? null;
-    const posterPath = media.poster_path ?? null;
-    const backdropPath = media.backdrop_path ?? null;
-    const releaseDate = media.release_date ?? null;
-    const firstAirDate = media.first_air_date ?? null;
-    const normalizedGenres = normalizeGenres(media.genres);
-    const tmdbRating = media.vote_average ?? media.tmdb_rating ?? null;
-    const tmdbVoteCount = media.vote_count ?? null;
-    const runtime = media.runtime ?? null;
-    const seasonsCount = media.number_of_seasons ?? null;
-    const episodesCount = media.number_of_episodes ?? null;
-    const creatorNames = media.creator_names || [];
-    const castNames = media.cast_names || [];
-    const rawJson = media || {};
+    /*
+     * 1. Catálogo compartilhado (public.media) — V3.3
+     *
+     * O cliente só identifica a obra (tmdb_id + tipo). Título, sinopse,
+     * pôster, datas, gêneros, temporadas etc. são do catálogo de TODOS:
+     * nunca vêm do corpo da requisição. Antes este upsert gravava o que o
+     * navegador mandasse por cima da linha existente (qualquer conta podia
+     * trocar o título de uma obra para todo mundo).
+     *  - já existe → reaproveita a linha, sem chamar o TMDB e sem alterá-la;
+     *  - não existe → criada com dados do TMDB buscados pelo servidor;
+     *  - id inexistente no TMDB → 404, nada é criado;
+     *  - TMDB indisponível → 503 (tente de novo), nada é criado.
+     */
+    const tmdbId = Number(media.id);
+    const mediaType = media.media_type === "tv" ? "tv" : media.media_type === "movie" ? "movie" : null;
+
+    if (!Number.isInteger(tmdbId) || tmdbId <= 0 || !mediaType) {
+      return NextResponse.json({ error: "Dados do título inválidos." }, { status: 400 });
+    }
 
     const sql = getDb();
+    const catalog = await resolveCatalogMedia(sql, mediaType, tmdbId);
 
-    /*
-     * 1. Salvar / atualizar mídia
-     */
-    const mediaRows = await sql`
-      INSERT INTO public.media (
-        tmdb_id,
-        media_type,
-        title,
-        original_title,
-        overview,
-        poster_path,
-        backdrop_path,
-        release_date,
-        first_air_date,
-        genres,
-        tmdb_rating,
-        tmdb_vote_count,
-        runtime,
-        seasons_count,
-        episodes_count,
-        creator_names,
-        cast_names,
-        raw,
-        updated_at
-      )
-      VALUES (
-        ${media.id},
-        ${mediaType},
-        ${mediaTitle},
-        ${originalTitle},
-        ${overview},
-        ${posterPath},
-        ${backdropPath},
-        ${releaseDate},
-        ${firstAirDate},
-        ${normalizedGenres},
-        ${tmdbRating},
-        ${tmdbVoteCount},
-        ${runtime},
-        ${seasonsCount},
-        ${episodesCount},
-        ${creatorNames},
-        ${castNames},
-        ${rawJson},
-        NOW()
-      )
-      ON CONFLICT (tmdb_id, media_type)
-      DO UPDATE SET
-        title = EXCLUDED.title,
-        original_title = EXCLUDED.original_title,
-        overview = EXCLUDED.overview,
-        poster_path = EXCLUDED.poster_path,
-        backdrop_path = EXCLUDED.backdrop_path,
-        release_date = EXCLUDED.release_date,
-        first_air_date = EXCLUDED.first_air_date,
-        genres = EXCLUDED.genres,
-        tmdb_rating = EXCLUDED.tmdb_rating,
-        tmdb_vote_count = EXCLUDED.tmdb_vote_count,
-        runtime = EXCLUDED.runtime,
-        seasons_count = EXCLUDED.seasons_count,
-        episodes_count = EXCLUDED.episodes_count,
-        creator_names = CASE WHEN cardinality(EXCLUDED.creator_names) > 0 THEN EXCLUDED.creator_names ELSE media.creator_names END,
-        cast_names = CASE WHEN cardinality(EXCLUDED.cast_names) > 0 THEN EXCLUDED.cast_names ELSE media.cast_names END,
-        -- V2.3: mescla (novo vence nas chaves repetidas) — não apaga o
-        -- enriquecimento dos Insights (idioma, país, diretores) nem dados de
-        -- temporada salvos por outra tela.
-        raw = coalesce(media.raw, '{}'::jsonb) || EXCLUDED.raw,
-        updated_at = NOW()
-      RETURNING *;
-    `;
+    if (!catalog.ok) {
+      return catalog.reason === "not_found"
+        ? NextResponse.json({ error: "Título não encontrado no catálogo." }, { status: 404 })
+        : NextResponse.json(
+            { error: "Não foi possível confirmar o título agora. Tente de novo em instantes." },
+            { status: 503 }
+          );
+    }
 
+    const mediaRows = await sql`SELECT * FROM public.media WHERE id = ${catalog.id} LIMIT 1`;
     const existingMedia = mediaRows[0];
     if (!existingMedia) {
       return NextResponse.json(
@@ -684,7 +609,7 @@ export async function POST(
         libraryItemId: existingLibraryItem.id,
         transition,
         derived: { current_season: currentSeason, completed_seasons: completedSeasons, stopped_season: stoppedSeason },
-        rewatchMeta: { title: mediaTitle },
+        rewatchMeta: { title: existingMedia.title },
       });
     }
 
@@ -787,7 +712,7 @@ export async function POST(
             ${{
               status: newStatus,
               media_type: mediaType,
-              title: mediaTitle,
+              title: existingMedia.title,
             }}
           );
         `;

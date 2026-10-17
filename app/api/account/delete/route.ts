@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { del } from "@vercel/blob";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 
@@ -20,9 +21,20 @@ export async function DELETE() {
   try {
     const sql = getDb();
 
-    // A exclusão de neon_auth."user" aciona ON DELETE CASCADE em todas as 28 FKs
-    // (incluindo neon_auth.session, neon_auth.account, public.profiles e dados do usuário)
+    const avatarRows = await sql`SELECT avatar_url FROM public.profiles WHERE id = ${user.id} LIMIT 1`;
+    const avatarUrl = typeof avatarRows[0]?.avatar_url === "string" ? avatarRows[0].avatar_url : null;
+
+    // A exclusão de neon_auth."user" aciona ON DELETE CASCADE em todas as FKs de
+    // dono (sessões, perfil, biblioteca, diário, episódios, listas, follows,
+    // notificações, preferências…). O catálogo compartilhado (`media`) nunca é
+    // apagado por isso.
     await sql`DELETE FROM neon_auth."user" WHERE id = ${user.id}`;
+
+    // V3.3: o arquivo do avatar fica fora do banco — remove também (melhor
+    // esforço: a conta já foi excluída; uma falha aqui não a "desfaz").
+    if (avatarUrl && avatarUrl.includes("blob.vercel-storage.com")) {
+      await del(avatarUrl).catch((error) => console.warn("[DELETE /api/account/delete] avatar:", error?.message));
+    }
 
     return NextResponse.json(
       {

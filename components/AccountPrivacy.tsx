@@ -1,13 +1,7 @@
 "use client";
 
-import {
-  FormEvent,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-
 import {
   AlertTriangle,
   Check,
@@ -17,852 +11,219 @@ import {
   Loader2,
   LockKeyhole,
   Mail,
-  ShieldCheck,
   Trash2,
-  Undo2,
   UserRound,
 } from "lucide-react";
 
 import { authClient } from "@/lib/auth/client";
+import { useToast } from "@/components/ToastProvider";
+import { Dialog } from "@/components/ui/Dialog";
+import { apiFetch, errorMessage } from "@/lib/api-client";
 
-import {
-  useToast,
-} from "@/components/ToastProvider";
-
-import {
-  apiFetch,
-  errorMessage,
-} from "@/lib/api-client";
-
-type HiddenTitle = {
-  id:
-    string;
-
-  tmdb_id:
-    number;
-
-  media_type:
-    "movie" |
-    "tv";
-
-  reason:
-    string;
-
-  created_at:
-    string;
-
-  title:
-    string;
-
-  poster_path:
-    string |
-    null;
-
-  year:
-    string;
-
-  vote_average:
-    number |
-    null;
-};
+/*
+ * Configurações → Conta e privacidade (parte "conta"). A privacidade social
+ * (perfil público/privado, quem segue, quem vê cada seção) fica logo abaixo,
+ * em SocialSettings — uma única fonte, sem atalho paralelo.
+ *
+ * V3.3:
+ *  - sem "ID da conta" (não servia ao usuário: nem suporte, nem cópia);
+ *  - e-mail é só leitura e diz por quê (antes: formulário que parecia
+ *    funcionar e só mostrava um aviso ao enviar);
+ *  - senha atual obrigatória (a API exige; o campo dizia "Recomendado");
+ *  - "Não tenho interesse" mudou para Streaming (é preferência de
+ *    recomendação, não de conta);
+ *  - exclusão num diálogo acessível (Esc, foco preso, devolve o foco).
+ */
 
 type AccountData = {
-  id:
-    string;
-
-  email:
-    string;
-
-  displayName:
-    string;
-
-  visibility:
-    "private" |
-    "public";
+  email: string;
+  displayName: string;
 };
 
-function initials(
-  name:
-    string,
-  email:
-    string
-) {
-  const source =
-    name.trim() ||
-    email
-      .split(
-        "@"
-      )[0] ||
-    "MC";
+function initials(name: string, email: string) {
+  const source = name.trim() || email.split("@")[0] || "MC";
+  const parts = source.split(/\s+/).filter(Boolean);
 
-  const parts =
-    source
-      .split(
-        /\s+/
-      )
-      .filter(
-        Boolean
-      );
+  if (parts.length > 1) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 
-  if (
-    parts.length >
-    1
-  ) {
-    return (
-      parts[0][0] +
-      parts[
-        parts.length -
-        1
-      ][0]
-    ).toUpperCase();
-  }
-
-  return source
-    .slice(
-      0,
-      2
-    )
-    .toUpperCase();
+  return source.slice(0, 2).toUpperCase();
 }
 
 export function AccountPrivacy() {
-  const toast =
-    useToast();
+  const toast = useToast();
+  const [account, setAccount] = useState<AccountData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [displayName, setDisplayName] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPasswords, setShowPasswords] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
-  const [
-    account,
-    setAccount,
-  ] =
-    useState<
-      AccountData |
-      null
-    >(null);
+  const passwordStrength = useMemo(() => {
+    let score = 0;
 
-  const [
-    loading,
-    setLoading,
-  ] =
-    useState(
-      true
-    );
+    if (newPassword.length >= 8) score++;
+    if (/[A-Z]/.test(newPassword)) score++;
+    if (/[0-9]/.test(newPassword)) score++;
+    if (/[^A-Za-z0-9]/.test(newPassword)) score++;
 
-  const [
-    displayName,
-    setDisplayName,
-  ] =
-    useState("");
-
-  const [
-    email,
-    setEmail,
-  ] =
-    useState("");
-
-  const [
-    currentPassword,
-    setCurrentPassword,
-  ] =
-    useState("");
-
-  const [
-    newPassword,
-    setNewPassword,
-  ] =
-    useState("");
-
-  const [
-    confirmPassword,
-    setConfirmPassword,
-  ] =
-    useState("");
-
-  const [
-    showPasswords,
-    setShowPasswords,
-  ] =
-    useState(
-      false
-    );
-
-  const [
-    savingProfile,
-    setSavingProfile,
-  ] =
-    useState(
-      false
-    );
-
-  const [
-    savingEmail,
-    setSavingEmail,
-  ] =
-    useState(
-      false
-    );
-
-  const [
-    savingPassword,
-    setSavingPassword,
-  ] =
-    useState(
-      false
-    );
-
-  // Lista de "Não tenho interesse" começa recolhida (pode ter centenas de títulos).
-  const [hiddenOpen, setHiddenOpen] = useState(false);
-
-  const [
-    hidden,
-    setHidden,
-  ] =
-    useState<
-      HiddenTitle[]
-    >([]);
-
-  const [
-    hiddenLoading,
-    setHiddenLoading,
-  ] =
-    useState(
-      true
-    );
-
-  const [
-    hiddenError,
-    setHiddenError,
-  ] =
-    useState("");
-
-  const [
-    removingHidden,
-    setRemovingHidden,
-  ] =
-    useState<
-      string |
-      null
-    >(null);
-
-  const [
-    deleteOpen,
-    setDeleteOpen,
-  ] =
-    useState(
-      false
-    );
-
-  const [
-    deleteConfirm,
-    setDeleteConfirm,
-  ] =
-    useState("");
-
-  const [
-    deleting,
-    setDeleting,
-  ] =
-    useState(
-      false
-    );
-
-  const passwordStrength =
-    useMemo(
-      () => {
-        let score =
-          0;
-
-        if (
-          newPassword.length >=
-          8
-        ) {
-          score++;
-        }
-
-        if (
-          /[A-Z]/.test(
-            newPassword
-          )
-        ) {
-          score++;
-        }
-
-        if (
-          /[0-9]/.test(
-            newPassword
-          )
-        ) {
-          score++;
-        }
-
-        if (
-          /[^A-Za-z0-9]/.test(
-            newPassword
-          )
-        ) {
-          score++;
-        }
-
-        return score;
-      },
-      [
-        newPassword,
-      ]
-    );
-
-  async function loadAccount() {
-    try {
-      setLoading(
-        true
-      );
-
-      const res = await authClient.getSession();
-      const user = res?.data?.user;
-
-      if (!user) {
-        setAccount(null);
-        return;
-      }
-
-      let visibility: "private" | "public" = "private";
-      try {
-        const socRes = await fetch("/api/profile/social-settings");
-        if (socRes.ok) {
-          const socData = await socRes.json();
-          if (socData.visibility === "public") {
-            visibility = "public";
-          }
-        }
-      } catch {
-        // fallback para private
-      }
-
-      const next = {
-        id: user.id,
-        email: user.email || "",
-        displayName:
-          user.name ||
-          user.email?.split("@")[0] ||
-          "",
-        visibility,
-      } as AccountData;
-
-      setAccount(
-        next
-      );
-
-      setDisplayName(
-        next.displayName
-      );
-
-      setEmail(
-        next.email
-      );
-    } catch (
-      error
-    ) {
-      toast.error(
-        "Não foi possível carregar sua conta",
-        {
-          description:
-            errorMessage(
-              error
-            ),
-        }
-      );
-    } finally {
-      setLoading(
-        false
-      );
-    }
-  }
-
-  async function loadHidden() {
-    try {
-      setHiddenLoading(
-        true
-      );
-
-      setHiddenError(
-        ""
-      );
-
-      const data =
-        await apiFetch<
-          HiddenTitle[]
-        >(
-          "/api/account/hidden-titles",
-          {
-            cache:
-              "no-store",
-          }
-        );
-
-      setHidden(
-        Array.isArray(
-          data
-        )
-          ? data
-          : []
-      );
-    } catch (
-      error
-    ) {
-      setHiddenError(
-        errorMessage(
-          error,
-          "Não foi possível carregar os títulos ocultos."
-        )
-      );
-    } finally {
-      setHiddenLoading(
-        false
-      );
-    }
-  }
+    return score;
+  }, [newPassword]);
 
   useEffect(() => {
-    loadAccount();
+    let alive = true;
 
-    loadHidden();
+    authClient
+      .getSession()
+      .then((res) => {
+        const user = res?.data?.user;
+
+        if (!alive) return;
+        if (!user) {
+          setAccount(null);
+          return;
+        }
+
+        const next = { email: user.email || "", displayName: user.name || user.email?.split("@")[0] || "" };
+
+        setAccount(next);
+        setDisplayName(next.displayName);
+      })
+      .catch((error) => {
+        if (alive) toast.error("Não foi possível carregar sua conta", { description: errorMessage(error) });
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function saveName(
-    event:
-      FormEvent
-  ) {
+  async function saveName(event: FormEvent) {
     event.preventDefault();
 
-    const clean =
-      displayName.trim();
+    const clean = displayName.trim();
 
-    if (
-      clean.length <
-      2
-    ) {
-      toast.error(
-        "Nome muito curto"
-      );
-
+    if (clean.length < 2) {
+      toast.error("Nome muito curto", { description: "Use pelo menos 2 caracteres." });
       return;
     }
 
     try {
-      setSavingProfile(
-        true
-      );
+      setSavingProfile(true);
 
-      const updateRes = await authClient.updateUser({
-        name: clean,
-      });
+      const updateRes = await authClient.updateUser({ name: clean });
 
-      if (updateRes.error) {
-        throw updateRes.error;
-      }
+      if (updateRes.error) throw updateRes.error;
 
+      // O nome público do perfil acompanha o nome da conta.
       await fetch("/api/auth/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ display_name: clean }),
       }).catch(() => {});
 
-      setAccount(
-        (
-          current
-        ) =>
-          current
-            ? {
-                ...current,
-
-                displayName:
-                  clean,
-              }
-            : current
-      );
-
-      toast.success(
-        "Nome atualizado"
-      );
-
-      /*
-       * Faz AccountMenu/Home perceberem o metadata novo.
-       */
-      window.dispatchEvent(
-        new Event(
-          "mycatalog:account-updated"
-        )
-      );
-    } catch (
-      error
-    ) {
-      toast.error(
-        "Não foi possível atualizar o nome",
-        {
-          description:
-            errorMessage(
-              error
-            ),
-        }
-      );
+      setAccount((current) => (current ? { ...current, displayName: clean } : current));
+      toast.success("Nome de exibição salvo.");
+      // Faz AccountMenu/Home perceberem o nome novo.
+      window.dispatchEvent(new Event("mycatalog:account-updated"));
+    } catch (error) {
+      toast.error("Não foi possível salvar o nome", { description: errorMessage(error) });
     } finally {
-      setSavingProfile(
-        false
-      );
+      setSavingProfile(false);
     }
   }
 
-  async function changeVisibility(
-    visibility:
-      "private" |
-      "public"
-  ) {
-    const previous =
-      account
-        ?.visibility ||
-      "private";
-
-    setAccount(
-      (
-        current
-      ) =>
-        current
-          ? {
-              ...current,
-              visibility,
-            }
-          : current
-    );
-
-    try {
-      const res = await fetch("/api/profile/social-settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ visibility }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Não foi possível salvar a privacidade");
-      }
-
-      toast.success(
-        visibility ===
-          "private"
-          ? "Perfil definido como privado"
-          : "Perfil definido como público",
-        {
-          description:
-            visibility ===
-            "private"
-              ? "Seu catálogo não ficará disponível em futuros recursos públicos."
-              : "Seu perfil poderá ser usado em recursos sociais quando eles forem ativados.",
-        }
-      );
-    } catch (
-      error
-    ) {
-      setAccount(
-        (
-          current
-        ) =>
-          current
-            ? {
-                ...current,
-                visibility:
-                  previous,
-              }
-            : current
-      );
-
-      toast.error(
-        "Não foi possível salvar a privacidade",
-        {
-          description:
-            errorMessage(
-              error
-            ),
-        }
-      );
-    }
-  }
-
-  async function saveEmail(
-    event:
-      FormEvent
-  ) {
+  async function savePassword(event: FormEvent) {
     event.preventDefault();
 
-    const clean =
-      email
-        .trim()
-        .toLowerCase();
-
-    if (
-      !clean.includes(
-        "@"
-      )
-    ) {
-      toast.error(
-        "Digite um e-mail válido"
-      );
-
+    if (!currentPassword) {
+      toast.error("Digite sua senha atual");
       return;
     }
-
-    if (
-      clean ===
-      account?.email
-    ) {
-      toast.info(
-        "Esse já é o seu e-mail"
-      );
-
+    if (newPassword.length < 8) {
+      toast.error("Use pelo menos 8 caracteres na nova senha");
       return;
     }
-
-    toast.info(
-      "A alteração de e-mail está desativada no momento pelo provedor de autenticação.",
-      {
-        description:
-          "O provedor Neon Managed Auth mantém o e-mail de cadastro fixo por segurança.",
-      }
-    );
-  }
-
-  async function savePassword(
-    event:
-      FormEvent
-  ) {
-    event.preventDefault();
-
-    if (
-      newPassword.length <
-      8
-    ) {
-      toast.error(
-        "Use pelo menos 8 caracteres"
-      );
-
-      return;
-    }
-
-    if (
-      newPassword !==
-      confirmPassword
-    ) {
-      toast.error(
-        "As senhas novas não são iguais"
-      );
-
+    if (newPassword !== confirmPassword) {
+      toast.error("A confirmação não é igual à nova senha");
       return;
     }
 
     try {
-      setSavingPassword(
-        true
-      );
+      setSavingPassword(true);
 
-      const res = await authClient.changePassword({
-        currentPassword,
-        newPassword,
-        revokeOtherSessions: true,
+      const res = await authClient.changePassword({ currentPassword, newPassword, revokeOtherSessions: true });
+
+      if (res.error) throw new Error(res.error.message || "A senha atual está incorreta ou a nova senha é inválida.");
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      toast.success("Senha alterada.", {
+        description: "Você continua conectado aqui; os outros aparelhos foram desconectados.",
       });
-
-      if (res.error) {
-        throw new Error(res.error.message || "A senha atual está incorreta ou nova senha é inválida.");
-      }
-
-      setCurrentPassword(
-        ""
-      );
-
-      setNewPassword(
-        ""
-      );
-
-      setConfirmPassword(
-        ""
-      );
-
-      toast.success(
-        "Senha alterada com sucesso"
-      );
-    } catch (
-      error
-    ) {
-      toast.error(
-        "Não foi possível alterar a senha",
-        {
-          description:
-            errorMessage(
-              error
-            ),
-        }
-      );
+    } catch (error) {
+      toast.error("Não foi possível alterar a senha", { description: errorMessage(error) });
     } finally {
-      setSavingPassword(
-        false
-      );
+      setSavingPassword(false);
     }
   }
 
-  async function restoreHidden(
-    item:
-      HiddenTitle
-  ) {
-    try {
-      setRemovingHidden(
-        item.id
-      );
+  function closeDelete() {
+    if (deleting) return;
 
-      const params =
-        new URLSearchParams({
-          tmdb_id:
-            String(
-              item.tmdb_id
-            ),
-
-          media_type:
-            item.media_type,
-        });
-
-      await apiFetch(
-        `/api/not-interested?${params.toString()}`,
-        {
-          method:
-            "DELETE",
-
-          retries:
-            0,
-        }
-      );
-
-      setHidden(
-        (
-          current
-        ) =>
-          current.filter(
-            (
-              entry
-            ) =>
-              entry.id !==
-              item.id
-          )
-      );
-
-      toast.success(
-        `${item.title} pode aparecer novamente`,
-        {
-          description:
-            "O título voltou a ser elegível para recomendações.",
-        }
-      );
-    } catch (
-      error
-    ) {
-      toast.error(
-        "Não foi possível restaurar o título",
-        {
-          description:
-            errorMessage(
-              error
-            ),
-        }
-      );
-    } finally {
-      setRemovingHidden(
-        null
-      );
-    }
+    setDeleteOpen(false);
+    setDeleteConfirm("");
   }
 
   async function deleteAccount() {
-    if (
-      deleteConfirm !==
-      "EXCLUIR"
-    ) {
-      return;
-    }
+    if (deleteConfirm !== "EXCLUIR") return;
 
     try {
-      setDeleting(
-        true
-      );
-
-      await apiFetch(
-        "/api/account/delete",
-        {
-          method:
-            "DELETE",
-
-          retries:
-            0,
-
-          timeout:
-            30000,
-        }
-      );
+      setDeleting(true);
+      await apiFetch("/api/account/delete", { method: "DELETE", retries: 0, timeout: 30000 });
 
       try {
         await authClient.signOut();
       } catch {
-        // ignore
+        // a conta já não existe; a sessão local é descartada pelo redirect
       }
 
-      location.href =
-        "/?account=deleted";
-    } catch (
-      error
-    ) {
-      toast.error(
-        "Não foi possível excluir sua conta",
-        {
-          description:
-            errorMessage(
-              error
-            ),
-        }
-      );
-
-      setDeleting(
-        false
-      );
+      location.href = "/?account=deleted";
+    } catch (error) {
+      toast.error("Não foi possível excluir sua conta", { description: errorMessage(error) });
+      setDeleting(false);
     }
   }
 
-  if (
-    loading
-  ) {
+  if (loading) {
     return (
       <section className="panel settings-panel account-settings-panel">
-        <div className="account-settings-loading">
-          <Loader2
-            size={19}
-            className="spin"
-          />
-
-          Carregando sua conta...
+        <div className="account-settings-loading" role="status">
+          <Loader2 size={19} className="spin" aria-hidden="true" />
+          Carregando sua conta…
         </div>
       </section>
     );
   }
 
-  if (
-    !account
-  ) {
+  if (!account) {
     return (
       <section className="panel settings-panel account-settings-panel">
         <div className="account-settings-empty">
-          <LockKeyhole
-            size={22}
-          />
-
+          <LockKeyhole size={22} aria-hidden="true" />
           <div>
-            <strong>
-              Entre para gerenciar sua conta
-            </strong>
-
-            <span>
-              Preferências da conta só ficam disponíveis para usuários autenticados.
-            </span>
+            <strong>Entre para gerenciar sua conta</strong>
+            <span>Preferências da conta só ficam disponíveis para usuários autenticados.</span>
           </div>
         </div>
       </section>
@@ -871,802 +232,243 @@ export function AccountPrivacy() {
 
   return (
     <>
-      <section
-        id="account"
-        className="panel settings-panel account-settings-panel"
-      >
+      <section id="account" className="panel settings-panel account-settings-panel" aria-labelledby="account-title">
         <div className="settings-panel-head">
           <div className="settings-icon">
-            <UserRound
-              size={19}
-            />
+            <UserRound size={19} aria-hidden="true" />
           </div>
-
           <div>
-            <h2>
-              Conta
-            </h2>
-
+            <h2 id="account-title">Conta</h2>
             <p className="muted">
-              Nome, e-mail e informações usadas para identificar sua conta.
+              Seu nome e e-mail. Foto, bio, @ e Top 5 ficam no{" "}
+              <Link href="/profile">seu perfil</Link>.
             </p>
           </div>
         </div>
 
         <div className="account-settings-identity">
-          <div className="account-settings-avatar">
-            {initials(
-              displayName,
-              email
-            )}
+          <div className="account-settings-avatar" aria-hidden="true">
+            {initials(displayName, account.email)}
           </div>
-
           <div>
-            <strong>
-              {
-                account.displayName
-              }
-            </strong>
-
-            <span>
-              {
-                account.email
-              }
-            </span>
-          </div>
-
-          <div className="account-settings-id">
-            ID da conta
-            <code>
-              {account.id.slice(
-                0,
-                8
-              )}
-              …
-            </code>
+            <strong>{account.displayName}</strong>
+            <span>{account.email}</span>
           </div>
         </div>
 
         <div className="account-settings-grid">
-          <form
-            className="account-settings-card"
-            onSubmit={
-              saveName
-            }
-          >
+          <form className="account-settings-card" onSubmit={saveName}>
             <div className="account-settings-card-head">
-              <UserRound
-                size={17}
-              />
-
+              <UserRound size={17} aria-hidden="true" />
               <div>
-                <strong>
-                  Nome de exibição
-                </strong>
-
-                <span>
-                  É o nome mostrado no MyCatalog.
-                </span>
+                <strong>Nome de exibição</strong>
+                <span>Aparece no seu perfil e para quem você segue.</span>
               </div>
             </div>
-
             <label>
-              <span>
-                Nome
-              </span>
-
-              <input
-                value={
-                  displayName
-                }
-                maxLength={
-                  60
-                }
-                onChange={(
-                  event
-                ) =>
-                  setDisplayName(
-                    event.target
-                      .value
-                  )
-                }
-              />
+              <span>Nome</span>
+              <input value={displayName} maxLength={60} onChange={(event) => setDisplayName(event.target.value)} />
             </label>
-
             <button
               type="submit"
               className="btn"
-              disabled={
-                savingProfile ||
-                displayName.trim() ===
-                  account.displayName
-              }
+              disabled={savingProfile || displayName.trim() === account.displayName}
             >
-              {savingProfile ? (
-                <Loader2
-                  size={14}
-                  className="spin"
-                />
-              ) : (
-                <Check
-                  size={14}
-                />
-              )}
-
+              {savingProfile ? <Loader2 size={14} className="spin" aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}
               Salvar nome
             </button>
           </form>
 
-          <form
-            className="account-settings-card"
-            onSubmit={
-              saveEmail
-            }
-          >
+          <div className="account-settings-card">
             <div className="account-settings-card-head">
-              <Mail
-                size={17}
-              />
-
+              <Mail size={17} aria-hidden="true" />
               <div>
-                <strong>
-                  E-mail
-                </strong>
-
-                <span>
-                  Usado para entrar e recuperar a conta.
-                </span>
+                <strong>E-mail</strong>
+                <span>Usado para entrar e recuperar a conta. Só você vê.</span>
               </div>
             </div>
-
             <label>
-              <span>
-                Novo e-mail
-              </span>
-
-              <input
-                type="email"
-                autoComplete="email"
-                value={
-                  email
-                }
-                onChange={(
-                  event
-                ) =>
-                  setEmail(
-                    event.target
-                      .value
-                  )
-                }
-              />
+              <span>E-mail da conta</span>
+              <input type="email" value={account.email} readOnly aria-readonly="true" />
             </label>
-
-            <button
-              type="submit"
-              className="btn"
-              disabled={
-                savingEmail ||
-                email.trim() ===
-                  account.email
-              }
-            >
-              {savingEmail ? (
-                <Loader2
-                  size={14}
-                  className="spin"
-                />
-              ) : (
-                <Mail
-                  size={14}
-                />
-              )}
-
-              Alterar e-mail
-            </button>
-          </form>
-        </div>
-      </section>
-
-      <section
-        id="privacy"
-        className="panel settings-panel account-settings-panel"
-      >
-        <div className="settings-panel-head">
-          <div className="settings-icon">
-            <ShieldCheck
-              size={19}
-            />
-          </div>
-
-          <div>
-            <h2>
-              Privacidade
-            </h2>
-
-            <p className="muted">
-              Controle como seu perfil poderá aparecer em recursos sociais do MyCatalog.
+            <p className="muted account-settings-note">
+              Por segurança, o provedor de login mantém o e-mail do cadastro — ele não pode ser trocado por aqui.
             </p>
           </div>
         </div>
-
-        <div className="account-privacy-options">
-          <Link href="/profile" className="active">
-            <UserRound size={18} />
-            <div>
-              <strong>Configurar no seu perfil</strong>
-              <span>O perfil não é separado da conta. Escolha lá entre Público ou Somente amigos e edite sua vitrine.</span>
-            </div>
-          </Link>
-        </div>
       </section>
 
-      <section
-        id="security"
-        className="panel settings-panel account-settings-panel"
-      >
+      <section id="security" className="panel settings-panel account-settings-panel" aria-labelledby="security-title">
         <div className="settings-panel-head">
           <div className="settings-icon">
-            <KeyRound
-              size={19}
-            />
+            <KeyRound size={19} aria-hidden="true" />
           </div>
-
           <div>
-            <h2>
-              Segurança
-            </h2>
-
-            <p className="muted">
-              Troque sua senha sem precisar sair da conta.
-            </p>
+            <h2 id="security-title">Senha</h2>
+            <p className="muted">Ao trocar, você continua conectado aqui e os outros aparelhos são desconectados.</p>
           </div>
         </div>
 
-        <form
-          className="account-password-form"
-          onSubmit={
-            savePassword
-          }
-        >
+        <form className="account-password-form" onSubmit={savePassword}>
           <label>
-            <span>
-              Senha atual
-            </span>
-
+            <span>Senha atual</span>
             <div className="account-password-input">
-              <LockKeyhole
-                size={15}
-              />
-
+              <LockKeyhole size={15} aria-hidden="true" />
               <input
-                type={
-                  showPasswords
-                    ? "text"
-                    : "password"
-                }
+                type={showPasswords ? "text" : "password"}
                 autoComplete="current-password"
-                value={
-                  currentPassword
-                }
-                onChange={(
-                  event
-                ) =>
-                  setCurrentPassword(
-                    event.target
-                      .value
-                  )
-                }
-                placeholder="Recomendado para confirmar sua identidade"
+                required
+                value={currentPassword}
+                onChange={(event) => setCurrentPassword(event.target.value)}
               />
             </div>
           </label>
 
           <label>
-            <span>
-              Nova senha
-            </span>
-
+            <span>Nova senha</span>
             <div className="account-password-input">
-              <KeyRound
-                size={15}
-              />
-
+              <KeyRound size={15} aria-hidden="true" />
               <input
-                type={
-                  showPasswords
-                    ? "text"
-                    : "password"
-                }
+                type={showPasswords ? "text" : "password"}
                 autoComplete="new-password"
-                value={
-                  newPassword
-                }
-                onChange={(
-                  event
-                ) =>
-                  setNewPassword(
-                    event.target
-                      .value
-                  )
-                }
+                required
+                minLength={8}
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
                 placeholder="Mínimo de 8 caracteres"
               />
-
               <button
                 type="button"
-                aria-label={
-                  showPasswords
-                    ? "Ocultar senhas"
-                    : "Mostrar senhas"
-                }
-                onClick={() =>
-                  setShowPasswords(
-                    (
-                      value
-                    ) =>
-                      !value
-                  )
-                }
+                aria-label={showPasswords ? "Ocultar senhas" : "Mostrar senhas"}
+                aria-pressed={showPasswords}
+                onClick={() => setShowPasswords((value) => !value)}
               >
-                {showPasswords ? (
-                  <EyeOff
-                    size={15}
-                  />
-                ) : (
-                  <Eye
-                    size={15}
-                  />
-                )}
+                {showPasswords ? <EyeOff size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />}
               </button>
             </div>
-
             {newPassword && (
               <div className="account-password-strength">
-                <span>
-                  {[
-                    1,
-                    2,
-                    3,
-                    4,
-                  ].map(
-                    (
-                      level
-                    ) => (
-                      <i
-                        key={
-                          level
-                        }
-                        className={
-                          passwordStrength >=
-                          level
-                            ? "active"
-                            : ""
-                        }
-                      />
-                    )
-                  )}
+                <span aria-hidden="true">
+                  {[1, 2, 3, 4].map((level) => (
+                    <i key={level} className={passwordStrength >= level ? "active" : ""} />
+                  ))}
                 </span>
-
                 <small>
-                  {passwordStrength <=
-                  1
-                    ? "Fraca"
-                    : passwordStrength ===
-                        2
-                      ? "Razoável"
-                      : passwordStrength ===
-                          3
-                        ? "Boa"
-                        : "Forte"}
+                  {passwordStrength <= 1 ? "Fraca" : passwordStrength === 2 ? "Razoável" : passwordStrength === 3 ? "Boa" : "Forte"}
                 </small>
               </div>
             )}
           </label>
 
           <label>
-            <span>
-              Confirmar nova senha
-            </span>
-
+            <span>Confirmar nova senha</span>
             <div className="account-password-input">
-              <Check
-                size={15}
-              />
-
+              <Check size={15} aria-hidden="true" />
               <input
-                type={
-                  showPasswords
-                    ? "text"
-                    : "password"
-                }
+                type={showPasswords ? "text" : "password"}
                 autoComplete="new-password"
-                value={
-                  confirmPassword
-                }
-                onChange={(
-                  event
-                ) =>
-                  setConfirmPassword(
-                    event.target
-                      .value
-                  )
-                }
+                required
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
               />
             </div>
           </label>
+          {confirmPassword && newPassword !== confirmPassword && (
+            <p className="set-error" role="alert">
+              A confirmação não é igual à nova senha.
+            </p>
+          )}
 
           <button
             type="submit"
             className="btn primary"
-            disabled={
-              savingPassword ||
-              newPassword.length <
-                8 ||
-              newPassword !==
-                confirmPassword
-            }
+            disabled={savingPassword || !currentPassword || newPassword.length < 8 || newPassword !== confirmPassword}
           >
-            {savingPassword ? (
-              <Loader2
-                size={14}
-                className="spin"
-              />
-            ) : (
-              <KeyRound
-                size={14}
-              />
-            )}
-
+            {savingPassword ? <Loader2 size={14} className="spin" aria-hidden="true" /> : <KeyRound size={14} aria-hidden="true" />}
             Alterar senha
           </button>
         </form>
       </section>
 
       <section
-        id="hidden-titles"
-        className="panel settings-panel account-settings-panel"
-      >
-        <div className="settings-panel-head">
-          <div className="settings-icon">
-            <EyeOff
-              size={19}
-            />
-          </div>
-
-          <div>
-            <h2>
-              Não tenho interesse
-            </h2>
-
-            <p className="muted">
-              Títulos dessa lista deixam de aparecer nas recomendações personalizadas.
-            </p>
-          </div>
-
-          {!hiddenLoading && (
-            <span className="account-hidden-count">
-              {
-                hidden.length
-              }
-            </span>
-          )}
-
-          {!hiddenLoading && !hiddenError && hidden.length > 0 && (
-            <button
-              type="button"
-              className="btn"
-              aria-expanded={hiddenOpen}
-              aria-controls="hidden-titles-list"
-              onClick={() => setHiddenOpen((open) => !open)}
-            >
-              {hiddenOpen ? "Ocultar lista" : `Ver lista (${hidden.length})`}
-            </button>
-          )}
-        </div>
-
-        {!hiddenOpen && !hiddenLoading && !hiddenError && hidden.length > 0 ? (
-          <p className="muted" style={{ margin: "4px 0 0" }}>
-            {hidden.length} {hidden.length === 1 ? "título oculto" : "títulos ocultos"}. Abra a lista só se quiser
-            reativar algum.
-          </p>
-        ) : hiddenLoading ? (
-          <div className="account-settings-loading small">
-            <Loader2
-              size={17}
-              className="spin"
-            />
-
-            Carregando títulos...
-          </div>
-        ) : hiddenError ? (
-          <div className="account-hidden-error">
-            <span>
-              {
-                hiddenError
-              }
-            </span>
-
-            <button
-              type="button"
-              className="btn"
-              onClick={
-                loadHidden
-              }
-            >
-              Tentar novamente
-            </button>
-          </div>
-        ) : hidden.length ===
-          0 ? (
-          <div className="account-hidden-empty">
-            <Eye
-              size={22}
-            />
-
-            <div>
-              <strong>
-                Nenhum título oculto
-              </strong>
-
-              <span>
-                Quando marcar “Não tenho interesse”, ele aparecerá aqui.
-              </span>
-            </div>
-          </div>
-        ) : (
-          <div className="account-hidden-list" id="hidden-titles-list">
-            {hidden.map(
-              (
-                item
-              ) => (
-                <article
-                  key={
-                    item.id
-                  }
-                  className="account-hidden-item"
-                >
-                  <div className="account-hidden-poster">
-                    {item.poster_path ? (
-                      <img
-                        src={`https://image.tmdb.org/t/p/w154${item.poster_path}`}
-                        alt=""
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div>
-                        {item.media_type ===
-                        "tv"
-                          ? "S"
-                          : "F"}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="account-hidden-copy">
-                    <strong>
-                      {
-                        item.title
-                      }
-                    </strong>
-
-                    <span>
-                      {item.media_type ===
-                      "tv"
-                        ? "Série"
-                        : "Filme"}
-
-                      {item.year
-                        ? ` · ${item.year}`
-                        : ""}
-
-                      {item.vote_average
-                        ? ` · ★ ${item.vote_average.toFixed(
-                            1
-                          )}`
-                        : ""}
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    className="btn"
-                    disabled={
-                      removingHidden ===
-                      item.id
-                    }
-                    onClick={() =>
-                      restoreHidden(
-                        item
-                      )
-                    }
-                  >
-                    {removingHidden ===
-                    item.id ? (
-                      <Loader2
-                        size={14}
-                        className="spin"
-                      />
-                    ) : (
-                      <Undo2
-                        size={14}
-                      />
-                    )}
-
-                    Voltar a recomendar
-                  </button>
-                </article>
-              )
-            )}
-          </div>
-        )}
-      </section>
-
-      <section
         id="danger-zone"
         className="panel settings-panel account-settings-panel account-danger-zone"
+        aria-labelledby="danger-title"
       >
         <div className="settings-panel-head">
           <div className="settings-icon danger">
-            <AlertTriangle
-              size={19}
-            />
+            <AlertTriangle size={19} aria-hidden="true" />
           </div>
-
           <div>
-            <h2>
-              Zona de risco
-            </h2>
-
-            <p className="muted">
-              A exclusão da conta é permanente.
-            </p>
+            <h2 id="danger-title">Zona de risco</h2>
+            <p className="muted">A exclusão da conta é permanente.</p>
           </div>
         </div>
 
         <div className="account-delete-row">
           <div>
-            <strong>
-              Excluir minha conta
-            </strong>
-
+            <strong>Excluir minha conta</strong>
             <span>
-              Remove sua conta, biblioteca, notas, histórico e preferências vinculadas ao usuário.
+              Apaga sua conta e tudo que é seu: biblioteca, notas, resenhas, diário, progresso de séries, listas,
+              seguidores, notificações e preferências.
             </span>
           </div>
-
-          <button
-            type="button"
-            className="btn danger"
-            onClick={() =>
-              setDeleteOpen(
-                true
-              )
-            }
-          >
-            <Trash2
-              size={14}
-            />
-
+          <button type="button" className="btn danger" onClick={() => setDeleteOpen(true)}>
+            <Trash2 size={14} aria-hidden="true" />
             Excluir conta
           </button>
         </div>
       </section>
 
-      {deleteOpen && (
-        <div
-          className="mycatalog-confirm-backdrop"
-          onMouseDown={(
-            event
-          ) => {
-            if (
-              event.target ===
-              event.currentTarget &&
-              !deleting
-            ) {
-              setDeleteOpen(
-                false
-              );
-
-              setDeleteConfirm(
-                ""
-              );
-            }
-          }}
-        >
-          <div className="mycatalog-confirm-modal account-delete-modal">
-            <div className="mycatalog-confirm-icon danger">
-              <Trash2
-                size={20}
-              />
-            </div>
-
-            <div className="eyebrow">
-              EXCLUSÃO PERMANENTE
-            </div>
-
-            <h3>
-              Excluir sua conta do MyCatalog?
-            </h3>
-
-            <p className="muted">
-              Essa ação não tem Desfazer. Exporte um backup antes se quiser guardar seus dados.
-            </p>
-
-            <label className="account-delete-confirm-field">
-              <span>
-                Digite <strong>EXCLUIR</strong> para confirmar
-              </span>
-
-              <input
-                autoFocus
-                value={
-                  deleteConfirm
-                }
-                disabled={
-                  deleting
-                }
-                onChange={(
-                  event
-                ) =>
-                  setDeleteConfirm(
-                    event.target
-                      .value
-                      .toUpperCase()
-                  )
-                }
-                placeholder="EXCLUIR"
-              />
-            </label>
-
-            <div className="mycatalog-confirm-actions">
-              <button
-                type="button"
-                className="btn"
-                disabled={
-                  deleting
-                }
-                onClick={() => {
-                  setDeleteOpen(
-                    false
-                  );
-
-                  setDeleteConfirm(
-                    ""
-                  );
-                }}
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="button"
-                className="btn danger"
-                disabled={
-                  deleting ||
-                  deleteConfirm !==
-                    "EXCLUIR"
-                }
-                onClick={
-                  deleteAccount
-                }
-              >
-                {deleting ? (
-                  <Loader2
-                    size={14}
-                    className="spin"
-                  />
-                ) : (
-                  <Trash2
-                    size={14}
-                  />
-                )}
-
-                Excluir definitivamente
-              </button>
-            </div>
-          </div>
+      <Dialog
+        open={deleteOpen}
+        onClose={closeDelete}
+        role="alertdialog"
+        labelledBy="account-delete-title"
+        describedBy="account-delete-desc"
+        className="mycatalog-confirm-modal account-delete-modal"
+      >
+        <div className="mycatalog-confirm-icon danger" aria-hidden="true">
+          <Trash2 size={20} />
         </div>
-      )}
+        <div className="eyebrow">EXCLUSÃO PERMANENTE</div>
+        <h3 id="account-delete-title">Excluir sua conta do MyCatalog?</h3>
+        <div id="account-delete-desc">
+          <p className="muted">
+            Isso apaga sua biblioteca, notas, resenhas, diário, progresso de séries, listas, seguidores e
+            preferências, e encerra suas sessões. Não tem Desfazer.
+          </p>
+          <p className="muted">
+            Quer guardar seus dados? Exporte um backup em <Link href="/settings?tab=data">Dados e backup</Link> antes.
+          </p>
+        </div>
+        <label className="account-delete-confirm-field">
+          <span>
+            Digite <strong>EXCLUIR</strong> para confirmar
+          </span>
+          <input
+            autoFocus
+            value={deleteConfirm}
+            disabled={deleting}
+            onChange={(event) => setDeleteConfirm(event.target.value.toUpperCase())}
+            placeholder="EXCLUIR"
+          />
+        </label>
+        <div className="mycatalog-confirm-actions">
+          <button type="button" className="btn" disabled={deleting} onClick={closeDelete}>
+            Cancelar
+          </button>
+          <button
+            type="button"
+            className="btn danger"
+            disabled={deleting || deleteConfirm !== "EXCLUIR"}
+            onClick={deleteAccount}
+          >
+            {deleting ? <Loader2 size={14} className="spin" aria-hidden="true" /> : <Trash2 size={14} aria-hidden="true" />}
+            Excluir definitivamente
+          </button>
+        </div>
+      </Dialog>
     </>
   );
 }

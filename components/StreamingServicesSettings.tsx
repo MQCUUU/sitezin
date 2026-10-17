@@ -108,9 +108,9 @@ export function StreamingServicesSettings() {
       });
       if (!response.ok) throw new Error();
       setSaved(currentKey);
-      toast.success("Serviços salvos");
+      toast.success("Serviços de streaming salvos.");
     } catch {
-      toast.error("Não foi possível salvar seus serviços");
+      toast.error("Não foi possível salvar seus serviços", { description: "Nada foi alterado. Tente de novo." });
     } finally {
       setSaving(false);
     }
@@ -180,6 +180,9 @@ export function StreamingServicesSettings() {
                 Limpar seleção
               </button>
             )}
+            <span className="muted" role="status" aria-live="polite">
+              {dirty ? "Alterações não salvas." : ""}
+            </span>
           </div>
         </>
       )}

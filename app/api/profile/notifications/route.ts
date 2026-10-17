@@ -43,7 +43,7 @@ export async function GET() {
       LIMIT 1;
     `;
 
-    return NextResponse.json(rows[0] || defaults);
+    return NextResponse.json(rows[0] || defaults, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     console.error("Erro em GET /api/profile/notifications:", error);
     return respostaDeErro(error, "GET /api/profile/notifications");

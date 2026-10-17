@@ -1,275 +1,111 @@
-import { getDb } from "@/lib/db/neon";
-import {
-  NextRequest,
-  NextResponse,
-} from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { respostaDeErro } from "@/lib/api-error";
-
 import { auth } from "@/lib/auth/server";
+import { getDb } from "@/lib/db/neon";
+import { InvalidJsonError, readJsonWithLimit, RequestBodyTooLargeError } from "@/lib/request-json";
+import { planRestore } from "@/lib/backup/plan";
+import { resolveCatalogMedia } from "@/lib/lists/media";
 
-import {
-  InvalidJsonError,
-  readJsonWithLimit,
-  RequestBodyTooLargeError
-} from "@/lib/request-json";
+/*
+ * POST /api/account/import — restaura um backup do MyCatalog (JSON).
+ *
+ * V3.3 (reescrita):
+ *  - valida o arquivo INTEIRO antes de escrever (lib/backup/plan.ts);
+ *  - grava numa ÚNICA transação: ou entra tudo, ou nada (antes: centenas de
+ *    comandos soltos — uma falha no meio deixava o restore pela metade e
+ *    erros de ocultos/visualizações/atividade eram engolidos);
+ *  - SQL em conjunto (5 comandos, independente do tamanho do backup);
+ *  - o arquivo nunca é fonte do catálogo compartilhado: título que já existe
+ *    em `media` não é tocado (antes o arquivo sobrescrevia título/sinopse/
+ *    pôster de qualquer obra para TODOS os usuários) e título que falta é
+ *    criado com dados do TMDB buscados pelo servidor (lib/lists/media.ts) —
+ *    o que o TMDB não confirma é ignorado e contado no resumo;
+ *  - tudo é escopado ao usuário da sessão (nada do arquivo é autoridade);
+ *  - mesclagem: o mais recente (updated_at) vence; empate = a conta;
+ *  - datas comparadas em milissegundos (precisão do JSON exportado), senão
+ *    o mesmo evento "parecia" novo e duplicava.
+ */
 
-const MAX_BACKUP_BYTES =
-  10 * 1024 * 1024;
+const MAX_BACKUP_BYTES = 10 * 1024 * 1024;
+// Títulos fora do catálogo resolvidos por restauração (cada um = 1 chamada ao TMDB).
+// Restaurar de novo continua de onde parou (é idempotente).
+const MAX_CATALOG_LOOKUPS = 400;
+const LOOKUP_CONCURRENCY = 6;
 
-function genres(
-  value:
-    any
-) {
-  if (
-    !Array.isArray(
-      value
-    )
-  ) {
-    return [];
+export async function POST(req: NextRequest) {
+  const session = await auth.getSession().catch(() => null);
+  const user = session?.data?.user;
+
+  if (!user || !user.id) {
+    return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
 
-  return value
-    .map(
-      (
-        item
-      ) =>
-        typeof item ===
-          "string"
-          ? item
-          : item?.name
-            ? {
-                id:
-                  item.id ??
-                  null,
-
-                name:
-                  item.name,
-              }
-            : null
-    )
-    .filter(
-      Boolean
-    );
-}
-
-export async function POST(
-  req:
-    NextRequest
-) {
-  const session = await auth.getSession().catch(() => null);
-    const user = session?.data?.user;
-
-    if (!user || !user.id) {
-      return NextResponse.json(
-        { error: "Não autenticado" },
-        { status: 401 }
-      );
-    }
-
-    const sql = getDb();
-
   try {
-    const backup =
-  await readJsonWithLimit<any>(
-    req,
-    MAX_BACKUP_BYTES
-  );
+    const backup = await readJsonWithLimit<unknown>(req, MAX_BACKUP_BYTES);
+    const result = planRestore(backup);
 
-    if (
-      !backup
-        ?.mycatalog_backup ||
-      Number(
-        backup.version
-      ) !==
-        1 ||
-      !backup.data
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Este arquivo não é um backup válido do MyCatalog.",
-        },
-        {
-          status:
-            400,
-        }
-      );
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
-    const library =
-      Array.isArray(
-        backup.data
-          .library
-      )
-        ? backup.data
-            .library
-        : [];
+    const { plan } = result;
+    const userId = user.id;
+    const sql = getDb();
+    const library = JSON.stringify(plan.library);
+    const watches = JSON.stringify(plan.watches);
+    const episodes = JSON.stringify(plan.episodes);
+    const hidden = JSON.stringify(plan.hidden);
+    const activity = JSON.stringify(plan.activity);
 
-    const oldMediaToNew =
-      new Map<
-        string,
-        string
-      >();
+    // Catálogo ANTES da transação: só o que falta, criado a partir do TMDB (servidor).
+    const keys = new Map<string, { tmdb_id: number; media_type: "movie" | "tv" }>();
+    for (const row of [...plan.library, ...plan.watches, ...plan.episodes, ...plan.activity]) {
+      keys.set(`${row.media_type}:${row.tmdb_id}`, { tmdb_id: row.tmdb_id, media_type: row.media_type });
+    }
+    const wanted = Array.from(keys.values());
+    const present = wanted.length
+      ? ((await sql`
+          SELECT m.tmdb_id, m.media_type
+          FROM public.media m
+          JOIN unnest(${wanted.map((k) => k.media_type)}::text[], ${wanted.map((k) => k.tmdb_id)}::int[]) AS w(media_type, tmdb_id)
+            ON w.media_type = m.media_type AND w.tmdb_id = m.tmdb_id
+        `) as { tmdb_id: number; media_type: string }[])
+      : [];
+    const presentKeys = new Set(present.map((row) => `${row.media_type}:${row.tmdb_id}`));
+    const missing = wanted.filter((k) => !presentKeys.has(`${k.media_type}:${k.tmdb_id}`));
+    const toResolve = missing.slice(0, MAX_CATALOG_LOOKUPS);
+    let catalogUnresolved = missing.length - toResolve.length;
 
-    const oldLibraryToNew =
-      new Map<
-        string,
-        string
-      >();
+    for (let index = 0; index < toResolve.length; index += LOOKUP_CONCURRENCY) {
+      const slice = toResolve.slice(index, index + LOOKUP_CONCURRENCY);
+      const batch = await Promise.all(slice.map((k) => resolveCatalogMedia(sql, k.media_type, k.tmdb_id)));
 
-    let libraryCount =
-      0;
+      batch.forEach((result, i) => {
+        if (result.ok) presentKeys.add(`${slice[i].media_type}:${slice[i].tmdb_id}`);
+        else catalogUnresolved++;
+      });
+    }
 
-    for (
-      const item
-      of library
-    ) {
-      const media =
-        item?.media;
+    // Itens da biblioteca do arquivo que têm obra no catálogo (os demais são ignorados).
+    const libraryInCatalog = plan.library.filter((item) => presentKeys.has(`${item.media_type}:${item.tmdb_id}`)).length;
 
-      if (
-        !media
-          ?.tmdb_id ||
-        !media
-          ?.media_type
-      ) {
-        continue;
-      }
-
-
-      const savedMediaRows = await sql`
-        INSERT INTO public.media (
-          tmdb_id, media_type, title, original_title, overview, poster_path, backdrop_path,
-          release_date, first_air_date, genres, tmdb_rating, tmdb_vote_count, runtime,
-          seasons_count, episodes_count, creator_names, cast_names, raw, updated_at
-        )
-        VALUES (
-          ${media.tmdb_id}, ${media.media_type}, ${media.title || "Sem título"},
-          ${media.original_title ?? null}, ${media.overview ?? null}, ${media.poster_path ?? null},
-          ${media.backdrop_path ?? null}, ${media.release_date ?? null}, ${media.first_air_date ?? null},
-          ${genres(media.genres)}, ${media.tmdb_rating ?? null}, ${media.tmdb_vote_count ?? null},
-          ${media.runtime ?? null}, ${media.seasons_count ?? null}, ${media.episodes_count ?? null},
-          ${media.creator_names || []}, ${media.cast_names || []}, ${JSON.stringify(media.raw || media)}, now()
-        )
-        ON CONFLICT (tmdb_id, media_type)
-        DO UPDATE SET
-          title = EXCLUDED.title,
-          original_title = COALESCE(EXCLUDED.original_title, media.original_title),
-          overview = COALESCE(EXCLUDED.overview, media.overview),
-          poster_path = COALESCE(EXCLUDED.poster_path, media.poster_path),
-          backdrop_path = COALESCE(EXCLUDED.backdrop_path, media.backdrop_path),
-          genres = COALESCE(EXCLUDED.genres, media.genres),
-          updated_at = now()
-        RETURNING id
-      `;
-
-      const savedMedia = savedMediaRows[0];
-      if (!savedMedia) {
-        throw new Error(`Erro restaurando ${media.title}.`);
-      }
-
-      if (
-        media.id
-      ) {
-        oldMediaToNew.set(
-          String(
-            media.id
-          ),
-          String(
-            savedMedia.id
-          )
-        );
-      }
-
-      const payload:
-        Record<
-          string,
-          any
-        > = {
-          user_id:
-            user.id,
-
-          media_id:
-            savedMedia.id,
-
-          status:
-            item.status ||
-            "want",
-
-          favorite:
-            Boolean(
-              item.favorite
-            ),
-
-          personal_rating:
-            item.personal_rating ??
-            null,
-
-          review:
-            item.review ??
-            null,
-
-          watched_at:
-            item.watched_at ??
-            null,
-
-          // V2.3 — proveniência só se o backup trouxer; senão desconhecida.
-          watched_at_precision:
-            item.watched_at &&
-            (item.watched_at_precision === "date" || item.watched_at_precision === "datetime")
-              ? item.watched_at_precision
-              : null,
-
-          rewatch_count:
-            Number(
-              item.rewatch_count ||
-                0
-            ),
-
-          current_season:
-            item.current_season ??
-            null,
-
-          completed_seasons:
-            Number(
-              item.completed_seasons ||
-                0
-            ),
-
-          stopped_season:
-            item.stopped_season ??
-            null,
-        };
-
-      if (
-        item.added_at
-      ) {
-        payload.added_at =
-          item.added_at;
-      }
-
-      if (
-        item.updated_at
-      ) {
-        payload.updated_at =
-          item.updated_at;
-      }
-
-
-      const savedLibraryRows = await sql`
+    const [libraryRows, watchRows, episodeRows, hiddenRows, activityRows] = await sql.transaction([
+      // 1. Biblioteca (só títulos do catálogo): adiciona o que falta; no conflito, o mais recente vence.
+      sql`
         INSERT INTO public.library_items (
-          user_id, media_id, status, favorite, personal_rating, review,
-          watched_at, watched_at_precision, rewatch_count, current_season, completed_seasons, stopped_season, added_at, updated_at
+          user_id, media_id, status, favorite, personal_rating, review, watched_at, watched_at_precision,
+          rewatch_count, current_season, completed_seasons, stopped_season, added_at, updated_at
         )
-        VALUES (
-          ${user.id}, ${savedMedia.id}, ${payload.status}, ${payload.favorite},
-          ${payload.personal_rating ?? null}, ${payload.review ?? null}, ${payload.watched_at ?? null}, ${payload.watched_at_precision ?? null},
-          ${payload.rewatch_count ?? 0}, ${payload.current_season ?? null}, ${payload.completed_seasons ?? []},
-          ${payload.stopped_season ?? null}, ${payload.added_at || new Date().toISOString()}, ${payload.updated_at || new Date().toISOString()}
+        SELECT ${userId}, m.id, x.status, x.favorite, x.personal_rating, x.review, x.watched_at, x.watched_at_precision,
+               x.rewatch_count, x.current_season, x.completed_seasons, x.stopped_season, x.added_at, x.updated_at
+        FROM jsonb_to_recordset(${library}::jsonb) AS x(
+          tmdb_id int, media_type text, status text, favorite boolean, personal_rating numeric, review text,
+          watched_at timestamptz, watched_at_precision text, rewatch_count int, current_season int,
+          completed_seasons int, stopped_season int, added_at timestamptz, updated_at timestamptz
         )
-        ON CONFLICT (user_id, media_id)
-        DO UPDATE SET
+        JOIN public.media m ON m.tmdb_id = x.tmdb_id AND m.media_type = x.media_type
+        ON CONFLICT (user_id, media_id) DO UPDATE SET
           status = EXCLUDED.status,
           favorite = EXCLUDED.favorite,
           personal_rating = EXCLUDED.personal_rating,
@@ -281,345 +117,108 @@ export async function POST(
           completed_seasons = EXCLUDED.completed_seasons,
           stopped_season = EXCLUDED.stopped_season,
           updated_at = EXCLUDED.updated_at
-        RETURNING id
-      `;
+        -- O JSON guarda milissegundos e o banco microssegundos: compara na mesma precisão.
+        WHERE date_trunc('milliseconds', library_items.updated_at) < EXCLUDED.updated_at
+        RETURNING (xmax = 0) AS inserted
+      `,
+      // 2. Visualizações (Diário): só as que a conta ainda não tem.
+      sql`
+        INSERT INTO public.watch_entries (
+          user_id, library_item_id, media_id, watched_at, watched_at_precision, rating, comment, is_rewatch, created_at, updated_at
+        )
+        SELECT DISTINCT ON (m.id, x.watched_at, x.is_rewatch)
+               ${userId}, li.id, m.id, x.watched_at, x.watched_at_precision, x.rating, x.comment, x.is_rewatch, x.created_at, x.updated_at
+        FROM jsonb_to_recordset(${watches}::jsonb) AS x(
+          tmdb_id int, media_type text, watched_at timestamptz, watched_at_precision text, rating numeric,
+          comment text, is_rewatch boolean, created_at timestamptz, updated_at timestamptz
+        )
+        JOIN public.media m ON m.tmdb_id = x.tmdb_id AND m.media_type = x.media_type
+        LEFT JOIN public.library_items li ON li.user_id = ${userId} AND li.media_id = m.id
+        WHERE NOT EXISTS (
+          SELECT 1 FROM public.watch_entries w
+          WHERE w.user_id = ${userId} AND w.media_id = m.id AND w.is_rewatch = x.is_rewatch
+            AND date_trunc('milliseconds', w.watched_at) = date_trunc('milliseconds', x.watched_at)
+        )
+        ORDER BY m.id, x.watched_at, x.is_rewatch
+        ON CONFLICT DO NOTHING
+        RETURNING 1
+      `,
+      // 3. Progresso de episódios: só os que a conta ainda não marcou.
+      sql`
+        INSERT INTO public.episodes_progress (
+          user_id, media_id, season_number, episode_number, watched, watched_at, watched_at_precision, comment, is_rewatch
+        )
+        SELECT DISTINCT ON (m.id, x.season_number, x.episode_number)
+               ${userId}, m.id, x.season_number, x.episode_number, x.watched, x.watched_at, x.watched_at_precision, x.comment, x.is_rewatch
+        FROM jsonb_to_recordset(${episodes}::jsonb) AS x(
+          tmdb_id int, media_type text, season_number int, episode_number int, watched boolean,
+          watched_at timestamptz, watched_at_precision text, comment text, is_rewatch boolean
+        )
+        JOIN public.media m ON m.tmdb_id = x.tmdb_id AND m.media_type = x.media_type
+        ORDER BY m.id, x.season_number, x.episode_number
+        ON CONFLICT (user_id, media_id, season_number, episode_number) DO NOTHING
+        RETURNING 1
+      `,
+      // 4. "Não tenho interesse".
+      sql`
+        INSERT INTO public.user_hidden_titles (user_id, tmdb_id, media_type, reason, created_at)
+        SELECT DISTINCT ON (x.tmdb_id, x.media_type) ${userId}, x.tmdb_id, x.media_type, x.reason, x.created_at
+        FROM jsonb_to_recordset(${hidden}::jsonb) AS x(tmdb_id bigint, media_type text, reason text, created_at timestamptz)
+        ORDER BY x.tmdb_id, x.media_type
+        ON CONFLICT (user_id, tmdb_id, media_type) DO NOTHING
+        RETURNING 1
+      `,
+      // 5. Atividade: sem duplicar o que já existe (mesmo título, tipo e momento).
+      sql`
+        INSERT INTO public.activity_events (user_id, media_id, library_item_id, event_type, metadata, occurred_at)
+        SELECT DISTINCT ON (m.id, x.event_type, x.occurred_at)
+               ${userId}, m.id, li.id, x.event_type, COALESCE(x.metadata, '{}'::jsonb), x.occurred_at
+        FROM jsonb_to_recordset(${activity}::jsonb) AS x(tmdb_id int, media_type text, event_type text, metadata jsonb, occurred_at timestamptz)
+        JOIN public.media m ON m.tmdb_id = x.tmdb_id AND m.media_type = x.media_type
+        LEFT JOIN public.library_items li ON li.user_id = ${userId} AND li.media_id = m.id
+        WHERE NOT EXISTS (
+          SELECT 1 FROM public.activity_events a
+          WHERE a.user_id = ${userId} AND a.media_id = m.id AND a.event_type = x.event_type
+            AND date_trunc('milliseconds', a.occurred_at) = date_trunc('milliseconds', x.occurred_at)
+        )
+        ORDER BY m.id, x.event_type, x.occurred_at
+        RETURNING 1
+      `,
+    ]);
 
-      const savedLibrary = savedLibraryRows[0];
-      if (!savedLibrary) {
-        throw new Error(`Erro restaurando ${media.title}.`);
-      }
+    const libraryResult = libraryRows as { inserted: boolean }[];
+    const added = libraryResult.filter((row) => row.inserted).length;
+    const updated = libraryResult.length - added;
 
-      if (
-        item.id
-      ) {
-        oldLibraryToNew.set(
-          String(
-            item.id
-          ),
-          String(
-            savedLibrary.id
-          )
-        );
-      }
-
-      libraryCount++;
-    }
-
-    let hiddenCount =
-      0;
-
-    const hidden =
-      Array.isArray(
-        backup.data
-          .hidden_titles
-      )
-        ? backup.data
-            .hidden_titles
-        : [];
-
-    for (
-      const item
-      of hidden
-    ) {
-      if (
-        !item
-          ?.tmdb_id ||
-        !item
-          ?.media_type
-      ) {
-        continue;
-      }
-
-      try {
-
-        await sql`
-          INSERT INTO public.user_hidden_titles (
-            user_id, tmdb_id, media_type, reason, created_at
-          )
-          VALUES (
-            ${user.id},
-            ${item.tmdb_id},
-            ${item.media_type},
-            ${item.reason || "not_interested"},
-            ${item.created_at || new Date().toISOString()}
-          )
-          ON CONFLICT (user_id, tmdb_id, media_type)
-          DO UPDATE SET
-            reason = EXCLUDED.reason,
-            created_at = EXCLUDED.created_at
-        `;
-        hiddenCount++;
-      } catch (err: any) {
-        console.error("Erro ao importar hidden title:", err?.message);
-      }
-    }
-
-    let watchCount =
-      0;
-
-    const watches =
-      Array.isArray(
-        backup.data
-          .watch_history
-      )
-        ? backup.data
-            .watch_history
-        : [];
-
-    for (
-      const entry
-      of watches
-    ) {
-      const newLibraryId =
-        oldLibraryToNew.get(
-          String(
-            entry
-              .library_item_id ||
-              ""
-          )
-        );
-
-      const newMediaId =
-        oldMediaToNew.get(
-          String(
-            entry
-              .media_id ||
-              ""
-          )
-        );
-
-      if (
-        !newLibraryId ||
-        !newMediaId
-      ) {
-        continue;
-      }
-
-      const payload = {
-        user_id:
-          user.id,
-
-        library_item_id:
-          newLibraryId,
-
-        media_id:
-          newMediaId,
-
-        watched_at:
-          entry.watched_at || new Date().toISOString(),
-
-        // sem data no backup = agora (relógio do servidor); com data, só a do backup
-        watched_at_precision: !entry.watched_at
-          ? "datetime"
-          : entry.watched_at_precision === "date" || entry.watched_at_precision === "datetime"
-            ? entry.watched_at_precision
-            : null,
-
-        rating:
-          entry.rating ??
-          null,
-
-        comment:
-          entry.comment ??
-          null,
-
-        is_rewatch:
-          Boolean(
-            entry.is_rewatch
-          ),
-
-        created_at:
-          entry.created_at,
-
-        updated_at:
-          entry.updated_at,
-      };
-
-      try {
-
-        // O `id` do backup nunca é usado como chave de escrita: um
-        // atacante poderia colocar o id de um watch_entry alheio (exposto
-        // publicamente em diário/atividade) para sequestrar aquele
-        // registro via ON CONFLICT(id). O id é sempre gerado no servidor;
-        // a deduplicação em reimportações usa uma chave natural escopada
-        // por user_id (watch_entries_user_dedup_idx), que nunca pode
-        // apontar para uma linha de outro usuário.
-        await sql`
-          INSERT INTO public.watch_entries (
-            id, user_id, library_item_id, media_id, watched_at, watched_at_precision,
-            rating, comment, is_rewatch, created_at, updated_at
-          )
-          VALUES (
-            ${crypto.randomUUID()},
-            ${user.id},
-            ${payload.library_item_id},
-            ${payload.media_id},
-            ${payload.watched_at},
-            ${payload.watched_at_precision},
-            ${payload.rating},
-            ${payload.comment},
-            ${payload.is_rewatch},
-            ${payload.created_at || new Date().toISOString()},
-            ${payload.updated_at || new Date().toISOString()}
-          )
-          ON CONFLICT (user_id, library_item_id, watched_at, is_rewatch)
-          DO UPDATE SET
-            media_id = EXCLUDED.media_id,
-            rating = EXCLUDED.rating,
-            comment = EXCLUDED.comment,
-            updated_at = EXCLUDED.updated_at
-        `;
-        watchCount++;
-      } catch (err: any) {
-        console.error("Erro ao importar watch entry:", err?.message);
-      }
-    }
-
-    let activityCount =
-      0;
-
-    const activities =
-      Array.isArray(
-        backup.data
-          .activity_events
-      )
-        ? backup.data
-            .activity_events
-        : [];
-
-    for (
-      const event
-      of activities
-    ) {
-      const newMediaId =
-        oldMediaToNew.get(
-          String(
-            event.media_id ||
-              ""
-          )
-        );
-
-      if (
-        !newMediaId
-      ) {
-        continue;
-      }
-
-      const newLibraryId =
-        event.library_item_id
-          ? oldLibraryToNew.get(
-              String(
-                event.library_item_id
-              )
-            ) ||
-            null
-          : null;
-
-            try {
-
-        // O `id` do backup nunca é usado como chave de escrita (evita
-        // sequestro de activity_event alheio via ON CONFLICT(id) — mesma
-        // classe de IDOR do watch_entries acima). Id sempre gerado no
-        // servidor. Diferente do watch_entries, aqui a dedupe é feita por
-        // uma checagem explícita (não por unique index): a tabela real já
-        // tem linhas legítimas duplicadas na chave natural
-        // (user_id, media_id, event_type, occurred_at) — achado de
-        // integridade pré-existente e não relacionado a este fix,
-        // registrado no relatório desta fase — então um índice único
-        // quebraria escritas reais do app. A checagem evita reimportação
-        // duplicada sem exigir uma constraint que a tabela hoje viola.
-        const occurredAt =
-          event.occurred_at || new Date().toISOString();
-
-        const already = await sql`
-          SELECT 1 FROM public.activity_events
-          WHERE user_id = ${user.id}
-            AND media_id = ${newMediaId}
-            AND event_type = ${event.event_type}
-            AND occurred_at = ${occurredAt}
-          LIMIT 1
-        `;
-
-        if (already.length === 0) {
-          await sql`
-            INSERT INTO public.activity_events (
-              id, user_id, media_id, library_item_id, event_type, metadata, occurred_at, created_at
-            )
-            VALUES (
-              ${crypto.randomUUID()},
-              ${user.id},
-              ${newMediaId},
-              ${newLibraryId},
-              ${event.event_type},
-              ${JSON.stringify(event.metadata || {})},
-              ${occurredAt},
-              ${new Date().toISOString()}
-            )
-          `;
-        }
-        activityCount++;
-      } catch (err: any) {
-        console.error("Erro ao importar activity event:", err?.message);
-      }
-    }
-
-    return NextResponse.json({
-      ok:
-        true,
-
-      restored: {
-        library:
-          libraryCount,
-
-        watch_history:
-          watchCount,
-
-        hidden_titles:
-          hiddenCount,
-
-        activity_events:
-          activityCount,
+    return NextResponse.json(
+      {
+        ok: true,
+        restored: {
+          library: added + updated,
+          library_added: added,
+          library_updated: updated,
+          library_kept: libraryInCatalog - added - updated,
+          watch_history: watchRows.length,
+          episodes: episodeRows.length,
+          hidden_titles: hiddenRows.length,
+          activity_events: activityRows.length,
+          skipped: plan.skipped,
+          catalog_unresolved: catalogUnresolved,
+        },
       },
-    });
-  } catch (
-    error
-  ) {
-    if (
-  error instanceof
-    RequestBodyTooLargeError
-) {
-  return NextResponse.json(
-    {
-      error: error.message
-    },
-    {
-      status: 413
-    }
-  );
-}
-
-if (
-  error instanceof
-    InvalidJsonError
-) {
-  return NextResponse.json(
-    {
-      error: error.message
-    },
-    {
-      status: 400
-    }
-  );
-}
-
-    console.error(
-      "Erro ao importar backup:",
-      error
+      { headers: { "Cache-Control": "private, no-store" } }
     );
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return NextResponse.json({ error: error.message }, { status: 413 });
+    }
 
-    return respostaDeErro(
-  error,
-  "POST /api/account/import",
-);
+    if (error instanceof InvalidJsonError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    console.error("Erro ao importar backup:", error);
+
+    return respostaDeErro(error, "POST /api/account/import");
   }
 }

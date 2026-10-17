@@ -129,12 +129,54 @@ export function applyAccountPreferences(preferences: unknown) {
   storeLocally(sanitizePreferences(preferences));
 }
 
+/* V3.3 — contraste (WCAG) do destaque. */
+const LIGHT_BG = "#f5f6f8";
+
+function rgbOf(hex: string) {
+  return [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+}
+
+function luminance(rgb: number[]) {
+  const [r, g, b] = rgb.map((value) => {
+    const x = value / 255;
+
+    return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+  });
+
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+export function contrastRatio(a: string, b: string) {
+  const [x, y] = [luminance(rgbOf(a)), luminance(rgbOf(b))].sort((p, q) => q - p);
+
+  return (x + 0.05) / (y + 0.05);
+}
+
+/**
+ * Escurece o destaque (mesmo matiz) só o necessário para ler como texto
+ * (≥ 4.5:1) sobre o fundo claro. Ciano/Verde/Laranja puros ficavam ~2:1 no
+ * tema Claro (eyebrows, links e botões ilegíveis). No Escuro/OLED não muda.
+ */
+export function readableAccent(accent: string, background = LIGHT_BG, minimum = 4.5) {
+  const base = rgbOf(accent);
+  let factor = 0;
+  let current = accent;
+
+  while (contrastRatio(current, background) < minimum && factor < 0.9) {
+    factor += 0.02;
+    current = `#${base.map((value) => Math.round(value * (1 - factor)).toString(16).padStart(2, "0")).join("")}`;
+  }
+
+  return current;
+}
+
 export function applyPreferences(
   preferences: AppearancePreferences
 ) {
   if (typeof document === "undefined") return;
 
   const root = document.documentElement;
+  const accent = preferences.theme === "light" ? readableAccent(preferences.accent) : preferences.accent;
 
   root.dataset.theme = preferences.theme;
   root.dataset.density = preferences.density;
@@ -143,11 +185,18 @@ export function applyPreferences(
 
   root.style.setProperty(
     "--accent",
-    preferences.accent
+    accent
   );
 
   root.style.setProperty(
     "--accent2",
-    preferences.accent
+    accent
   );
+
+  // Texto SOBRE o destaque (botão primário): branco ou quase-preto, o que ler melhor.
+  root.style.setProperty("--on-accent", onAccent(accent));
+}
+
+export function onAccent(accent: string) {
+  return contrastRatio(accent, "#ffffff") >= contrastRatio(accent, "#0b0d12") ? "#ffffff" : "#0b0d12";
 }

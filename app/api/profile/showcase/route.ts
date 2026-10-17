@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { respostaDeErro } from "@/lib/api-error";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
+import { isValidUsername, normalizeUsername, USERNAME_RULE_MESSAGE } from "@/lib/username";
+import { applyUsernameChange } from "@/lib/username-change";
 
 export async function GET() {
   try {
@@ -64,49 +66,33 @@ export async function PUT(request: Request) {
 
     // 1. Perfil atual
     const existingProfileRows = await sql`
-      SELECT id, username, display_name
+      SELECT id, username, display_name, visibility
       FROM public.profiles
       WHERE id = ${user.id}
       LIMIT 1
     `;
 
     const existingProfile = existingProfileRows[0];
-    const requestedUsername = String(body.username || "").trim().toLowerCase();
-    let username = String(existingProfile?.username || requestedUsername).trim().toLowerCase();
+    const requestedUsername = normalizeUsername(String(body.username || ""));
+    const currentUsername = existingProfile?.username ? String(existingProfile.username).toLowerCase() : null;
+    const wantsChange = Boolean(currentUsername && requestedUsername && requestedUsername !== currentUsername);
+    // V3.3: valida o @ que VAI ser gravado (antes validava só o atual e o novo
+    // passava cru — ex.: "meu nome!"). Mesma regra única de lib/username.ts.
+    const username = wantsChange || !currentUsername ? requestedUsername : currentUsername;
 
-    if (!/^[a-z0-9_]{3,24}$/.test(username)) {
-      return NextResponse.json({ error: "Use de 3 a 24 letras, números ou _." }, { status: 400 });
+    if (!isValidUsername(username)) {
+      return NextResponse.json({ error: USERNAME_RULE_MESSAGE }, { status: 400 });
     }
 
-    let usernameChange = null;
-    if (existingProfile?.username && requestedUsername && requestedUsername !== existingProfile.username) {
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      const changesCountRes = await sql`
-        SELECT count(*)::int as count
-        FROM public.username_changes
-        WHERE user_id = ${user.id} AND changed_at >= ${thirtyDaysAgo}
-      `;
-
-      if (Number(changesCountRes[0]?.count || 0) >= 2) {
-        return NextResponse.json({ error: "Você já usou as 2 trocas de @ dos últimos 30 dias." }, { status: 429 });
-      }
-
+    if (wantsChange) {
       const takenRes = await sql`
         SELECT id FROM public.profiles
-        WHERE lower(username) = ${requestedUsername} AND id != ${user.id}
+        WHERE lower(username) = ${username} AND id != ${user.id}
         LIMIT 1
       `;
       if (takenRes.length > 0) {
         return NextResponse.json({ error: "Esse @ já está em uso." }, { status: 409 });
       }
-
-      const insertChangeRes = await sql`
-        INSERT INTO public.username_changes (user_id, old_username, new_username, changed_at)
-        VALUES (${user.id}, ${existingProfile.username}, ${requestedUsername}, now())
-        RETURNING *
-      `;
-      usernameChange = insertChangeRes[0];
-      username = requestedUsername;
     }
 
     // 2. Validação dos favoritos
@@ -155,10 +141,25 @@ export async function PUT(request: Request) {
       }
     }
 
+    let usernameChange = null;
+    if (wantsChange) {
+      const changed = await applyUsernameChange(sql, user.id, username, currentUsername);
+      if (!changed.ok) {
+        return NextResponse.json({ error: changed.error }, { status: changed.status });
+      }
+      usernameChange = { old_username: currentUsername, new_username: username };
+    }
+
     // 3. Atualizar public.profiles
     const bio = String(body.bio || "").trim().slice(0, 280) || null;
-    const visibility = body.visibility === "public" ? "public" : "private";
-    const isPublic = body.visibility === "public";
+    // Campo ausente mantém a visibilidade atual (não torna o perfil privado por omissão).
+    const visibility =
+      body.visibility === "public" || body.visibility === "private"
+        ? body.visibility
+        : existingProfile?.visibility === "public"
+          ? "public"
+          : "private";
+    const isPublic = visibility === "public";
     const displayName = user.name || existingProfile?.display_name || username;
 
     await sql`

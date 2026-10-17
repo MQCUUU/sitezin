@@ -1,99 +1,155 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { Bell, Loader2, Save } from "lucide-react";
+
 import { useToast } from "@/components/ToastProvider";
 
 /*
  * F1 — a tabela `public.notifications` só aceita `type IN
  * ('new_season','new_episode')` (CHECK constraint). O único produtor
- * de linhas (`app/api/library/sync-seasons/route.ts`) só escreve esses
- * dois tipos. As preferências abaixo NÃO têm como virar uma
- * notificação real hoje:
+ * de linhas (`app/api/library/sync-seasons/route.ts`, regras em
+ * lib/notifications/series.ts) só escreve esses dois tipos, e só para
+ * séries CURTIDAS. Preferências sem produtor real (follow por e-mail,
+ * curtidas em review, e-mails) continuam fora da UI — as colunas ficam no
+ * banco para quando as features existirem.
  *
- * - `new_follower_*`/`follow_request_*`: o follow system (Fase E1)
- *   nunca escreve em `notifications` — só faz join direto com
- *   `public.follows`, sem produzir notificação.
- * - `review_like_*`: não existe NENHUMA feature de curtir review em
- *   lugar nenhum do código — nem tabela, nem rota, nem UI.
- * - `*_email`, incluindo `product_updates_email`: nenhum sender de
- *   e-mail existe no repositório (sem nodemailer/resend/sendgrid).
- *
- * Manter esses toggles visíveis como se funcionassem seria enganoso —
- * decisão de produto da F1 (fechada) foi escondê-los da UI ativa sem
- * apagar as colunas do banco (podem voltar quando as features reais
- * existirem). Só `new_season_site`/`new_episode_site` têm produtor
- * real e continuam visíveis.
+ * V3.3: estado de carregamento/erro (antes, falha no GET mostrava tudo
+ * desmarcado como se fosse a preferência salva), "alterações não salvas"
+ * e feedback específico.
  */
+
+type Prefs = { new_season_site: boolean; new_episode_site: boolean };
+
+const keyOf = (prefs: Prefs | null) => (prefs ? `${prefs.new_season_site}|${prefs.new_episode_site}` : "");
 
 export function NotificationSettings() {
   const toast = useToast();
-  const [prefs, setPrefs] = useState<any>({});
+  const [prefs, setPrefs] = useState<Prefs | null>(null);
+  const [saved, setSaved] = useState("");
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [saving, setSaving] = useState(false);
 
+  async function load() {
+    setStatus("loading");
+
+    try {
+      const response = await fetch("/api/profile/notifications", { cache: "no-store" });
+
+      if (!response.ok) throw new Error();
+
+      const data = await response.json();
+      const next = { new_season_site: data.new_season_site !== false, new_episode_site: data.new_episode_site !== false };
+
+      setPrefs(next);
+      setSaved(keyOf(next));
+      setStatus("ready");
+    } catch {
+      setStatus("error");
+    }
+  }
+
   useEffect(() => {
-    fetch("/api/profile/notifications", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : {}))
-      .then(setPrefs);
+    void load();
   }, []);
 
-  const toggle = (key: string) => setPrefs((p: any) => ({ ...p, [key]: !p[key] }));
+  const dirty = status === "ready" && keyOf(prefs) !== saved;
+  const toggle = (key: keyof Prefs) => setPrefs((current) => (current ? { ...current, [key]: !current[key] } : current));
 
   async function save() {
+    if (!prefs) return;
+
     setSaving(true);
-    const r = await fetch("/api/profile/notifications", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(prefs),
-    });
-    setSaving(false);
-    r.ok ? toast.success("Preferências salvas") : toast.error("Não foi possível salvar");
+
+    try {
+      const response = await fetch("/api/profile/notifications", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(prefs),
+      });
+
+      if (!response.ok) throw new Error();
+
+      setSaved(keyOf(prefs));
+      toast.success("Preferências de notificações salvas.");
+    } catch {
+      toast.error("Não foi possível salvar as notificações", { description: "Nada foi alterado. Tente de novo." });
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
-    <section className="panel notification-settings">
+    <section className="panel notification-settings" aria-labelledby="notification-settings-title">
       <div className="settings-panel-head">
         <div className="settings-icon">
-          <Bell size={19} />
+          <Bell size={19} aria-hidden="true" />
         </div>
         <div>
-          <h2>Notificações</h2>
-          <p className="muted">Escolha apenas os avisos que realmente importam.</p>
+          <h2 id="notification-settings-title">Notificações</h2>
+          <p className="muted">Avisos no sino do MyCatalog sobre as séries que você curtiu.</p>
         </div>
       </div>
 
-      <div className="notification-content-preferences">
-        <label className="notification-product">
-          <input
-            type="checkbox"
-            checked={Boolean(prefs.new_season_site)}
-            onChange={() => toggle("new_season_site")}
-          />
-          <span>
-            <strong>Novas temporadas</strong>
-            <small>Avisar quando uma série curtida ganhar uma nova temporada.</small>
-          </span>
-        </label>
-        <label className="notification-product">
-          <input
-            type="checkbox"
-            checked={Boolean(prefs.new_episode_site)}
-            onChange={() => toggle("new_episode_site")}
-          />
-          <span>
-            <strong>Novos episódios</strong>
-            <small>Avisar sobre o próximo episódio e sua data de estreia.</small>
-          </span>
-        </label>
-      </div>
+      {status === "loading" && (
+        <p className="muted" role="status">
+          <Loader2 className="spin" size={14} aria-hidden="true" /> Carregando preferências…
+        </p>
+      )}
 
-      <p className="muted notification-settings-note">
-        Notificações de seguidores, curtidas em avaliações e por e-mail ainda não
-        existem — chegam em uma fase futura.
-      </p>
+      {status === "error" && (
+        <div className="set-inline-error" role="alert">
+          <span>Não foi possível carregar suas preferências.</span>
+          <button type="button" className="btn" onClick={() => void load()}>
+            Tentar de novo
+          </button>
+        </div>
+      )}
 
-      <button type="button" className="btn primary" disabled={saving} onClick={save}>
-        {saving ? <Loader2 className="spin" size={15} /> : <Save size={15} />} Salvar notificações
-      </button>
+      {status === "ready" && prefs && (
+        <>
+          <fieldset className="notification-content-preferences">
+            <legend className="mc-visually-hidden">Avisos no site</legend>
+            <label className="notification-product">
+              <input
+                type="checkbox"
+                checked={prefs.new_season_site}
+                onChange={() => toggle("new_season_site")}
+              />
+              <span>
+                <strong>Novas temporadas</strong>
+                <small>Quando uma série curtida tiver uma temporada nova anunciada ou estreando.</small>
+              </span>
+            </label>
+            <label className="notification-product">
+              <input
+                type="checkbox"
+                checked={prefs.new_episode_site}
+                onChange={() => toggle("new_episode_site")}
+              />
+              <span>
+                <strong>Próximos episódios</strong>
+                <small>O próximo episódio de uma série curtida e a data de estreia dele.</small>
+              </span>
+            </label>
+          </fieldset>
+
+          <p className="muted notification-settings-note">
+            Pedidos para seguir aparecem como aviso rápido enquanto o site está aberto. Notificações
+            de curtidas e por e-mail ainda não existem.
+          </p>
+
+          <div className="set-save-row">
+            <button type="button" className="btn primary" disabled={saving || !dirty} onClick={save}>
+              {saving ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <Save size={15} aria-hidden="true" />}{" "}
+              Salvar notificações
+            </button>
+            <span className="muted" role="status" aria-live="polite">
+              {dirty ? "Alterações não salvas." : ""}
+            </span>
+          </div>
+        </>
+      )}
     </section>
   );
 }

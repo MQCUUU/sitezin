@@ -1,6 +1,31 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
+import { canViewProfile, canViewSection } from "@/lib/social/visibility";
+
+/*
+ * V3.3 — privacidade aplicada AQUI (servidor), pela regra única de
+ * lib/social/visibility.ts:
+ *  - seção invisível para quem pede nem é consultada (antes: diário,
+ *    listas e seguidores eram buscados e só depois descartados);
+ *  - nenhum id interno de conta sai desta rota (nem do dono, nem de
+ *    seguidores/seguindo) — a página age por @username;
+ *  - e-mail nunca é selecionado.
+ */
+const NO_STORE = { "Cache-Control": "private, no-store", Vary: "Cookie" };
+
+function publicProfile(profile: Record<string, any>, bio: string | null) {
+  return {
+    display_name: profile.display_name,
+    username: profile.username,
+    bio,
+    avatar_url: profile.avatar_url,
+    is_public: profile.is_public,
+    visibility: profile.visibility,
+    follow_policy: profile.follow_policy,
+    created_at: profile.created_at,
+  };
+}
 
 export async function GET(_request: Request, context: { params: Promise<{ username: string }> }) {
   const { username } = await context.params;
@@ -23,49 +48,35 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
   const profile = profileRows[0];
 
   const session = await auth.getSession().catch(() => null);
-  const viewer: { id: string } | null = session?.data?.user?.id ? { id: session.data.user.id } : null;
-  const isOwner = viewer?.id === profile.id;
+  const viewerId: string | null = session?.data?.user?.id ?? null;
+  const isOwner = viewerId === profile.id;
 
-  let canView = profile.visibility === "public" || profile.is_public === true || isOwner;
+  const [viewerFollowRows, viewerProfileRows] = await Promise.all([
+    viewerId && !isOwner
+      ? sql`
+          SELECT status
+          FROM public.follows
+          WHERE follower_id = ${viewerId} AND following_id = ${profile.id}
+          LIMIT 1
+        `
+      : Promise.resolve([]),
+    viewerId ? sql`SELECT username FROM public.profiles WHERE id = ${viewerId} LIMIT 1` : Promise.resolve([]),
+  ]);
+  const viewerFollowStatus: string | null = (viewerFollowRows[0] as { status?: string } | undefined)?.status || null;
+  const viewerUsername: string | null = (viewerProfileRows[0] as { username?: string } | undefined)?.username || null;
+  const relation = { isOwner, isAcceptedFollower: viewerFollowStatus === "accepted" };
+  const canView = canViewProfile(profile, relation);
 
-  let viewerFollowStatus: string | null = null;
-  if (viewer && !isOwner) {
-    const vfRows = await sql`
-      SELECT status
-      FROM public.follows
-      WHERE follower_id = ${viewer.id} AND following_id = ${profile.id}
-      LIMIT 1
-    `;
-    viewerFollowStatus = vfRows[0]?.status || null;
-  }
-
-  const isFollower = viewerFollowStatus === "accepted";
-  if (!canView) {
-    canView = isFollower;
-  }
-
-  const sectionVisible = (setting: string) => isOwner || setting === "profile" || (setting === "followers" && isFollower);
-  const activityVisible = sectionVisible(profile.activity_visibility);
-  const diaryVisible = sectionVisible(profile.diary_visibility);
-  const listsVisible = sectionVisible(profile.lists_visibility);
-  const likesVisible = sectionVisible(profile.likes_visibility);
+  const followersCountPromise = sql`SELECT count(*)::int as count FROM public.follows WHERE following_id = ${profile.id} AND status = 'accepted'`;
+  const followingCountPromise = sql`SELECT count(*)::int as count FROM public.follows WHERE follower_id = ${profile.id} AND status = 'accepted'`;
 
   if (!canView) {
-    const [followersCountRes, followingCountRes] = await Promise.all([
-      sql`SELECT count(*)::int as count FROM public.follows WHERE following_id = ${profile.id} AND status = 'accepted'`,
-      sql`SELECT count(*)::int as count FROM public.follows WHERE follower_id = ${profile.id} AND status = 'accepted'`,
-    ]);
-    const followersCount = Number(followersCountRes[0]?.count || 0);
-    const followingCount = Number(followingCountRes[0]?.count || 0);
+    const [followersCountRes, followingCountRes] = await Promise.all([followersCountPromise, followingCountPromise]);
 
     return NextResponse.json(
       {
-        // I1 — achado durante a auditoria de metadata (§30): esta rota
-        // devolvia `profile` cru, incluindo `bio` (texto livre do
-        // usuário), mesmo com `canView=false`. As demais seções já eram
-        // corretamente ocultadas (arrays vazios); a bio escapava disso
-        // por ser um campo do objeto `profile`, não uma seção separada.
-        profile: { ...profile, bio: null },
+        // I1: bio é texto livre do usuário — perfil bloqueado não a expõe.
+        profile: publicProfile(profile, null),
         locked: true,
         favorites: [],
         activity: [],
@@ -75,105 +86,34 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
         lists: [],
         diary: [],
         social: {
-          followers_count: followersCount,
-          following_count: followingCount,
+          followers_count: Number(followersCountRes[0]?.count || 0),
+          following_count: Number(followingCountRes[0]?.count || 0),
           relationship: viewerFollowStatus || "none",
-          can_follow: !isOwner && profile.follow_policy !== "nobody",
+          can_follow: profile.follow_policy !== "nobody",
+          viewer_username: viewerUsername,
           followers: null,
           following: null,
-          viewer_following_ids: [],
+          viewer_following_usernames: [],
         },
       },
-      { headers: { "Cache-Control": "private, no-store", Vary: "Cookie" } }
+      { headers: NO_STORE }
     );
   }
 
+  const visible = (setting: unknown) => canViewSection(profile, setting, relation);
+  const activityVisible = visible(profile.activity_visibility);
+  const diaryVisible = visible(profile.diary_visibility);
+  const listsVisible = visible(profile.lists_visibility);
+  const likesVisible = visible(profile.likes_visibility);
+  const followersVisible = visible(profile.followers_visibility);
+  const followingVisible = visible(profile.following_visibility);
+  const none = Promise.resolve([] as Record<string, any>[]);
+
   /*
-   * H1 — antes esta rota buscava `library_items` INTEIRA (sem LIMIT) e
-   * derivava `stats`/`reviews`/`recent_reviews`/`liked_titles` em JS
-   * sobre esse array completo (H0, HIGH — pior que o full-fetch da
-   * Library antes da D1, porque este aqui é exposto a QUALQUER
-   * visitante de um perfil público, não só ao dono). Substituído por
-   * quatro queries específicas: um agregado SQL para `stats`, e três
-   * listas já filtradas/ordenadas/limitadas no banco. As duas seções
-   * gated por privacidade (`reviews`/`recent_reviews` por
-   * `activityVisible`, `liked_titles` por `likesVisible`) só disparam a
-   * query quando a seção é visível para quem está pedindo — mesmo
-   * padrão já usado abaixo para `viewerFollowingRows`.
-   *
-   * `reviews` (aba "Todas as reviews") preservava a lista completa,
-   * sem limite, no comportamento antigo — aqui ganhou um teto de 200,
-   * generoso o bastante para nunca ser atingido por um usuário real
-   * (nenhuma mudança de produto pretendida, só um limite de segurança
-   * que a versão anterior nunca teve).
+   * H1 — agregado SQL para `stats` e listas já filtradas/limitadas no banco
+   * (nunca a library_items inteira). Cada seção só é consultada se for
+   * visível para quem pede.
    */
-  const statsPromise = sql`
-    SELECT
-      count(*)::int AS total,
-      count(*) FILTER (WHERE li.status IN ('watched', 'rewatching', 'rewatched'))::int AS watched,
-      count(*) FILTER (WHERE m.media_type = 'movie')::int AS movies,
-      count(*) FILTER (WHERE m.media_type = 'tv')::int AS series
-    FROM public.library_items li
-    LEFT JOIN public.media m ON m.id = li.media_id
-    WHERE li.user_id = ${profile.id}
-  `;
-
-  const reviewsPromise = activityVisible
-    ? sql`
-        SELECT
-          li.id, li.personal_rating, li.review, li.watched_at, li.added_at, li.updated_at,
-          json_build_object(
-            'tmdb_id', m.tmdb_id,
-            'media_type', m.media_type,
-            'title', m.title,
-            'poster_path', m.poster_path
-          ) as media
-        FROM public.library_items li
-        LEFT JOIN public.media m ON m.id = li.media_id
-        WHERE li.user_id = ${profile.id} AND li.review IS NOT NULL AND trim(li.review) <> ''
-        ORDER BY coalesce(li.updated_at, li.watched_at, li.added_at) DESC
-        LIMIT 200
-      `
-    : Promise.resolve([]);
-
-  const recentReviewsPromise = activityVisible
-    ? sql`
-        SELECT
-          li.id, li.personal_rating, li.review, li.watched_at, li.added_at, li.updated_at,
-          json_build_object(
-            'tmdb_id', m.tmdb_id,
-            'media_type', m.media_type,
-            'title', m.title,
-            'poster_path', m.poster_path
-          ) as media
-        FROM public.library_items li
-        LEFT JOIN public.media m ON m.id = li.media_id
-        WHERE li.user_id = ${profile.id}
-          AND ((li.review IS NOT NULL AND trim(li.review) <> '') OR li.personal_rating IS NOT NULL)
-        ORDER BY coalesce(li.updated_at, li.watched_at, li.added_at) DESC
-        LIMIT 8
-      `
-    : Promise.resolve([]);
-
-  const likedTitlesPromise = likesVisible
-    ? sql`
-        SELECT
-          li.id, li.status, li.personal_rating, li.review, li.favorite,
-          li.watched_at, li.added_at, li.updated_at,
-          json_build_object(
-            'tmdb_id', m.tmdb_id,
-            'media_type', m.media_type,
-            'title', m.title,
-            'poster_path', m.poster_path
-          ) as media
-        FROM public.library_items li
-        LEFT JOIN public.media m ON m.id = li.media_id
-        WHERE li.user_id = ${profile.id} AND li.favorite = true
-        ORDER BY li.updated_at DESC
-        LIMIT 20
-      `
-    : Promise.resolve([]);
-
   const [
     favorites,
     statsRows,
@@ -198,95 +138,163 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
       WHERE pf.user_id = ${profile.id}
       ORDER BY pf.position ASC
     `,
-    statsPromise,
-    reviewsPromise,
-    recentReviewsPromise,
-    likedTitlesPromise,
     sql`
       SELECT
-        f.follower_id,
-        json_build_object(
-          'id', p.id,
-          'username', p.username,
-          'display_name', p.display_name,
-          'avatar_url', p.avatar_url
-        ) as profile
-      FROM public.follows f
-      JOIN public.profiles p ON p.id = f.follower_id
-      WHERE f.following_id = ${profile.id} AND f.status = 'accepted'
-      ORDER BY f.created_at DESC
-      LIMIT 200
+        count(*)::int AS total,
+        count(*) FILTER (WHERE li.status IN ('watched', 'rewatching', 'rewatched'))::int AS watched,
+        count(*) FILTER (WHERE m.media_type = 'movie')::int AS movies,
+        count(*) FILTER (WHERE m.media_type = 'tv')::int AS series
+      FROM public.library_items li
+      LEFT JOIN public.media m ON m.id = li.media_id
+      WHERE li.user_id = ${profile.id}
     `,
-    sql`
-      SELECT
-        f.following_id,
-        json_build_object(
-          'id', p.id,
-          'username', p.username,
-          'display_name', p.display_name,
-          'avatar_url', p.avatar_url
-        ) as profile
-      FROM public.follows f
-      JOIN public.profiles p ON p.id = f.following_id
-      WHERE f.follower_id = ${profile.id} AND f.status = 'accepted'
-      ORDER BY f.created_at DESC
-      LIMIT 200
-    `,
-    sql`
-      SELECT
-        cl.id,
-        cl.name,
-        NULLIF(NULLIF(btrim(cl.description), ''), 'null') AS description,
-        cl.is_public,
-        cl.created_at,
-        json_build_array(json_build_object('count', (
-          SELECT count(*)::int FROM public.custom_list_items cli WHERE cli.list_id = cl.id
-        ))) as items,
-        COALESCE((
-          SELECT json_agg(c.poster_path ORDER BY c.rn)
-          FROM (
-            SELECT m.poster_path, row_number() OVER (ORDER BY i.position, i.added_at, i.media_id) AS rn
-            FROM public.custom_list_items i
-            JOIN public.media m ON m.id = i.media_id
-            WHERE i.list_id = cl.id AND m.poster_path IS NOT NULL
-            ORDER BY i.position, i.added_at, i.media_id
-            LIMIT 4
-          ) c
-        ), '[]'::json) AS covers
-      FROM public.custom_lists cl
-      -- V2.7: visitante só vê listas PÚBLICAS (antes, privadas apareciam no perfil).
-      WHERE cl.user_id = ${profile.id} AND (cl.is_public OR ${isOwner})
-      ORDER BY cl.updated_at DESC, cl.id
-      LIMIT 20
-    `,
-    sql`
-      SELECT
-        we.id,
-        we.watched_at,
-        we.rating,
-        we.comment,
-        we.is_rewatch,
-        json_build_object(
-          'media', json_build_object(
-            'tmdb_id', m.tmdb_id,
-            'media_type', m.media_type,
-            'title', m.title,
-            'poster_path', m.poster_path
-          )
-        ) as library
-      FROM public.watch_entries we
-      LEFT JOIN public.library_items li ON li.id = we.library_item_id
-      -- V2.5: a visualização guarda o próprio media_id (sobrevive à remoção do item).
-      LEFT JOIN public.media m ON m.id = COALESCE(we.media_id, li.media_id)
-      WHERE we.user_id = ${profile.id}
-      ORDER BY we.watched_at DESC
-      LIMIT 12
-    `,
-    viewer?.id
-      ? sql`SELECT following_id FROM public.follows WHERE follower_id = ${viewer.id} AND status = 'accepted'`
-      : Promise.resolve([]),
-    sql`SELECT count(*)::int as count FROM public.follows WHERE following_id = ${profile.id} AND status = 'accepted'`,
-    sql`SELECT count(*)::int as count FROM public.follows WHERE follower_id = ${profile.id} AND status = 'accepted'`,
+    activityVisible
+      ? sql`
+          SELECT
+            li.id, li.personal_rating, li.review, li.watched_at, li.added_at, li.updated_at,
+            json_build_object(
+              'tmdb_id', m.tmdb_id,
+              'media_type', m.media_type,
+              'title', m.title,
+              'poster_path', m.poster_path
+            ) as media
+          FROM public.library_items li
+          LEFT JOIN public.media m ON m.id = li.media_id
+          WHERE li.user_id = ${profile.id} AND li.review IS NOT NULL AND trim(li.review) <> ''
+          ORDER BY coalesce(li.updated_at, li.watched_at, li.added_at) DESC
+          LIMIT 200
+        `
+      : none,
+    activityVisible
+      ? sql`
+          SELECT
+            li.id, li.personal_rating, li.review, li.watched_at, li.added_at, li.updated_at,
+            json_build_object(
+              'tmdb_id', m.tmdb_id,
+              'media_type', m.media_type,
+              'title', m.title,
+              'poster_path', m.poster_path
+            ) as media
+          FROM public.library_items li
+          LEFT JOIN public.media m ON m.id = li.media_id
+          WHERE li.user_id = ${profile.id}
+            AND ((li.review IS NOT NULL AND trim(li.review) <> '') OR li.personal_rating IS NOT NULL)
+          ORDER BY coalesce(li.updated_at, li.watched_at, li.added_at) DESC
+          LIMIT 8
+        `
+      : none,
+    likesVisible
+      ? sql`
+          SELECT
+            li.id, li.status, li.personal_rating, li.review, li.favorite,
+            li.watched_at, li.added_at, li.updated_at,
+            json_build_object(
+              'tmdb_id', m.tmdb_id,
+              'media_type', m.media_type,
+              'title', m.title,
+              'poster_path', m.poster_path
+            ) as media
+          FROM public.library_items li
+          LEFT JOIN public.media m ON m.id = li.media_id
+          WHERE li.user_id = ${profile.id} AND li.favorite = true
+          ORDER BY li.updated_at DESC
+          LIMIT 20
+        `
+      : none,
+    followersVisible
+      ? sql`
+          SELECT
+            json_build_object(
+              'username', p.username,
+              'display_name', p.display_name,
+              'avatar_url', p.avatar_url
+            ) as profile
+          FROM public.follows f
+          JOIN public.profiles p ON p.id = f.follower_id
+          WHERE f.following_id = ${profile.id} AND f.status = 'accepted'
+          ORDER BY f.created_at DESC
+          LIMIT 200
+        `
+      : none,
+    followingVisible
+      ? sql`
+          SELECT
+            json_build_object(
+              'username', p.username,
+              'display_name', p.display_name,
+              'avatar_url', p.avatar_url
+            ) as profile
+          FROM public.follows f
+          JOIN public.profiles p ON p.id = f.following_id
+          WHERE f.follower_id = ${profile.id} AND f.status = 'accepted'
+          ORDER BY f.created_at DESC
+          LIMIT 200
+        `
+      : none,
+    listsVisible
+      ? sql`
+          SELECT
+            cl.id,
+            cl.name,
+            NULLIF(NULLIF(btrim(cl.description), ''), 'null') AS description,
+            cl.is_public,
+            cl.created_at,
+            json_build_array(json_build_object('count', (
+              SELECT count(*)::int FROM public.custom_list_items cli WHERE cli.list_id = cl.id
+            ))) as items,
+            COALESCE((
+              SELECT json_agg(c.poster_path ORDER BY c.rn)
+              FROM (
+                SELECT m.poster_path, row_number() OVER (ORDER BY i.position, i.added_at, i.media_id) AS rn
+                FROM public.custom_list_items i
+                JOIN public.media m ON m.id = i.media_id
+                WHERE i.list_id = cl.id AND m.poster_path IS NOT NULL
+                ORDER BY i.position, i.added_at, i.media_id
+                LIMIT 4
+              ) c
+            ), '[]'::json) AS covers
+          FROM public.custom_lists cl
+          -- V2.7: visitante só vê listas PÚBLICAS; lista privada nunca vira pública pelo perfil.
+          WHERE cl.user_id = ${profile.id} AND (cl.is_public OR ${isOwner})
+          ORDER BY cl.updated_at DESC, cl.id
+          LIMIT 20
+        `
+      : none,
+    diaryVisible
+      ? sql`
+          SELECT
+            we.id,
+            we.watched_at,
+            we.rating,
+            we.comment,
+            we.is_rewatch,
+            json_build_object(
+              'media', json_build_object(
+                'tmdb_id', m.tmdb_id,
+                'media_type', m.media_type,
+                'title', m.title,
+                'poster_path', m.poster_path
+              )
+            ) as library
+          FROM public.watch_entries we
+          LEFT JOIN public.library_items li ON li.id = we.library_item_id
+          -- V2.5: a visualização guarda o próprio media_id (sobrevive à remoção do item).
+          LEFT JOIN public.media m ON m.id = COALESCE(we.media_id, li.media_id)
+          WHERE we.user_id = ${profile.id}
+          ORDER BY we.watched_at DESC
+          LIMIT 12
+        `
+      : none,
+    viewerId
+      ? sql`
+          SELECT p.username
+          FROM public.follows f
+          JOIN public.profiles p ON p.id = f.following_id
+          WHERE f.follower_id = ${viewerId} AND f.status = 'accepted' AND p.username IS NOT NULL
+        `
+      : none,
+    followersCountPromise,
+    followingCountPromise,
   ]);
 
   const statsRow = (statsRows[0] as { total: number; watched: number; movies: number; series: number } | undefined) || {
@@ -295,30 +303,22 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
     movies: 0,
     series: 0,
   };
-  const stats = {
-    total: Number(statsRow.total || 0),
-    watched: Number(statsRow.watched || 0),
-    movies: Number(statsRow.movies || 0),
-    series: Number(statsRow.series || 0),
-  };
-
-  const followersCount = Number(followersCountRes[0]?.count || 0);
-  const followingCount = Number(followingCountRes[0]?.count || 0);
-  const viewerFollowing = (viewerFollowingRows || []).map((row: any) => row.following_id);
-
-  const reviews = reviewsRows || [];
-  const recentReviews = recentReviewsRows || [];
 
   return NextResponse.json(
     {
-      profile,
+      profile: publicProfile(profile, profile.bio ?? null),
       favorites: favorites || [],
-      stats,
-      reviews,
-      recent_reviews: recentReviews,
+      stats: {
+        total: Number(statsRow.total || 0),
+        watched: Number(statsRow.watched || 0),
+        movies: Number(statsRow.movies || 0),
+        series: Number(statsRow.series || 0),
+      },
+      reviews: reviewsRows || [],
+      recent_reviews: recentReviewsRows || [],
       liked_titles: likedTitlesRows || [],
-      lists: listsVisible ? lists || [] : [],
-      diary: diaryVisible ? diary || [] : [],
+      lists: lists || [],
+      diary: diary || [],
       section_visibility: {
         activity: activityVisible,
         diary: diaryVisible,
@@ -326,20 +326,16 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
         likes: likesVisible,
       },
       social: {
-        followers_count: followersCount,
-        following_count: followingCount,
+        followers_count: Number(followersCountRes[0]?.count || 0),
+        following_count: Number(followingCountRes[0]?.count || 0),
         relationship: isOwner ? "self" : viewerFollowStatus || "none",
         can_follow: !isOwner && profile.follow_policy !== "nobody",
-        followers: sectionVisible(profile.followers_visibility) ? followers || [] : null,
-        following: sectionVisible(profile.following_visibility) ? following || [] : null,
-        viewer_following_ids: viewerFollowing,
+        viewer_username: viewerUsername,
+        followers: followersVisible ? followers || [] : null,
+        following: followingVisible ? following || [] : null,
+        viewer_following_usernames: (viewerFollowingRows || []).map((row: Record<string, any>) => row.username),
       },
     },
-    {
-      headers: {
-        "Cache-Control": "private, no-store",
-        "Vary": "Cookie",
-      },
-    }
+    { headers: NO_STORE }
   );
 }

@@ -297,6 +297,36 @@
   color: var(--danger, #ff667d);
 }
 
+/* V3.3 — dica sob a lista de critérios, erro com "Tentar de novo", linha de salvar. */
+.set-hint {
+  margin: 0;
+  padding: 0 20px 4px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.set-inline-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  color: var(--danger, #ff667d);
+  font-size: 13.5px;
+}
+
+.set-save-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.account-settings-note {
+  margin: 0;
+  font-size: 12.5px;
+}
+
 /* Painéis legados dentro das seções (conta, notificações, streaming, dados) */
 .set-content > .panel,
 .set-content > section.panel {

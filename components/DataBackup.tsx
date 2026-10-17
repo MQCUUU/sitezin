@@ -149,7 +149,8 @@ export function DataBackup() {
   async function importLetterboxd() {
     try {
       setLetterboxdImporting(true);
-      const total = { imported: 0, history: 0, notFound: 0 };
+      const total = { imported: 0, updated: 0, history: 0, notFound: 0, batches: 0 };
+      const missing: string[] = [];
 
       // Lotes menores evitam o limite de duração das funções da Vercel.
       for (let start = 0; start < letterboxdRows.length; start += 40) {
@@ -162,18 +163,26 @@ export function DataBackup() {
         if (!response.ok || data?.error) throw new Error(data?.error || "Não foi possível importar.");
 
         total.imported += Number(data.imported || 0);
+        total.updated += Number(data.updated || 0);
         total.history += Number(data.history || 0);
         total.notFound += Number(data.not_found?.length || 0);
+        total.batches++;
+        for (const item of data.not_found || []) if (missing.length < 3) missing.push(item.year ? `${item.name} (${item.year})` : item.name);
       }
 
       setLetterboxdRows([]);
       setLetterboxdName("");
       toast.success("Letterboxd importado", {
-        description: `${total.imported} filmes e ${total.history} registros do diário processados. ${total.notFound} não encontrados.`,
+        description:
+          `${total.imported} adicionados · ${total.updated} atualizados · ${total.history} visualizações novas no Diário · ${total.notFound} não encontrados` +
+          (missing.length ? ` (ex.: ${missing.join(", ")})` : "") +
+          ".",
+        duration: 12000,
       });
     } catch (error) {
-      toast.error("Erro ao importar", {
-        description: error instanceof Error ? error.message : "Tente novamente.",
+      // Lotes já enviados ficam aplicados; reimportar o mesmo arquivo é seguro (não duplica nada).
+      toast.error("A importação parou no meio", {
+        description: `${error instanceof Error ? error.message : "Tente novamente."} Pode importar o mesmo arquivo de novo: o que já entrou não é duplicado.`,
       });
     } finally {
       setLetterboxdImporting(false);
@@ -426,7 +435,7 @@ if (
         "Backup restaurado",
         {
           description:
-            `${data.restored?.library || 0} títulos e ${data.restored?.watch_history || 0} visualizações processados.`,
+            `${data.restored?.library_added || 0} títulos adicionados · ${data.restored?.library_updated || 0} atualizados · ${data.restored?.library_kept || 0} mantidos (a versão da conta era mais recente) · ${data.restored?.watch_history || 0} visualizações · ${data.restored?.episodes || 0} episódios.`,
         }
       );
     } catch (
@@ -485,7 +494,7 @@ if (
             </strong>
 
             <p>
-              Biblioteca, notas, reviews, progresso, histórico de visualizações, Diário e títulos sem interesse.
+              Biblioteca, notas, reviews, progresso de séries (incluindo episódios), Diário e títulos marcados como “Não tenho interesse”. Senha e sessões nunca entram no arquivo.
             </p>
           </div>
 
@@ -577,7 +586,7 @@ if (
             </strong>
 
             <p>
-              O modo de restauração é por mesclagem: ele atualiza títulos existentes e adiciona os que estiverem faltando.
+              Restaurar mescla o arquivo com a sua conta: títulos que faltam são adicionados; se o mesmo título existe nos dois, fica a versão editada mais recentemente. Nada é apagado — e se algo falhar, nada muda.
             </p>
           </div>
 
@@ -587,6 +596,7 @@ if (
             }
             type="file"
             accept="application/json,.json"
+            aria-label="Arquivo de backup do MyCatalog (.json)"
             hidden
             onChange={
               selectBackup
@@ -616,13 +626,14 @@ if (
 
           <div>
             <strong>Importar do Letterboxd</strong>
-            <p>Importe diary.csv, ratings.csv ou watchlist.csv. A importação mescla os filmes sem apagar sua biblioteca.</p>
+            <p>Importe diary.csv, ratings.csv ou watchlist.csv. A importação mescla os filmes sem apagar sua biblioteca; importar o mesmo arquivo de novo não duplica nada. Filmes que não conseguirmos identificar com segurança aparecem no resumo como “não encontrados”.</p>
           </div>
 
           <input
             ref={letterboxdInputRef}
             type="file"
             accept="text/csv,.csv"
+            aria-label="Arquivo CSV do Letterboxd"
             hidden
             onChange={selectLetterboxd}
           />
@@ -667,7 +678,7 @@ if (
             </h3>
 
             <p className="muted">
-              Seus dados atuais não serão apagados. O MyCatalog vai mesclar o backup com a conta atual.
+              Nada da sua conta será apagado. Em cada título que existir nos dois, fica a versão editada mais recentemente.
             </p>
 
             <div className="mycatalog-confirm-actions">

@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { detailsTMDB } from "@/lib/tmdb";
+import { todayIn } from "@/lib/calendar/dates";
+import { buildSeriesNotices } from "@/lib/notifications/series";
 
-const dateAtNoonUtc = (date?: string | null) => (date ? `${date}T12:00:00.000Z` : null);
 
 export async function POST() {
   const session = await auth.getSession().catch(() => null);
@@ -28,7 +29,9 @@ export async function POST() {
       FROM public.library_items li
       JOIN public.media m ON m.id = li.media_id
       WHERE li.user_id = ${user.id}
+        AND m.media_type = 'tv'
         AND (li.favorite = true OR li.status IN ('watched', 'rewatched'))
+      ORDER BY li.favorite DESC, li.updated_at DESC, li.id
       LIMIT 40
     `,
     sql`
@@ -47,6 +50,7 @@ export async function POST() {
   }).slice(0, 40);
 
   const reopened: string[] = [];
+  const today = todayIn();
   const generated: string[] = [];
 
   for (let index = 0; index < candidates.length; index += 4) {
@@ -79,34 +83,16 @@ export async function POST() {
             reopened.push(item.id);
           }
 
-          const notices: any[] = [];
-          if (item.favorite && knownSeasons > 0 && seasons > knownSeasons && preferences?.new_season_site !== false) {
-            const season = (details.seasons || []).filter((row: any) => Number(row.season_number) === seasons)[0];
-            notices.push({
-              event_key: `season:${media.tmdb_id}:${seasons}`,
-              type: "new_season",
-              title: `Nova temporada de ${details.name || media.title}`,
-              message: `A temporada ${seasons} foi anunciada${season?.air_date ? ` para ${season.air_date}` : ""}.`,
-              href: `/title/tv/${media.tmdb_id}`,
-              release_at: dateAtNoonUtc(season?.air_date),
-              release_precision: "date",
-              metadata: { tmdb_id: media.tmdb_id, season_number: seasons },
-            });
-          }
-
-          const episode = details?.next_episode_to_air;
-          if (item.favorite && episode?.air_date && preferences?.new_episode_site !== false) {
-            notices.push({
-              event_key: `episode:${media.tmdb_id}:${episode.season_number}:${episode.episode_number}:${episode.air_date}`,
-              type: "new_episode",
-              title: `Novo episódio de ${details.name || media.title}`,
-              message: `T${episode.season_number} E${episode.episode_number}${episode.name ? ` · ${episode.name}` : ""}`,
-              href: `/title/tv/${media.tmdb_id}`,
-              release_at: dateAtNoonUtc(episode.air_date),
-              release_precision: "date",
-              metadata: { tmdb_id: media.tmdb_id, season_number: episode.season_number, episode_number: episode.episode_number },
-            });
-          }
+          // V3.3: regra por usuário (lib/notifications/series.ts) — não depende
+          // mais de media.seasons_count, que é do catálogo compartilhado.
+          const notices = buildSeriesNotices({
+            tmdbId: Number(media.tmdb_id),
+            title: media.title,
+            favorite: Boolean(item.favorite),
+            details,
+            prefs: preferences,
+            today,
+          });
 
           for (const notice of notices) {
             const inserted = await sql`

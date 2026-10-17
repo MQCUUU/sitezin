@@ -1,71 +1,36 @@
-import { getDb } from "@/lib/db/neon";
-import { auth } from "@/lib/auth/server";
-import {
-  NextRequest,
-  NextResponse,
-} from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { respostaDeErro } from "@/lib/api-error";
+import { auth } from "@/lib/auth/server";
+import { getDb } from "@/lib/db/neon";
+import { BACKUP_VERSION, csvCell } from "@/lib/backup/plan";
 
-function csvEscape(
-  value:
-    unknown
-) {
-  const text =
-    value ===
-      null ||
-    value ===
-      undefined
-      ? ""
-      : typeof value ===
-          "object"
-        ? JSON.stringify(
-            value
-          )
-        : String(
-            value
-          );
+/*
+ * GET /api/account/export?format=json|csv — cópia dos dados do usuário da
+ * sessão. Nunca inclui senha/hash, token, sessão ou segredo.
+ *
+ * V3.3:
+ *  - JSON versão 2: + progresso de episódios; visualizações/atividade levam
+ *    (tmdb_id, media_type) para o restore não depender de ids internos;
+ *    `account` traz só o e-mail do próprio dono (sem id interno);
+ *  - CSV: ano de lançamento real (a coluna `release_year` não existe em
+ *    `media` e saía sempre vazia), temporadas concluídas (é um número, não
+ *    uma lista — também saía vazia) e proteção contra fórmula (CSV injection).
+ */
 
-  return `"${text.replace(
-    /"/g,
-    '""'
-  )}"`;
-}
-
-export async function GET(
-  req:
-    NextRequest
-) {
+export async function GET(req: NextRequest) {
   try {
     const session = await auth.getSession().catch(() => null);
     const user = session?.data?.user;
 
-    if (
-      !user || !user.id
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Não autenticado",
-        },
-        {
-          status:
-            401,
-        }
-      );
+    if (!user || !user.id) {
+      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
     }
 
-    const format =
-      new URL(
-        req.url
-      ).searchParams.get(
-        "format"
-      ) ===
-      "csv"
-        ? "csv"
-        : "json";
-
+    const format = new URL(req.url).searchParams.get("format") === "csv" ? "csv" : "json";
     const sql = getDb();
+    const stamp = new Date().toISOString().slice(0, 10);
+
     const library = await sql`
       SELECT
         li.id,
@@ -81,7 +46,7 @@ export async function GET(
         li.stopped_season,
         li.added_at,
         li.updated_at,
-        row_to_json(m.*) AS media
+        (to_jsonb(m.*) - 'raw') AS media
       FROM public.library_items li
       LEFT JOIN public.media m ON m.id = li.media_id
       WHERE li.user_id = ${user.id}
@@ -90,7 +55,6 @@ export async function GET(
 
     if (format === "csv") {
       const headers = [
-        "id",
         "tmdb_id",
         "media_type",
         "title",
@@ -108,80 +72,81 @@ export async function GET(
         "updated_at",
       ];
 
-      const rows = (library || []).map((item: any) =>
-        [
-          csvEscape(item.id),
-          csvEscape(item.media?.tmdb_id ?? ""),
-          csvEscape(item.media?.media_type ?? ""),
-          csvEscape(item.media?.title ?? ""),
-          csvEscape(item.media?.release_year ?? ""),
-          csvEscape(item.status),
-          csvEscape(Boolean(item.favorite)),
-          csvEscape(item.personal_rating ?? ""),
-          csvEscape(item.review ?? ""),
-          csvEscape(item.watched_at ?? ""),
-          csvEscape(item.rewatch_count ?? 0),
-          csvEscape(item.current_season ?? ""),
-          csvEscape(
-            Array.isArray(item.completed_seasons)
-              ? item.completed_seasons.join(";")
-              : ""
-          ),
-          csvEscape(item.stopped_season ?? ""),
-          csvEscape(item.added_at),
-          csvEscape(item.updated_at),
-        ].join(",")
-      );
+      const rows = (library as Record<string, any>[]).map((item) => {
+        const media = item.media || {};
+        const release = String(media.release_date || media.first_air_date || "");
 
-      const csv = [headers.join(","), ...rows].join("\n");
+        return [
+          media.tmdb_id ?? "",
+          media.media_type ?? "",
+          media.title ?? "",
+          release ? Number(release.slice(0, 4)) : "",
+          item.status,
+          Boolean(item.favorite),
+          item.personal_rating === null ? "" : Number(item.personal_rating),
+          item.review ?? "",
+          item.watched_at ?? "",
+          Number(item.rewatch_count ?? 0),
+          item.current_season ?? "",
+          Number(item.completed_seasons ?? 0),
+          item.stopped_season ?? "",
+          item.added_at,
+          item.updated_at,
+        ]
+          .map(csvCell)
+          .join(",");
+      });
 
-      return new NextResponse("\uFEFF" + csv, {
+      return new NextResponse("﻿" + [headers.join(","), ...rows].join("\r\n"), {
         headers: {
           "Content-Type": "text/csv; charset=utf-8",
-          "Content-Disposition": `attachment; filename="mycatalog-library-${new Date()
-            .toISOString()
-            .slice(0, 10)}.csv"`,
+          "Content-Disposition": `attachment; filename="mycatalog-library-${stamp}.csv"`,
           "Cache-Control": "private, no-store",
         },
       });
     }
 
-    async function optionalTable(table: string) {
-      try {
-        if (table === "watch_entries") {
-          return await sql`SELECT * FROM public.watch_entries WHERE user_id = ${user!.id}`;
-        }
-        if (table === "user_hidden_titles") {
-          return await sql`SELECT * FROM public.user_hidden_titles WHERE user_id = ${user!.id}`;
-        }
-        if (table === "activity_events") {
-          return await sql`SELECT * FROM public.activity_events WHERE user_id = ${user!.id}`;
-        }
-        return [];
-      } catch (err: any) {
-        console.warn(`Backup: ${table} indisponível:`, err?.message);
-        return [];
-      }
-    }
-
-    const [watchHistory, hiddenTitles, activityEvents] = await Promise.all([
-      optionalTable("watch_entries"),
-      optionalTable("user_hidden_titles"),
-      optionalTable("activity_events"),
+    const [watchHistory, episodesProgress, hiddenTitles, activityEvents] = await Promise.all([
+      sql`
+        SELECT we.id, we.library_item_id, we.media_id, m.tmdb_id, m.media_type, we.watched_at, we.watched_at_precision,
+               we.rating, we.comment, we.is_rewatch, we.created_at, we.updated_at
+        FROM public.watch_entries we
+        JOIN public.media m ON m.id = we.media_id
+        WHERE we.user_id = ${user.id}
+        ORDER BY we.watched_at
+      `,
+      sql`
+        SELECT m.tmdb_id, m.media_type, ep.season_number, ep.episode_number, ep.watched, ep.watched_at,
+               ep.watched_at_precision, ep.comment, ep.is_rewatch
+        FROM public.episodes_progress ep
+        JOIN public.media m ON m.id = ep.media_id
+        WHERE ep.user_id = ${user.id}
+        ORDER BY m.tmdb_id, ep.season_number, ep.episode_number
+      `,
+      sql`
+        SELECT tmdb_id::int AS tmdb_id, media_type, reason, created_at
+        FROM public.user_hidden_titles
+        WHERE user_id = ${user.id}
+        ORDER BY created_at
+      `,
+      sql`
+        SELECT ae.event_type, ae.metadata, ae.occurred_at, ae.media_id, ae.library_item_id, m.tmdb_id, m.media_type
+        FROM public.activity_events ae
+        LEFT JOIN public.media m ON m.id = ae.media_id
+        WHERE ae.user_id = ${user.id}
+        ORDER BY ae.occurred_at
+      `,
     ]);
 
     const backup = {
       mycatalog_backup: true,
-      version: 1,
+      version: BACKUP_VERSION,
       exported_at: new Date().toISOString(),
-      account: {
-        id: user.id,
-        email: user.email || null,
-        metadata: (user as any).user_metadata || {},
-      },
+      account: { email: user.email || null },
       data: {
         library: library || [],
         watch_history: watchHistory,
+        episodes_progress: episodesProgress,
         hidden_titles: hiddenTitles,
         activity_events: activityEvents,
       },
@@ -189,9 +154,7 @@ export async function GET(
 
     return NextResponse.json(backup, {
       headers: {
-        "Content-Disposition": `attachment; filename="mycatalog-backup-${new Date()
-          .toISOString()
-          .slice(0, 10)}.json"`,
+        "Content-Disposition": `attachment; filename="mycatalog-backup-${stamp}.json"`,
         "Cache-Control": "private, no-store",
       },
     });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
+import { canViewSection } from "@/lib/social/visibility";
 
 /*
  * E1 — antes, a aba "Atividade" do perfil público reconstruía um feed
@@ -24,7 +25,7 @@ export async function GET(
   const sql = getDb();
 
   const profileRows = await sql`
-    SELECT id, activity_visibility
+    SELECT id, visibility, is_public, activity_visibility
     FROM public.profiles
     WHERE lower(username) = lower(${username})
     LIMIT 1
@@ -34,7 +35,7 @@ export async function GET(
     return NextResponse.json({ error: "Perfil não encontrado." }, { status: 404 });
   }
 
-  const profile = profileRows[0] as { id: string; activity_visibility: string };
+  const profile = profileRows[0] as { id: string; visibility: string; is_public: boolean; activity_visibility: string };
 
   const session = await auth.getSession().catch(() => null);
   const viewerId: string | null = session?.data?.user?.id || null;
@@ -50,10 +51,12 @@ export async function GET(
     isFollower = followRows[0]?.status === "accepted";
   }
 
-  const visible =
-    isOwner ||
-    profile.activity_visibility === "profile" ||
-    (profile.activity_visibility === "followers" && isFollower);
+  // V3.3: a seção nunca abre mais que o perfil — antes, perfil PRIVADO com
+  // atividade em "Mesma regra do perfil" entregava o feed a qualquer visitante.
+  const visible = canViewSection(profile, profile.activity_visibility, {
+    isOwner,
+    isAcceptedFollower: isFollower,
+  });
 
   if (!visible) {
     return NextResponse.json(
