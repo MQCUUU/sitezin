@@ -70,7 +70,12 @@ export function NotificationCenter() {
     }
   }
 
+  const userId = session?.user?.id ?? null;
+
   useEffect(() => {
+    // V3.4: visitante não tem notificações — nada de requisição (antes: 401 a cada 60 s).
+    if (sessionPending || !userId) return;
+
     let cancelled = false;
     void load(true);
 
@@ -95,13 +100,17 @@ export function NotificationCenter() {
       clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, sessionPending]);
 
   useEffect(() => {
+    if (!userId) return;
+
     const refresh = () => void load(true);
     window.addEventListener("mycatalog:notifications-updated", refresh);
     return () => window.removeEventListener("mycatalog:notifications-updated", refresh);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   async function read(id?: string) {
     const targetWasUnread = id
@@ -126,7 +135,7 @@ export function NotificationCenter() {
     );
   }
 
-  if (!ready || sessionPending) return <div className="notification-center-slot" />;
+  if (sessionPending) return <div className="notification-center-slot" />;
 
   /*
    * A API sempre retorna 401 para visitantes anônimos (GET /api/notifications
@@ -135,6 +144,7 @@ export function NotificationCenter() {
    * conta no topo (BUG-A2.5-01).
    */
   if (!session?.user?.id) return null;
+  if (!ready) return <div className="notification-center-slot" />;
 
   return (
     <div className="notification-center" ref={ref}>

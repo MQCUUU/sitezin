@@ -34,7 +34,7 @@ export const CHAPTERS: { id: string; label: string }[] = [
   { id: "watchlist", label: "Watchlist" },
   { id: "evolucao", label: "Evolução" },
   { id: "ia", label: "IA" },
-  { id: "favoritos", label: "Favoritos" },
+  { id: "favoritos", label: "Maiores notas" },
   { id: "ano", label: "Seu ano" },
 ];
 
@@ -1122,8 +1122,8 @@ export function FavoritesChapter({ data, index }: { data: Data; index: number })
       id="favoritos"
       index={index}
       kicker="Ranking"
-      title="Seus favoritos"
-      lead="Suas maiores notas de todos os tempos."
+      title="Suas maiores notas"
+      lead="Os títulos com as notas mais altas que você já deu."
       aside={
         <Link href={`/ranking${typeParam}`} className="ins-link">
           Ver ranking completo <ArrowRight size={14} aria-hidden="true" />

@@ -435,7 +435,11 @@ if (
         "Backup restaurado",
         {
           description:
-            `${data.restored?.library_added || 0} títulos adicionados · ${data.restored?.library_updated || 0} atualizados · ${data.restored?.library_kept || 0} mantidos (a versão da conta era mais recente) · ${data.restored?.watch_history || 0} visualizações · ${data.restored?.episodes || 0} episódios.`,
+            `${data.restored?.library_added || 0} títulos adicionados · ${data.restored?.library_updated || 0} atualizados · ${data.restored?.library_kept || 0} mantidos (a versão da conta era mais recente) · ${data.restored?.watch_history || 0} visualizações · ${data.restored?.episodes || 0} episódios.` +
+            (data.restored?.catalog_unresolved
+              ? ` ${data.restored.catalog_unresolved} títulos não puderam ser confirmados no catálogo agora: restaure o mesmo arquivo de novo para continuar (nada é duplicado).`
+              : ""),
+          duration: data.restored?.catalog_unresolved ? 15000 : undefined,
         }
       );
     } catch (

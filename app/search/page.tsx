@@ -456,6 +456,11 @@ function SearchPageContent() {
               ? { results: [] }
               : await cachedSearchJson(`/api/search?q=${encodeURIComponent(catalogQuery)}`, controller.signal);
 
+        // V3.4: catálogo indisponível (TMDB/servidor) é erro, não "nenhum resultado".
+        if (!usersOnly && !advancedResolved && searchData?.error) {
+          throw new Error(searchData.error);
+        }
+
         setUserResults(Array.isArray(usersData?.users) ? usersData.users : []);
 
         const rawResults = Array.isArray(searchData?.results) ? searchData.results : [];

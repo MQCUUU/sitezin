@@ -10,6 +10,8 @@ export function FollowRequestNotifier() {
 
   useEffect(() => {
     let cancelled = false;
+    // V3.4: só consulta depois de confirmar sessão (antes: visitante tomava 401 a cada 30 s).
+    let authenticated = false;
     let profileUsername = "";
     /*
      * E1 — antes baixava o grafo INTEIRO de follows a cada 30s só para
@@ -71,6 +73,7 @@ export function FollowRequestNotifier() {
     fetchProfileMe()
       .then((data) => {
         if (cancelled || !data?.authenticated) return;
+        authenticated = true;
         profileUsername = data.username || "";
 
         // Carga inicial
@@ -80,13 +83,13 @@ export function FollowRequestNotifier() {
 
     // Polling inteligente: a cada 30 segundos enquanto a página estiver visível
     const timer = setInterval(() => {
-      if (document.visibilityState === "visible" && navigator.onLine && !cancelled) {
+      if (authenticated && document.visibilityState === "visible" && navigator.onLine && !cancelled) {
         void refresh(true);
       }
     }, 30 * 1000);
 
     const handleVisibility = () => {
-      if (document.visibilityState === "visible" && navigator.onLine && !cancelled) {
+      if (authenticated && document.visibilityState === "visible" && navigator.onLine && !cancelled) {
         void refresh(true);
       }
     };

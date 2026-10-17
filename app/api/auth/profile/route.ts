@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
-import { isValidUsername, normalizeUsername } from "@/lib/username";
+import { isReservedUsername, isValidUsername, normalizeUsername, USERNAME_RESERVED_MESSAGE } from "@/lib/username";
 import { applyUsernameChange } from "@/lib/username-change";
 
 export async function POST(request: Request) {
@@ -35,6 +35,13 @@ export async function POST(request: Request) {
     }
 
     const sql = getDb();
+
+    // V3.4: @ reservado só bloqueia quem tenta ADOTÁ-LO (o próprio @ atual, se já fosse, não trava).
+    if (isReservedUsername(cleanUsername)) {
+      const mine = await sql`SELECT 1 FROM public.profiles WHERE id = ${user.id} AND lower(username) = ${cleanUsername} LIMIT 1`;
+
+      if (mine.length === 0) return NextResponse.json({ error: USERNAME_RESERVED_MESSAGE }, { status: 400 });
+    }
 
     // 1. Verifica se username já está em uso por outro usuário
     const existing = await sql`

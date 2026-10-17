@@ -61,7 +61,7 @@ export const STATUS_LABELS: Record<
   want: "Quero assistir",
   watching: "Assistindo",
   watched: "Assistido",
-  dropped: "Abandonei",
+  dropped: "Abandonado",
   rewatching: "Reassistindo",
   rewatched: "Reassistido",
 };

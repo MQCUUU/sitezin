@@ -359,7 +359,7 @@ function InsightsContent() {
               <ChapterBoundary name="IA">
                 <AiChapter data={data} index={position("ia")} />
               </ChapterBoundary>
-              <ChapterBoundary name="Favoritos">
+              <ChapterBoundary name="Maiores notas">
                 <FavoritesChapter data={data} index={position("favoritos")} />
               </ChapterBoundary>
               <ChapterBoundary name="Seu ano">

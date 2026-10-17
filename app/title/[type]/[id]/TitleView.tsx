@@ -164,6 +164,8 @@ export default function TitlePage({
           `/api/library?tmdb_id=${encodeURIComponent(id)}&type=${encodeURIComponent(type)}`,
           { cache: "no-store" }
         ).then(async (response) => {
+          // Visitante sem sessão: não ter estado pessoal é o esperado, não um erro.
+          if (response.status === 401) return null;
           const data = await response.json();
           if (!response.ok || data?.error) {
             throw new Error(data?.error || "Biblioteca indisponível.");

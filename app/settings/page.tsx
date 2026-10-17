@@ -258,7 +258,7 @@ type RatingCategory = { id: string; name: string; weight: number; position?: num
 /*
  * V3.3 — esta seção editava `rating_categories`, que NENHUMA tela usa (0
  * linhas em PROD): criar um critério aqui não mudava nada. Os critérios reais
- * são os do painel "Sua avaliação" da página de título (ReviewPanel →
+ * são os do modo "Detalhada" em Avaliações e resenhas, na página de título (ReviewPanel →
  * /api/reviews/categories → review_categories/review_scores): é a mesma
  * lista, editável nos dois lugares. Nota final = média ponderada das
  * categorias preenchidas; pesos relativos (0–100); todos 0 = média simples.
@@ -364,7 +364,7 @@ function RatingsSection() {
       <SectionHead
         id="set-ratings"
         title="Critérios de avaliação"
-        description="Categorias opcionais (ex.: roteiro, atuação) que aparecem em “Sua avaliação”, na página de cada título. A nota sugerida é a média ponderada das categorias que você preencher."
+        description="Categorias opcionais (ex.: roteiro, atuação) para avaliar no modo Detalhada, em Avaliações e resenhas de cada título. A nota sugerida é a média ponderada das categorias que você preencher."
       />
 
       {status === 'loading' && <p className="set-empty" role="status">Carregando categorias…</p>}

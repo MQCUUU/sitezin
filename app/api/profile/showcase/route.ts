@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { respostaDeErro } from "@/lib/api-error";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
-import { isValidUsername, normalizeUsername, USERNAME_RULE_MESSAGE } from "@/lib/username";
+import { isReservedUsername, isValidUsername, normalizeUsername, USERNAME_RESERVED_MESSAGE, USERNAME_RULE_MESSAGE } from "@/lib/username";
 import { applyUsernameChange } from "@/lib/username-change";
 
 export async function GET() {
@@ -82,6 +82,10 @@ export async function PUT(request: Request) {
 
     if (!isValidUsername(username)) {
       return NextResponse.json({ error: USERNAME_RULE_MESSAGE }, { status: 400 });
+    }
+
+    if (wantsChange && isReservedUsername(username)) {
+      return NextResponse.json({ error: USERNAME_RESERVED_MESSAGE }, { status: 400 });
     }
 
     if (wantsChange) {

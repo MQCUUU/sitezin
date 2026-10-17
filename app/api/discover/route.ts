@@ -23,6 +23,7 @@ import {
   type TypeTotal,
 } from "@/lib/discover/catalog";
 import { parseDiscoverParams } from "@/lib/discover/params";
+import { todayIn } from "@/lib/calendar/dates";
 import { getUserProviderFilter, MY_SERVICES_SENTINEL } from "@/lib/streaming-services-server";
 
 /*
@@ -53,7 +54,7 @@ function tmdbParams(type: MediaType, page: number, f: Filters, apiKey: string, l
   }
   if (f.sort === "newest") {
     // "Recentes" = já lançados (até hoje), com algumas avaliações; nada de datas futuras
-    p.set(type === "movie" ? "primary_release_date.lte" : "first_air_date.lte", new Date().toISOString().slice(0, 10));
+    p.set(type === "movie" ? "primary_release_date.lte" : "first_air_date.lte", todayIn() /* V3.4: "lançado até hoje" no dia de Brasília */);
     minVotes = Math.max(minVotes, NEWEST_MIN_VOTES);
   }
   if (minVotes) p.set("vote_count.gte", String(minVotes));

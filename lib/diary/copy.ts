@@ -65,7 +65,8 @@ export const STATUS_TEXT: Record<string, string> = {
   want: "Quero assistir",
   watching: "Assistindo",
   watched: "Assistido",
-  dropped: "Abandonei",
+  paused: "Pausado",
+  dropped: "Abandonado",
   rewatching: "Reassistindo",
   rewatched: "Reassistido",
 };

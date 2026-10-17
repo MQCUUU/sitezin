@@ -28,7 +28,7 @@ export const SOURCE_LABEL: Record<string, string> = {
   collection: "Coleções",
   person: "Página de pessoa",
   lists: "Listas",
-  profile: "Perfis de amigos",
+  profile: "Perfis de outras pessoas",
   library: "Biblioteca",
   calendar: "Calendário",
   other: "Outros",

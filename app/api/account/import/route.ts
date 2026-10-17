@@ -217,8 +217,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    console.error("Erro ao importar backup:", error);
-
+    // Sem logar o objeto de erro inteiro: o driver pode anexar parâmetros (o conteúdo do backup).
+    // respostaDeErro registra só mensagem/código/detalhe.
     return respostaDeErro(error, "POST /api/account/import");
   }
 }

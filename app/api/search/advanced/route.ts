@@ -3071,9 +3071,12 @@ async function handle(
     handled:
       false,
 
+    // V3.4: null = o TMDB falhou (não "zero resultados") — a página não pode
+    // transformar falha em "Nenhum resultado"; ela tenta a reserva e, se falhar,
+    // mostra o estado de erro.
     catalog:
       Array.isArray(multiSearch?.results)
         ? multiSearch.results
-        : [],
+        : null,
   });
 }

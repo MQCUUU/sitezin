@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
-import { isValidUsername, normalizeUsername, USERNAME_RULE_MESSAGE } from "@/lib/username";
+import { isReservedUsername, isValidUsername, normalizeUsername, USERNAME_RESERVED_MESSAGE, USERNAME_RULE_MESSAGE } from "@/lib/username";
 import { applyUsernameChange } from "@/lib/username-change";
 
 export async function GET() {
@@ -86,6 +86,14 @@ export async function POST(request: Request) {
       WHERE lower(username) = ${username}
       LIMIT 1
     `;
+
+    // V3.4: @ reservado só bloqueia quem tenta adotá-lo.
+    if (isReservedUsername(username) && !(existing.length > 0 && existing[0].id === user.id)) {
+      return NextResponse.json(
+        { error: USERNAME_RESERVED_MESSAGE },
+        { status: 400, headers: { "X-Username-Backend": "neon-direct-v1" } }
+      );
+    }
 
     if (existing.length > 0 && existing[0].id !== user.id) {
       return NextResponse.json(

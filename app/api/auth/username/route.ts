@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db/neon";
-import { isValidUsername, normalizeUsername, USERNAME_RULE_MESSAGE } from "@/lib/username";
+import { isReservedUsername, isValidUsername, normalizeUsername, USERNAME_RESERVED_MESSAGE, USERNAME_RULE_MESSAGE } from "@/lib/username";
 
 export async function GET(request: Request) {
   const username = normalizeUsername(new URL(request.url).searchParams.get("username") || "");
   if (!isValidUsername(username)) {
     return NextResponse.json(
       { available: false, error: USERNAME_RULE_MESSAGE },
+      { status: 400, headers: { "X-Username-Backend": "neon-direct-v1" } }
+    );
+  }
+
+  if (isReservedUsername(username)) {
+    return NextResponse.json(
+      { available: false, error: USERNAME_RESERVED_MESSAGE },
       { status: 400, headers: { "X-Username-Backend": "neon-direct-v1" } }
     );
   }

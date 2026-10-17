@@ -21,3 +21,25 @@ export function normalizeUsername(raw: string): string {
 export function isValidUsername(raw: string): boolean {
   return USERNAME_REGEX.test(raw);
 }
+
+/*
+ * V3.4 — @ reservados: não há colisão de ROTA (perfis vivem em /u/<nome>), o
+ * risco é se passar pela equipe/sistema. Conjunto mínimo e deliberado; vale só
+ * quando alguém ESCOLHE um @ novo (cadastro, disponibilidade, troca). Ninguém
+ * em PROD usava um desses nomes quando a regra entrou.
+ */
+export const RESERVED_USERNAMES = new Set([
+  "admin", "administrador", "administrator", "root",
+  "mycatalog", "my_catalog", "mycatalog_oficial",
+  "suporte", "support", "ajuda", "help",
+  "moderador", "moderator", "staff", "equipe", "oficial", "official",
+  "sistema", "system", "api", "settings", "configuracoes",
+  "login", "signup", "perfil", "profile",
+  "null", "undefined", "anonimo", "anonymous",
+]);
+
+export const USERNAME_RESERVED_MESSAGE = "Esse @ é reservado. Escolha outro.";
+
+export function isReservedUsername(raw: string): boolean {
+  return RESERVED_USERNAMES.has(normalizeUsername(raw));
+}

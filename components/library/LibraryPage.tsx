@@ -59,7 +59,7 @@ const STATUS_TABS: [LibraryStatusFilter, string][] = [
   ["want", "Quero assistir"],
   ["watching", "Assistindo"],
   ["watched", "Assistido"],
-  ["dropped", "Abandonei"],
+  ["dropped", "Abandonado"],
   ["rewatching", "Reassistindo"],
   ["rewatched", "Reassistido"],
 ];

@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { respostaDeErro } from "@/lib/api-error";
 import { auth } from "@/lib/auth/server";
+import { todayIn } from "@/lib/calendar/dates";
 import { genreFilterLabels, genreKeyFromParam, GENRE_LABEL, idsForKey, type GenreKey } from "@/lib/for-you/genres";
 import { anchorOrder, anchorsPerPage, buildProfile, topGenres, type MediaType, type Profile, type TitleSignal, type WeightedTitle } from "@/lib/for-you/profile";
 import { anchorWord, assemble, balanceTypes, isEligible, typeCounts, scoreCandidate, sortScored, type Candidate, type Scored, type SortMode } from "@/lib/for-you/rank";
@@ -262,7 +263,7 @@ export async function GET(req: NextRequest) {
     return true;
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIn(); // V3.4: o "dia" da rotação é o de Brasília (regra do Calendário)
   const anchorsAll = anchorOrder(profile, `${userId}|${today}`).filter((a) => type === "all" || a.media_type === type);
   const perPage = providerFilter || isTeenGenre || genreFilter ? 0 : anchorsPerPage(profile);
   const anchors = anchorsAll.slice((page - 1) * perPage, page * perPage);
