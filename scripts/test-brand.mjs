@@ -124,6 +124,24 @@ test("títulos de aba: toda rota principal declara o seu", () => {
   assert.match(read("app/layout.tsx"), /template: "%s · MyCatalog"/);
 });
 
+test("favicon: fonte central — nenhuma rota declara ícone próprio", () => {
+  const declaring = sources
+    .filter(([file]) => file.startsWith("app/") && /\/(layout|page|head)\.tsx?$/.test(file))
+    .filter(([, src]) => /\bicons\s*:|rel=["'](shortcut )?icon["']/.test(src))
+    .map(([file]) => file);
+  assert.deepEqual(declaring, []);
+  const icons = fs.readdirSync(path.join(root, "app")).filter((f) => /^(icon|favicon|apple-icon)\b/.test(f)).sort();
+  assert.deepEqual(icons, ["apple-icon.png", "icon.svg"]);
+});
+
+test("favicon dinâmico sobrevive à navegação: 1 link, observer só nos filhos do <head>, sem polling", () => {
+  const src = read("components/brand/DynamicFavicon.tsx");
+  assert.match(src, /observer\.observe\(document\.head, \{ childList: true \}\)/);
+  assert.doesNotMatch(src, /subtree|attributes:|setInterval|setTimeout|requestAnimationFrame/);
+  assert.match(src, /getElementById\(LINK_ID\)/, "reaproveita o link existente");
+  assert.match(src, /observer\.disconnect\(\)/);
+});
+
 test("favicon dinâmico montado no layout raiz", () => {
   const layout = read("app/layout.tsx");
   assert.match(layout, /<DynamicFavicon \/>/);
