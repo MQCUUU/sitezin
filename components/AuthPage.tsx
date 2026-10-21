@@ -33,7 +33,7 @@ import { authClient } from "@/lib/auth/client";
 import {
   useToast,
 } from "@/components/ToastProvider";
-import { authRedirectOrigin, passwordValidationError, PASSWORD_HINT } from "@/lib/auth-client";
+import { authFormPasswordError, authRedirectOrigin, PASSWORD_HINT } from "@/lib/auth-client";
 
 type Mode =
   | "login"
@@ -215,6 +215,13 @@ export function AuthPage({
 
   const [username, setUsername] = useState("");
 
+  /*
+   * Fase 0 — cadastro em dois passos (conta no Auth, depois perfil no banco).
+   * Se o perfil falhar, a conta JÁ existe e a sessão já foi aberta: o próximo
+   * envio só tenta o perfil de novo (idempotente), nunca recria a conta.
+   */
+  const [accountCreated, setAccountCreated] = useState(false);
+
   const [
     password,
     setPassword,
@@ -295,7 +302,8 @@ export function AuthPage({
       return;
     }
 
-    const passwordError = passwordValidationError(password);
+    // Fase 0 (P1-02): força da senha só no cadastro; no login o provedor decide.
+    const passwordError = authFormPasswordError(isSignup ? "signup" : "login", password);
     if (passwordError) { setError(passwordError); return; }
 
     if (
@@ -318,20 +326,24 @@ export function AuthPage({
       if (
         isSignup
       ) {
-        const usernameResponse = await fetch(`/api/auth/username?username=${encodeURIComponent(username)}`, { cache: "no-store" });
-        const usernameData = await usernameResponse.json();
-        if (!usernameResponse.ok || !usernameData.available) {
-          throw new Error(usernameData.error || "Este @ de usuário já está em uso.");
-        }
+        if (!accountCreated) {
+          const usernameResponse = await fetch(`/api/auth/username?username=${encodeURIComponent(username)}`, { cache: "no-store" });
+          const usernameData = await usernameResponse.json();
+          if (!usernameResponse.ok || !usernameData.available) {
+            throw new Error(usernameData.error || "Este @ de usuário já está em uso.");
+          }
 
-        const res = await authClient.signUp.email({
-          email: email.trim(),
-          password,
-          name: name.trim(),
-        });
+          const res = await authClient.signUp.email({
+            email: email.trim(),
+            password,
+            name: name.trim(),
+          });
 
-        if (res.error) {
-          throw new Error(res.error.message || "Erro ao criar conta.");
+          if (res.error) {
+            throw new Error(res.error.message || "Erro ao criar conta.");
+          }
+
+          setAccountCreated(true);
         }
 
         const profileRes = await fetch("/api/auth/profile", {
@@ -345,7 +357,12 @@ export function AuthPage({
 
         const profileData = await profileRes.json().catch(() => ({}));
         if (!profileRes.ok) {
-          throw new Error(profileData.error || "Conta criada, mas falha ao configurar perfil.");
+          // A conta existe: a mensagem diz isso e como concluir (sem recriar a conta).
+          throw new Error(
+            profileRes.status === 401
+              ? "Sua conta foi criada, mas a sessão não foi confirmada. Entre com seu e-mail e senha para concluir o perfil."
+              : `Sua conta foi criada, mas não conseguimos salvar seu perfil${profileData.error ? ` (${profileData.error})` : ""}. Clique em "Concluir cadastro" para tentar de novo.`
+          );
         }
 
         toast.success(
@@ -789,7 +806,9 @@ export function AuthPage({
               )}
 
               {isSignup
-                ? "Criar minha conta"
+                ? accountCreated
+                  ? "Concluir cadastro"
+                  : "Criar minha conta"
                 : "Entrar"}
             </button>
           </form>

@@ -150,12 +150,17 @@ export async function PATCH(
      * quando o pedido as envia explicitamente e não há transição.
      */
     const explicitSeasons = !transition;
+    /*
+     * Fase 0: curtida, nota e resenha também só são gravadas quando o pedido as
+     * envia. Antes eram regravadas a partir da leitura do passo 1, e dois PATCH
+     * simultâneos (ex.: nota e Curtir) faziam um apagar o campo do outro.
+     */
     const updatedRows = await sql`
       UPDATE public.library_items
       SET
-        favorite = ${newFavorite},
-        personal_rating = ${newPersonalRating},
-        review = ${newReview},
+        favorite = CASE WHEN ${body.favorite !== undefined}::boolean THEN ${newFavorite}::boolean ELSE favorite END,
+        personal_rating = CASE WHEN ${body.personal_rating !== undefined}::boolean THEN ${newPersonalRating}::numeric ELSE personal_rating END,
+        review = CASE WHEN ${body.review !== undefined}::boolean THEN ${newReview}::text ELSE review END,
         current_season = CASE WHEN ${explicitSeasons && body.current_season !== undefined}::boolean THEN ${newCurrentSeason}::int ELSE current_season END,
         completed_seasons = CASE WHEN ${explicitSeasons && body.completed_seasons !== undefined}::boolean THEN ${newCompletedSeasons}::int ELSE completed_seasons END,
         stopped_season = CASE WHEN ${explicitSeasons && body.stopped_season !== undefined}::boolean THEN ${stoppedSeason}::int ELSE stopped_season END,

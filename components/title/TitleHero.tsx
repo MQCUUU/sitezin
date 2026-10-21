@@ -1,8 +1,9 @@
-import { Heart, Plus, Star, Trash2, Film, Tv } from "lucide-react";
+import { Heart, Plus, RefreshCw, Star, Trash2, Film, Tv } from "lucide-react";
 
 import { Poster } from "@/components/Poster";
 import { mediaStatusLabel } from "@/lib/media-status";
 import { languageName, runtimeLabel, workStatusLabel } from "@/lib/title-locale";
+import type { LibraryLookupState } from "@/lib/library/lookup";
 import type { LibraryItem, LooseTitleDetails, TitleType } from "./types";
 
 export type TitleHeroProps = {
@@ -11,6 +12,9 @@ export type TitleHeroProps = {
   libraryItem: LibraryItem | null;
   favorite: boolean;
   saving: boolean;
+  /** Fase 0: "ready" = estado confirmado; "loading"/"error" = sem Adicionar/Curtir. */
+  libraryLookup: LibraryLookupState;
+  onRetryLibraryLookup: () => void;
   onAddToLibrary: () => void;
   onRemoveFromLibrary: () => void;
   onToggleFavorite: () => void;
@@ -34,11 +38,16 @@ export function TitleHero({
   libraryItem,
   favorite,
   saving,
+  libraryLookup,
+  onRetryLibraryLookup,
   onAddToLibrary,
   onRemoveFromLibrary,
   onToggleFavorite,
 }: TitleHeroProps) {
   const title = details.title || details.name;
+
+  // Fase 0: sem item e sem estado confirmado, nada pode ser criado nem curtido.
+  const lookupPending = !libraryItem && libraryLookup !== "ready";
 
   const year = (details.first_air_date || details.release_date || "").slice(
     0,
@@ -163,7 +172,26 @@ export function TitleHero({
             </div>
 
             <div className="title-actions mc-title-actions">
-              {!libraryItem ? (
+              {!libraryItem && libraryLookup === "error" ? (
+                <button
+                  type="button"
+                  className="btn primary title-main-btn"
+                  onClick={onRetryLibraryLookup}
+                >
+                  <RefreshCw size={18} />
+                  Tentar de novo
+                </button>
+              ) :!libraryItem && libraryLookup === "loading" ? (
+                <button
+                  type="button"
+                  className="btn primary title-main-btn"
+                  disabled
+                  aria-busy="true"
+                >
+                  <Plus size={18} />
+                  Verificando biblioteca...
+                </button>
+              ) : !libraryItem ? (
                 <button
                   className="btn primary title-main-btn"
                   onClick={onAddToLibrary}
@@ -192,12 +220,20 @@ export function TitleHero({
                   favorite ? "btn favorite-btn active" : "btn favorite-btn"
                 }
                 onClick={onToggleFavorite}
+                disabled={lookupPending}
               >
                 <Heart size={18} fill={favorite ? "currentColor" : "none"} />
 
                 {favorite ? "Curtido" : "Curtir"}
               </button>
             </div>
+
+            {!libraryItem && libraryLookup === "error" && (
+              <p className="title-status-hint" role="alert">
+                Não foi possível verificar se este título está na sua biblioteca.
+                Nada foi alterado. Tente de novo.
+              </p>
+            )}
           </div>
         </div>
       </div>

@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { removeLibraryItem } from "@/lib/library/remove";
 import { attachSeriesProgress } from "@/lib/library/attach-progress";
-import { applyStatusTransition, statusTransition } from "@/lib/library/status-event";
+import { addLibraryItem, type AddLibraryMedia } from "@/lib/library/add";
 import { respostaDeErro } from "@/lib/api-error";
 import { resolveCatalogMedia } from "@/lib/lists/media";
 
@@ -516,166 +516,22 @@ export async function POST(
     }
 
     /*
-     * 2. Procurar item na biblioteca do usuário
+     * 2. Adicionar (Fase 0): cria o item se ele não existe; se já existe, devolve-o
+     * SEM alterar nada (lib/library/add.ts). Status, curtida, nota e resenha de um
+     * item existente só mudam por PATCH /api/library/[id], campo a campo.
      */
-    const existingItemRows = await sql`
-      SELECT
-        id,
-        status,
-        favorite,
-        personal_rating,
-        review,
-        rewatch_count,
-        current_season,
-        completed_seasons,
-        stopped_season
-      FROM public.library_items
-      WHERE user_id = ${userId} AND media_id = ${existingMedia.id}
-      LIMIT 1;
-    `;
-    const existingLibraryItem = existingItemRows[0] || null;
-
-    /*
-     * 3. Calcular reassistidas e progresso
-     */
-    let rewatchCount = Number(existingLibraryItem?.rewatch_count || 0);
-    const isStartingRewatch =
-      body.status === "rewatching" &&
-      existingLibraryItem?.status !== "rewatching";
-
-    const isDirectlyCompletingRewatch =
-      body.status === "rewatched" &&
-      existingLibraryItem?.status !== "rewatching" &&
-      existingLibraryItem?.status !== "rewatched";
-
-    if (isStartingRewatch || isDirectlyCompletingRewatch) {
-      rewatchCount += 1;
-    }
-
-    const newStatus =
-      body.status ?? existingLibraryItem?.status ?? "want";
-    const newFavorite =
-      body.favorite ?? existingLibraryItem?.favorite ?? false;
-    const personalRating =
-      body.personal_rating !== undefined
-        ? body.personal_rating
-        : existingLibraryItem?.personal_rating ?? null;
-    const review =
-      body.review !== undefined
-        ? body.review
-        : existingLibraryItem?.review ?? null;
-
-    let currentSeason = existingLibraryItem?.current_season ?? null;
-    let completedSeasons = Number(existingLibraryItem?.completed_seasons || 0);
-    let stoppedSeason = existingLibraryItem?.stopped_season ?? null;
-
-    if (mediaType === "tv" && !existingLibraryItem) {
-      currentSeason = 1;
-      completedSeasons = 0;
-      stoppedSeason = null;
-    }
-
-    if (mediaType === "movie") {
-      currentSeason = null;
-      completedSeasons = 0;
-      stoppedSeason = null;
-    }
-
-    if (mediaType === "tv" && isStartingRewatch) {
-      completedSeasons = 0;
-      currentSeason = 1;
-      stoppedSeason = null;
-    }
-
-    if (mediaType === "tv" && newStatus === "rewatched") {
-      const totalSeasons = Number(existingMedia.seasons_count || 0);
-      completedSeasons = totalSeasons;
-      currentSeason = totalSeasons || 1;
-      stoppedSeason = null;
-    }
-
-    /*
-     * V3.0 — transição de status de item existente = UM comando atômico
-     * (lib/library/status-event.ts, a MESMA primitive do PATCH):
-     * compare-and-set + temporadas + contador de reassistidas (incremento na
-     * linha) + `status_changed`/`rewatch_started`. Tudo ou nada; retries e
-     * requisições concorrentes não repetem nada.
-     */
-    const transition = existingLibraryItem ? statusTransition(existingLibraryItem.status, body.status) : null;
-
-    if (transition) {
-      await applyStatusTransition(sql, {
-        userId,
-        libraryItemId: existingLibraryItem.id,
-        transition,
-        derived: { current_season: currentSeason, completed_seasons: completedSeasons, stopped_season: stoppedSeason },
-        rewatchMeta: { title: existingMedia.title },
-      });
-    }
-
-    /*
-     * 4. Salvar na biblioteca (Upsert)
-     * Item novo: tudo vem daqui. Item existente: só os campos pessoais —
-     * status, contador de reassistidas e temporadas mudam apenas pela
-     * transição acima, nunca a partir da leitura (possivelmente desatualizada).
-     */
-    const itemRows = await sql`
-      INSERT INTO public.library_items (
-        user_id,
-        media_id,
-        status,
-        favorite,
-        personal_rating,
-        review,
-        rewatch_count,
-        current_season,
-        completed_seasons,
-        stopped_season,
-        updated_at
-      )
-      VALUES (
-        ${userId},
-        ${existingMedia.id},
-        ${newStatus},
-        ${newFavorite},
-        ${personalRating},
-        ${review},
-        ${rewatchCount},
-        ${currentSeason},
-        ${completedSeasons},
-        ${stoppedSeason},
-        NOW()
-      )
-      ON CONFLICT (user_id, media_id)
-      DO UPDATE SET
-        favorite = EXCLUDED.favorite,
-        personal_rating = EXCLUDED.personal_rating,
-        review = EXCLUDED.review,
-        updated_at = NOW()
-      RETURNING
-        id,
-        status,
-        favorite,
-        personal_rating,
-        review,
-        watched_at,
-        rewatch_count,
-        current_season,
-        completed_seasons,
-        stopped_season,
-        added_at,
-        updated_at;
-    `;
-
-    const item = itemRows[0];
-    if (!item) {
-      return NextResponse.json(
-        { error: "Não foi possível salvar o título na biblioteca." },
-        { status: 500 }
-      );
-    }
+    const { item, created } = await addLibraryItem(sql, {
+      userId,
+      media: existingMedia as AddLibraryMedia,
+      body,
+    });
 
     item.media = existingMedia;
+    item.created = created;
+
+    if (!created) {
+      return NextResponse.json(item as unknown as LibraryItem);
+    }
 
     /*
      * V2.5 — readição: visualizações de uma passagem anterior pela Biblioteca
@@ -683,47 +539,41 @@ export async function POST(
      * item novo do MESMO título e usuário. Nada é duplicado nem recriado: a
      * história é a mesma, só ganha de novo o vínculo com o estado atual.
      */
-    if (!existingLibraryItem) {
-      await sql`
-        UPDATE public.watch_entries
-        SET library_item_id = ${item.id}
-        WHERE user_id = ${userId} AND media_id = ${existingMedia.id} AND library_item_id IS NULL
-      `;
-    }
+    await sql`
+      UPDATE public.watch_entries
+      SET library_item_id = ${item.id}
+      WHERE user_id = ${userId} AND media_id = ${existingMedia.id} AND library_item_id IS NULL
+    `;
 
     /*
-     * 5. Registrar no diário (safe / não-bloqueante)
+     * 3. Registrar no diário (safe / não-bloqueante) — só a criação gera evento.
      */
     try {
-      if (!existingLibraryItem) {
-        await sql`
-          INSERT INTO public.activity_events (
-            user_id,
-            media_id,
-            library_item_id,
-            event_type,
-            metadata
-          )
-          VALUES (
-            ${userId},
-            ${existingMedia.id},
-            ${item.id},
-            'library_added',
-            ${{
-              status: newStatus,
-              media_type: mediaType,
-              title: existingMedia.title,
-            }}
-          );
-        `;
-      }
-
-      // `status_changed`/`rewatch_started` de item existente: gravados atomicamente pela transição (acima).
+      await sql`
+        INSERT INTO public.activity_events (
+          user_id,
+          media_id,
+          library_item_id,
+          event_type,
+          metadata
+        )
+        VALUES (
+          ${userId},
+          ${existingMedia.id},
+          ${item.id},
+          'library_added',
+          ${{
+            status: item.status,
+            media_type: mediaType,
+            title: existingMedia.title,
+          }}
+        );
+      `;
     } catch (actErr: any) {
       console.warn("[activity_events] Registro de atividade não pôde ser completado:", actErr?.message);
     }
 
-    return NextResponse.json(item as unknown as LibraryItem);
+    return NextResponse.json(item as unknown as LibraryItem, { status: 201 });
   } catch (error) {
     console.error("Erro ao atualizar biblioteca:", error);
     return respostaDeErro(error, "POST /api/library");

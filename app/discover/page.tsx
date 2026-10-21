@@ -452,6 +452,10 @@ function DiscoverContent() {
         throw new Error(result?.error || "Não foi possível adicionar.");
       }
 
+      // Fase 0: o card reflete o que o servidor salvou (um item já existente volta intacto).
+      const savedStatus = result.status || "want";
+      const savedFavorite = Boolean(result.favorite);
+
       setData((current) => {
         if (!current) return current;
 
@@ -463,7 +467,8 @@ function DiscoverContent() {
                   ...currentItem,
                   in_library: true,
                   library_id: result.id,
-                  library_status: "want",
+                  library_status: savedStatus,
+                  favorite: savedFavorite,
                 }
               : currentItem
           ),
@@ -472,7 +477,7 @@ function DiscoverContent() {
 
       setPreviewItem((current) =>
         current && current.id === item.id && current.media_type === item.media_type
-          ? { ...current, in_library: true, library_status: "want", library_id: result.id }
+          ? { ...current, in_library: true, library_status: savedStatus, favorite: savedFavorite, library_id: result.id }
           : current
       );
     } catch (error) {

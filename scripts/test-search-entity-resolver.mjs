@@ -7,10 +7,15 @@ import dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
 import { neon } from "@neondatabase/serverless";
 
-const databaseUrl = process.env.DATABASE_URL;
+// Ferramenta de TESTE (só leitura): roda contra o banco de teste, nunca contra produção.
+const databaseUrl = process.env.TEST_DATABASE_URL;
 
 if (!databaseUrl) {
-  throw new Error("DATABASE_URL ausente.");
+  throw new Error("TEST_DATABASE_URL ausente.");
+}
+
+if (process.env.PROD_DATABASE_URL && databaseUrl === process.env.PROD_DATABASE_URL) {
+  throw new Error("TEST_DATABASE_URL é igual a PROD_DATABASE_URL — configuração de ambiente inválida.");
 }
 
 const sql = neon(databaseUrl);

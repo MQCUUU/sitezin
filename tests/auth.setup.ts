@@ -33,11 +33,10 @@ setup(
     }
 
     /*
-     * Loga somente o e-mail.
-     * Nunca mostramos a senha no terminal.
+     * Fase 0: nem o e-mail nem a senha aparecem no terminal.
      */
     console.log(
-      `Conta E2E: ${email}`
+      `Conta E2E: ${email.replace(/^(.).*(@.*)$/, "$1***$2")}`
     );
 
     await page.goto(

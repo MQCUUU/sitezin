@@ -10,6 +10,7 @@ import { groupEditorialCrew } from "@/lib/title-credits";
 import type { Status } from "@/lib/types";
 import { useToast } from "@/components/ToastProvider";
 import { LIBRARY_ACTION_COPY } from "@/lib/library/remove";
+import { fetchLibraryState, type LibraryLookupState } from "@/lib/library/lookup";
 
 import {
   TitleCastSection,
@@ -100,6 +101,15 @@ export default function TitlePage({
     useState(false);
 
   /*
+   * Fase 0 — estado da consulta à biblioteca. "Não está na biblioteca" só vale
+   * depois de uma resposta confirmada ("ready" com item nulo). Enquanto a
+   * consulta roda ("loading") ou se ela falhou ("error"), "Adicionar" e
+   * "Curtir" não são oferecidos: uma falha de leitura nunca vira "ausente".
+   */
+  const [libraryLookup, setLibraryLookup] =
+    useState<LibraryLookupState>("loading");
+
+  /*
    * V3.1 — relê o item da biblioteca (com `library_progress`/`progress`, o
    * mesmo progresso da Biblioteca/Home/Quick View). Usado depois de marcar
    * episódios, mudar status ou adicionar/restaurar: o painel "Seu progresso"
@@ -139,8 +149,53 @@ export default function TitlePage({
    */
   const needsDetails = !initialDetails;
 
+  /*
+   * Fase 0: aplica um resultado CONFIRMADO da consulta (item ou nulo = ausente).
+   * Nunca é chamado quando a consulta falha.
+   */
+  const applyLibraryResult = useCallback((found: LibraryItem | null) => {
+    setLibraryItem(found);
+
+    if (found) {
+      setStatus(found.status as Status);
+
+      setRating(
+        found.personal_rating !== null &&
+          found.personal_rating !== undefined
+          ? String(found.personal_rating)
+          : ""
+      );
+
+      setReview(found.review || "");
+      setFavorite(!!found.favorite);
+    } else {
+      /*
+       * Importante ao navegar diretamente
+       * de um título para outro sem remontar
+       * toda a aplicação.
+       */
+      setStatus("want");
+      setRating("");
+      setReview("");
+      setFavorite(false);
+    }
+  }, []);
+
+  const retryLibraryLookup = useCallback(async () => {
+    setLibraryLookup("loading");
+
+    try {
+      applyLibraryResult(await fetchLibraryState<LibraryItem>(type, id));
+      setLibraryLookup("ready");
+    } catch (err) {
+      console.error(err);
+      setLibraryLookup("error");
+    }
+  }, [type, id, applyLibraryResult]);
+
   const load = useCallback(async () => {
     setError(null);
+    setLibraryLookup("loading");
 
     if (needsDetails) {
       setLoading(true);
@@ -160,18 +215,7 @@ export default function TitlePage({
             })
           : Promise.resolve(null),
 
-        fetch(
-          `/api/library?tmdb_id=${encodeURIComponent(id)}&type=${encodeURIComponent(type)}`,
-          { cache: "no-store" }
-        ).then(async (response) => {
-          // Visitante sem sessão: não ter estado pessoal é o esperado, não um erro.
-          if (response.status === 401) return null;
-          const data = await response.json();
-          if (!response.ok || data?.error) {
-            throw new Error(data?.error || "Biblioteca indisponível.");
-          }
-          return data;
-        }),
+        fetchLibraryState<LibraryItem>(type, id),
       ]);
 
       if (needsDetails) {
@@ -183,42 +227,17 @@ export default function TitlePage({
       }
 
       /*
-       * Falha aqui é só logada — o usuário ainda vê o título
-       * inteiro, só sem saber se já está na biblioteca dele.
+       * Fase 0: falha na consulta NÃO é "fora da biblioteca". O título continua
+       * visível, mas sem "Adicionar"/"Curtir" até uma resposta confirmada (o
+       * hero oferece "Tentar de novo").
        */
-      const found =
-        libraryResult.status === "fulfilled"
-          ? libraryResult.value || null
-          : null;
-
       if (libraryResult.status === "rejected") {
         console.error(libraryResult.reason);
-      }
-
-      setLibraryItem(found);
-
-      if (found) {
-        setStatus(found.status);
-
-        setRating(
-          found.personal_rating !== null &&
-            found.personal_rating !== undefined
-            ? String(found.personal_rating)
-            : ""
-        );
-
-        setReview(found.review || "");
-        setFavorite(!!found.favorite);
+        setLibraryItem(null);
+        setLibraryLookup("error");
       } else {
-        /*
-         * Importante ao navegar diretamente
-         * de um título para outro sem remontar
-         * toda a aplicação.
-         */
-        setStatus("want");
-        setRating("");
-        setReview("");
-        setFavorite(false);
+        applyLibraryResult(libraryResult.value);
+        setLibraryLookup("ready");
       }
     } catch (err) {
       console.error(err);
@@ -230,16 +249,19 @@ export default function TitlePage({
     } finally {
       setLoading(false);
     }
-  }, [type, id, needsDetails]);
+  }, [type, id, needsDetails, applyLibraryResult]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   async function addToLibrary() {
+    // Fase 0: só adiciona com o estado confirmado (nunca durante/depois de uma falha de leitura).
     if (
       !details ||
-      saving
+      saving ||
+      libraryLookup !== "ready" ||
+      libraryItem
     ) {
       return;
     }
@@ -372,6 +394,25 @@ export default function TitlePage({
           result?.error ||
             "Não foi possível adicionar à biblioteca."
         );
+      }
+
+      /*
+       * Fase 0: o servidor nunca altera um item que já existe (adicionado em
+       * outra aba, por exemplo). A tela passa a mostrar o que está salvo.
+       */
+      if (result?.created === false) {
+        applyLibraryResult(result);
+        void reloadLibraryItem();
+
+        toast.info(
+          `${mediaTitle} já estava na sua biblioteca`,
+          {
+            description:
+              "Nada foi alterado: status, curtida, nota e resenha continuam como estavam.",
+          }
+        );
+
+        return;
       }
 
       setLibraryItem(
@@ -1031,6 +1072,9 @@ export default function TitlePage({
   }
 
   function handleToggleFavorite() {
+    // Fase 0: sem estado confirmado, não há o que curtir (o hero também desabilita o botão).
+    if (!libraryItem && libraryLookup !== "ready") return;
+
     const value = !favorite;
     setFavorite(value);
 
@@ -1040,6 +1084,8 @@ export default function TitlePage({
   }
 
   function handleStatusChange(value: Status) {
+    if (!libraryItem && libraryLookup !== "ready") return;
+
     setStatus(value);
 
     if (libraryItem) {
@@ -1176,6 +1222,8 @@ export default function TitlePage({
         libraryItem={libraryItem}
         favorite={favorite}
         saving={saving}
+        libraryLookup={libraryLookup}
+        onRetryLibraryLookup={retryLibraryLookup}
         onAddToLibrary={addToLibrary}
         onRemoveFromLibrary={removeFromLibrary}
         onToggleFavorite={handleToggleFavorite}
@@ -1198,6 +1246,7 @@ export default function TitlePage({
             details={details}
             status={status}
             libraryItem={libraryItem}
+            libraryLookup={libraryLookup}
             onStatusChange={handleStatusChange}
           />
 

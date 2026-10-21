@@ -1,8 +1,9 @@
 /*
  * Biblioteca — transição de status como UM fato atômico.
  *
- * Regra ÚNICA para PATCH /api/library/[id] (cards, Quick View, Biblioteca) e
- * POST /api/library (página do título): só há transição quando o pedido traz
+ * Regra ÚNICA para PATCH /api/library/[id] (cards, Quick View, Biblioteca, página
+ * do título). POST /api/library só cria item novo e nunca muda o status de um
+ * item existente (lib/library/add.ts). Só há transição quando o pedido traz
  * um status E ele é diferente do status gravado. Repetir o mesmo payload
  * (retry, duplo clique, salvar nota/Curtir/review sem mudar o status) não
  * gera nada. Item novo não passa por aqui: a criação é contada por

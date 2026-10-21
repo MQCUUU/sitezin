@@ -9,6 +9,17 @@ export function passwordValidationError(password: string): string | null {
   return null;
 }
 
+/**
+ * Fase 0 (P1-02): validação da senha no formulário de login/cadastro.
+ * A política de força vale para CRIAR senha (cadastro, redefinição). No login
+ * a senha só precisa estar preenchida: quem decide se ela está certa é o
+ * provedor — senhas antigas, criadas antes da política, continuam entrando.
+ */
+export function authFormPasswordError(mode: "login" | "signup", password: string): string | null {
+  if (mode === "signup") return passwordValidationError(password);
+  return password.length === 0 ? "Digite sua senha." : null;
+}
+
 export function authRedirectOrigin(): string {
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
   if (configured) {

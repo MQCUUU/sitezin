@@ -188,6 +188,15 @@ export function SmartQueue({ genres }: { genres: string[] }) {
 
       if (!post.ok) throw new Error();
 
+      // Fase 0: um item que já existia volta intacto do servidor — mostra o status salvo.
+      const saved = await post.json().catch(() => null);
+
+      if (saved?.created === false) {
+        setAdded((current) => ({ ...current, [resultKey(result)]: saved.status || "want" }));
+        toast.info(`${result.title} já estava na sua biblioteca`);
+        return;
+      }
+
       setAdded((current) => ({ ...current, [resultKey(result)]: "want" }));
       toast.success(`${result.title} entrou na sua fila`);
     } catch {

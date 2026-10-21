@@ -3,6 +3,7 @@ import { CalendarDays, Clock3, Layers3, Play } from "lucide-react";
 
 import { MEDIA_STATUS_OPTIONS } from "@/lib/media-status";
 import { languageName, runtimeLabel } from "@/lib/title-locale";
+import type { LibraryLookupState } from "@/lib/library/lookup";
 import type { Status } from "@/lib/types";
 import { TitleSeriesProgress } from "./TitleSeriesProgress";
 import type {
@@ -16,6 +17,8 @@ export type TitleOverviewSectionProps = {
   details: LooseTitleDetails;
   status: Status;
   libraryItem: LibraryItem | null;
+  /** Fase 0: sem estado confirmado, o status não pode ser escolhido. */
+  libraryLookup: LibraryLookupState;
   onStatusChange: (value: Status) => void;
 };
 
@@ -28,8 +31,11 @@ export function TitleOverviewSection({
   details,
   status,
   libraryItem,
+  libraryLookup,
   onStatusChange,
 }: TitleOverviewSectionProps) {
+  const lookupPending = !libraryItem && libraryLookup !== "ready";
+
   const runtime = runtimeLabel(details.runtime);
   const overviewLanguage = details.overview_language ? languageName(details.overview_language) : null;
 
@@ -142,6 +148,7 @@ export function TitleOverviewSection({
             aria-label="Status na sua biblioteca"
             value={status}
             onChange={(event) => onStatusChange(event.target.value as Status)}
+            disabled={lookupPending}
           >
             {MEDIA_STATUS_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -150,9 +157,15 @@ export function TitleOverviewSection({
             ))}
           </select>
 
-          {!libraryItem && (
+          {!libraryItem && libraryLookup === "ready" && (
             <p className="title-status-hint">
               Adicione à biblioteca para acompanhar o status.
+            </p>
+          )}
+
+          {!libraryItem && libraryLookup === "error" && (
+            <p className="title-status-hint">
+              Não foi possível verificar sua biblioteca agora.
             </p>
           )}
         </div>

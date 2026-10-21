@@ -2,6 +2,32 @@ import {
   defineConfig,
   devices,
 } from "@playwright/test";
+import dotenv from "dotenv";
+
+/*
+ * Fase 0: o processo dos testes lê o mesmo .env.local do servidor
+ * (E2E_USER_EMAIL / E2E_USER_PASSWORD). Variáveis já definidas no
+ * ambiente têm precedência.
+ */
+dotenv.config({
+  path: ".env.local",
+  quiet: true,
+});
+
+/*
+ * Os testes criam, alteram e removem dados da conta E2E. Eles só
+ * rodam quando o app aponta para o banco de TESTE — nunca para
+ * produção.
+ */
+if (
+  process.env.TEST_DATABASE_URL &&
+  process.env.DATABASE_URL !==
+    process.env.TEST_DATABASE_URL
+) {
+  throw new Error(
+    "E2E bloqueado: DATABASE_URL não é o banco de teste (TEST_DATABASE_URL)."
+  );
+}
 
 export default defineConfig({
   testDir:
@@ -162,7 +188,7 @@ export default defineConfig({
        * então ele não entra neste projeto.
        */
       testIgnore:
-        /signup\.spec\.ts/,
+        /(signup|login)\.spec\.ts/,
     },
 
     /*
@@ -191,7 +217,7 @@ export default defineConfig({
       },
 
       testMatch:
-        /signup\.spec\.ts/,
+        /(signup|login)\.spec\.ts/,
     },
   ],
 

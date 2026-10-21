@@ -41,8 +41,16 @@ dotenv.config({
 const TMDB_API_KEY =
   process.env.TMDB_API_KEY;
 
+/*
+ * Ferramenta de PRODUÇÃO: popula as tabelas search_* do banco de produção
+ * (etapa do deploy). Usa só PROD_DATABASE_URL — nunca DATABASE_URL, que no
+ * ambiente local aponta para o banco de TESTE. Como grava em produção, exige
+ * confirmação explícita:
+ *
+ *   node scripts/build-universal-index-v4.mjs --prod
+ */
 const DATABASE_URL =
-  process.env.DATABASE_URL;
+  process.env.PROD_DATABASE_URL;
 
 if (!TMDB_API_KEY) {
   throw new Error(
@@ -52,7 +60,22 @@ if (!TMDB_API_KEY) {
 
 if (!DATABASE_URL) {
   throw new Error(
-    "DATABASE_URL não encontrada."
+    "PROD_DATABASE_URL não encontrada."
+  );
+}
+
+if (
+  process.env.TEST_DATABASE_URL &&
+  DATABASE_URL === process.env.TEST_DATABASE_URL
+) {
+  throw new Error(
+    "PROD_DATABASE_URL é igual a TEST_DATABASE_URL — configuração de ambiente inválida."
+  );
+}
+
+if (!process.argv.includes("--prod")) {
+  throw new Error(
+    "Este script grava no banco de PRODUÇÃO. Confirme com: node scripts/build-universal-index-v4.mjs --prod"
   );
 }
 
