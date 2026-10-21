@@ -39,6 +39,7 @@ import { useToast } from "@/components/ToastProvider";
 import { ApiError } from "@/lib/api-client";
 import { intentForMedia, type LibraryIntent } from "@/lib/auth/pending-action";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
+import { fetchDiscoverFilters } from "@/lib/discover/filters-client";
 
 import { normalizeWatchProviders } from "@/components/media/providers/normalize";
 import { ProviderLogo } from "@/components/media/providers/ProviderLogo";
@@ -618,45 +619,11 @@ export function PickForMe({ inherit }: { inherit?: PickInherit } = {}) {
           true
         );
 
-        const [
-          movies,
-          tv,
-        ] =
-          await Promise.all([
-            fetch(
-              "/api/discover/filters?type=movie"
-            ),
-            fetch(
-              "/api/discover/filters?type=tv"
-            ),
-          ]);
-
-        const [
-          movieData,
-          tvData,
-        ] =
-          await Promise.all([
-            movies.ok
-              ? safeJson(
-                  movies
-                )
-              : Promise.resolve({
-                  genres:
-                    [],
-                  providers:
-                    [],
-                }),
-
-            tv.ok
-              ? safeJson(
-                  tv
-                )
-              : Promise.resolve({
-                  genres:
-                    [],
-                  providers:
-                    [],
-                }),
+        // Fase 2 (P3-11): mesma resposta já carregada pelo Descobrir (sem repetir a requisição).
+          const empty = { genres: [], providers: [] };
+          const [movieData, tvData] = await Promise.all([
+            fetchDiscoverFilters("/api/discover/filters?type=movie").catch(() => empty),
+            fetchDiscoverFilters("/api/discover/filters?type=tv").catch(() => empty),
           ]);
 
         if (

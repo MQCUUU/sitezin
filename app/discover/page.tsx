@@ -7,6 +7,7 @@ import { Search } from "@/components/Search";
 import { apiFetch } from "@/lib/api-client";
 import { intentForMedia } from "@/lib/auth/pending-action";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
+import { fetchDiscoverFilters } from "@/lib/discover/filters-client";
 
 import {
   CLEAR_FILTERS_PATCH,
@@ -221,26 +222,14 @@ function DiscoverContent() {
 
         const filterTypes: MediaType[] =
           params.type === "all" ? ["movie", "tv"] : [params.type];
-        const responses = await Promise.all(
+        // Fase 2 (P3-11): resposta compartilhada com "Escolha pra mim" (mesmas URLs).
+        const payloads = await Promise.all(
           filterTypes.map((mediaType) =>
-            fetch(
+            fetchDiscoverFilters(
               `/api/discover/filters?type=${mediaType}${/^\d+$/.test(params.provider) ? `&keep=${params.provider}` : ""}`
             )
           )
         );
-        const payloads = await Promise.all(
-          responses.map((response) => response.json())
-        );
-
-        if (
-          responses.some((response) => !response.ok) ||
-          payloads.some((result) => result?.error)
-        ) {
-          throw new Error(
-            payloads.find((result) => result?.error)?.error ||
-              "Erro ao carregar filtros."
-          );
-        }
 
         const result = {
           genres: Array.from(

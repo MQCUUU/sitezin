@@ -832,7 +832,7 @@ function SearchPageContent() {
   return (
     <>
       <div className="topbar">
-        <Search />
+        <Search syncedQuery={query} />
       </div>
 
       <div className="section search-page-shell">
@@ -855,7 +855,7 @@ function SearchPageContent() {
               ? "Não foi possível carregar os resultados"
               : results.length === 0 && userResults.length === 0
                 ? "Nenhum resultado encontrado"
-                : `${results.length + userResults.length} resultados para "${query}"`}
+                : `${results.length + userResults.length} resultados`}
           </h2>
         )}
 

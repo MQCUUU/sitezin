@@ -49,11 +49,28 @@ function suggestionToRecentEntry(item: SearchSuggestion): Omit<RecentSearchEntry
  * split (260ms debounce, 2-char minimum, 15min memory + sessionStorage
  * cache, AbortController per keystroke).
  */
-export function useSearchSuggestions() {
+export function useSearchSuggestions(syncedQuery?: string) {
   const router = useRouter();
 
   const [searchTab, setSearchTab] = useState<SearchTab>("all");
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(syncedQuery ?? "");
+
+  /*
+   * Fase 2 (P2-05) — na página /search o campo mostra o termo da URL
+   * (`syncedQuery`, vindo de ?q=). A URL é a fonte da verdade: voltar/avançar
+   * troca o termo e o campo acompanha. Enquanto o texto é o da URL e o usuário
+   * não editou, não há sugestões (nada de buscar de novo o que a página já
+   * mostra, nem "sem resultados" ao focar). Editar = busca normal.
+   */
+  const [edited, setEdited] = useState(false);
+  const showingUrlQuery = syncedQuery !== undefined && !edited && q === syncedQuery;
+
+  useEffect(() => {
+    if (syncedQuery === undefined) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- espelha a URL (fonte da verdade)
+    setQ(syncedQuery);
+    setEdited(false);
+  }, [syncedQuery]);
   const [results, setResults] = useState<SearchSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -129,7 +146,7 @@ export function useSearchSuggestions() {
      * continuava do estado anterior (geralmente vazio), então
      * `searchState` calculava "no-results" incorretamente por ~260ms.
      */
-    if (q.trim().length >= 2) {
+    if (q.trim().length >= 2 && !showingUrlQuery) {
       setPending(true);
     } else {
       setPending(false);
@@ -138,7 +155,7 @@ export function useSearchSuggestions() {
     const timer = setTimeout(async () => {
       const query = q.trim();
 
-      if (query.length < 2) {
+      if (query.length < 2 || showingUrlQuery) {
         requestRef.current?.abort();
         setResults([]);
         setLoading(false);
@@ -177,7 +194,7 @@ export function useSearchSuggestions() {
       }
 
       try {
-        const stored = sessionStorage.getItem(`mycatalog:suggest:v1:${cacheKey}`);
+        const stored = sessionStorage.getItem(`mycatalog:suggest:v2:${cacheKey}`);
         if (stored) {
           const cached = JSON.parse(stored);
           if (cached.expiresAt > Date.now() && Array.isArray(cached.suggestions)) {
@@ -188,7 +205,7 @@ export function useSearchSuggestions() {
             setActiveIndex(-1);
             return;
           }
-          sessionStorage.removeItem(`mycatalog:suggest:v1:${cacheKey}`);
+          sessionStorage.removeItem(`mycatalog:suggest:v2:${cacheKey}`);
         }
       } catch {
         // A busca continua normalmente quando o storage está indisponível.
@@ -218,7 +235,7 @@ export function useSearchSuggestions() {
         const cached = { expiresAt: Date.now() + 15 * 60 * 1000, suggestions };
         suggestionCacheRef.current.set(cacheKey, cached);
         try {
-          sessionStorage.setItem(`mycatalog:suggest:v1:${cacheKey}`, JSON.stringify(cached));
+          sessionStorage.setItem(`mycatalog:suggest:v2:${cacheKey}`, JSON.stringify(cached));
         } catch {
           // Cache local é opcional.
         }
@@ -244,7 +261,7 @@ export function useSearchSuggestions() {
       clearTimeout(timer);
       requestRef.current?.abort();
     };
-  }, [q]);
+  }, [q, showingUrlQuery]);
 
   const mediaResults = useMemo(
     () => results.filter((item): item is MediaResult => item.kind === "media"),
@@ -275,37 +292,40 @@ export function useSearchSuggestions() {
   );
 
   /*
-   * B3.7 (Candidato 2 — HIGH): single source of truth for "what's actually
-   * navigable right now". Concatenates the same groups, in the same
-   * order and under the same `searchTab` conditions, as the JSX in
-   * Search.tsx renders them (Usuários → Personagem/Pessoas →
-   * Franquias/Títulos). Keyboard nav, aria-activedescendant, aria-selected
-   * and Enter all read from THIS array instead of the raw `results` —
-   * previously they read `results` directly, so on a tab that hides most
-   * kinds (e.g. "Atores": only characters+people), ArrowDown/Home/End
-   * could set `aria-activedescendant` to an id that was never rendered in
-   * that tab, and Enter could navigate to an item the user never saw.
-   *
-   * If the two render conditions below ever drift from Search.tsx's own,
-   * this drifts back out of sync — they must be changed together.
+   * Fase 2 (P2-04) — ordem dos grupos = ordem de relevância do servidor
+   * (lib/search/suggest-order.ts): o grupo do primeiro item vem primeiro.
+   * Antes a ordem era fixa (Usuários → Personagem → Pessoas → Franquias →
+   * Títulos) e "interst" mostrava/selecionava uma produtora antes de
+   * Interestelar. `groupOrder` é a ÚNICA fonte da ordem: o JSX (Search.tsx)
+   * renderiza os grupos nela e o teclado navega `visibleResults`, derivado
+   * dela — não há como os dois divergirem (B3.7). Abas continuam filtrando:
+   * Títulos = títulos + franquias; Pessoas = pessoas + personagens.
    */
+  const groupOrder = useMemo(() => {
+    const visibleIn = (kind: SearchSuggestion["kind"]) =>
+      kind === "user"
+        ? !(searchTab === "movies" || searchTab === "actors")
+        : kind === "person" || kind === "character"
+          ? searchTab === "all" || searchTab === "actors"
+          : searchTab === "all" || searchTab === "movies";
+
+    const order: SearchSuggestion["kind"][] = [];
+    for (const item of results) {
+      if (!order.includes(item.kind) && visibleIn(item.kind)) order.push(item.kind);
+    }
+    return order;
+  }, [results, searchTab]);
+
   const visibleResults = useMemo(() => {
-    const visible: SearchSuggestion[] = [];
-
-    if (!(searchTab === "movies" || searchTab === "actors")) {
-      visible.push(...userResults);
-    }
-
-    if (searchTab === "all" || searchTab === "actors") {
-      visible.push(...characterResults, ...personResults);
-    }
-
-    if (searchTab === "all" || searchTab === "movies") {
-      visible.push(...collectionResults, ...mediaResults);
-    }
-
-    return visible;
-  }, [searchTab, userResults, characterResults, personResults, collectionResults, mediaResults]);
+    const byKind: Record<SearchSuggestion["kind"], SearchSuggestion[]> = {
+      user: userResults,
+      character: characterResults,
+      person: personResults,
+      collection: collectionResults,
+      media: mediaResults,
+    };
+    return groupOrder.flatMap((kind) => byKind[kind]);
+  }, [groupOrder, userResults, characterResults, personResults, collectionResults, mediaResults]);
 
   /*
    * Whenever the navigable set shrinks (tab switch, new results, query
@@ -318,12 +338,12 @@ export function useSearchSuggestions() {
   }, [visibleResults]);
 
   const searchState: SearchState = useMemo(() => {
-    if (q.trim().length < 2) return "idle";
+    if (q.trim().length < 2 || showingUrlQuery) return "idle";
     if (pending || loading) return "loading";
     if (error) return "error";
     if (results.length > 0) return "results";
     return "no-results";
-  }, [q, pending, loading, error, results.length]);
+  }, [q, showingUrlQuery, pending, loading, error, results.length]);
 
   /*
    * V3.2: digitar SEMPRE reabre as sugestões — depois de Esc a lista fechava
@@ -331,6 +351,7 @@ export function useSearchSuggestions() {
    */
   function changeQuery(value: string) {
     setQ(value);
+    setEdited(true);
     setFocused(true);
   }
 
@@ -493,6 +514,7 @@ export function useSearchSuggestions() {
     personResults,
     characterResults,
     collectionResults,
+    groupOrder,
     clearSearch,
     getTitle,
     getYear,

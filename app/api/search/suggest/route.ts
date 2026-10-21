@@ -7,6 +7,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { getDb } from "@/lib/db/neon";
 import { createUpstreamLog, sqlCallName, type UpstreamLog } from "@/lib/search/upstream";
 import { isSelfPortrayal, rankTitles } from "@/lib/search/rank";
+import { arrangeSuggestions, KNOWN_PERSON_POPULARITY, selectPeople } from "@/lib/search/suggest-order";
 import { needsPersonVariants, personVariantsFor, PRIMARY_TIMEOUT_MS, SECONDARY_TIMEOUT_MS } from "@/lib/search/progressive";
 
 const TMDB_BASE =
@@ -593,7 +594,7 @@ async function handle(
     }
   }
 
-  Array.from(
+  const scoredPeople = Array.from(
     people.values()
   )
     .map(
@@ -615,23 +616,12 @@ async function handle(
       ) =>
         item.score >=
         68
-    )
-    .sort(
-      (
-        a,
-        b
-      ) =>
-        b.score -
-        a.score
-    )
-    .slice(
-      0,
-      3
-    )
+    );
+
+  // Fase 2 (P2-04): só pessoas do cinema/TV, exato > palavra inteira (por popularidade) > parecido.
+  selectPeople(q, scoredPeople)
     .forEach(
-      ({
-        person,
-      }) => {
+      (person) => {
         suggestions.push({
           kind:
             "person",
@@ -799,7 +789,9 @@ async function handle(
       : hasExactCharacter
         ? suggestions.filter(
             (item) =>
-              item.kind !== "person"
+              item.kind !== "person" ||
+              // Fase 2: o personagem exato esconde homônimos obscuros, não pessoas conhecidas ("nolan").
+              Number(item.popularity || 0) >= KNOWN_PERSON_POPULARITY
           )
         : suggestions;
 
@@ -809,7 +801,8 @@ async function handle(
         q,
 
       suggestions:
-        resolvedSuggestions.slice(
+        // Fase 2 (P2-04): grupos na ordem de relevância (títulos primeiro, salvo correspondência mais forte).
+        arrangeSuggestions(q, resolvedSuggestions).slice(
           0,
           10
         ),

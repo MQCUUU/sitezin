@@ -24,7 +24,11 @@ import { RecentSearches } from "@/components/search/RecentSearches";
  * SearchUserResult/SearchFranchiseResult) — a person no longer risks
  * looking like a MediaCard, a user no longer risks looking like a TMDB row.
  */
-export function Search() {
+/**
+ * Fase 2 (P2-05): `syncedQuery` — termo da URL na página /search (?q=), para o
+ * campo vir preenchido e poder ser refinado. Nas outras telas, omitido.
+ */
+export function Search({ syncedQuery }: { syncedQuery?: string } = {}) {
   const listboxId = useId();
   const {
     searchTab,
@@ -39,6 +43,7 @@ export function Search() {
     personResults,
     characterResults,
     collectionResults,
+    groupOrder,
     getTitle,
     getYear,
     clearSearch,
@@ -54,7 +59,7 @@ export function Search() {
     activeDescendantId,
     onFormFocus,
     onFormBlur,
-  } = useSearchSuggestions();
+  } = useSearchSuggestions(syncedQuery);
 
   const trimmedQuery = q.trim();
   const dropdownOpen = focused && searchState !== "loading";
@@ -136,97 +141,103 @@ export function Search() {
           </div>
 
           <div role="listbox" id={listboxId} aria-label="Sugestões">
-          {userResults.length > 0 && (
-            <SearchSuggestionGroup icon={<Users size={12} />} label="Usuários">
-              {userResults.map((item) => (
-                <SearchUserResult
-                  key={`user-${item.id}`}
-                  item={item}
-                  className={resultClass(item)}
-                  id={resultId(item)}
-                  ariaSelected={resultId(item) === activeDescendantId}
-                  onOpen={() => {
-                    recordSuggestion(item);
-                    clearSearch();
-                  }}
-                />
-              ))}
-            </SearchSuggestionGroup>
-          )}
-
-          {(searchTab === "all" || searchTab === "actors") && characterResults.length > 0 && (
-            <SearchSuggestionGroup icon={<Drama size={12} />} label="Personagem">
-              {characterResults.map((item) => (
-                <SearchPersonResult
-                  key={`character-${item.name}-${item.matched}`}
-                  item={item}
-                  className={resultClass(item)}
-                  id={resultId(item)}
-                  ariaSelected={resultId(item) === activeDescendantId}
-                  onOpen={() => {
-                    recordSuggestion(item);
-                    clearSearch();
-                  }}
-                />
-              ))}
-            </SearchSuggestionGroup>
-          )}
-
-          {(searchTab === "all" || searchTab === "actors") && personResults.length > 0 && (
-            <SearchSuggestionGroup icon={<UserRound size={12} />} label="Pessoas">
-              {personResults.map((item) => (
-                <SearchPersonResult
-                  key={`person-${item.id}`}
-                  item={item}
-                  className={resultClass(item)}
-                  id={resultId(item)}
-                  ariaSelected={resultId(item) === activeDescendantId}
-                  onOpen={() => {
-                    recordSuggestion(item);
-                    clearSearch();
-                  }}
-                />
-              ))}
-            </SearchSuggestionGroup>
-          )}
-
-          {(searchTab === "all" || searchTab === "movies") && collectionResults.length > 0 && (
-            <SearchSuggestionGroup icon={<Layers3 size={12} />} label="Franquias">
-              {collectionResults.map((item) => (
-                <SearchFranchiseResult
-                  key={`collection-${item.id}`}
-                  item={item}
-                  className={resultClass(item)}
-                  id={resultId(item)}
-                  ariaSelected={resultId(item) === activeDescendantId}
-                  onOpen={() => {
-                    recordSuggestion(item);
-                    clearSearch();
-                  }}
-                />
-              ))}
-            </SearchSuggestionGroup>
-          )}
-
-          {(searchTab === "all" || searchTab === "movies") && mediaResults.length > 0 && (
-            <SearchSuggestionGroup icon={<Film size={12} />} label="Títulos">
-              {mediaResults.map((item) => (
-                <SearchMediaResult
-                  key={`${item.media_type}-${item.id}`}
-                  item={item}
-                  title={getTitle(item)}
-                  year={getYear(item)}
-                  className={resultClass(item)}
-                  id={resultId(item)}
-                  ariaSelected={resultId(item) === activeDescendantId}
-                  onOpen={() => {
-                    recordSuggestion(item);
-                    clearSearch();
-                  }}
-                />
-              ))}
-            </SearchSuggestionGroup>
-          )}
+          {/* Fase 2 (P2-04): grupos na ordem de relevância (mesma ordem do teclado — groupOrder). */}
+          {groupOrder.map((kind) => {
+            switch (kind) {
+              case "user":
+                return userResults.length > 0 && (
+                  <SearchSuggestionGroup key="user" icon={<Users size={12} />} label="Usuários">
+                    {userResults.map((item) => (
+                      <SearchUserResult
+                        key={`user-${item.id}`}
+                        item={item}
+                        className={resultClass(item)}
+                        id={resultId(item)}
+                        ariaSelected={resultId(item) === activeDescendantId}
+                        onOpen={() => {
+                          recordSuggestion(item);
+                          clearSearch();
+                        }}
+                      />
+                    ))}
+                  </SearchSuggestionGroup>
+                );
+              case "character":
+                return characterResults.length > 0 && (
+                  <SearchSuggestionGroup key="character" icon={<Drama size={12} />} label="Personagem">
+                    {characterResults.map((item) => (
+                      <SearchPersonResult
+                        key={`character-${item.name}-${item.matched}`}
+                        item={item}
+                        className={resultClass(item)}
+                        id={resultId(item)}
+                        ariaSelected={resultId(item) === activeDescendantId}
+                        onOpen={() => {
+                          recordSuggestion(item);
+                          clearSearch();
+                        }}
+                      />
+                    ))}
+                  </SearchSuggestionGroup>
+                );
+              case "person":
+                return personResults.length > 0 && (
+                  <SearchSuggestionGroup key="person" icon={<UserRound size={12} />} label="Pessoas">
+                    {personResults.map((item) => (
+                      <SearchPersonResult
+                        key={`person-${item.id}`}
+                        item={item}
+                        className={resultClass(item)}
+                        id={resultId(item)}
+                        ariaSelected={resultId(item) === activeDescendantId}
+                        onOpen={() => {
+                          recordSuggestion(item);
+                          clearSearch();
+                        }}
+                      />
+                    ))}
+                  </SearchSuggestionGroup>
+                );
+              case "collection":
+                return collectionResults.length > 0 && (
+                  <SearchSuggestionGroup key="collection" icon={<Layers3 size={12} />} label="Franquias">
+                    {collectionResults.map((item) => (
+                      <SearchFranchiseResult
+                        key={`collection-${item.id}`}
+                        item={item}
+                        className={resultClass(item)}
+                        id={resultId(item)}
+                        ariaSelected={resultId(item) === activeDescendantId}
+                        onOpen={() => {
+                          recordSuggestion(item);
+                          clearSearch();
+                        }}
+                      />
+                    ))}
+                  </SearchSuggestionGroup>
+                );
+              case "media":
+                return mediaResults.length > 0 && (
+                  <SearchSuggestionGroup key="media" icon={<Film size={12} />} label="Títulos">
+                    {mediaResults.map((item) => (
+                      <SearchMediaResult
+                        key={`${item.media_type}-${item.id}`}
+                        item={item}
+                        title={getTitle(item)}
+                        year={getYear(item)}
+                        className={resultClass(item)}
+                        id={resultId(item)}
+                        ariaSelected={resultId(item) === activeDescendantId}
+                        onOpen={() => {
+                          recordSuggestion(item);
+                          clearSearch();
+                        }}
+                      />
+                    ))}
+                  </SearchSuggestionGroup>
+                );
+            }
+          })}
 
           </div>
 

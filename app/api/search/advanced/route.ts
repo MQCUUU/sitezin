@@ -2330,10 +2330,9 @@ async function handle(
     return NextResponse.json({
       handled: true,
       mode: "title",
-      title: `Resultados para ${original}`,
-      subtitle: exactTitle
-        ? `Correspondência direta de título. ${totalTitleResults && totalTitleResults > results.length ? resultCountLabel(results.length, totalTitleResults) : ""}`.trim()
-        : resultCountLabel(results.length, totalTitleResults),
+      // Fase 2 (P2-05): o termo já está no H1 da página — o painel diz o tipo de correspondência.
+      title: exactTitle ? "Correspondência direta de título" : "Títulos relacionados",
+      subtitle: resultCountLabel(results.length, totalTitleResults),
       resolved_from: original,
       resolver: entityCandidates,
       results,
