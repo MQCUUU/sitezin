@@ -4,6 +4,9 @@ import { MediaPosterActions } from "@/components/media/MediaPosterActions";
 import { MediaPosterTags } from "@/components/media/MediaBadges";
 import { Poster } from "@/components/Poster";
 import { chunkLibraryStateIds } from "@/lib/library-state-batches";
+import { ApiError } from "@/lib/api-client";
+import { intentForMedia, type LibraryIntent } from "@/lib/auth/pending-action";
+import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 import {
   useEffect,
   useMemo,
@@ -176,6 +179,9 @@ function formatRuntime(
 }
 
 export default function CollectionPage() {
+  // Fase 1: visitante é convidado a entrar; 401 nunca vira "Não autenticado".
+  const libraryAuth = useLibraryAuth();
+  const canLookupLibrary = libraryAuth.state === "authenticated" || libraryAuth.state === "unknown";
   const params =
     useParams<{
       id:
@@ -414,15 +420,9 @@ export default function CollectionPage() {
             response
           );
 
-        if (
-          !response.ok ||
-          data?.error
-        ) {
-          throw new Error(
-            data?.error ||
-              "Erro ao carregar detalhes."
-          );
-        }
+        if (!response.ok || data?.error) {
+        throw new ApiError(data?.error || "Erro ao carregar detalhes.", { status: response.status });
+      }
 
         if (
           !cancelled
@@ -530,61 +530,6 @@ export default function CollectionPage() {
             : []
         );
 
-        /*
-         * V2.1-D — antes: fetch("/api/library") INTEIRA só para cruzar o
-         * estado de poucos filmes desta coleção. Agora: ceil(N/100) chamadas
-         * batched (POST /api/library/state) só com os IDs das partes
-         * (o endpoint limita a 100 e exige sessão — guest recebe 401 e
-         * a coleção continua pública/funcional, só sem estado pessoal).
-         * Falha aqui nunca derruba a coleção em si.
-         */
-        const partIds: number[] = (
-          Array.isArray(collectionData.parts) ? collectionData.parts : []
-        )
-          .map((part: any) => Number(part?.id))
-          .filter((id: number) => Number.isInteger(id) && id > 0);
-
-        if (partIds.length > 0) {
-          try {
-            // ceil(N / 100) requests em paralelo — sem truncar coleções grandes.
-            const batches = await Promise.all(
-              chunkLibraryStateIds(partIds).map(async (ids) => {
-                const stateResponse = await fetch("/api/library/state", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    items: ids.map((id) => ({ media_type: "movie", tmdb_id: id })),
-                  }),
-                });
-
-                if (!stateResponse.ok) return [];
-
-                const stateData = await safeJson(stateResponse);
-
-                return Array.isArray(stateData?.items) ? stateData.items : [];
-              })
-            );
-
-            if (!cancelled) {
-              setLibrary(
-                batches.flat().map((item: any) => ({
-                  library_id: String(item.library_id),
-                  tmdb_id: Number(item.tmdb_id),
-                  media_type: "movie",
-                  favorite: Boolean(item.favorite),
-                  status: item.status || null,
-                  personal_rating:
-                    item.personal_rating === null ||
-                    item.personal_rating === undefined
-                      ? null
-                      : Number(item.personal_rating),
-                }))
-              );
-            }
-          } catch {
-            /* estado pessoal é opcional — a coleção pública segue funcionando */
-          }
-        }
       } catch (
         error
       ) {
@@ -617,6 +562,101 @@ export default function CollectionPage() {
   }, [
     params.id,
   ]);
+
+  /*
+   * Fase 1 (P2-03): estado pessoal das partes só com sessão — visitante não
+   * dispara POST /api/library/state (que daria 401). Efeito próprio para
+   * rodar também quando a sessão termina de carregar depois da coleção.
+   * V2.1-D: ceil(N/100) chamadas em lote, só com os IDs das partes.
+   */
+  useEffect(() => {
+    if (!canLookupLibrary || movies.length === 0) return;
+
+    let cancelled = false;
+
+    const partIds: number[] = movies
+      .map((part: any) => Number(part?.id))
+      .filter((id: number) => Number.isInteger(id) && id > 0);
+
+    Promise.all(
+      chunkLibraryStateIds(partIds).map(async (ids) => {
+        const stateResponse = await fetch("/api/library/state", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: ids.map((id) => ({ media_type: "movie", tmdb_id: id })),
+          }),
+        });
+
+        if (!stateResponse.ok) return [];
+
+        const stateData = await safeJson(stateResponse);
+        return Array.isArray(stateData?.items) ? stateData.items : [];
+      })
+    )
+      .then((batches) => {
+        if (cancelled) return;
+
+        setLibrary(
+          batches.flat().map((item: any) => ({
+            library_id: String(item.library_id),
+            tmdb_id: Number(item.tmdb_id),
+            media_type: "movie",
+            favorite: Boolean(item.favorite),
+            status: item.status || null,
+            personal_rating:
+              item.personal_rating === null ||
+              item.personal_rating === undefined
+                ? null
+                : Number(item.personal_rating),
+          }))
+        );
+      })
+      .catch(() => {
+        /* estado pessoal é opcional — a coleção pública segue funcionando */
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [movies, canLookupLibrary]);
+
+  /*
+   * Fase 1 — pontos de entrada das ações (cards, "Ver rápido", botões em lote):
+   * visitante confirmado é convidado a entrar (sem chamar a API) e qualquer
+   * falha vira mensagem amigável — 401 = "entre para salvar"/"sessão expirou".
+   */
+  function runGuarded(intent: LibraryIntent | undefined, fallback: string, run: () => Promise<unknown>) {
+    if (!libraryAuth.requireUser(intent)) return;
+
+    void run().catch((error) => {
+      console.error(error);
+      libraryAuth.handleError(error, intent, fallback);
+    });
+  }
+
+  const asMedia = (movie: CollectionMovie) => ({ ...movie, media_type: "movie" });
+
+  function guardedAdd(movie: CollectionMovie, status = "want") {
+    runGuarded(intentForMedia(asMedia(movie), status === "want" ? "add" : "status", status), "Erro ao adicionar", () => addToLibrary(movie, status));
+  }
+
+  function guardedUpdateStatus(movie: CollectionMovie, status: string) {
+    runGuarded(intentForMedia(asMedia(movie), "status", status), "Erro ao alterar status", () => updateStatus(movie, status));
+  }
+
+  function guardedToggleFavorite(movie: CollectionMovie) {
+    const intent = getLibraryItem(movie)?.favorite ? undefined : intentForMedia(asMedia(movie), "favorite");
+    runGuarded(intent, "Erro ao alterar curtida", () => toggleFavorite(movie));
+  }
+
+  function guardedUpdateRating(movie: CollectionMovie, rating: number | null) {
+    runGuarded(undefined, "Erro ao alterar sua nota", () => updateRating(movie, rating));
+  }
+
+  function guardedBulk(run: () => Promise<unknown>) {
+    runGuarded(undefined, "Não foi possível atualizar a coleção", run);
+  }
 
   function getLibraryItem(
     movie:
@@ -916,14 +956,8 @@ export default function CollectionPage() {
           response
         );
 
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Não foi possível adicionar."
-        );
+      if (!response.ok || data?.error) {
+        throw new ApiError(data?.error || "Não foi possível adicionar.", { status: response.status });
       }
 
       setLibrary(
@@ -1021,14 +1055,8 @@ export default function CollectionPage() {
           response
         );
 
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Não foi possível alterar o status."
-        );
+      if (!response.ok || data?.error) {
+        throw new ApiError(data?.error || "Não foi possível alterar o status.", { status: response.status });
       }
 
       patchLibrary(
@@ -1101,14 +1129,8 @@ export default function CollectionPage() {
           response
         );
 
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Não foi possível atualizar a curtida."
-        );
+      if (!response.ok || data?.error) {
+        throw new ApiError(data?.error || "Não foi possível atualizar a curtida.", { status: response.status });
       }
 
       patchLibrary(
@@ -1177,14 +1199,8 @@ export default function CollectionPage() {
           response
         );
 
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Não foi possível alterar a nota."
-        );
+      if (!response.ok || data?.error) {
+        throw new ApiError(data?.error || "Não foi possível alterar a nota.", { status: response.status });
       }
 
       patchLibrary(
@@ -1261,14 +1277,8 @@ export default function CollectionPage() {
           response
         );
 
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Não foi possível remover."
-        );
+      if (!response.ok || data?.error) {
+        throw new ApiError(data?.error || "Não foi possível remover.", { status: response.status });
       }
 
       setLibrary(
@@ -1549,7 +1559,7 @@ export default function CollectionPage() {
                   bulkProcessing
                 }
                 onClick={
-                  addAll
+                  () => guardedBulk(addAll)
                 }
               >
                 {bulkProcessing ? (
@@ -1573,7 +1583,7 @@ export default function CollectionPage() {
                   bulkProcessing
                 }
                 onClick={
-                  setAllWant
+                  () => guardedBulk(setAllWant)
                 }
               >
                 <Sparkles
@@ -1820,13 +1830,13 @@ export default function CollectionPage() {
                     setPreviewItem
                   }
                   addToLibrary={
-                    addToLibrary
+                    guardedAdd
                   }
                   updateStatus={
-                    updateStatus
+                    guardedUpdateStatus
                   }
                   toggleFavorite={
-                    toggleFavorite
+                    guardedToggleFavorite
                   }
                   requestRemove={
                     requestRemove
@@ -1851,9 +1861,9 @@ export default function CollectionPage() {
             : null
         }
         actions={{
-          onAdd: () => previewItem && addToLibrary(previewItem),
+          onAdd: () => previewItem && guardedAdd(previewItem),
           addLabel: "Quero assistir",
-          onRating: (_, rating) => previewItem && updateRating(previewItem, rating),
+          onRating: (_, rating) => previewItem && guardedUpdateRating(previewItem, rating),
           disabled: previewItem ? processing === `movie-${previewItem.id}` : false,
         }}
         providers={<WatchProviderList data={normalizeWatchProviders(previewDetails?.watch_providers, "BR")} loading={previewLoading} />}

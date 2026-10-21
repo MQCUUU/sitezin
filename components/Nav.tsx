@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BrandLogo, BrandMark } from "@/components/brand/BrandMark";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useAuthState } from "@/hooks/useLibraryAuth";
 
 import {
   House,
@@ -56,6 +57,11 @@ const items = [
   ["/lists", "Listas", List],
 ] as const;
 
+/*
+ * Fase 1 (P3-10): rotas privadas só são pré-carregadas com sessão confirmada.
+ * Para visitante, cada prefetch virava um redirect para /login sem utilidade.
+ */
+const PUBLIC_NAV_ROUTES = new Set<string>(["/", "/discover"]);
 const secondaryItems = [
   ["/assistant", "Assistente IA", Bot],
 ] as const;
@@ -78,6 +84,9 @@ const authRoutes = [
 
 export function Nav() {
   const pathname = usePathname();
+  const authState = useAuthState();
+  const prefetchFor = (href: string) =>
+    PUBLIC_NAV_ROUTES.has(href) || authState === "authenticated" ? undefined : false;
   const [moreOpen, setMoreOpen] = useState(false);
   useEffect(() => setMoreOpen(false), [pathname]);
 
@@ -176,6 +185,7 @@ export function Nav() {
               <Link
                 key={href}
                 href={href}
+                prefetch={prefetchFor(href)}
                 className={
                   "mc-focusable " +
                   (isActive(href)
@@ -226,6 +236,7 @@ export function Nav() {
             <Link
               key={href}
               href={href}
+              prefetch={prefetchFor(href)}
               className={
                 "mc-focusable " +
                 (isActive(href)
@@ -257,8 +268,8 @@ export function Nav() {
         <section className="mobile-more-sheet" aria-label="Mais páginas" role="dialog" aria-modal="true">
           <header><strong>Todas as páginas</strong><button className="mc-focusable" onClick={() => setMoreOpen(false)} aria-label="Fechar"><X size={20} /></button></header>
           <div>
-            {[items[4], items[5], items[6], items[7]].map(([href, label, Icon]) => <Link key={href} href={href} className={`mc-focusable ${isActive(href) ? "active" : ""}`} aria-current={isActive(href) ? "page" : undefined}><Icon size={20} /><span>{label}</span></Link>)}
-            {secondaryItems.map(([href, label, Icon]) => <Link key={href} href={href} className={`mc-focusable mobile-more-secondary ${isActive(href) ? "active" : ""}`} aria-current={isActive(href) ? "page" : undefined}><Icon size={20} /><span>{label}</span></Link>)}
+            {[items[4], items[5], items[6], items[7]].map(([href, label, Icon]) => <Link key={href} href={href} prefetch={prefetchFor(href)} className={`mc-focusable ${isActive(href) ? "active" : ""}`} aria-current={isActive(href) ? "page" : undefined}><Icon size={20} /><span>{label}</span></Link>)}
+            {secondaryItems.map(([href, label, Icon]) => <Link key={href} href={href} prefetch={prefetchFor(href)} className={`mc-focusable mobile-more-secondary ${isActive(href) ? "active" : ""}`} aria-current={isActive(href) ? "page" : undefined}><Icon size={20} /><span>{label}</span></Link>)}
           </div>
         </section>
       </div>}

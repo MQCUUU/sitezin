@@ -36,6 +36,9 @@ import {
 } from "@/lib/tmdb";
 
 import { useToast } from "@/components/ToastProvider";
+import { ApiError } from "@/lib/api-client";
+import { intentForMedia, type LibraryIntent } from "@/lib/auth/pending-action";
+import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 
 import { normalizeWatchProviders } from "@/components/media/providers/normalize";
 import { ProviderLogo } from "@/components/media/providers/ProviderLogo";
@@ -315,6 +318,18 @@ export type PickInherit = {
 export function PickForMe({ inherit }: { inherit?: PickInherit } = {}) {
   const toast =
     useToast();
+
+  // Fase 1: visitante é convidado a entrar; 401 nunca vira "Não autenticado".
+  const libraryAuth = useLibraryAuth();
+
+  function runGuarded(intent: LibraryIntent | undefined, fallback: string, run: () => Promise<unknown>) {
+    if (!libraryAuth.requireUser(intent)) return;
+
+    void run().catch((error) => {
+      console.error(error);
+      libraryAuth.handleError(error, intent, fallback);
+    });
+  }
 
   const [
     open,
@@ -1740,14 +1755,8 @@ export function PickForMe({ inherit }: { inherit?: PickInherit } = {}) {
           response
         );
 
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Erro ao adicionar."
-        );
+      if (!response.ok || data?.error) {
+        throw new ApiError(data?.error || "Erro ao adicionar.", { status: response.status });
       }
 
       setWinner(
@@ -1826,14 +1835,8 @@ export function PickForMe({ inherit }: { inherit?: PickInherit } = {}) {
           response
         );
 
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Erro ao atualizar biblioteca."
-        );
+      if (!response.ok || data?.error) {
+        throw new ApiError(data?.error || "Erro ao atualizar biblioteca.", { status: response.status });
       }
 
       return data;
@@ -2965,9 +2968,7 @@ export function PickForMe({ inherit }: { inherit?: PickInherit } = {}) {
                                     processing
                                   }
                                   onClick={() =>
-                                    updateRating(
-                                      value
-                                    )
+                                    runGuarded(undefined, "Erro ao alterar sua nota", () => updateRating(value))
                                   }
                                 >
                                   {
@@ -2984,9 +2985,7 @@ export function PickForMe({ inherit }: { inherit?: PickInherit } = {}) {
                                 processing
                               }
                               onClick={() =>
-                                updateRating(
-                                  null
-                                )
+                                runGuarded(undefined, "Erro ao alterar sua nota", () => updateRating(null))
                               }
                             >
                               Limpar
@@ -3012,7 +3011,7 @@ export function PickForMe({ inherit }: { inherit?: PickInherit } = {}) {
                               processing
                             }
                             onClick={
-                              addToLibrary
+                              () => winner && runGuarded(intentForMedia(winner, "add"), "Erro ao adicionar", addToLibrary)
                             }
                           >
                             {processing ? (
@@ -3080,9 +3079,7 @@ export function PickForMe({ inherit }: { inherit?: PickInherit } = {}) {
                                             : ""
                                         }
                                         onClick={() =>
-                                          updateStatus(
-                                            value
-                                          )
+                                          winner && runGuarded(intentForMedia(winner, "status", value), "Erro ao alterar status", () => updateStatus(value))
                                         }
                                       >
                                         <span>
@@ -3132,7 +3129,7 @@ export function PickForMe({ inherit }: { inherit?: PickInherit } = {}) {
                                 processing
                               }
                               onClick={
-                                toggleFavorite
+                                () => winner && runGuarded(winner.favorite ? undefined : intentForMedia(winner, "favorite"), "Erro ao alterar curtida", toggleFavorite)
                               }
                             >
                               <Heart

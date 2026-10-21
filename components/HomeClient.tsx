@@ -467,10 +467,31 @@ export default function HomeClient() {
     moments: moments.length,
   });
 
+  /* ------------------------------------------- sessão ainda carregando */
+
+  /*
+   * Fase 1 — "sessão carregando" não é visitante nem autenticado: até a sessão
+   * ser conhecida, nenhuma das duas Homes aparece (antes a Home logada piscava
+   * para visitantes). Só a busca, comum às duas, e o skeleton do hero/trilho.
+   * Os dados pessoais já esperavam a sessão; nada é atrasado depois dela.
+   */
+  if (!authReady) {
+    return (
+      <div className="home-smart" aria-busy="true">
+        <div className="topbar home-topbar">
+          <Search />
+        </div>
+
+        <section className="section">
+          <HomeSkeleton />
+        </section>
+      </div>
+    );
+  }
+
   /* ------------------------------------------------------- visitante */
 
   if (
-    authReady &&
     !user
   ) {
     return (

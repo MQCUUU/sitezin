@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { Search } from "@/components/Search";
@@ -11,6 +11,11 @@ import type { Status } from "@/lib/types";
 import { useToast } from "@/components/ToastProvider";
 import { LIBRARY_ACTION_COPY } from "@/lib/library/remove";
 import { fetchLibraryState, type LibraryLookupState } from "@/lib/library/lookup";
+import { createMutationQueue, runLibraryAction } from "@/lib/library/actions";
+import { apiFetch } from "@/lib/api-client";
+import type { LibraryIntent } from "@/lib/auth/pending-action";
+import { useLibraryAuth } from "@/hooks/useLibraryAuth";
+import { mediaStatusLabel } from "@/lib/media-status";
 
 import {
   TitleCastSection,
@@ -91,6 +96,21 @@ export default function TitlePage({
     [pathname, router, searchParams]
   );
 
+  const intentFor = useCallback(
+    (kind: "add" | "favorite" | "status", nextStatus?: Status): LibraryIntent => {
+      const base = {
+        media_type: type,
+        tmdb_id: Number(id),
+        title: details?.title || details?.name || undefined,
+      };
+
+      return kind === "status" && nextStatus
+        ? { kind: "status", status: nextStatus, ...base }
+        : { kind: kind === "status" ? "add" : kind, ...base };
+    },
+    [type, id, details]
+  );
+
   const [loading, setLoading] =
     useState(() => !initialDetails);
 
@@ -108,6 +128,14 @@ export default function TitlePage({
    */
   const [libraryLookup, setLibraryLookup] =
     useState<LibraryLookupState>("loading");
+
+  /*
+   * Fase 1 — sessão (carregando / visitante / autenticado) e tratamento de 401.
+   * Mutações deste título passam por uma fila: a intenção mais recente roda por
+   * último (status + Curtir rápidos não se atropelam nem apagam um ao outro).
+   */
+  const libraryAuth = useLibraryAuth();
+  const enqueueMutation = useRef(createMutationQueue()).current;
 
   /*
    * V3.1 — relê o item da biblioteca (com `library_progress`/`progress`, o
@@ -195,50 +223,21 @@ export default function TitlePage({
 
   const load = useCallback(async () => {
     setError(null);
-    setLibraryLookup("loading");
 
-    if (needsDetails) {
-      setLoading(true);
-    }
+    if (!needsDetails) return;
+
+    setLoading(true);
 
     try {
-      const [detailsResult, libraryResult] = await Promise.allSettled([
-        needsDetails
-          ? fetch(`/api/tmdb/${type}/${id}`).then(async (response) => {
-              const data = await response.json();
-              if (!response.ok || data?.error) {
-                throw new Error(
-                  data?.error || "Não foi possível carregar o título."
-                );
-              }
-              return data;
-            })
-          : Promise.resolve(null),
-
-        fetchLibraryState<LibraryItem>(type, id),
-      ]);
-
-      if (needsDetails) {
-        if (detailsResult.status === "rejected") {
-          throw detailsResult.reason;
-        }
-
-        setDetails(detailsResult.value);
+      const response = await fetch(`/api/tmdb/${type}/${id}`);
+      const data = await response.json();
+      if (!response.ok || data?.error) {
+        throw new Error(
+          data?.error || "Não foi possível carregar o título."
+        );
       }
 
-      /*
-       * Fase 0: falha na consulta NÃO é "fora da biblioteca". O título continua
-       * visível, mas sem "Adicionar"/"Curtir" até uma resposta confirmada (o
-       * hero oferece "Tentar de novo").
-       */
-      if (libraryResult.status === "rejected") {
-        console.error(libraryResult.reason);
-        setLibraryItem(null);
-        setLibraryLookup("error");
-      } else {
-        applyLibraryResult(libraryResult.value);
-        setLibraryLookup("ready");
-      }
+      setDetails(data);
     } catch (err) {
       console.error(err);
       setError(
@@ -249,12 +248,33 @@ export default function TitlePage({
     } finally {
       setLoading(false);
     }
-  }, [type, id, needsDetails, applyLibraryResult]);
+  }, [type, id, needsDetails]);
 
   useEffect(() => {
     load();
   }, [load]);
 
+  /*
+   * Fase 1 (P2-03): o estado pessoal só é consultado com sessão. Enquanto a
+   * sessão carrega, nada é pedido nem oferecido ("Verificando…"); visitante
+   * confirmado não tem estado pessoal (sem GET que daria 401). Fase 0 segue
+   * valendo: falha na consulta = "error", nunca "fora da biblioteca".
+   */
+  useEffect(() => {
+    if (libraryAuth.state === "loading") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- espelha o estado da sessão (sistema externo)
+      setLibraryLookup("loading");
+      return;
+    }
+
+    if (libraryAuth.state === "guest") {
+      applyLibraryResult(null);
+      setLibraryLookup("ready");
+      return;
+    }
+
+    void retryLibraryLookup();
+  }, [libraryAuth.state, applyLibraryResult, retryLibraryLookup]);
   async function addToLibrary() {
     // Fase 0: só adiciona com o estado confirmado (nunca durante/depois de uma falha de leitura).
     if (
@@ -265,6 +285,9 @@ export default function TitlePage({
     ) {
       return;
     }
+
+    // Fase 1: visitante confirmado é convidado a entrar (a intenção é preservada).
+    if (!libraryAuth.requireUser(intentFor("add"))) return;
 
     try {
       setSaving(
@@ -364,8 +387,9 @@ export default function TitlePage({
         review,
       };
 
-      const response =
-        await fetch(
+      // Fase 1: apiFetch devolve o status HTTP no erro (401 = precisa entrar).
+      const result =
+        await apiFetch(
           "/api/library",
           {
             method:
@@ -382,19 +406,6 @@ export default function TitlePage({
               ),
           }
         );
-
-      const result =
-        await response.json();
-
-      if (
-        !response.ok ||
-        result?.error
-      ) {
-        throw new Error(
-          result?.error ||
-            "Não foi possível adicionar à biblioteca."
-        );
-      }
 
       /*
        * Fase 0: o servidor nunca altera um item que já existe (adicionado em
@@ -471,15 +482,7 @@ export default function TitlePage({
         error
       );
 
-      toast.error(
-        "Erro ao adicionar",
-        {
-          description:
-            error instanceof Error
-              ? error.message
-              : "Não foi possível adicionar à biblioteca.",
-        }
-      );
+      libraryAuth.handleError(error, intentFor("add"), "Erro ao adicionar");
     } finally {
       setSaving(
         false
@@ -824,8 +827,8 @@ export default function TitlePage({
         })
       );
 
-      const response =
-        await fetch(
+      const result =
+        await apiFetch(
           `/api/library/${libraryId}`,
           {
             method:
@@ -843,19 +846,6 @@ export default function TitlePage({
               }),
           }
         );
-
-      const result =
-        await response.json();
-
-      if (
-        !response.ok ||
-        result?.error
-      ) {
-        throw new Error(
-          result?.error ||
-            "Erro ao atualizar."
-        );
-      }
 
       setLibraryItem(
         (
@@ -1059,16 +1049,51 @@ export default function TitlePage({
         );
       }
 
-      toast.error(
-        "Não foi possível salvar",
-        {
-          description:
-            error instanceof Error
-              ? error.message
-              : "A alteração foi revertida.",
-        }
-      );
+      // Fase 1: 401 = convite para entrar de novo (com a intenção), nunca "Não autenticado".
+      const intent =
+        field === "status"
+          ? intentFor("status", value)
+          : field === "favorite" && value === true
+            ? intentFor("favorite")
+            : undefined;
+
+      libraryAuth.handleError(error, intent, "Não foi possível salvar");
     }
+  }
+
+  /*
+   * Fase 1 (P1-05) — título fora da biblioteca: mudar o status ou curtir ADICIONA
+   * o título e grava a escolha na hora (nada de rascunho invisível). Usa a
+   * criação segura da Fase 0 + PATCH só do campo pedido (lib/library/actions.ts).
+   * A tela muda na hora e volta ao estado anterior se a gravação falhar.
+   */
+  function persistIntentForNewItem(intent: LibraryIntent) {
+    if (!libraryAuth.requireUser(intent)) return;
+
+    const snapshot = { status, favorite };
+
+    if (intent.kind === "favorite") setFavorite(true);
+    if (intent.kind === "status") setStatus(intent.status as Status);
+
+    void enqueueMutation(async () => {
+      try {
+        const { item } = await runLibraryAction(intent);
+
+        applyLibraryResult(item as LibraryItem);
+        void reloadLibraryItem();
+
+        toast.success(
+          intent.kind === "favorite"
+            ? "Curtido e adicionado à biblioteca"
+            : `Adicionado à biblioteca como ${mediaStatusLabel(item.status)}`
+        );
+      } catch (error) {
+        console.error(error);
+        setStatus(snapshot.status);
+        setFavorite(snapshot.favorite);
+        libraryAuth.handleError(error, intent, "Não foi possível salvar");
+      }
+    });
   }
 
   function handleToggleFavorite() {
@@ -1076,21 +1101,26 @@ export default function TitlePage({
     if (!libraryItem && libraryLookup !== "ready") return;
 
     const value = !favorite;
-    setFavorite(value);
 
-    if (libraryItem) {
-      updateLibrary("favorite", value);
+    if (!libraryItem) {
+      if (value) persistIntentForNewItem(intentFor("favorite"));
+      return;
     }
+
+    setFavorite(value);
+    void enqueueMutation(() => updateLibrary("favorite", value));
   }
 
   function handleStatusChange(value: Status) {
     if (!libraryItem && libraryLookup !== "ready") return;
 
-    setStatus(value);
-
-    if (libraryItem) {
-      updateLibrary("status", value);
+    if (!libraryItem) {
+      persistIntentForNewItem(intentFor("status", value));
+      return;
     }
+
+    setStatus(value);
+    void enqueueMutation(() => updateLibrary("status", value));
   }
 
   /*

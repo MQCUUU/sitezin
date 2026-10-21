@@ -6,7 +6,9 @@ import { useSearchParams } from "next/navigation";
 import { Search } from "@/components/Search";
 import { isSearchable, MIN_QUERY_LENGTH } from "@/lib/search/rank";
 import { chunkLibraryStatePairs } from "@/lib/library-state-batches";
-import { useToast } from "@/components/ToastProvider";
+import { apiFetch } from "@/lib/api-client";
+import { intentForMedia } from "@/lib/auth/pending-action";
+import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 
 import {
   SearchAdvancedPanel,
@@ -138,7 +140,9 @@ export default function SearchPage() {
 }
 
 function SearchPageContent() {
-  const toast = useToast();
+  // Fase 1: visitante é convidado a entrar; 401 nunca vira "Não autenticado".
+  const libraryAuth = useLibraryAuth();
+  const canLookupLibrary = libraryAuth.state === "authenticated" || libraryAuth.state === "unknown";
   const searchParams = useSearchParams();
   const query = searchParams.get("q")?.trim() || "";
 
@@ -352,6 +356,9 @@ function SearchPageContent() {
   const lookedUpRef = useRef(new Set<string>());
 
   useEffect(() => {
+    // Fase 1 (P2-03): visitante (ou sessão ainda carregando) não tem estado pessoal para consultar.
+    if (!canLookupLibrary) return;
+
     const batches = chunkLibraryStatePairs(
       results.filter((item) => !lookedUpRef.current.has(`${item.media_type}:${Number(item.id)}`))
     );
@@ -400,7 +407,7 @@ function SearchPageContent() {
 
     lookup();
     return () => controller.abort();
-  }, [results]);
+  }, [results, canLookupLibrary]);
 
   /*
    * ==========================================
@@ -632,6 +639,8 @@ function SearchPageContent() {
   async function addToLibrary(item: SearchItem) {
     const key = `${item.media_type}-${item.id}`;
 
+    if (!libraryAuth.requireUser(intentForMedia(item, "add"))) return;
+
     try {
       setProcessing(key);
 
@@ -652,7 +661,7 @@ function SearchPageContent() {
         // Usa o item da busca como fallback.
       }
 
-      const response = await fetch("/api/library", {
+      const data = await apiFetch("/api/library", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -667,12 +676,6 @@ function SearchPageContent() {
           favorite: false,
         }),
       });
-
-      const data = await safeJson(response);
-
-      if (!response.ok || data?.error) {
-        throw new Error(data?.error || "Não foi possível adicionar.");
-      }
 
       setLibrary((current) => [
         ...current.filter(
@@ -689,7 +692,7 @@ function SearchPageContent() {
       ]);
     } catch (error) {
       console.error(error);
-      toast.error(error instanceof Error ? error.message : "Erro ao adicionar.");
+      libraryAuth.handleError(error, intentForMedia(item, "add"), "Erro ao adicionar");
     } finally {
       setProcessing(null);
     }
@@ -709,23 +712,17 @@ function SearchPageContent() {
     try {
       setProcessing(key);
 
-      const response = await fetch(`/api/library/${existing.library_id}`, {
+      const data = await apiFetch(`/api/library/${existing.library_id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: nextStatus }),
       });
 
-      const data = await safeJson(response);
-
-      if (!response.ok || data?.error) {
-        throw new Error(data?.error || "Não foi possível alterar o status.");
-      }
-
       patchLibraryState(item, { status: data.status || nextStatus });
       setOpenLibraryMenu(null);
     } catch (error) {
       console.error(error);
-      toast.error(error instanceof Error ? error.message : "Erro ao alterar status.");
+      libraryAuth.handleError(error, intentForMedia(item, "status", nextStatus), "Erro ao alterar status");
     } finally {
       setProcessing(null);
     }
@@ -746,19 +743,16 @@ function SearchPageContent() {
     try {
       setProcessing(key);
 
-      const response = await fetch(`/api/library/${existing.library_id}`, {
+      const data = await apiFetch(`/api/library/${existing.library_id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ favorite: next }),
       });
 
-      const data = await safeJson(response);
-
-      if (!response.ok || data?.error) {
-        throw new Error(data?.error || "Não foi possível atualizar a curtida.");
-      }
-
       patchLibraryState(item, { favorite: data.favorite ?? next });
+    } catch (error) {
+      console.error(error);
+      libraryAuth.handleError(error, next ? intentForMedia(item, "favorite") : undefined, "Erro ao alterar curtida");
     } finally {
       setProcessing(null);
     }
@@ -778,19 +772,16 @@ function SearchPageContent() {
     try {
       setProcessing(key);
 
-      const response = await fetch(`/api/library/${existing.library_id}`, {
+      await apiFetch(`/api/library/${existing.library_id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ personal_rating: rating }),
       });
 
-      const data = await safeJson(response);
-
-      if (!response.ok || data?.error) {
-        throw new Error(data?.error || "Não foi possível alterar sua nota.");
-      }
-
       patchLibraryState(item, { personal_rating: rating });
+    } catch (error) {
+      console.error(error);
+      libraryAuth.handleError(error, undefined, "Erro ao alterar sua nota");
     } finally {
       setProcessing(null);
     }
@@ -820,16 +811,14 @@ function SearchPageContent() {
     try {
       setProcessing(key);
 
-      const response = await fetch(`/api/library/${existing.library_id}`, { method: "DELETE" });
-      const data = await safeJson(response);
-
-      if (!response.ok || data?.error) {
-        throw new Error(data?.error || "Não foi possível remover.");
-      }
+      await apiFetch(`/api/library/${existing.library_id}`, { method: "DELETE" });
 
       setLibrary((current) => current.filter((entry) => entry.library_id !== existing.library_id));
       setRemoveTarget(null);
       setOpenLibraryMenu(null);
+    } catch (error) {
+      console.error(error);
+      libraryAuth.handleError(error, undefined, "Erro ao remover");
     } finally {
       setProcessing(null);
     }

@@ -4,7 +4,9 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 import { Search } from "@/components/Search";
-import { useToast } from "@/components/ToastProvider";
+import { apiFetch } from "@/lib/api-client";
+import { intentForMedia } from "@/lib/auth/pending-action";
+import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 
 import {
   CLEAR_FILTERS_PATCH,
@@ -57,7 +59,8 @@ export default function DiscoverPage() {
 }
 
 function DiscoverContent() {
-  const toast = useToast();
+  // Fase 1: visitante é convidado a entrar; 401 nunca vira "Não autenticado".
+  const libraryAuth = useLibraryAuth();
   const { params, setParams, replaceParams } = useDiscoverParams();
 
   const [showFilters, setShowFilters] = useState(false);
@@ -427,10 +430,12 @@ function DiscoverContent() {
   async function addToLibrary(item: DiscoverItem) {
     const key = `${item.media_type}-${item.id}`;
 
+    if (!libraryAuth.requireUser(intentForMedia(item, "add"))) return;
+
     try {
       setProcessing(key);
 
-      const response = await fetch("/api/library", {
+      const result = await apiFetch("/api/library", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -445,12 +450,6 @@ function DiscoverContent() {
           favorite: false,
         }),
       });
-
-      const result = await response.json();
-
-      if (!response.ok || result?.error) {
-        throw new Error(result?.error || "Não foi possível adicionar.");
-      }
 
       // Fase 0: o card reflete o que o servidor salvou (um item já existente volta intacto).
       const savedStatus = result.status || "want";
@@ -482,7 +481,7 @@ function DiscoverContent() {
       );
     } catch (error) {
       console.error(error);
-      toast.error(error instanceof Error ? error.message : "Erro ao adicionar.");
+      libraryAuth.handleError(error, intentForMedia(item, "add"), "Erro ao adicionar");
     } finally {
       setProcessing(null);
     }
@@ -496,17 +495,11 @@ function DiscoverContent() {
     try {
       setProcessing(key);
 
-      const response = await fetch(`/api/library/${item.library_id}`, {
+      const result = await apiFetch(`/api/library/${item.library_id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: nextStatus }),
       });
-
-      const result = await response.json();
-
-      if (!response.ok || result?.error) {
-        throw new Error(result?.error || "Não foi possível alterar o status.");
-      }
 
       setData((current) => {
         if (!current) return current;
@@ -530,7 +523,7 @@ function DiscoverContent() {
       setOpenLibraryMenu(null);
     } catch (error) {
       console.error(error);
-      toast.error(error instanceof Error ? error.message : "Erro ao alterar status.");
+      libraryAuth.handleError(error, intentForMedia(item, "status", nextStatus), "Erro ao alterar status");
     } finally {
       setProcessing(null);
     }
@@ -544,15 +537,9 @@ function DiscoverContent() {
     try {
       setProcessing(key);
 
-      const response = await fetch(`/api/library/${item.library_id}`, {
+      await apiFetch(`/api/library/${item.library_id}`, {
         method: "DELETE",
       });
-
-      const result = await response.json();
-
-      if (!response.ok || result?.error) {
-        throw new Error(result?.error || "Não foi possível remover da biblioteca.");
-      }
 
       setData((current) => {
         if (!current) return current;
@@ -577,7 +564,7 @@ function DiscoverContent() {
       setRemoveTarget(null);
     } catch (error) {
       console.error(error);
-      toast.error(error instanceof Error ? error.message : "Erro ao remover.");
+      libraryAuth.handleError(error, undefined, "Erro ao remover");
     } finally {
       setProcessing(null);
     }
@@ -601,17 +588,11 @@ function DiscoverContent() {
     try {
       setProcessing(key);
 
-      const response = await fetch(`/api/library/${item.library_id}`, {
+      await apiFetch(`/api/library/${item.library_id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ personal_rating: rating }),
       });
-
-      const result = await response.json();
-
-      if (!response.ok || result?.error) {
-        throw new Error(result?.error || "Não foi possível alterar sua nota.");
-      }
 
       setData((current) => {
         if (!current) return current;
@@ -633,7 +614,7 @@ function DiscoverContent() {
       );
     } catch (error) {
       console.error(error);
-      toast.error(error instanceof Error ? error.message : "Erro ao alterar sua nota.");
+      libraryAuth.handleError(error, undefined, "Erro ao alterar sua nota");
     } finally {
       setProcessing(null);
     }
@@ -647,17 +628,11 @@ function DiscoverContent() {
     try {
       setProcessing(key);
 
-      const response = await fetch(`/api/library/${item.library_id}`, {
+      const result = await apiFetch(`/api/library/${item.library_id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ favorite: !item.favorite }),
       });
-
-      const result = await response.json();
-
-      if (!response.ok || result?.error) {
-        throw new Error(result?.error || "Não foi possível alterar a curtida.");
-      }
 
       const nextFavorite = Boolean(result.favorite ?? !item.favorite);
 
@@ -681,7 +656,7 @@ function DiscoverContent() {
       );
     } catch (error) {
       console.error(error);
-      toast.error(error instanceof Error ? error.message : "Erro ao alterar curtida.");
+      libraryAuth.handleError(error, item.favorite ? undefined : intentForMedia(item, "favorite"), "Erro ao alterar curtida");
     } finally {
       setProcessing(null);
     }

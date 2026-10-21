@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CalendarDays, ChevronRight, Clock3, Radio, Tv } from "lucide-react";
 
 import { img } from "@/lib/tmdb";
+import { useAuthState } from "@/hooks/useLibraryAuth";
 import { longDate, relativeWhen, shortDate, todayIn } from "@/lib/calendar/dates";
 
 /*
@@ -34,6 +35,8 @@ const pad = (n: number) => String(n).padStart(2, "0");
 const code = (e: Episode) => `T${e.season_number}:E${pad(e.episode_number)}`;
 
 export function SeriesSchedule({ tvId, inProduction }: { tvId: number | string; inProduction: boolean }) {
+  // Fase 1 (P3-10): página pública — o Calendário (privado) só é pré-carregado com sessão.
+  const authState = useAuthState();
   const [data, setData] = useState<Schedule | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
 
@@ -99,7 +102,7 @@ export function SeriesSchedule({ tvId, inProduction }: { tvId: number | string; 
             <p className="muted">Datas informadas pelo TMDB para os próximos lançamentos.</p>
           </div>
 
-          <Link href="/calendar" className="btn">
+          <Link href="/calendar" className="btn" prefetch={authState === "authenticated" ? undefined : false}>
             <CalendarDays size={15} aria-hidden="true" />
             Ver calendário
           </Link>

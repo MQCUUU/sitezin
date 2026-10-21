@@ -159,7 +159,7 @@ export function TitleOverviewSection({
 
           {!libraryItem && libraryLookup === "ready" && (
             <p className="title-status-hint">
-              Adicione à biblioteca para acompanhar o status.
+              Escolher um status adiciona o título à sua biblioteca.
             </p>
           )}
 

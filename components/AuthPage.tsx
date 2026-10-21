@@ -2,6 +2,7 @@
 
 import {
   FormEvent,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -33,7 +34,11 @@ import { authClient } from "@/lib/auth/client";
 import {
   useToast,
 } from "@/components/ToastProvider";
-import { authFormPasswordError, authRedirectOrigin, PASSWORD_HINT } from "@/lib/auth-client";
+import { authErrorMessage, authFormPasswordError, authRedirectOrigin, PASSWORD_HINT } from "@/lib/auth-client";
+import { describeIntent, peekPendingAction, takePendingAction } from "@/lib/auth/pending-action";
+import { runLibraryAction } from "@/lib/library/actions";
+import { mediaStatusLabel } from "@/lib/media-status";
+import { safeNextPath } from "@/lib/safe-next";
 
 type Mode =
   | "login"
@@ -134,41 +139,6 @@ function friendlyAuthError(
   return message;
 }
 
-function safeNext(
-  value:
-    string |
-    null
-) {
-  if (
-    !value ||
-    !value.startsWith(
-      "/"
-    ) ||
-    value.startsWith(
-      "//"
-    )
-  ) {
-    return "/";
-  }
-
-  /*
-   * Não permitimos redirecionar de volta para
-   * telas de autenticação.
-   */
-  if (
-    value.startsWith(
-      "/login"
-    ) ||
-    value.startsWith(
-      "/signup"
-    )
-  ) {
-    return "/";
-  }
-
-  return value;
-}
-
 export function AuthPage({
   mode,
 }: {
@@ -188,8 +158,9 @@ export function AuthPage({
     mode ===
     "signup";
 
+  // Fase 1: mesma validação do proxy (só caminhos internos; bloqueia "/\evil.com").
   const returnTo =
-    safeNext(
+    safeNextPath(
       searchParams.get(
         "next"
       )
@@ -200,6 +171,32 @@ export function AuthPage({
       "reason"
     ) ===
     "session";
+
+  /*
+   * Fase 1 — ação pedida antes do login (Adicionar / Curtir / status). A tela
+   * só a DESCREVE; a execução acontece uma vez, depois de entrar.
+   */
+  const [pendingDescription, setPendingDescription] = useState<string | null>(null);
+
+  useEffect(() => {
+    const pending = peekPendingAction();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sessionStorage só existe no cliente
+    setPendingDescription(pending && pending.return_to === returnTo ? describeIntent(pending, mediaStatusLabel) : null);
+  }, [returnTo]);
+
+  async function completePendingAction() {
+    const pending = takePendingAction(returnTo);
+    if (!pending) return;
+
+    const what = describeIntent(pending, mediaStatusLabel);
+
+    try {
+      await runLibraryAction(pending);
+      toast.success("Ação concluída", { description: `Feito: ${what}.` });
+    } catch {
+      toast.error("Não foi possível concluir a ação", { description: `Você entrou, mas não conseguimos ${what}. Tente de novo na página.` });
+    }
+  }
 
   const [
     name,
@@ -340,7 +337,7 @@ export function AuthPage({
           });
 
           if (res.error) {
-            throw new Error(res.error.message || "Erro ao criar conta.");
+            throw new Error(authErrorMessage(res.error, "Erro ao criar conta."));
           }
 
           setAccountCreated(true);
@@ -369,6 +366,8 @@ export function AuthPage({
           "Conta criada com sucesso"
         );
 
+        await completePendingAction();
+
         router.replace(
           returnTo
         );
@@ -384,12 +383,14 @@ export function AuthPage({
       });
 
       if (res.error) {
-        throw new Error(res.error.message || "Credenciais inválidas.");
+        throw new Error(authErrorMessage(res.error, "E-mail ou senha incorretos."));
       }
 
       toast.success(
         "Bem-vindo de volta"
       );
+
+      await completePendingAction();
 
       /*
        * replace evita o botão Voltar mandar a
@@ -403,11 +404,15 @@ export function AuthPage({
     } catch (
       error
     ) {
+      // Fase 1 (P2-02): erro do provedor traduzido pelo código; mensagens nossas seguem como estão.
       const message =
-        friendlyAuthError(
-          error instanceof Error
-            ? error.message
-            : "Não foi possível continuar."
+        authErrorMessage(
+          error as { code?: string; status?: number },
+          friendlyAuthError(
+            error instanceof Error
+              ? error.message
+              : "Não foi possível continuar."
+          )
         );
 
       setError(
@@ -529,7 +534,26 @@ export function AuthPage({
             </p>
           </div>
 
+          {pendingDescription && (
+            <div className="auth-session-notice" role="status">
+              <LockKeyhole
+                size={16}
+              />
+
+              <div>
+                <strong>
+                  {isSignup ? "Crie sua conta para continuar" : "Entre para continuar"}
+                </strong>
+
+                <span>
+                  Depois do login, vamos {pendingDescription} e você volta para a página onde estava.
+                </span>
+              </div>
+            </div>
+          )}
+
           {sessionReason &&
+            !pendingDescription &&
             !isSignup && (
             <div className="auth-session-notice">
               <LockKeyhole
