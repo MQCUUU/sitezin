@@ -154,7 +154,7 @@ export function NotificationCenter() {
         aria-label={`Notificações${unread ? `, ${unread} não lidas` : ""}`}
         aria-expanded={open}
       >
-        <Bell size={19} />
+        <Bell size={18} />
         {unread > 0 && <b>{unread > 99 ? "99+" : unread}</b>}
       </button>
 
@@ -177,7 +177,7 @@ export function NotificationCenter() {
             </div>
             {unread > 0 && (
               <button className="mc-focusable" onClick={() => read()}>
-                <CheckCheck size={15} /> Marcar todas
+                <CheckCheck size={16} /> Marcar todas
               </button>
             )}
           </header>
@@ -187,9 +187,9 @@ export function NotificationCenter() {
               <article className={item.read_at ? "" : "unread"} key={item.id}>
                 <span>
                   {item.type === "new_season" ? (
-                    <Tv2 size={17} />
+                    <Tv2 size={18} />
                   ) : (
-                    <CalendarClock size={17} />
+                    <CalendarClock size={18} />
                   )}
                 </span>
                 <Link
@@ -210,7 +210,7 @@ export function NotificationCenter() {
                     onClick={() => read(item.id)}
                     aria-label="Marcar como lida"
                   >
-                    <Check size={15} />
+                    <Check size={16} />
                   </button>
                 )}
               </article>

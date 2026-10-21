@@ -434,8 +434,9 @@ export default function TitlePage({
       toast.success(
         `${mediaTitle} adicionado à biblioteca`,
         {
+          // Fase 3: diz o que de fato aconteceu (antes: "Status, curtida e nota foram salvos" ao só adicionar).
           description:
-            "Status, curtida e nota foram salvos.",
+            `Entrou como ${mediaStatusLabel(result.status)}.`,
 
           // V3.1: a ação REMOVE (o Diário registra a remoção) — não é "desfazer".
           actionLabel:

@@ -16,7 +16,7 @@ export function SearchPageErrorState({ onRetry }: SearchPageErrorStateProps) {
       <span>Não foi possível buscar agora.</span>
       <p className="muted">Verifique sua conexão e tente novamente.</p>
       <button type="button" className="btn" onClick={onRetry}>
-        <RotateCcw size={15} />
+        <RotateCcw size={16} />
         Tentar novamente
       </button>
     </div>

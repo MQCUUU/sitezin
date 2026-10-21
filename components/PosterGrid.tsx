@@ -1371,7 +1371,7 @@ function Card({ item, ...actionProps }: CardActionProps & { item: LibraryItem })
 
         {item.favorite && (
           <span className="favorite-label">
-            <Heart size={11} fill="currentColor" />
+            <Heart size={12} fill="currentColor" />
             Curtido
           </span>
         )}
@@ -1433,7 +1433,7 @@ function ListItem({ item, ...actionProps }: CardActionProps & { item: LibraryIte
 
           {item.favorite && (
             <span className="favorite-label">
-              <Heart size={11} fill="currentColor" />
+              <Heart size={12} fill="currentColor" />
               Curtido
             </span>
           )}

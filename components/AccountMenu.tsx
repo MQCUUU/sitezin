@@ -336,7 +336,7 @@ export function AccountMenu(): React.ReactElement {
           className="btn account-login-button"
         >
           <LogIn
-            size={15}
+            size={16}
           />
 
           Entrar
@@ -347,7 +347,7 @@ export function AccountMenu(): React.ReactElement {
           className="btn primary account-signup-button"
         >
           <UserPlus
-            size={15}
+            size={16}
           />
 
           Criar conta
@@ -415,7 +415,7 @@ export function AccountMenu(): React.ReactElement {
         </span>
 
         <ChevronDown
-          size={13}
+          size={14}
         />
       </button>
 

@@ -82,7 +82,7 @@
   align-items: baseline;
   gap: 6px;
   padding: 7px 12px;
-  font-size: 12.5px;
+  font-size: var(--mc-fs-sm);
   color: var(--muted);
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--text) 10%, var(--line));
@@ -90,7 +90,7 @@
 }
 
 .home-smart .home-smart-summary strong {
-  font-size: 15px;
+  font-size: var(--mc-fs-base);
   font-weight: 750;
   color: var(--text);
   font-variant-numeric: tabular-nums;
@@ -161,7 +161,7 @@
   align-items: center;
   gap: 12px;
   margin: 2px 0 12px;
-  font-size: 12.5px;
+  font-size: var(--mc-fs-sm);
   color: var(--mc-color-text-secondary, var(--muted));
 }
 
@@ -219,10 +219,10 @@
   --tone: #4ea8de;
 }
 .home-tone-liked {
-  --tone: #ff5c83;
+  --tone: var(--mc-color-favorite);
 }
 .home-tone-rated {
-  --tone: #f6c65b;
+  --tone: var(--mc-color-rating);
 }
 
 .home-summary-top {
@@ -243,7 +243,7 @@
 }
 
 .home-summary-label {
-  font-size: 11px;
+  font-size: var(--mc-fs-xs);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
@@ -282,7 +282,7 @@
 }
 
 .home-summary-sub {
-  font-size: 12px;
+  font-size: var(--mc-fs-xs);
   line-height: 1.35;
   color: var(--muted);
   display: -webkit-box;
@@ -326,19 +326,19 @@
 }
 
 .home-queue-eyebrow {
-  font-size: 10.5px;
+  font-size: var(--mc-fs-xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: color-mix(in srgb, var(--accent) 60%, white);
 }
 
 .home-queue-copy strong {
-  font-size: 18px;
+  font-size: var(--mc-fs-xl);
   letter-spacing: -0.01em;
 }
 
 .home-queue-copy small {
-  font-size: 12.5px;
+  font-size: var(--mc-fs-sm);
   line-height: 1.4;
   color: var(--mc-color-text-secondary, var(--muted));
 }
@@ -350,11 +350,11 @@
   align-items: center;
   gap: 6px;
   padding: 7px 14px;
-  font-size: 13px;
+  font-size: var(--mc-fs-sm);
   font-weight: 650;
   border-radius: 999px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent, #fff);
 }
 
 /* varredura de luz única ao passar o mouse (não é loop) */
@@ -398,13 +398,13 @@
 }
 
 .tv-next-episode-label {
-  font-size: 12px;
+  font-size: var(--mc-fs-xs);
   font-weight: 650;
   color: color-mix(in srgb, var(--accent) 55%, var(--text));
 }
 
 .tv-next-episode-detail {
-  font-size: 11.5px;
+  font-size: var(--mc-fs-xs);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -488,7 +488,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12.5px;
+  font-size: var(--mc-fs-sm);
   color: var(--accent);
 }
 
@@ -706,32 +706,32 @@
 /* ---------- Tipografia: nada de texto minúsculo (antes 7–10px em vários blocos) ---------- */
 
 .home-smart .home-focus-copy p {
-  font-size: 13.5px;
+  font-size: var(--mc-fs-md);
   line-height: 1.45;
 }
 
 .home-smart .home-focus-side span {
-  font-size: 11.5px;
+  font-size: var(--mc-fs-xs);
 }
 
 .home-smart .home-focus-side small {
-  font-size: 12.5px;
+  font-size: var(--mc-fs-sm);
 }
 
 .home-smart .home-section-head p.muted {
-  font-size: 12.5px;
+  font-size: var(--mc-fs-sm);
 }
 
 .home-smart .home-activity-item strong {
-  font-size: 13px;
+  font-size: var(--mc-fs-sm);
 }
 
 .home-smart .home-activity-item small {
-  font-size: 11.5px;
+  font-size: var(--mc-fs-xs);
 }
 
 .home-smart .card-status {
-  font-size: 10px;
+  font-size: var(--mc-fs-xs);
 }
 
 /* ---------- V3.0 ---------- */
@@ -767,7 +767,7 @@
   margin-top: 2px;
   overflow: hidden;
   color: var(--text);
-  font-size: 12.5px;
+  font-size: var(--mc-fs-sm);
   text-overflow: ellipsis;
   white-space: nowrap;
   opacity: 0.86;

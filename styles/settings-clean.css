@@ -64,12 +64,12 @@
 }
 
 .set-nav-text strong {
-  font-size: 14px;
+  font-size: var(--mc-fs-md);
   font-weight: 650;
 }
 
 .set-nav-text small {
-  font-size: 12px;
+  font-size: var(--mc-fs-xs);
   color: var(--muted);
 }
 
@@ -99,7 +99,7 @@
 
 .set-section-head p {
   margin: 4px 0 0;
-  font-size: 13px;
+  font-size: var(--mc-fs-sm);
   color: var(--muted);
 }
 
@@ -123,12 +123,12 @@
 }
 
 .set-row-copy strong {
-  font-size: 14px;
+  font-size: var(--mc-fs-md);
   font-weight: 650;
 }
 
 .set-row-copy span {
-  font-size: 12.5px;
+  font-size: var(--mc-fs-sm);
   color: var(--muted);
 }
 
@@ -151,14 +151,14 @@
   border-radius: 8px;
   background: transparent;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--mc-fs-sm);
   font-weight: 600;
   cursor: pointer;
 }
 
 .set-segmented button.is-active {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent, #fff);
 }
 
 .set-segmented button:focus-visible,
@@ -227,7 +227,7 @@
   background: color-mix(in srgb, var(--text) 4%, var(--panel));
   color: var(--text);
   font: inherit;
-  font-size: 14px;
+  font-size: var(--mc-fs-md);
 }
 
 .set-input {
@@ -246,7 +246,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12.5px;
+  font-size: var(--mc-fs-sm);
   color: var(--muted);
 }
 
@@ -289,7 +289,7 @@
 .set-error {
   margin: 0;
   padding: 16px 20px;
-  font-size: 13.5px;
+  font-size: var(--mc-fs-md);
   color: var(--muted);
 }
 
@@ -301,7 +301,7 @@
 .set-hint {
   margin: 0;
   padding: 0 20px 4px;
-  font-size: 12.5px;
+  font-size: var(--mc-fs-sm);
   color: var(--muted);
 }
 
@@ -312,7 +312,7 @@
   gap: 10px;
   padding: 12px 20px;
   color: var(--danger, #ff667d);
-  font-size: 13.5px;
+  font-size: var(--mc-fs-md);
 }
 
 .set-save-row {
@@ -324,7 +324,7 @@
 
 .account-settings-note {
   margin: 0;
-  font-size: 12.5px;
+  font-size: var(--mc-fs-sm);
 }
 
 /* Painéis legados dentro das seções (conta, notificações, streaming, dados) */

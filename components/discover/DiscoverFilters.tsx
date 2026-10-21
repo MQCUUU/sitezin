@@ -140,7 +140,7 @@ export function DiscoverFilters({
             aria-pressed={params.hideWatched}
             onClick={() => onChange({ hideWatched: !params.hideWatched })}
           >
-            <Check size={17} />
+            <Check size={18} />
             <div>
               <strong>Ocultar assistidos</strong>
               <span>Esconde o que você já concluiu</span>
@@ -156,7 +156,7 @@ export function DiscoverFilters({
             aria-pressed={params.onlyNew}
             onClick={() => onChange({ onlyNew: !params.onlyNew })}
           >
-            <Plus size={17} />
+            <Plus size={18} />
             <div>
               <strong>Só não adicionados</strong>
               <span>Mostra apenas títulos fora da biblioteca</span>
@@ -171,7 +171,7 @@ export function DiscoverFilters({
               className="btn"
               onClick={onClearFilters}
             >
-              <RotateCcw size={15} />
+              <RotateCcw size={16} />
               Limpar filtros
             </button>
           </div>

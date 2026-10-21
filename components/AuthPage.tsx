@@ -460,7 +460,7 @@ export function AuthPage({
             <div>
               <span>
                 <Film
-                  size={17}
+                  size={18}
                 />
               </span>
 
@@ -478,7 +478,7 @@ export function AuthPage({
             <div>
               <span>
                 <Sparkles
-                  size={17}
+                  size={18}
                 />
               </span>
 
@@ -496,7 +496,7 @@ export function AuthPage({
             <div>
               <span>
                 <ShieldCheck
-                  size={17}
+                  size={18}
                 />
               </span>
 
@@ -820,12 +820,12 @@ export function AuthPage({
             >
               {loading ? (
                 <Loader2
-                  size={17}
+                  size={18}
                   className="spin"
                 />
               ) : (
                 <ArrowRight
-                  size={17}
+                  size={18}
                 />
               )}
 

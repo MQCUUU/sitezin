@@ -31,7 +31,7 @@ export function DiscoverEmptyState({
           Escolher meus serviços
         </Link>
         <button type="button" className="btn" onClick={onClearFilters}>
-          <RotateCcw size={15} />
+          <RotateCcw size={16} />
           Limpar filtros
         </button>
       </div>
@@ -47,7 +47,7 @@ export function DiscoverEmptyState({
         <>
           <p className="muted">Tente reduzir ou limpar os filtros ativos.</p>
           <button type="button" className="btn" onClick={onClearFilters}>
-            <RotateCcw size={15} />
+            <RotateCcw size={16} />
             Limpar filtros
           </button>
         </>

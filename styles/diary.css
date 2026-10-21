@@ -25,7 +25,7 @@
 
 .dy-eyebrow {
   display: block;
-  font-size: 12px;
+  font-size: var(--mc-fs-xs);
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -42,7 +42,7 @@
 .dy-header p {
   margin: 0;
   color: var(--muted);
-  font-size: 15px;
+  font-size: var(--mc-fs-base);
 }
 
 .dy-controls {
@@ -78,7 +78,7 @@
 
 .dy-today-btn {
   padding: 0 14px;
-  font-size: 13.5px;
+  font-size: var(--mc-fs-md);
   font-weight: 650;
 }
 
@@ -103,7 +103,7 @@
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23929aaa' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
     no-repeat right 10px center;
   color: var(--text);
-  font-size: 15px;
+  font-size: var(--mc-fs-base);
   font-weight: 750;
   appearance: none;
   cursor: pointer;
@@ -139,7 +139,7 @@
   border-radius: 10px;
   background: transparent;
   color: color-mix(in srgb, var(--text) 80%, transparent);
-  font-size: 13.5px;
+  font-size: var(--mc-fs-md);
   font-weight: 650;
   white-space: nowrap;
   cursor: pointer;
@@ -151,7 +151,7 @@
 }
 
 .dy-seg button.is-active {
-  color: #fff;
+  color: var(--on-accent, #fff);
   background: var(--accent);
 }
 
@@ -175,7 +175,7 @@
   align-items: center;
   gap: 12px;
   margin: 0 0 4px;
-  font-size: 13px;
+  font-size: var(--mc-fs-sm);
   font-weight: 750;
   letter-spacing: 0.02em;
   color: color-mix(in srgb, var(--text) 78%, transparent);
@@ -210,7 +210,7 @@
 
 .dy-time {
   padding-top: 2px;
-  font-size: 12.5px;
+  font-size: var(--mc-fs-sm);
   font-variant-numeric: tabular-nums;
   color: var(--muted);
 }
@@ -259,7 +259,7 @@
 }
 
 .dy-title {
-  font-size: 16px;
+  font-size: var(--mc-fs-lg);
   font-weight: 750;
   letter-spacing: -0.01em;
   line-height: 1.3;
@@ -273,7 +273,7 @@ a.dy-title:hover {
 
 .dy-what {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--mc-fs-md);
   line-height: 1.4;
   color: color-mix(in srgb, var(--text) 86%, transparent);
 }
@@ -287,7 +287,7 @@ a.dy-title:hover {
 
 .dy-detail {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--mc-fs-sm);
   color: var(--muted);
 }
 
@@ -299,7 +299,7 @@ a.dy-title:hover {
   margin: 4px 0 0;
   padding: 3px 10px;
   border-radius: 999px;
-  font-size: 12.5px;
+  font-size: var(--mc-fs-sm);
   font-weight: 700;
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 14%, transparent);
@@ -314,14 +314,14 @@ a.dy-title:hover {
   align-items: center;
   gap: 5px;
   margin: 2px 0 0;
-  font-size: 13.5px;
+  font-size: var(--mc-fs-md);
   font-weight: 700;
   color: #f5c451;
 }
 
 .dy-comment p {
   margin: 4px 0 0;
-  font-size: 14px;
+  font-size: var(--mc-fs-md);
   line-height: 1.5;
   font-style: italic;
   color: color-mix(in srgb, var(--text) 82%, transparent);
@@ -341,7 +341,7 @@ a.dy-title:hover {
   border: 0;
   background: none;
   color: var(--accent);
-  font-size: 13px;
+  font-size: var(--mc-fs-sm);
   font-weight: 650;
   cursor: pointer;
 }
@@ -370,7 +370,7 @@ a.dy-title:hover {
   gap: 14px;
   align-items: center;
   padding: 4px 0;
-  font-size: 13.5px;
+  font-size: var(--mc-fs-md);
 }
 
 .dy-compact .dy-time {
@@ -443,11 +443,11 @@ a.dy-compact-title:hover {
 }
 
 .dy-group-text strong {
-  font-size: 14px;
+  font-size: var(--mc-fs-md);
 }
 
 .dy-group-text span {
-  font-size: 13px;
+  font-size: var(--mc-fs-sm);
   color: var(--muted);
 }
 
@@ -456,7 +456,7 @@ a.dy-compact-title:hover {
   align-items: center;
   gap: 4px;
   flex: none;
-  font-size: 13px;
+  font-size: var(--mc-fs-sm);
   font-weight: 650;
   color: var(--accent);
 }
@@ -471,7 +471,7 @@ a.dy-compact-title:hover {
 
 .dy-group-note {
   margin: 0 0 8px;
-  font-size: 12.5px;
+  font-size: var(--mc-fs-sm);
   color: var(--muted);
 }
 
@@ -495,7 +495,7 @@ a.dy-compact-title:hover {
   gap: 2px 12px;
   padding: 8px 0;
   border-top: 1px solid color-mix(in srgb, var(--text) 7%, transparent);
-  font-size: 13.5px;
+  font-size: var(--mc-fs-md);
 }
 
 .dy-summary-list span {
@@ -518,7 +518,7 @@ a.dy-compact-title:hover {
 
 .dy-state strong {
   color: var(--text);
-  font-size: 16px;
+  font-size: var(--mc-fs-lg);
 }
 
 .dy-state .btn {
@@ -542,7 +542,7 @@ a.dy-compact-title:hover {
   margin: 8px 0 0;
   padding: 10px 14px;
   border-radius: 12px;
-  font-size: 13.5px;
+  font-size: var(--mc-fs-md);
   color: color-mix(in srgb, var(--text) 85%, transparent);
   background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
@@ -570,14 +570,14 @@ a.dy-compact-title:hover {
 }
 
 .dy-more-error {
-  font-size: 13px;
+  font-size: var(--mc-fs-sm);
   color: var(--danger);
 }
 
 .dy-end {
   margin: 30px 0 10px;
   text-align: center;
-  font-size: 13px;
+  font-size: var(--mc-fs-sm);
   color: var(--muted);
 }
 
@@ -664,7 +664,7 @@ a.dy-compact-title:hover {
   .dy-seg button {
     flex: 1 0 auto;
     padding: 0 9px;
-    font-size: 13px;
+    font-size: var(--mc-fs-sm);
   }
 
   .dy-moment {
@@ -686,7 +686,7 @@ a.dy-compact-title:hover {
   }
 
   .dy-title {
-    font-size: 15px;
+    font-size: var(--mc-fs-base);
   }
 
   .dy-compact {

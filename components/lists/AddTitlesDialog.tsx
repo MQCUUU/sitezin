@@ -130,7 +130,7 @@ export function AddTitlesDialog({
         <SearchIcon size={16} aria-hidden="true" />
         <span className="lst-sr">Buscar filmes e séries</span>
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar filmes e séries…" ref={fieldRef} />
-        {loading ? <Loader2 size={15} className="spin" aria-hidden="true" /> : null}
+        {loading ? <Loader2 size={16} className="spin" aria-hidden="true" /> : null}
       </label>
       <p className="lst-hint">Adicionar à lista não muda sua Biblioteca.</p>
       <p className="lst-sr" role="status" aria-live="polite">

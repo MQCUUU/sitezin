@@ -218,11 +218,11 @@ export function MediaPosterActions({
             }}
           >
             {busy ? (
-              <Loader2 size={15} className="spin" aria-hidden="true" />
+              <Loader2 size={16} className="spin" aria-hidden="true" />
             ) : (
               <>
-                <Check size={15} aria-hidden="true" />
-                <ChevronDown size={11} aria-hidden="true" />
+                <Check size={16} aria-hidden="true" />
+                <ChevronDown size={12} aria-hidden="true" />
               </>
             )}
           </button>
@@ -239,7 +239,7 @@ export function MediaPosterActions({
                 onAdd();
               }}
             >
-              {busy ? <Loader2 size={15} className="spin" aria-hidden="true" /> : <Plus size={17} aria-hidden="true" />}
+              {busy ? <Loader2 size={16} className="spin" aria-hidden="true" /> : <Plus size={18} aria-hidden="true" />}
             </button>
           )
         )}

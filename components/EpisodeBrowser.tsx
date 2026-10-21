@@ -107,7 +107,7 @@ function EpisodeRow({
             {episode.runtime ? ` · ${episode.runtime} min` : ""}
             {isFuture && (
               <span className="episode-future-badge">
-                <Clock size={11} aria-hidden="true" /> Futuro
+                <Clock size={12} aria-hidden="true" /> Futuro
               </span>
             )}
           </small>

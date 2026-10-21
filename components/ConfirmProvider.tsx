@@ -42,7 +42,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
         {pending && (
           <>
             <div className={cx("mc-confirm-icon", pending.danger && "mc-confirm-icon--danger")}>
-              <AlertTriangle size={21} />
+              <AlertTriangle size={22} />
             </div>
             <h3 id="global-confirm-title">{pending.title}</h3>
             <p id="global-confirm-description" className="mc-confirm-description">

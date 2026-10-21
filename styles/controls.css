@@ -1,0 +1,104 @@
+/*
+ * Fase 3 — padrão consolidado de controles (botões, chips, ícones, inputs,
+ * diálogos). Importado por último em app/layout.tsx: aqui fica a regra
+ * FINAL de cada papel, em vez de mais um ajuste no fim do globals.css.
+ *
+ * Usa só tokens (styles/tokens.css): --mc-control-*, --mc-fs-*, --mc-radius-*.
+ * Não muda cores nem a identidade: só tamanho, tipografia e forma, para que
+ * controles com o MESMO papel sejam iguais em todas as telas.
+ */
+
+/* ---------------------------------------------------------------------------
+ * Botões (.btn): 40px, rótulo 14px, raio médio. Antes 36/38/40px e rótulo 12px.
+ * ------------------------------------------------------------------------- */
+.btn {
+  min-height: var(--mc-control-md);
+  font-size: var(--mc-fs-md);
+  border-radius: var(--mc-radius-md);
+}
+
+/* Mesmo papel de .btn, com regras próprias mais específicas que prendiam 36–38px e rótulo 12px. */
+.account-auth-actions .btn {
+  min-height: var(--mc-control-md);
+  font-size: var(--mc-fs-sm);
+}
+
+.mc-discover-page-btn,
+.fy-filter-button {
+  min-height: var(--mc-control-md);
+  font-size: var(--mc-fs-md);
+  border-radius: var(--mc-radius-md);
+}
+
+/* ---------------------------------------------------------------------------
+ * Chips de filtro (Descobrir, Biblioteca): 34px, 13px, pílula.
+ * Antes: Descobrir 34px/12px e Biblioteca 38px/16px para o mesmo papel.
+ * ------------------------------------------------------------------------- */
+.mc-discover-shortcut,
+.library-quick-filter,
+.lib-liked {
+  min-height: var(--mc-control-sm);
+  font-size: var(--mc-fs-sm);
+  border-radius: var(--mc-radius-pill);
+}
+
+/* ---------------------------------------------------------------------------
+ * Ícones da barra do topo (notificações, conta): 40px, lado a lado iguais.
+ * Antes: sino 42px e avatar 40px.
+ * ------------------------------------------------------------------------- */
+.notification-bell {
+  width: var(--mc-control-md);
+  height: var(--mc-control-md);
+}
+
+/* ---------------------------------------------------------------------------
+ * Diálogos: um padrão visual (raio, sombra, borda, fundo) para os modais
+ * legados. A estrutura de cada modal não muda nesta fase.
+ * ------------------------------------------------------------------------- */
+.mycatalog-confirm-modal,
+.profile-connections-modal,
+.profile-picker-modal,
+.username-gate-card {
+  border: var(--mc-border-default);
+  border-radius: var(--mc-radius-lg);
+  background: var(--mc-color-surface);
+  box-shadow: var(--mc-shadow-modal);
+}
+
+/* ---------------------------------------------------------------------------
+ * Abas da página de título: rótulo 13px (igual às abas do Descobrir), 40px,
+ * nunca quebra linha. No celular, cada aba tem o tamanho do texto e o trilho
+ * rola — antes as 4 colunas fixas (repeat(4,1fr)) espremiam "Avaliações e
+ * resenhas" em 2 linhas a 390px.
+ * ------------------------------------------------------------------------- */
+.mc-title-tabs .title-content-tabs button {
+  min-height: var(--mc-control-md);
+  font-size: var(--mc-fs-sm);
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .mc-title-tabs .title-content-tabs.mc-title-tabs-track {
+    grid-template-columns: none;
+    grid-auto-columns: max-content;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Busca do topo: a mesma geometria em todas as páginas (largura máx. 600px,
+ * altura 50px). Antes a Home ia até 720px e a busca da Biblioteca tinha
+ * 460×42px. A busca da Biblioteca continua com função e texto próprios.
+ * ------------------------------------------------------------------------- */
+.home-smart .home-topbar .search {
+  max-width: 600px;
+}
+
+.library-search {
+  height: var(--mc-control-lg);
+  max-width: 600px;
+}
+
+/* Inputs de texto: 16px (padrão do produto; evita zoom automático no iOS). */
+.library-search input {
+  font-size: var(--mc-fs-lg);
+}

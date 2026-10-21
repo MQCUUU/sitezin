@@ -218,7 +218,7 @@ export function TitleCastSection({
                     gap: "9px",
                   }}
                 >
-                  <Building2 size={17} />
+                  <Building2 size={18} />
 
                   <span>{company.name}</span>
                 </div>

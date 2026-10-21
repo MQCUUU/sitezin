@@ -86,7 +86,7 @@ export function RecentSearches({ entries, onOpen, onRemove, onClear }: RecentSea
     <div className="mc-search-idle">
       <div className="mc-search-idle-header">
         <span>
-          <Clock size={13} />
+          <Clock size={14} />
           Buscas recentes
         </span>
 
@@ -119,7 +119,7 @@ export function RecentSearches({ entries, onOpen, onRemove, onClear }: RecentSea
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => handleRemove(entry.query, index)}
               >
-                <X size={13} />
+                <X size={14} />
               </button>
             </li>
           );

@@ -77,7 +77,7 @@ export function SearchPageIdleState() {
         <div className="mc-search-page-idle-recent">
           <div className="mc-search-page-idle-recent-head">
             <span>
-              <Clock size={13} />
+              <Clock size={14} />
               Buscas recentes
             </span>
 

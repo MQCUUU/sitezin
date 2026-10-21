@@ -132,7 +132,7 @@ export function ListFormDialog({
             Cancelar
           </button>
           <button type="submit" className="btn primary" disabled={saving}>
-            {saving ? <Loader2 size={15} className="spin" aria-hidden="true" /> : null}
+            {saving ? <Loader2 size={16} className="spin" aria-hidden="true" /> : null}
             {editing ? "Salvar" : "Criar lista"}
           </button>
         </div>

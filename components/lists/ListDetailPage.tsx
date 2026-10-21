@@ -8,6 +8,8 @@ import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Link2, ListOrdered,
 import { Search } from "@/components/Search";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { useToast } from "@/components/ToastProvider";
+import { useAuthState } from "@/hooks/useLibraryAuth";
+import { loginHref } from "@/lib/auth/pending-action";
 import { img } from "@/lib/tmdb";
 import { mediaStatusLabel } from "@/lib/media-status";
 import { moveInOrder, plural } from "@/lib/lists/validate";
@@ -56,6 +58,7 @@ function DetailContent() {
   const search = useSearchParams();
   const q = (search.get("q") || "").trim();
   const toast = useToast();
+  const authState = useAuthState();
   const confirmAction = useConfirm();
 
   const [meta, setMeta] = useState<Meta | null>(null);
@@ -242,9 +245,23 @@ function DetailContent() {
       <div className="lst-state" role="alert">
         <strong>Lista não encontrada.</strong>
         <span>Ela pode ter sido excluída ou ser privada.</span>
-        <Link className="btn" href="/lists">
-          Ir para minhas listas
-        </Link>
+        {/* Fase 3: "minhas listas" é rota privada — visitante recebe um próximo passo público. */}
+        {authState === "authenticated" ? (
+          <Link className="btn" href="/lists">
+            Ir para minhas listas
+          </Link>
+        ) : (
+          <span className="lst-state-actions">
+            <Link className="btn" href="/discover">
+              Explorar títulos
+            </Link>
+            {authState === "guest" && (
+              <Link className="btn primary" href={loginHref(pathname, "action")}>
+                Entrar
+              </Link>
+            )}
+          </span>
+        )}
       </div>
     );
   }
@@ -268,7 +285,7 @@ function DetailContent() {
     <>
       {owner ? (
         <Link href="/lists" className="lst-back">
-          <ArrowLeft size={15} aria-hidden="true" /> Listas
+          <ArrowLeft size={16} aria-hidden="true" /> Listas
         </Link>
       ) : null}
 
@@ -296,9 +313,9 @@ function DetailContent() {
                 <ListMenu
                   label="Mais ações da lista"
                   items={[
-                    { label: "Editar lista", icon: <Pencil size={15} aria-hidden="true" />, onSelect: () => setEditing(true) },
-                    ...(meta.is_public ? [{ label: "Copiar link", icon: <Link2 size={15} aria-hidden="true" />, onSelect: () => void share() }] : []),
-                    { label: "Excluir lista", icon: <Trash2 size={15} aria-hidden="true" />, onSelect: () => void deleteList(), danger: true },
+                    { label: "Editar lista", icon: <Pencil size={16} aria-hidden="true" />, onSelect: () => setEditing(true) },
+                    ...(meta.is_public ? [{ label: "Copiar link", icon: <Link2 size={16} aria-hidden="true" />, onSelect: () => void share() }] : []),
+                    { label: "Excluir lista", icon: <Trash2 size={16} aria-hidden="true" />, onSelect: () => void deleteList(), danger: true },
                   ]}
                 />
               </>
@@ -323,7 +340,7 @@ function DetailContent() {
           <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Buscar nesta lista…" />
           {searchInput ? (
             <button type="button" className="lst-icon-btn" onClick={() => setSearchInput("")} aria-label="Limpar busca">
-              <X size={15} />
+              <X size={16} />
             </button>
           ) : null}
         </label>

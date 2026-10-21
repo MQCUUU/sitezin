@@ -58,7 +58,7 @@ export function DiscoverPagination({
           title="Página anterior"
           aria-label="Página anterior"
         >
-          <ChevronLeft size={17} />
+          <ChevronLeft size={18} />
         </button>
 
         {pagination.map((value) =>
@@ -90,7 +90,7 @@ export function DiscoverPagination({
           title="Próxima página"
           aria-label="Próxima página"
         >
-          <ChevronRight size={17} />
+          <ChevronRight size={18} />
         </button>
       </nav>
       {depthNote ? <p className="mc-discover-depth-note muted">{depthNote}</p> : null}

@@ -573,7 +573,7 @@ export function ToastProvider({
                 }
               >
                 <X
-                  size={15}
+                  size={16}
                 />
               </button>
 

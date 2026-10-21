@@ -97,7 +97,7 @@ export function TitleHero({
 
           <div className="title-main mc-title-main">
             <div className="title-type">
-              {type === "tv" ? <Tv size={15} /> : <Film size={15} />}
+              {type === "tv" ? <Tv size={16} /> : <Film size={16} />}
 
               {type === "tv" ? "Série" : "Filme"}
 
@@ -202,14 +202,24 @@ export function TitleHero({
                   {saving ? "Adicionando..." : "Adicionar à biblioteca"}
                 </button>
               ) : (
+                // Fase 3: remover (reversível, com "Desfazer") não tem o peso do CTA principal — variante discreta.
                 <button
-                  className="btn title-main-btn"
+                  type="button"
+                  className="btn title-main-btn title-remove-btn"
                   onClick={onRemoveFromLibrary}
                   disabled={saving}
+                  aria-label={saving ? undefined : "Remover da biblioteca"}
                 >
                   <Trash2 size={18} />
 
-                  {saving ? "Removendo..." : "Remover da biblioteca"}
+                  {/* Fase 3: em telas estreitas o rótulo visível encurta para "Remover" (o nome acessível continua completo). */}
+                  {saving ? (
+                    "Removendo..."
+                  ) : (
+                    <span>
+                      Remover<span className="title-remove-label-extra"> da biblioteca</span>
+                    </span>
+                  )}
                 </button>
               )}
 

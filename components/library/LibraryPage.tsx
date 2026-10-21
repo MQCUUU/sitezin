@@ -243,7 +243,8 @@ function LibraryContent() {
   const totalPages = result?.total_pages ?? 1;
   const filtered = hasAnyFilter(query);
   const panelCount = panelFilterCount(query);
-  const tabs = counts.paused ? [...STATUS_TABS, ["paused", "Pausado"] as [LibraryStatusFilter, string]] : STATUS_TABS;
+  // Fase 3: "Pausado" é um status como os outros (escolhível em qualquer tela) — aparece sempre, mesmo com 0.
+  const tabs: [LibraryStatusFilter, string][] = [...STATUS_TABS, ["paused", "Pausado"]];
 
   function onTabKey(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
@@ -273,12 +274,12 @@ function LibraryContent() {
     <>
       <div className="topbar">
         <div className="library-search" role="search">
-          <Search size={17} aria-hidden="true" />
+          <Search size={18} aria-hidden="true" />
           <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Buscar na biblioteca..." aria-label="Buscar na biblioteca" />
           {loading && searchInput.trim() !== "" ? <span className="lib-search-busy" aria-hidden="true" /> : null}
           {searchInput ? (
             <button type="button" onClick={() => setSearchInput("")} title="Limpar busca" aria-label="Limpar busca">
-              <X size={15} />
+              <X size={16} />
             </button>
           ) : null}
         </div>
@@ -326,7 +327,7 @@ function LibraryContent() {
           title="Curtidos combina com qualquer status"
           onClick={() => change({ favorite: !query.favorite })}
         >
-          <Heart size={15} fill={query.favorite ? "currentColor" : "none"} aria-hidden="true" />
+          <Heart size={16} fill={query.favorite ? "currentColor" : "none"} aria-hidden="true" />
           <span>Curtidos</span>
           <b>{counts.favorites ?? 0}</b>
         </button>
@@ -362,7 +363,7 @@ function LibraryContent() {
             <div className="library-filter-header-actions">
               <span className="library-filter-count">{totalResults} resultados</span>
               <button type="button" className="library-filter-close" onClick={() => setShowFilters(false)} title="Fechar filtros" aria-label="Fechar filtros">
-                <X size={17} />
+                <X size={18} />
               </button>
             </div>
           </div>
@@ -370,7 +371,7 @@ function LibraryContent() {
           <div className="lib-filter-grid">
             <fieldset className="lib-filter-field">
               <legend>
-                <Film size={15} aria-hidden="true" /> Tipo
+                <Film size={16} aria-hidden="true" /> Tipo
               </legend>
               <div className="library-filter-options">
                 {(
@@ -390,7 +391,7 @@ function LibraryContent() {
 
             <label className="lib-filter-field">
               <span className="lib-filter-legend">
-                <Tag size={15} aria-hidden="true" /> Gênero
+                <Tag size={16} aria-hidden="true" /> Gênero
               </span>
               <select value={query.genre} onChange={(event) => change({ genre: event.target.value })}>
                 <option value="all">Todos os gêneros</option>
@@ -404,7 +405,7 @@ function LibraryContent() {
 
             <label className="lib-filter-field">
               <span className="lib-filter-legend">
-                <CalendarDays size={15} aria-hidden="true" /> Ano de lançamento
+                <CalendarDays size={16} aria-hidden="true" /> Ano de lançamento
               </span>
               <select value={query.year} onChange={(event) => change({ year: event.target.value })}>
                 <option value="all">Todos os anos</option>
@@ -493,7 +494,7 @@ function LibraryContent() {
           </div>
           <div className="library-pagination">
             <button type="button" className="library-page-btn" disabled={query.page <= 1} onClick={() => goToPage(query.page - 1)} aria-label="Página anterior" title="Página anterior">
-              <ChevronLeft size={17} />
+              <ChevronLeft size={18} />
             </button>
             {buildPages(query.page, totalPages).map((value) =>
               typeof value === "number" ? (
@@ -507,7 +508,7 @@ function LibraryContent() {
               )
             )}
             <button type="button" className="library-page-btn" disabled={query.page >= totalPages} onClick={() => goToPage(query.page + 1)} aria-label="Próxima página" title="Próxima página">
-              <ChevronRight size={17} />
+              <ChevronRight size={18} />
             </button>
           </div>
         </nav>

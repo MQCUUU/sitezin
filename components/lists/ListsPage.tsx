@@ -207,9 +207,9 @@ export function ListsPage() {
                   className="lst-card-menu"
                   label={`Ações da lista ${list.name}`}
                   items={[
-                    { label: "Editar", icon: <Pencil size={15} aria-hidden="true" />, onSelect: () => setForm({ open: true, initial: list }) },
-                    ...(list.is_public ? [{ label: "Copiar link", icon: <Link2 size={15} aria-hidden="true" />, onSelect: () => void share(list) }] : []),
-                    { label: "Excluir", icon: <Trash2 size={15} aria-hidden="true" />, onSelect: () => void remove(list), danger: true },
+                    { label: "Editar", icon: <Pencil size={16} aria-hidden="true" />, onSelect: () => setForm({ open: true, initial: list }) },
+                    ...(list.is_public ? [{ label: "Copiar link", icon: <Link2 size={16} aria-hidden="true" />, onSelect: () => void share(list) }] : []),
+                    { label: "Excluir", icon: <Trash2 size={16} aria-hidden="true" />, onSelect: () => void remove(list), danger: true },
                   ]}
                 />
               </article>

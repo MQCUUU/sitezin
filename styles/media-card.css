@@ -158,3 +158,43 @@
   height: 11px;
   margin-top: var(--mc-space-6);
 }
+
+/* =====================================================================
+   Fase 3 — card de pôster: um padrão para Descobrir, Busca, Biblioteca,
+   Home, Coleção e Para você.
+   Antes: as regras base reservavam 2 linhas para o título (min-height
+   34–38px) enquanto uma regra posterior forçava 1 linha (nowrap) — a
+   2ª linha vazia virava um vão de ~24px até "ano · nota". E o mesmo
+   papel tinha 16px numa tela e 12px em outra.
+   Agora: título em 1 linha (reticências; o nome completo aparece na
+   página do título), 14px seminegrito; "ano · nota" logo abaixo, 12px.
+   ===================================================================== */
+
+.mc-media-card .card-title,
+.card .card-title,
+.discover-card .card-title,
+.for-you-card .card-title,
+.fy-card-body > strong {
+  display: block;
+  min-height: 0;
+  max-height: none;
+  margin-top: var(--mc-space-8);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--mc-fs-md);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.fy-card-body > strong {
+  margin-top: 0;
+}
+
+.mc-media-card .card-meta,
+.card .card-meta,
+.fy-card-meta {
+  min-height: 0;
+  margin-top: var(--mc-space-4);
+  font-size: var(--mc-fs-xs);
+}

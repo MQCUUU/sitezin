@@ -52,13 +52,13 @@ export function SearchAdvancedPanel({ meta }: AdvancedPanelProps) {
     <div className="search-advanced-panel panel">
       <div className="search-advanced-icon">
         {meta.mode === "collection" ? (
-          <Layers3 size={19} />
+          <Layers3 size={18} />
         ) : meta.mode === "filters" ? (
-          <SlidersHorizontal size={19} />
+          <SlidersHorizontal size={18} />
         ) : meta.mode === "director" ? (
-          <Clapperboard size={19} />
+          <Clapperboard size={18} />
         ) : (
-          <UserRound size={19} />
+          <UserRound size={18} />
         )}
       </div>
 

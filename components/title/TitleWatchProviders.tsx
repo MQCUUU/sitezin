@@ -68,7 +68,7 @@ export function TitleWatchProviders({ details }: TitleWatchProvidersProps) {
               className="btn"
             >
               Ver opções
-              <ExternalLink size={15} />
+              <ExternalLink size={16} />
             </a>
           </div>
         )}

@@ -58,7 +58,7 @@ export function TitleSeriesProgress({
       {next && (
         <div className="title-series-progress-actions">
           <Link className="btn primary" href={`/title/tv/${tvId}/season/${next.season}/episode/${next.episode}`}>
-            <PlayCircle size={15} aria-hidden="true" />
+            <PlayCircle size={16} aria-hidden="true" />
             {progress.state === "not_started" ? "Começar" : "Continuar"} {episodeCode(next.season, next.episode)}
           </Link>
           <Link className="btn" href={`?season=${next.season}`} scroll={false}>

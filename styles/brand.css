@@ -31,21 +31,21 @@
 .brand {
   display: flex;
   align-items: center;
-  font-size: 19px;
+  font-size: var(--mc-fs-2xl);
 }
 
 /* Auth (entrar, cadastrar, esqueci/redefinir senha): o mesmo lockup, maior. */
 .auth-brand {
   display: inline-flex;
   align-items: center;
-  font-size: 20px;
+  font-size: var(--mc-fs-2xl);
 }
 
 .auth-card-brand {
   display: flex;
   justify-content: center;
   margin-bottom: 18px;
-  font-size: 18px;
+  font-size: var(--mc-fs-xl);
   color: var(--text);
   text-decoration: none;
 }

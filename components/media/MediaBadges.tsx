@@ -11,13 +11,13 @@ import { mediaStatusLabel, mediaStatusTone } from "@/lib/media-status";
  */
 
 const STATUS_ICON: Record<string, ReactNode> = {
-  want: <Clock size={11} aria-hidden="true" />,
-  watching: <Play size={11} fill="currentColor" aria-hidden="true" />,
-  watched: <Check size={11} aria-hidden="true" />,
-  rewatching: <RotateCcw size={11} aria-hidden="true" />,
-  rewatched: <Repeat size={11} aria-hidden="true" />,
-  paused: <Pause size={11} fill="currentColor" aria-hidden="true" />,
-  dropped: <CircleMinus size={11} aria-hidden="true" />,
+  want: <Clock size={12} aria-hidden="true" />,
+  watching: <Play size={12} fill="currentColor" aria-hidden="true" />,
+  watched: <Check size={12} aria-hidden="true" />,
+  rewatching: <RotateCcw size={12} aria-hidden="true" />,
+  rewatched: <Repeat size={12} aria-hidden="true" />,
+  paused: <Pause size={12} fill="currentColor" aria-hidden="true" />,
+  dropped: <CircleMinus size={12} aria-hidden="true" />,
 };
 
 export function MediaTypeTag({ type }: { type: "movie" | "tv" | string }) {
@@ -25,7 +25,7 @@ export function MediaTypeTag({ type }: { type: "movie" | "tv" | string }) {
 
   return (
     <span className="mc-tag mc-tag--type">
-      {isTv ? <Tv size={11} aria-hidden="true" /> : <Film size={11} aria-hidden="true" />}
+      {isTv ? <Tv size={12} aria-hidden="true" /> : <Film size={12} aria-hidden="true" />}
       {isTv ? "Série" : "Filme"}
     </span>
   );
@@ -36,7 +36,7 @@ export function MediaStatusTag({ status }: { status?: string | null }) {
 
   return (
     <span className={`mc-tag mc-tag--status mc-tag--${mediaStatusTone(status)}`}>
-      {STATUS_ICON[status] ?? <Check size={11} aria-hidden="true" />}
+      {STATUS_ICON[status] ?? <Check size={12} aria-hidden="true" />}
       {mediaStatusLabel(status)}
     </span>
   );

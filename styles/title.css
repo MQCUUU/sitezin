@@ -527,7 +527,7 @@
   margin-bottom: 10px;
   color: var(--mc-color-text-muted);
   text-transform: uppercase;
-  font-size: 11px;
+  font-size: var(--mc-fs-xs);
   font-weight: 800;
   letter-spacing: 1px;
 }
@@ -683,7 +683,7 @@
 .title-series-progress-total {
   display: grid;
   gap: 6px;
-  font-size: 12.5px;
+  font-size: var(--mc-fs-sm);
   color: var(--muted);
 }
 
@@ -717,7 +717,7 @@
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--mc-fs-sm);
 }
 
 .series-schedule-skeleton {
@@ -727,10 +727,51 @@
 
 .title-overview-note {
   margin-top: 6px;
-  font-size: 12.5px;
+  font-size: var(--mc-fs-sm);
 }
 
 a.series-episode-row {
   color: inherit;
   text-decoration: none;
+}
+
+/* =====================================================================
+   Fase 3 — "Remover da biblioteca" no hero: ação reversível (há
+   "Desfazer"), não o CTA principal. Mesma posição e tamanho, sem o
+   peso visual: fundo transparente, texto secundário; vermelho só no
+   hover/foco, para sinalizar o efeito antes do clique.
+   ===================================================================== */
+
+.title-remove-btn {
+  background: transparent;
+  border-color: var(--mc-color-border);
+  color: var(--mc-color-text-secondary);
+  font-weight: 650;
+}
+
+.title-remove-btn:hover:not(:disabled),
+.title-remove-btn:focus-visible {
+  border-color: color-mix(in srgb, var(--mc-color-danger) 55%, transparent);
+  background: var(--mc-color-danger-soft);
+  color: var(--mc-color-danger);
+}
+
+/* Fase 3: em telas estreitas os dois botões do hero ficam lado a lado com ~140px cada —
+   "Remover da biblioteca" quebrava em 2–3 linhas. Lá o rótulo visível vira "Remover"
+   (ícone de lixeira + nome acessível completo); a fonte não diminui. */
+.title-remove-btn {
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .title-remove-label-extra {
+    display: none;
+  }
+}
+
+/* Fase 3 (contraste): "Minha coleção" é texto normal (12px/600) sobre o painel — o destaque puro
+   dava 4,32:1. Um leve ajuste derivado do próprio destaque (90% destaque + 10% cor do texto)
+   chega a 5,0:1 no escuro e 5,7:1 no claro, e continua seguindo a cor escolhida em Aparência. */
+.title-status-card .title-section-heading > span {
+  color: color-mix(in srgb, var(--accent) 90%, var(--text));
 }

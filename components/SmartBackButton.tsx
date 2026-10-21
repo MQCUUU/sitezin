@@ -86,7 +86,7 @@ export function SmartBackButton() {
       onClick={goBack}
     >
       <ArrowLeft
-        size={17}
+        size={18}
       />
 
       Voltar

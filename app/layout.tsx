@@ -20,6 +20,8 @@ import "@/styles/diary.css";
 import "@/styles/library.css";
 import "@/styles/lists.css";
 import "@/styles/brand.css";
+// Fase 3: padrão final de controles (botões, chips, ícones, diálogos) — por último.
+import "@/styles/controls.css";
 
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";

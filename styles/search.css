@@ -176,7 +176,7 @@
   border: 1px solid var(--mc-color-border);
   background: var(--mc-color-surface-muted);
   font: inherit;
-  font-size: 10px;
+  font-size: var(--mc-fs-xs);
 }
 
 /* Discreet — desktop pointer only, per B3 §7 ("não aumentar demais o
