@@ -1,8 +1,13 @@
+import { limitPublicRequest } from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
 
 import { searchTMDB } from "@/lib/tmdb";
 
 export async function GET(request: Request) {
+  // Fase 6 (P3-08): endpoint público e caro — limite por IP (lib/rate-limit.ts).
+  const limited = limitPublicRequest(request, "search");
+  if (limited) return limited;
+
   const query =
     new URL(request.url).searchParams
       .get("q")

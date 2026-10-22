@@ -42,7 +42,8 @@ export function PreferencesSync() {
 
         if (customized) saveToAccount(readPreferences());
       })
-      .catch(() => {});
+      // Recuperável: a aparência segue salva neste aparelho; a sincronização tenta de novo na próxima sessão.
+      .catch((error) => console.warn("[PreferencesSync] não foi possível sincronizar a aparência:", error instanceof Error ? error.message : error));
   }, [userId]);
 
   return null;

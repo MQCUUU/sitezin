@@ -1,7 +1,7 @@
 /*
  * Insights — contratos de dados.
  *
- * Fontes (todas já existentes, exceto user_events — ver supabase/v2.3-insights.sql):
+ * Fontes (todas já existentes, exceto user_events — ver db/legacy/supabase/v2.3-insights.sql):
  *   library_items + media     → BIBLIOTECA (o que foi catalogado) e status/nota/curtido
  *   episodes_progress         → HISTÓRICO de séries (episódio marcado, com data)
  *   library_items.watched_at  → HISTÓRICO de filmes

@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch, errorMessage } from "@/lib/api-client";
+import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Check, Clock3, EyeOff, Loader2, Play, Plus, Shuffle, Sparkles, Star, X } from "lucide-react";
@@ -82,6 +84,7 @@ const resultKey = (result: QueueResult) => `${result.media_type}-${result.tmdb_i
 
 export function SmartQueue({ genres }: { genres: string[] }) {
   const toast = useToast();
+  const { handleError } = useLibraryAuth();
   const [open, setOpen] = useState(false);
   const [minutes, setMinutes] = useState("60");
   const [type, setType] = useState("all");
@@ -125,15 +128,12 @@ export function SmartQueue({ genres }: { genres: string[] }) {
       if (mine) params.set("mine", "1");
       if (surprise) params.set("surprise", "1");
 
-      const result = await fetch(`/api/smart-queue?${params.toString()}`, { cache: "no-store" });
-      const data = await result.json().catch(() => null);
-
-      if (!result.ok) throw new Error(data?.error || "Não foi possível montar sugestões.");
+      const data = await apiFetch(`/api/smart-queue?${params.toString()}`, { cache: "no-store", timeout: 30000 });
 
       setResponse(data);
     } catch (err) {
       setResponse(null);
-      setError(err instanceof Error ? err.message : "Não foi possível montar sugestões.");
+      setError(errorMessage(err, "Não foi possível montar sugestões."));
     } finally {
       setLoading(false);
     }
@@ -145,18 +145,12 @@ export function SmartQueue({ genres }: { genres: string[] }) {
     setActing(resultKey(result));
 
     try {
-      const patch = await fetch(`/api/library/${result.library_id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "watching" }),
-      });
-
-      if (!patch.ok) throw new Error();
+      await apiFetch(`/api/library/${result.library_id}`, { method: "PATCH", json: { status: "watching" } });
 
       setAdded((current) => ({ ...current, [resultKey(result)]: "watching" }));
       toast.success(`${result.title}: marcado como Assistindo`);
-    } catch {
-      toast.error("Não foi possível atualizar o status");
+    } catch (error) {
+      handleError(error, undefined, "Não foi possível atualizar o status");
     } finally {
       setActing(null);
     }
@@ -167,13 +161,12 @@ export function SmartQueue({ genres }: { genres: string[] }) {
 
     try {
       // Mesmo caminho do "+" das outras telas: detalhes completos do TMDB e depois a biblioteca.
-      const detailsResponse = await fetch(`/api/tmdb/${result.media_type}/${result.tmdb_id}`).catch(() => null);
-      const details = detailsResponse?.ok ? await detailsResponse.json() : {};
+      // Intencional: detalhes extras são opcionais; sem eles o título entra com os dados básicos.
+      const details = await apiFetch(`/api/tmdb/${result.media_type}/${result.tmdb_id}`).catch(() => ({}));
 
-      const post = await fetch("/api/library", {
+      const saved = await apiFetch("/api/library", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        json: {
           media: {
             ...details,
             id: result.tmdb_id,
@@ -183,13 +176,10 @@ export function SmartQueue({ genres }: { genres: string[] }) {
             genres: details.genres || [],
           },
           status: "want",
-        }),
+        },
       });
 
-      if (!post.ok) throw new Error();
-
       // Fase 0: um item que já existia volta intacto do servidor — mostra o status salvo.
-      const saved = await post.json().catch(() => null);
 
       if (saved?.created === false) {
         setAdded((current) => ({ ...current, [resultKey(result)]: saved.status || "want" }));
@@ -199,8 +189,8 @@ export function SmartQueue({ genres }: { genres: string[] }) {
 
       setAdded((current) => ({ ...current, [resultKey(result)]: "want" }));
       toast.success(`${result.title} entrou na sua fila`);
-    } catch {
-      toast.error("Não foi possível adicionar à fila");
+    } catch (error) {
+      handleError(error, undefined, "Não foi possível adicionar à fila");
     } finally {
       setActing(null);
     }
@@ -210,18 +200,15 @@ export function SmartQueue({ genres }: { genres: string[] }) {
     setActing(resultKey(result));
 
     try {
-      const post = await fetch("/api/not-interested", {
+      await apiFetch("/api/not-interested", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tmdb_id: result.tmdb_id, media_type: result.media_type, reason: "smart_queue" }),
+        json: { tmdb_id: result.tmdb_id, media_type: result.media_type, reason: "smart_queue" },
       });
-
-      if (!post.ok) throw new Error();
 
       setDismissed((current) => new Set(current).add(resultKey(result)));
       toast.success("Não vamos mais sugerir esse título");
-    } catch {
-      toast.error("Não foi possível ocultar o título");
+    } catch (error) {
+      handleError(error, undefined, "Não foi possível ocultar o título");
     } finally {
       setActing(null);
     }

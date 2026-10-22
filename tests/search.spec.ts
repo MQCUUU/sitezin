@@ -146,6 +146,23 @@ test.describe("Fase 2 — busca", () => {
     await expect(page.getByText(/Nenhum resultado/)).toHaveCount(0);
   });
 
+  // Fase 6: a página /search completa também diz a causa (antes: sempre "Verifique sua conexão").
+  test("/search com 429: 'muitas buscas'; com 503: indisponível — nunca 'conexão'", async ({ page }) => {
+    await page.route("**/api/search/advanced*", (route) => route.fulfill({ status: 429, contentType: "application/json", body: '{"error":"x"}' }));
+    await page.route("**/api/search?*", (route) => route.fulfill({ status: 429, contentType: "application/json", body: '{"error":"x"}' }));
+    await page.goto(`/search?q=f6limite${Date.now()}`);
+    await expect(page.getByText("Muitas buscas em pouco tempo.")).toBeVisible();
+    await expect(page.getByText(/Verifique sua conexão/)).toHaveCount(0);
+
+    await page.unroute("**/api/search/advanced*");
+    await page.unroute("**/api/search?*");
+    await page.route("**/api/search/advanced*", (route) => route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"x"}' }));
+    await page.route("**/api/search?*", (route) => route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"x"}' }));
+    await page.goto(`/search?q=f6indisp${Date.now()}`);
+    await expect(page.getByText(/A busca está indisponível no momento/)).toBeVisible();
+    await expect(page.getByText(/Verifique sua conexão/)).toHaveCount(0);
+  });
+
   // Fase 5: limite de buscas (429) não é falha de conexão.
   test("429 nas sugestões: 'muitas buscas', nunca 'verifique sua conexão'", async ({ page }) => {
     await page.route("**/api/search/suggest*", (route) => route.fulfill({ status: 429, contentType: "application/json", body: "{}" }));

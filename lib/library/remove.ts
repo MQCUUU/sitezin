@@ -8,7 +8,7 @@ import type { getDb } from "@/lib/db/neon";
  *     nota e contadores — os únicos fatos que só existiam em library_items;
  *     nenhum texto livre). library_item_id fica NULL de propósito: o evento
  *     não depende do item que está sendo apagado.
- *  2. apaga o item. Pela migration db/migrations/2026-10-14_v2.5-history-integrity.sql,
+ *  2. apaga o item. Pela migration db/legacy/migrations/2026-10-14_v2.5-history-integrity.sql,
  *     activity_events e watch_entries ficam (library_item_id → NULL);
  *     episodes_progress nunca dependeu do item. Listas (V2.7) também ficam:
  *     o item da lista aponta para a mídia e o vínculo com a Biblioteca vira

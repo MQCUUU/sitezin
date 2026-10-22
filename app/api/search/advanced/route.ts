@@ -1,3 +1,4 @@
+import { limitPublicRequest } from "@/lib/rate-limit";
 import {
   NextRequest,
   NextResponse,
@@ -1670,6 +1671,10 @@ function trackedDb() {
 }
 
 export async function GET(req: NextRequest) {
+  // Fase 6 (P3-08): endpoint público e caro — limite por IP (lib/rate-limit.ts).
+  const limited = limitPublicRequest(req, "search");
+  if (limited) return limited;
+
   const log = createUpstreamLog();
   const started = performance.now();
   const response = await upstream.run(log, () => handle(req));

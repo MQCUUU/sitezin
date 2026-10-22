@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   Check,
   MessageSquare,
@@ -10,7 +10,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useConfirm } from "@/components/ConfirmProvider";
-import { useToast } from "@/components/ToastProvider";
+import { useLibraryAuth } from "@/hooks/useLibraryAuth";
+import { apiFetch, isAbortError } from "@/lib/api-client";
 
 type Category = {
   id: string;
@@ -83,7 +84,7 @@ export function ReviewPanel({
   onReviewChange,
 }: ReviewPanelProps) {
   const confirmAction = useConfirm();
-  const toast = useToast();
+  const { handleError } = useLibraryAuth();
   const [mode, setMode] = useState<"simple" | "detailed">("simple");
 
   const [rating, setRating] = useState(
@@ -92,6 +93,9 @@ export function ReviewPanel({
       : ""
   );
 
+  // Último valor CONFIRMADO pelo servidor: é contra ele que se compara (o campo chama
+  // saveRating no blur com o estado já atualizado) e para ele que se volta em caso de erro.
+  const savedRating = useRef<number | null>(initialRating ?? null);
   const [review, setReview] = useState(initialReview || "");
   // Fase 5 (P2-10): ids para ligar os campos aos textos visíveis que já os descrevem.
   const fieldId = useId();
@@ -105,208 +109,103 @@ export function ReviewPanel({
   const [newCategory, setNewCategory] = useState("");
   const [showAddCategory, setShowAddCategory] = useState(false);
 
+  /*
+   * Fase 6 (P2-11): tudo pelo cliente padrão (lib/api-client). A tela só
+   * confirma o que o servidor confirmou — antes, nota, notas por categoria e
+   * resenha pareciam salvas mesmo quando o PATCH falhava (401/500 ignorados).
+   * Erro: 401 vira "Sua sessão expirou" (useLibraryAuth); o resto, aviso
+   * amigável; mudança otimista é desfeita.
+   */
   useEffect(() => {
-  const controller =
-    new AbortController();
+    const controller = new AbortController();
 
-  async function loadReviewData() {
-    try {
-      /*
-       * Categorias e notas são independentes e podem ser
-       * carregadas em paralelo.
-       */
-      const [
-        categoriesResponse,
-        scoresResponse
-      ] =
-        await Promise.all([
-          fetch(
-            "/api/reviews/categories",
-            {
-              cache: "no-store",
-              signal:
-                controller.signal
-            }
-          ),
-
-          fetch(
-            `/api/reviews/scores?library_item_id=${encodeURIComponent(
-              libraryId
-            )}`,
-            {
-              cache: "no-store",
-              signal:
-                controller.signal
-            }
-          )
+    async function loadReviewData() {
+      try {
+        const [categoryData, scoreData] = await Promise.all([
+          apiFetch<Category[]>("/api/reviews/categories", { cache: "no-store", signal: controller.signal }),
+          apiFetch<Score[]>(`/api/reviews/scores?library_item_id=${encodeURIComponent(libraryId)}`, {
+            cache: "no-store",
+            signal: controller.signal,
+          }),
         ]);
 
-      if (
-        categoriesResponse.ok
-      ) {
-        const categoryData =
-          await categoriesResponse
-            .json();
+        if (Array.isArray(categoryData)) setCategories(categoryData);
 
-        if (
-          Array.isArray(
-            categoryData
-          )
-        ) {
-          setCategories(
-            categoryData
-          );
+        if (Array.isArray(scoreData)) {
+          const mapped: Record<string, number | ""> = {};
+          scoreData.forEach((item: Score) => {
+            mapped[item.category_id] = item.score === null ? "" : item.score;
+          });
+          setScores(mapped);
+          if (scoreData.length > 0) setMode("detailed");
         }
+      } catch (error) {
+        // Fechar o painel / trocar de título aborta a leitura: não é erro.
+        if (isAbortError(error)) return;
+        console.error("[ReviewPanel] falha ao carregar avaliação detalhada:", error);
+        handleError(error, undefined, "Não foi possível carregar sua avaliação detalhada");
       }
-
-      if (
-        scoresResponse.ok
-      ) {
-        const scoreData =
-          await scoresResponse
-            .json();
-
-        if (
-          Array.isArray(
-            scoreData
-          )
-        ) {
-          const mapped:
-            Record<
-              string,
-              number | ""
-            > = {};
-
-          scoreData.forEach(
-            (
-              item: Score
-            ) => {
-              mapped[
-                item.category_id
-              ] =
-                item.score ===
-                null
-                  ? ""
-                  : item.score;
-            }
-          );
-
-          setScores(
-            mapped
-          );
-
-          if (
-            scoreData.length >
-            0
-          ) {
-            setMode(
-              "detailed"
-            );
-          }
-        }
-      }
-    } catch (error) {
-      /*
-       * AbortError é esperado quando o componente fecha ou
-       * muda rapidamente para outro título.
-       */
-      if (
-        error instanceof
-          DOMException &&
-        error.name ===
-          "AbortError"
-      ) {
-        return;
-      }
-
-      console.error(
-        "Erro ao carregar avaliações:",
-        error
-      );
     }
+
+    void loadReviewData();
+
+    return () => controller.abort();
+    // handleError muda só quando a sessão muda; recarregar por isso seria refazer a leitura à toa.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [libraryId]);
+
+  async function patchLibrary(patch: Record<string, unknown>) {
+    return apiFetch(`/api/library/${libraryId}`, { method: "PATCH", json: patch });
   }
 
-  void loadReviewData();
-
-  return () => {
-    controller.abort();
-  };
-}, [libraryId]);
   async function saveRating(value: string) {
-    if (value === "") {
-      setRating("");
-      onRatingChange?.(null);
+    const previousNumber = savedRating.current;
+    const previous = previousNumber === null ? "" : String(previousNumber);
+    let next: number | null = null;
 
-      if (libraryId) {
-        await fetch(`/api/library/${libraryId}`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            personal_rating: null,
-          }),
-        });
-      }
-
-      return;
+    if (value !== "") {
+      let number = Number(value);
+      if (Number.isNaN(number)) return;
+      if (number < 0) number = 0;
+      if (number > 10) number = 10;
+      next = Number(number.toFixed(1));
     }
 
-    let number = Number(value);
+    setRating(next === null ? "" : String(next));
+    onRatingChange?.(next);
 
-    if (Number.isNaN(number)) return;
+    if (!libraryId || next === previousNumber) return;
 
-    if (number < 0) number = 0;
-    if (number > 10) number = 10;
-
-    const formatted = Number(number.toFixed(1));
-
-    setRating(String(formatted));
-    onRatingChange?.(formatted);
-
-    if (libraryId) {
-      await fetch(`/api/library/${libraryId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          personal_rating: formatted,
-        }),
-      });
+    try {
+      await patchLibrary({ personal_rating: next });
+      savedRating.current = next;
+    } catch (error) {
+      setRating(previous);
+      onRatingChange?.(previousNumber);
+      handleError(error, undefined, "Não foi possível salvar sua nota");
     }
   }
 
-  async function saveScore(
-    categoryId: string,
-    value: number | ""
-  ) {
-    const nextScores = {
-      ...scores,
-      [categoryId]: value,
-    };
+  async function saveScore(categoryId: string, value: number | "") {
+    const previousScores = scores;
+    const nextScores = { ...scores, [categoryId]: value };
 
     setScores(nextScores);
 
     if (value === "") return;
 
     try {
-      await fetch("/api/reviews/scores", {
+      await apiFetch("/api/reviews/scores", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          library_item_id: libraryId,
-          category_id: categoryId,
-          score: value,
-        }),
+        json: { library_item_id: libraryId, category_id: categoryId, score: value },
       });
-
-      await syncPersonalRating(categories, nextScores);
     } catch (error) {
-      console.error(error);
+      setScores(previousScores);
+      handleError(error, undefined, "Não foi possível salvar a nota da categoria");
+      return;
     }
+
+    await syncPersonalRating(categories, nextScores);
   }
 
   async function saveReview() {
@@ -314,24 +213,13 @@ export function ReviewPanel({
     setReviewSaved(false);
 
     try {
-      await fetch(`/api/library/${libraryId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          review,
-        }),
-      });
-
+      await patchLibrary({ review });
       onReviewChange?.(review);
       setReviewSaved(true);
-
-      setTimeout(() => {
-        setReviewSaved(false);
-      }, 2000);
+      setTimeout(() => setReviewSaved(false), 2000);
     } catch (error) {
-      console.error(error);
+      // O texto continua no campo: nada se perde, dá para tentar de novo.
+      handleError(error, undefined, "Não foi possível salvar sua opinião");
     } finally {
       setSavingReview(false);
     }
@@ -339,34 +227,18 @@ export function ReviewPanel({
 
   async function addCategory() {
     const name = newCategory.trim();
-
     if (!name) return;
 
     try {
-      const response = await fetch("/api/reviews/categories", {
+      const data = await apiFetch<Category>("/api/reviews/categories", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name,
-          weight: categories.length === 0 ? 100 : 0,
-          position: categories.length,
-        }),
+        json: { name, weight: categories.length === 0 ? 100 : 0, position: categories.length },
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        toast.error(data.error || "Não foi possível criar a categoria.");
-        return;
-      }
-
       setCategories((current) => [...current, data]);
       setNewCategory("");
       setShowAddCategory(false);
     } catch (error) {
-      console.error(error);
+      handleError(error, undefined, "Não foi possível criar a categoria");
     }
   }
 
@@ -380,26 +252,21 @@ export function ReviewPanel({
     if (!confirmed) return;
 
     try {
-      await fetch(
-        `/api/reviews/categories?id=${id}`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      const nextCategories = categories.filter(
-        (category) => category.id !== id
-      );
-      const nextScores = { ...scores };
-      delete nextScores[id];
-
-      setCategories(nextCategories);
-      setScores(nextScores);
-
-      await syncPersonalRating(nextCategories, nextScores);
+      // Só some da tela depois que o servidor removeu.
+      await apiFetch(`/api/reviews/categories?id=${encodeURIComponent(id)}`, { method: "DELETE" });
     } catch (error) {
-      console.error(error);
+      handleError(error, undefined, "Não foi possível remover a categoria");
+      return;
     }
+
+    const nextCategories = categories.filter((category) => category.id !== id);
+    const nextScores = { ...scores };
+    delete nextScores[id];
+
+    setCategories(nextCategories);
+    setScores(nextScores);
+
+    await syncPersonalRating(nextCategories, nextScores);
   }
 
   const calculatedRating = useMemo(
@@ -411,8 +278,7 @@ export function ReviewPanel({
    * D1 — sincroniza a nota calculada do modo detalhado com
    * library_items.personal_rating (a ÚNICA nota pessoal canônica:
    * Ranking, Stats, badges, Pick for Me e Quick Peek leem esse campo,
-   * não o cálculo local). Antes disso, o modo detalhado calculava a
-   * nota só para exibição e o banco nunca via esse valor.
+   * não o cálculo local).
    */
   async function syncPersonalRating(nextCategories: Category[], nextScores: Record<string, number | "">) {
     const computed = computeWeightedRating(nextCategories, nextScores);
@@ -421,13 +287,10 @@ export function ReviewPanel({
     onRatingChange?.(computed);
 
     try {
-      await fetch(`/api/library/${libraryId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ personal_rating: computed }),
-      });
+      await patchLibrary({ personal_rating: computed });
+      savedRating.current = computed;
     } catch (error) {
-      console.error(error);
+      handleError(error, undefined, "Não foi possível atualizar a nota calculada");
     }
   }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch, errorMessage } from "@/lib/api-client";
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Save, Tv } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
@@ -32,18 +33,27 @@ export function StreamingServicesSettings() {
 
     async function load() {
       try {
-        const [mine, movie, tv] = await Promise.all([
-          fetch("/api/streaming-services", { cache: "no-store" }),
-          fetch("/api/discover/filters?type=movie"),
-          fetch("/api/discover/filters?type=tv"),
+        /*
+         * Fase 6: os serviços SALVOS são obrigatórios — antes, uma falha aqui abria a seleção vazia e
+         * "Salvar" substituía tudo pelo que estivesse marcado (apagava os serviços salvos). O catálogo
+         * de opções é recuperável: sem ele, ficam só os já salvos.
+         */
+        const optionalCatalog = (type: string) =>
+          apiFetch<{ providers?: { provider_id: number; provider_name: string; logo_path?: string | null }[] }>(
+            `/api/discover/filters?type=${type}`
+          ).catch((catalogError) => {
+            console.warn("[StreamingServicesSettings] catálogo indisponível:", errorMessage(catalogError));
+            return null;
+          });
+        const [mineData, movie, tv] = await Promise.all([
+          apiFetch<{ services?: StreamingService[] }>("/api/streaming-services", { cache: "no-store" }),
+          optionalCatalog("movie"),
+          optionalCatalog("tv"),
         ]);
 
-        const mineData = mine.ok ? await mine.json() : { services: [] };
         const merged = new Map<number, StreamingService>();
 
-        for (const response of [movie, tv]) {
-          if (!response.ok) continue;
-          const data = await response.json().catch(() => null);
+        for (const data of [movie, tv]) {
           for (const provider of data?.providers ?? []) {
             const id = Number(provider.provider_id);
             if (!id || merged.has(id)) continue;
@@ -64,8 +74,8 @@ export function StreamingServicesSettings() {
         setCatalog(Array.from(merged.values()));
         setSelected(new Map(current.map((service) => [service.provider_id, service])));
         setSaved(current.map((service) => service.provider_id).sort((a, b) => a - b).join(","));
-      } catch {
-        if (!cancelled) setError("Não foi possível carregar os serviços agora.");
+      } catch (loadError) {
+        if (!cancelled) setError(`Não foi possível carregar os serviços agora. ${errorMessage(loadError, "")}`.trim());
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -101,16 +111,11 @@ export function StreamingServicesSettings() {
   async function save() {
     setSaving(true);
     try {
-      const response = await fetch("/api/streaming-services", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ services: Array.from(selected.values()) }),
-      });
-      if (!response.ok) throw new Error();
+      await apiFetch("/api/streaming-services", { method: "PUT", json: { services: Array.from(selected.values()) } });
       setSaved(currentKey);
       toast.success("Serviços de streaming salvos.");
-    } catch {
-      toast.error("Não foi possível salvar seus serviços", { description: "Nada foi alterado. Tente de novo." });
+    } catch (saveError) {
+      toast.error("Não foi possível salvar seus serviços", { description: `${errorMessage(saveError, "")} Nada foi alterado.`.trim() });
     } finally {
       setSaving(false);
     }
@@ -134,7 +139,7 @@ export function StreamingServicesSettings() {
       {loading && <p className="muted" role="status"><Loader2 size={14} className="spin" /> Carregando serviços…</p>}
       {error && <p className="muted" role="alert">{error}</p>}
 
-      {!loading && (
+      {!loading && !error && (
         <>
           <p className="streaming-selected muted" aria-live="polite">
             {selected.size === 0

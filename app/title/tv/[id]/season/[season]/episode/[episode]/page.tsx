@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, Check, Clock, Eye, Loader2, RotateCcw, Save, Star } from "lucide-react";
 
 import { Search } from "@/components/Search";
+import { useLibraryAuth } from "@/hooks/useLibraryAuth";
+import { apiFetch, errorMessage, isApiError } from "@/lib/api-client";
 import { img } from "@/lib/tmdb";
 import { getEpisodeReleaseStatus, type EpisodeSummary } from "@/lib/title-seasons";
 import { BRAZIL_TIME_ZONE, dateKeyInTimeZone } from "@/lib/date-only";
@@ -51,6 +53,8 @@ export default function EpisodePage() {
   const [rewatch, setRewatch] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const { handleError } = useLibraryAuth();
   const [releasedCount, setReleasedCount] = useState(0);
   const [contentTab, setContentTab] = useState<"details" | "journal">("details");
   const [spoilerRevealed, setSpoilerRevealed] = useState(false);
@@ -63,16 +67,20 @@ export default function EpisodePage() {
 
     let cancelled = false;
 
+    /*
+     * Fase 6: cada leitura pelo cliente padrão. Antes, um erro virava "Episódio não encontrado"
+     * e, pior, uma falha ao ler o progresso deixava o comentário vazio na tela — "Salvar" apagava
+     * o comentário guardado. Agora erro = estado de erro (nada para salvar por cima).
+     */
     async function load() {
-      const [seasonResponse, showResponse, libraryResponse] = await Promise.all([
-        fetch(`/api/tv/${params.id}/season/${seasonNumber}`),
-        fetch(`/api/tmdb/tv/${params.id}`),
-        fetch(`/api/library?tmdb_id=${params.id}&type=tv`, { cache: "no-store" }),
-      ]);
       const [seasonData, showData, libraryData] = await Promise.all([
-        seasonResponse.json(),
-        showResponse.json(),
-        libraryResponse.json(),
+        apiFetch(`/api/tv/${params.id}/season/${seasonNumber}`),
+        apiFetch(`/api/tmdb/tv/${params.id}`),
+        // Visitante (401) não tem biblioteca: é ausência, não erro.
+        apiFetch(`/api/library?tmdb_id=${params.id}&type=tv`, { cache: "no-store" }).catch((error) => {
+          if (isApiError(error, "UNAUTHENTICATED")) return null;
+          throw error;
+        }),
       ]);
 
       const episodesList: EpisodeSummary[] = Array.isArray(seasonData?.episodes) ? seasonData.episodes : [];
@@ -88,10 +96,9 @@ export default function EpisodePage() {
       setLibrary(libraryData || null);
 
       if (libraryData?.id) {
-        const response = await fetch(`/api/episodes?library_id=${libraryData.id}&season=${seasonNumber}`, {
+        const values = await apiFetch(`/api/episodes?library_id=${libraryData.id}&season=${seasonNumber}`, {
           cache: "no-store",
         });
-        const values = await response.json();
         const saved = Array.isArray(values)
           ? values.find((item: EpisodeProgressRow) => Number(item.episode_number) === episodeNumber)
           : null;
@@ -104,8 +111,11 @@ export default function EpisodePage() {
       setLoading(false);
     }
 
-    load().catch(() => {
-      if (!cancelled) setLoading(false);
+    load().catch((error) => {
+      if (cancelled) return;
+      // Temporada inexistente no TMDB = episódio não encontrado; o resto é falha de carregamento.
+      if (!isApiError(error, "NOT_FOUND")) setLoadError(errorMessage(error, "Não foi possível carregar o episódio."));
+      setLoading(false);
     });
 
     return () => {
@@ -116,10 +126,10 @@ export default function EpisodePage() {
   async function save(watched: boolean) {
     if (!library?.id) return;
     setSaving(true);
-    const response = await fetch("/api/episodes", {
+    try {
+      const saved = await apiFetch("/api/episodes", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      json: {
         library_id: library.id,
         season_number: seasonNumber,
         episode_number: episodeNumber,
@@ -130,14 +140,20 @@ export default function EpisodePage() {
         is_rewatch: rewatch,
         released_episode_count: releasedCount,
         total_seasons: Number(show?.number_of_seasons || 0),
-      }),
+      },
     });
-    if (response.ok) setProgress(await response.json());
-    setSaving(false);
+      setProgress(saved);
+    } catch (error) {
+      // Fase 6: antes, erro era ignorado (e falha de rede deixava o botão preso em "salvando").
+      handleError(error, undefined, "Não foi possível salvar o episódio");
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (!paramsValid) return <><Search /><div className="empty">Episódio não encontrado.</div></>;
   if (loading) return <><Search /><div className="empty"><Loader2 className="spin" /> Carregando episódio...</div></>;
+  if (loadError) return <><Search /><div className="empty" role="alert">{loadError}</div></>;
   if (!episode) return <><Search /><div className="empty">Episódio não encontrado.</div></>;
 
   const releaseStatus = getEpisodeReleaseStatus(episode.air_date);

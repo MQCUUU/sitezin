@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch, errorMessage } from "@/lib/api-client";
 import { useState } from "react";
 import { EyeOff, Loader2, Undo2 } from "lucide-react";
 
@@ -41,19 +42,15 @@ export function HiddenTitlesSettings() {
     setError("");
 
     try {
-      const response = await fetch(`/api/account/hidden-titles?offset=${offset}`, { cache: "no-store" });
-
-      if (!response.ok) throw new Error();
-
-      const result = await response.json();
+      const result = await apiFetch(`/api/account/hidden-titles?offset=${offset}`, { cache: "no-store" });
 
       setData((current) => ({
         items: offset === 0 || !current ? result.items : [...current.items, ...result.items],
         total: Number(result.total || 0),
         hasMore: Boolean(result.has_more),
       }));
-    } catch {
-      setError("Não foi possível carregar os títulos ocultos.");
+    } catch (loadError) {
+      setError(`Não foi possível carregar os títulos ocultos. ${errorMessage(loadError, "")}`.trim());
     } finally {
       setLoading(false);
     }
@@ -71,16 +68,14 @@ export function HiddenTitlesSettings() {
 
     try {
       const params = new URLSearchParams({ tmdb_id: String(item.tmdb_id), media_type: item.media_type });
-      const response = await fetch(`/api/not-interested?${params.toString()}`, { method: "DELETE" });
-
-      if (!response.ok) throw new Error();
+      await apiFetch(`/api/not-interested?${params.toString()}`, { method: "DELETE" });
 
       setData((current) =>
         current ? { ...current, items: current.items.filter((entry) => entry.id !== item.id), total: Math.max(0, current.total - 1) } : current
       );
       toast.success(`${item.title} pode voltar a ser recomendado.`);
-    } catch {
-      toast.error("Não foi possível restaurar o título", { description: "Ele continua oculto. Tente de novo." });
+    } catch (restoreError) {
+      toast.error("Não foi possível restaurar o título", { description: `${errorMessage(restoreError, "")} Ele continua oculto.`.trim() });
     } finally {
       setRestoring(null);
     }

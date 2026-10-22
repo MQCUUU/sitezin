@@ -228,7 +228,7 @@ export function useSearchSuggestions(syncedQuery?: string) {
 
         if (!response.ok) {
           setResults([]);
-          setErrorKind(response.status === 429 ? "rate-limit" : "unavailable");
+          setErrorKind(response.status === 429 ? "rate-limit" : response.status === 400 ? "invalid" : "unavailable");
           setError(true);
           return;
         }

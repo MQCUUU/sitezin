@@ -1,3 +1,4 @@
+import { limitPublicRequest } from "@/lib/rate-limit";
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db/neon";
 
@@ -10,6 +11,10 @@ function normalize(value: string) {
 }
 
 export async function GET(request: NextRequest) {
+  // Fase 6 (P3-08): endpoint público e caro — limite por IP (lib/rate-limit.ts).
+  const limited = limitPublicRequest(request, "users");
+  if (limited) return limited;
+
   const rawQuery = request.nextUrl.searchParams.get("q")?.trim() || "";
   const query = rawQuery.replace(/^@+/, "").trim();
 

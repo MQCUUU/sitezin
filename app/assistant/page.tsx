@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import { Poster } from "@/components/Poster";
 import { MediaPosterTags } from "@/components/media/MediaBadges";
 import {
@@ -112,36 +113,8 @@ export default function AssistantPage() {
         true
       );
 
-      const response =
-        await fetch(
-          "/api/assistant",
-          {
-            method:
-              "POST",
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-            body:
-              JSON.stringify({
-                message:
-                  value,
-              }),
-          }
-        );
-
-      const data =
-        await response.json();
-
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Erro no assistente."
-        );
-      }
+      // A resposta da IA pode passar dos 15 s padrão do cliente (antes não havia limite).
+      const data = await apiFetch("/api/assistant", { method: "POST", json: { message: value }, timeout: 60000 });
 
       setAnswer(
         data.answer ||

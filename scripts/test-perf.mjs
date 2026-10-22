@@ -78,7 +78,8 @@ test("redirects: /stats no next.config, /profile como Route Handler", () => {
 
 test("temporada: a busca não depende do item da biblioteca", () => {
   const src = read("components/EpisodeBrowser.tsx");
-  const seasonFetch = src.indexOf("fetch(`/api/tv/${tvId}/season/${season}`)");
+  // Fase 6: a chamada passou a ser apiFetch — procura a URL, não o nome da função.
+  const seasonFetch = src.indexOf("`/api/tv/${tvId}/season/${season}`");
   assert.ok(seasonFetch > 0);
   const deps = src.slice(seasonFetch).match(/\}, \[([^\]]*)\]\);/);
   assert.ok(deps, "deps do efeito da temporada");

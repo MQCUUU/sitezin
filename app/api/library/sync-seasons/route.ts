@@ -66,7 +66,7 @@ export async function POST() {
           if (["watched", "rewatched"].includes(item.status) && seasons > completed) {
             /*
              * `stopped_episode` não existe em nenhum DDL versionado
-             * (supabase/schema.sql nem os demais .sql do repo) — só
+             * (db/legacy/supabase/schema.sql nem os demais .sql do repo) — só
              * `stopped_season`. Referenciá-la aqui fazia esse UPDATE
              * inteiro lançar (coluna inexistente), engolido pelo catch
              * por-item como se fosse falha do TMDB: a reabertura de série

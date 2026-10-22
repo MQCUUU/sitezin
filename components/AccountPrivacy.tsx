@@ -124,15 +124,18 @@ export function AccountPrivacy() {
 
       if (updateRes.error) throw updateRes.error;
 
-      // O nome público do perfil acompanha o nome da conta.
-      await fetch("/api/auth/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ display_name: clean }),
-      }).catch(() => {});
-
       setAccount((current) => (current ? { ...current, displayName: clean } : current));
-      toast.success("Nome de exibição salvo.");
+
+      // O nome público do perfil acompanha o nome da conta. Fase 6: antes a falha era engolida
+      // (.catch(() => {})) e o aviso dizia "salvo" com o perfil público desatualizado.
+      try {
+        await apiFetch("/api/auth/profile", { method: "PATCH", json: { display_name: clean } });
+        toast.success("Nome de exibição salvo.");
+      } catch (profileError) {
+        toast.error("Nome da conta salvo, mas o perfil público não foi atualizado", {
+          description: errorMessage(profileError, "Tente salvar de novo em instantes."),
+        });
+      }
       // Faz AccountMenu/Home perceberem o nome novo.
       window.dispatchEvent(new Event("mycatalog:account-updated"));
     } catch (error) {

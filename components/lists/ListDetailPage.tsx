@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch, errorMessage, isApiError } from "@/lib/api-client";
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -88,16 +89,7 @@ function DetailContent() {
 
         if (q) qs.set("q", q);
 
-        const response = await fetch(`/api/lists/items?${qs}`, { cache: "no-store" });
-
-        if (response.status === 404) {
-          setState("missing");
-          return;
-        }
-
-        if (!response.ok) throw new Error(String(response.status));
-
-        const result = await response.json();
+        const result = await apiFetch(`/api/lists/items?${qs}`, { cache: "no-store" });
 
         setMeta(result.list);
         setItems((current) => (target === 1 ? result.items : [...current, ...result.items]));
@@ -107,9 +99,11 @@ function DetailContent() {
         if (result.members) setMembers(new Set(result.members));
         setState("ready");
         firstLoad.current = false;
-      } catch {
-        if (target === 1 && firstLoad.current) setState("error");
-        else toast.error("Não foi possível carregar a lista.");
+      } catch (error) {
+        // Privada ≡ inexistente para quem não é o dono (a API responde 404).
+        if (isApiError(error, "NOT_FOUND")) setState("missing");
+        else if (target === 1 && firstLoad.current) setState("error");
+        else toast.error("Não foi possível carregar a lista.", { description: errorMessage(error) });
       } finally {
         setBusy(false);
       }
@@ -152,19 +146,16 @@ function DetailContent() {
     if (target < items.length) setItems(moveInOrder(items, index, target).map((row, i) => ({ ...row, rank: i + 1 })));
 
     try {
-      const response = await fetch("/api/lists/items", {
+      await apiFetch("/api/lists/items", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ list_id: listId, media_id: item.media_id, to_index: target }),
+        json: { list_id: listId, media_id: item.media_id, to_index: target },
       });
-
-      if (!response.ok) throw new Error("move");
 
       setAnnounce(`${item.title} movido para a posição ${target + 1}.`);
       if (target >= previous.length) void load(1);
-    } catch {
+    } catch (error) {
       setItems(previous);
-      toast.error("Não foi possível mover o título.");
+      toast.error("Não foi possível mover o título.", { description: errorMessage(error) });
     } finally {
       setPending(null);
     }
@@ -178,13 +169,10 @@ function DetailContent() {
     setTotalFiltered((n) => n - 1);
 
     try {
-      const response = await fetch("/api/lists/items", {
+      await apiFetch("/api/lists/items", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ list_id: listId, media_id: item.media_id }),
+        json: { list_id: listId, media_id: item.media_id },
       });
-
-      if (!response.ok) throw new Error("remove");
 
       setMembers((current) => {
         const next = new Set(current);
@@ -193,11 +181,11 @@ function DetailContent() {
         return next;
       });
       setAnnounce(`${item.title} removido da lista.`);
-    } catch {
+    } catch (error) {
       setItems(previous);
       setMeta((current) => (current ? { ...current, item_count: current.item_count + 1 } : current));
       setTotalFiltered((n) => n + 1);
-      toast.error("Não foi possível remover o título da lista.");
+      toast.error("Não foi possível remover o título da lista.", { description: errorMessage(error) });
     }
   }
 
@@ -212,10 +200,11 @@ function DetailContent() {
 
     if (!confirmed) return;
 
-    const response = await fetch(`/api/lists?id=${encodeURIComponent(meta.id)}`, { method: "DELETE" });
-
-    if (!response.ok) {
-      toast.error("Não foi possível excluir a lista.");
+    // Fase 6: antes o fetch ficava fora de try — falha de rede virava erro sem aviso.
+    try {
+      await apiFetch(`/api/lists?id=${encodeURIComponent(meta.id)}`, { method: "DELETE" });
+    } catch (error) {
+      toast.error("Não foi possível excluir a lista.", { description: errorMessage(error) });
       return;
     }
 

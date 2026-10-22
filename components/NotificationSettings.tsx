@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch, errorMessage } from "@/lib/api-client";
 import { useEffect, useState } from "react";
 import { Bell, Loader2, Save } from "lucide-react";
 
@@ -34,17 +35,14 @@ export function NotificationSettings() {
     setStatus("loading");
 
     try {
-      const response = await fetch("/api/profile/notifications", { cache: "no-store" });
-
-      if (!response.ok) throw new Error();
-
-      const data = await response.json();
+      const data = await apiFetch("/api/profile/notifications", { cache: "no-store" });
       const next = { new_season_site: data.new_season_site !== false, new_episode_site: data.new_episode_site !== false };
 
       setPrefs(next);
       setSaved(keyOf(next));
       setStatus("ready");
-    } catch {
+    } catch (error) {
+      console.warn("[NotificationSettings]", errorMessage(error));
       setStatus("error");
     }
   }
@@ -62,18 +60,12 @@ export function NotificationSettings() {
     setSaving(true);
 
     try {
-      const response = await fetch("/api/profile/notifications", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(prefs),
-      });
-
-      if (!response.ok) throw new Error();
+      await apiFetch("/api/profile/notifications", { method: "PUT", json: prefs });
 
       setSaved(keyOf(prefs));
       toast.success("Preferências de notificações salvas.");
-    } catch {
-      toast.error("Não foi possível salvar as notificações", { description: "Nada foi alterado. Tente de novo." });
+    } catch (error) {
+      toast.error("Não foi possível salvar as notificações", { description: `${errorMessage(error, "")} Nada foi alterado.`.trim() });
     } finally {
       setSaving(false);
     }

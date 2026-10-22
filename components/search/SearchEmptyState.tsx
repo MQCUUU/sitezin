@@ -1,5 +1,6 @@
 import { AlertTriangle, Sparkles } from "lucide-react";
 
+import { SEARCH_ERROR_COPY } from "./errorCopy";
 import type { SearchErrorKind } from "./types";
 
 export type SearchEmptyStateProps = {
@@ -39,24 +40,7 @@ export type SearchErrorStateProps = {
   kind?: SearchErrorKind;
 };
 
-/*
- * Fase 5 — cada falha com a sua causa (antes, tudo virava "Verifique sua
- * conexão", inclusive o limite de buscas, HTTP 429).
- */
-const ERROR_COPY: Record<SearchErrorKind, { title: string; hint: string }> = {
-  "rate-limit": {
-    title: "Muitas buscas em pouco tempo",
-    hint: "Aguarde um momento e tente novamente.",
-  },
-  network: {
-    title: "Não foi possível buscar agora",
-    hint: "Verifique sua conexão e tente novamente.",
-  },
-  unavailable: {
-    title: "Não foi possível buscar agora",
-    hint: "A busca está indisponível no momento. Tente novamente em instantes.",
-  },
-};
+
 
 /**
  * New (B1): before this, a failed request looked identical to
@@ -65,7 +49,7 @@ const ERROR_COPY: Record<SearchErrorKind, { title: string; hint: string }> = {
  * was found.
  */
 export function SearchErrorState({ listboxId, kind = "unavailable" }: SearchErrorStateProps) {
-  const copy = ERROR_COPY[kind];
+  const copy = SEARCH_ERROR_COPY[kind];
 
   return (
     <div className="results" role="listbox" id={listboxId}>

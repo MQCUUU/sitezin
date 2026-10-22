@@ -34,7 +34,8 @@ export function MediaRepair() {
             window.dispatchEvent(new CustomEvent("mycatalog:library-updated", { detail: data }));
           }
         })
-        .catch(() => undefined);
+        // Auxiliar e em segundo plano: tenta de novo na próxima visita.
+        .catch((error) => console.warn("[MediaRepair]", error instanceof Error ? error.message : error));
     }, 4000); // não disputa com a carga inicial da tela
 
     return () => window.clearTimeout(timer);

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch, errorMessage } from "@/lib/api-client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Check, Loader2, Plus, X } from "lucide-react";
@@ -35,17 +36,13 @@ export function AddToListDialog({
   useEffect(() => {
     let alive = true;
 
-    fetch(`/api/lists?tmdb_id=${tmdbId}&media_type=${mediaType}`, { cache: "no-store" })
-      .then((response) => {
-        if (!response.ok) throw new Error(String(response.status));
-        return response.json();
-      })
+    apiFetch(`/api/lists?tmdb_id=${tmdbId}&media_type=${mediaType}`, { cache: "no-store" })
       .then((result) => {
         if (!alive) return;
         setLists(Array.isArray(result.custom_lists) ? result.custom_lists : []);
       })
-      .catch(() => {
-        if (alive) toast.error("Não foi possível carregar suas listas.");
+      .catch((error) => {
+        if (alive) toast.error("Não foi possível carregar suas listas.", { description: errorMessage(error) });
       })
       .finally(() => {
         if (alive) setLoading(false);
@@ -68,24 +65,16 @@ export function AddToListDialog({
     setPendingId(list.id);
 
     try {
-      const response = await fetch("/api/lists/items", {
+      await apiFetch("/api/lists/items", {
         method: list.in_list ? "DELETE" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ list_id: list.id, tmdb_id: tmdbId, media_type: mediaType }),
+        json: { list_id: list.id, tmdb_id: tmdbId, media_type: mediaType },
       });
-
-      if (!response.ok) {
-        const result = await response.json().catch(() => ({}));
-        toast.error(result.error || "Não foi possível atualizar a lista.");
-        return;
-      }
 
       setLists((current) =>
         current.map((row) => (row.id === list.id ? { ...row, in_list: !row.in_list } : row))
       );
     } catch (error) {
-      console.error(error);
-      toast.error("Não foi possível atualizar a lista.");
+      toast.error("Não foi possível atualizar a lista.", { description: errorMessage(error) });
     } finally {
       setPendingId(null);
     }

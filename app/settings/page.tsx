@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch, errorMessage } from '@/lib/api-client';
 import { Suspense, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -275,15 +276,12 @@ function RatingsSection() {
     setStatus('loading');
 
     try {
-      const response = await fetch('/api/reviews/categories', { cache: 'no-store' });
-
-      if (!response.ok) throw new Error();
-
-      const data = await response.json();
+      const data = await apiFetch('/api/reviews/categories', { cache: 'no-store' });
 
       setItems(Array.isArray(data) ? data : []);
       setStatus('ready');
-    } catch {
+    } catch (loadError) {
+      console.warn('[settings] categorias:', errorMessage(loadError));
       setStatus('error');
     }
   }, []);
@@ -305,20 +303,15 @@ function RatingsSection() {
     setError('');
 
     try {
-      const response = await fetch('/api/reviews/categories', {
+      const created = await apiFetch<RatingCategory>('/api/reviews/categories', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         // Primeira categoria nasce com peso 100 (mesma regra do painel de avaliação).
-        body: JSON.stringify({ name: value, weight: items.length === 0 ? 100 : 0, position: items.length }),
+        json: { name: value, weight: items.length === 0 ? 100 : 0, position: items.length },
       });
-
-      if (!response.ok) throw new Error();
-
-      const created = (await response.json()) as RatingCategory;
       setItems((list) => [...list, created]);
       setName('');
-    } catch {
-      setError('Não foi possível adicionar a categoria.');
+    } catch (addError) {
+      setError(`Não foi possível adicionar a categoria. ${errorMessage(addError, '')}`.trim());
     }
   }
 
@@ -336,25 +329,21 @@ function RatingsSection() {
     setError('');
     setItems((list) => list.map((item) => (item.id === id ? { ...item, [key]: value } : item)));
 
-    const response = await fetch('/api/reviews/categories', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, [key]: value }),
-    }).catch(() => null);
-
-    if (!response?.ok) {
+    try {
+      await apiFetch('/api/reviews/categories', { method: 'PATCH', json: { id, [key]: value } });
+    } catch (patchError) {
       setItems((list) => list.map((item) => (item.id === id ? current : item)));
-      setError('Não foi possível salvar a alteração. O valor anterior foi mantido.');
+      setError(`Não foi possível salvar a alteração. O valor anterior foi mantido. ${errorMessage(patchError, '')}`.trim());
     }
   }
 
   async function remove(id: string) {
-    const response = await fetch(`/api/reviews/categories?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(
-      () => null
-    );
-
-    if (response?.ok) setItems((list) => list.filter((item) => item.id !== id));
-    else setError('Não foi possível excluir a categoria.');
+    try {
+      await apiFetch(`/api/reviews/categories?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      setItems((list) => list.filter((item) => item.id !== id));
+    } catch (removeError) {
+      setError(`Não foi possível excluir a categoria. ${errorMessage(removeError, '')}`.trim());
+    }
   }
 
   const totalWeight = items.reduce((sum, item) => sum + Number(item.weight || 0), 0);

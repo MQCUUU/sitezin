@@ -16,7 +16,11 @@
     "test:e2e:critical": "playwright test tests/critical-flow.spec.ts --project=chromium",
     "test:e2e:signup": "playwright test tests/signup.spec.ts --project=signup",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "test:db": "node scripts/db-check.mjs",
+    "db:migrate": "node scripts/db-migrate.mjs",
+    "db:drift": "node scripts/db-drift.mjs",
+    "db:rebuild-check": "node scripts/db-rebuild-check.mjs"
   },
   "dependencies": {
     "@neondatabase/auth": "^0.5.0-beta",

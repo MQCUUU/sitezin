@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AtSign, ExternalLink, Film, Loader2, Plus, Save, Search, Tv, X } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
+import { apiFetch, errorMessage } from "@/lib/api-client";
 import { img } from "@/lib/tmdb";
 
 const titleOf = (item: any) => item?.media?.title || item?.media?.name || item?.title || "Sem título";
@@ -41,14 +42,17 @@ export function ProfileShowcaseEditor() {
   const [confirmUsername, setConfirmUsername] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // Fase 6: sem os dados atuais o editor NÃO abre — antes abria vazio e "Salvar" apagava @, bio e vitrine.
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  useEffect(() => { fetch("/api/profile/showcase").then(async (profileResponse) => {
-    const profileData = await profileResponse.json(); const loadedUsername = profileData.profile?.username || "";
+  useEffect(() => { apiFetch("/api/profile/showcase", { cache: "no-store" }).then((profileData) => {
+    const loadedUsername = profileData.profile?.username || "";
     setUsername(loadedUsername); setOriginalUsername(loadedUsername); setRemainingChanges(Number(profileData.username_changes?.remaining ?? 2)); setBio(profileData.profile?.bio || ""); setVisibility(profileData.profile?.visibility === "public" || profileData.profile?.is_public ? "public" : "private");
     const choices: Record<string, number> = {}; const media: Record<string, any> = {};
     for (const item of profileData.favorites || []) { const key = `${item.media_type}-${item.position}`; choices[key] = Number(item.media_id); media[key] = item.media; }
     setSelected(choices); setSelectedMedia(media); setLoading(false);
-  }).catch(() => setLoading(false)); }, []);
+  }).catch((error) => { setLoadError(errorMessage(error, "Não foi possível carregar seu perfil.")); setLoading(false); }); }, [reloadKey]);
 
   useEffect(() => {
     if (!picker) return;
@@ -60,10 +64,13 @@ export function ProfileShowcaseEditor() {
       const term = pickerSearch.trim();
       if (term) params.set("search", term);
 
-      fetch(`/api/profile/showcase/eligible?${params.toString()}`, { cache: "no-store" })
-        .then((response) => (response.ok ? response.json() : []))
+      apiFetch(`/api/profile/showcase/eligible?${params.toString()}`, { cache: "no-store" })
         .then((rows) => { if (vivo) setPickerOptions(Array.isArray(rows) ? rows : []); })
-        .catch(() => { if (vivo) setPickerOptions([]); })
+        .catch((error) => {
+          // Recuperável: sem opções o seletor fica vazio; nada é salvo daqui.
+          console.warn("[ProfileShowcaseEditor] opções da vitrine:", errorMessage(error));
+          if (vivo) setPickerOptions([]);
+        })
         .finally(() => { if (vivo) setPickerLoading(false); });
     }, 250);
 
@@ -81,9 +88,16 @@ export function ProfileShowcaseEditor() {
   async function persistSave() {
     setSaving(true);
     const favorites = Object.entries(selected).filter(([, mediaId]) => mediaId).map(([key, mediaId]) => { const [media_type, position] = key.split("-"); return { media_id: Number(mediaId), media_type, position: Number(position) }; });
-    const response = await fetch("/api/profile/showcase", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, bio, visibility, favorites }) });
-    const data = await response.json(); setSaving(false); setConfirmUsername(false);
-    if (!response.ok) return toast.error("Não foi possível salvar", { description: data.error });
+    let data;
+    try {
+      data = await apiFetch("/api/profile/showcase", { method: "PUT", json: { username, bio, visibility, favorites } });
+    } catch (error) {
+      return toast.error("Não foi possível salvar", { description: errorMessage(error) });
+    } finally {
+      // Fase 6: antes, falha de rede deixava o botão preso em "salvando".
+      setSaving(false);
+      setConfirmUsername(false);
+    }
     if (username !== originalUsername) { setOriginalUsername(username); setRemainingChanges(Number(data.username_change?.changes_remaining ?? Math.max(0, remainingChanges - 1))); }
     toast.success("Perfil atualizado");
     window.dispatchEvent(new CustomEvent("mycatalog:profile-updated", {
@@ -94,6 +108,7 @@ export function ProfileShowcaseEditor() {
   function save() { if (username !== originalUsername) { setConfirmUsername(true); return; } persistSave(); }
 
   if (loading) return <section className="panel profile-showcase-editor"><Loader2 className="spin" /> Carregando perfil...</section>;
+  if (loadError) return <section className="panel profile-showcase-editor" role="alert"><p>{loadError}</p><button type="button" className="btn" onClick={() => { setLoading(true); setLoadError(null); setReloadKey((n) => n + 1); }}>Tentar de novo</button></section>;
   return <section className="panel profile-showcase-editor"><div className="profile-showcase-editor-head"><div><span className="eyebrow">SEU PERFIL</span><h2>Sua vitrine</h2><p className="muted">Uma apresentação visual do que você mais gosta.</p></div>{originalUsername && <Link className="btn" href={`/u/${originalUsername}`}><ExternalLink size={15} /> Ver como está</Link>}</div><div className="profile-public-fields"><label>@ de usuário<div className="profile-username-input"><span>mycatalog.com/u/</span><input value={username} readOnly={remainingChanges <= 0} maxLength={24} onChange={(event) => setUsername(event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))} /></div><small className="muted">{remainingChanges > 0 ? `${remainingChanges} troca(s) disponível(is) nos próximos 30 dias.` : "Limite de 2 trocas atingido. Aguarde a liberação."}</small></label><label>Biografia<textarea value={bio} maxLength={280} onChange={(event) => setBio(event.target.value)} placeholder="Conte um pouco sobre seu gosto por filmes e séries." /></label><fieldset className="profile-visibility-choice"><legend>Quem pode ver seu perfil?</legend><label><input type="radio" name="profile-visibility" checked={visibility === "private"} onChange={() => setVisibility("private")} /><span><b>Privado</b><small>Apenas seguidores que você aceitar.</small></span></label><label><input type="radio" name="profile-visibility" checked={visibility === "public"} onChange={() => setVisibility("public")} /><span><b>Público</b><small>Qualquer pessoa pode abrir seu perfil.</small></span></label></fieldset></div><div className="profile-favorite-editor-grid"><FavoriteShelf type="movie" title="Filmes favoritos" selectedMedia={selectedMedia} selected={selected} onPick={(type: "movie", position: number) => setPicker({ type, position })} onRemove={(type: string, position: number) => { const key = `${type}-${position}`; setSelected((current) => ({ ...current, [key]: "" })); setSelectedMedia((current) => { const next = { ...current }; delete next[key]; return next; }); }} /><FavoriteShelf type="tv" title="Séries favoritas" selectedMedia={selectedMedia} selected={selected} onPick={(type: "tv", position: number) => setPicker({ type, position })} onRemove={(type: string, position: number) => { const key = `${type}-${position}`; setSelected((current) => ({ ...current, [key]: "" })); setSelectedMedia((current) => { const next = { ...current }; delete next[key]; return next; }); }} /></div><button className="btn primary profile-save-showcase" disabled={saving} onClick={save}>{saving ? <Loader2 className="spin" size={15} /> : <Save size={15} />} Salvar perfil</button>
 
   {picker && <div className="profile-picker-backdrop" onMouseDown={() => setPicker(null)}><div className="profile-picker-modal" onMouseDown={(event) => event.stopPropagation()}><div className="profile-picker-head"><div><span className="eyebrow">POSIÇÃO {picker.position}</span><h3>Escolher {picker.type === "movie" ? "filme" : "série"}</h3></div><button onClick={() => setPicker(null)}><X size={18} /></button></div><div className="profile-picker-search"><Search size={15} /><input autoFocus value={pickerSearch} onChange={(event) => setPickerSearch(event.target.value)} placeholder="Buscar entre seus títulos assistidos..." /></div><div className="profile-picker-grid">{pickerLoading ? <p className="muted"><Loader2 className="spin" size={15} /> Carregando...</p> : <>{pickerOptions.map((item: any) => <button type="button" onClick={() => choose(item)} key={item.media_id}><div>{item.poster_path ? <img src={img(item.poster_path, "w342")} alt={titleOf(item)} /> : <span><Film size={22} /></span>}</div><strong>{titleOf(item)}</strong></button>)}{pickerOptions.length === 0 && <p className="muted">Nenhum título elegível encontrado.</p>}</>}</div></div></div>}

@@ -213,7 +213,11 @@ export async function DELETE(
     }
 
     // Remove o estado da Biblioteca; o histórico (Diário, Insights) fica — ver lib/library/remove.ts.
-    await removeLibraryItem(getDb(), user.id, id);
+    const { removed } = await removeLibraryItem(getDb(), user.id, id);
+
+    // Fase 6 (P3-07): nada removido = 404, como nos outros DELETE (listas, notas, histórico).
+    // Mesma resposta para "não existe" e "é de outra conta" — a consulta já filtra pelo dono.
+    if (!removed) return NextResponse.json({ error: "Item não encontrado na sua biblioteca." }, { status: 404 });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch, errorMessage } from "@/lib/api-client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Check, Loader2, Users } from "lucide-react";
@@ -50,20 +51,18 @@ export function SocialSettings() {
     setStatus("loading");
 
     try {
-      const [settingsResponse, usernameResponse] = await Promise.all([
-        fetch("/api/profile/social-settings", { cache: "no-store" }),
-        fetch("/api/profile/username", { cache: "no-store" }),
+      // As regras salvas são obrigatórias (sem elas o editor não abre); o @ é só complemento.
+      const [data, usernameData] = await Promise.all([
+        apiFetch<Settings>("/api/profile/social-settings", { cache: "no-store" }),
+        apiFetch<{ username?: string }>("/api/profile/username", { cache: "no-store" }).catch(() => null),
       ]);
-
-      if (!settingsResponse.ok) throw new Error();
-
-      const data = (await settingsResponse.json()) as Settings;
 
       setSettings(data);
       setSaved(JSON.stringify(data));
-      if (usernameResponse.ok) setUsername((await usernameResponse.json())?.username || null);
+      setUsername(usernameData?.username || null);
       setStatus("ready");
-    } catch {
+    } catch (error) {
+      console.warn("[SocialSettings]", errorMessage(error));
       setStatus("error");
     }
   }
@@ -81,18 +80,12 @@ export function SocialSettings() {
     setSaving(true);
 
     try {
-      const response = await fetch("/api/profile/social-settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
-      });
-
-      if (!response.ok) throw new Error();
+      await apiFetch("/api/profile/social-settings", { method: "PUT", json: settings });
 
       setSaved(JSON.stringify(settings));
       toast.success("Privacidade e seguidores salvos.");
-    } catch {
-      toast.error("Não foi possível salvar a privacidade", { description: "Nada foi alterado. Tente de novo." });
+    } catch (error) {
+      toast.error("Não foi possível salvar a privacidade", { description: `${errorMessage(error, "")} Nada foi alterado.`.trim() });
     } finally {
       setSaving(false);
     }

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch, errorMessage } from "@/lib/api-client";
 import { ChangeEvent, useEffect, useState } from "react";
 import { Camera, Loader2, Trash2, Upload } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
@@ -34,12 +35,6 @@ async function squareAvatar(file: File): Promise<Blob> {
   );
 }
 
-async function readResult(response: Response): Promise<any> {
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "Não foi possível salvar a foto.");
-  return data;
-}
-
 export function AvatarSettings() {
   const toast = useToast();
   const confirmAction = useConfirm();
@@ -47,9 +42,11 @@ export function AvatarSettings() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetch("/api/profile/showcase", { cache: "no-store" })
-      .then((response) => response.ok ? response.json() : {})
-      .then((data: any) => setUrl(data.profile?.avatar_url || ""));
+    // Fase 6: antes não havia catch (falha de rede = erro solto) e 401/500 viravam "sem foto" em silêncio.
+    // Recuperável: sem a leitura, a prévia fica vazia e enviar/remover continuam funcionando.
+    apiFetch<{ profile?: { avatar_url?: string } }>("/api/profile/showcase", { cache: "no-store" })
+      .then((data) => setUrl(data?.profile?.avatar_url || ""))
+      .catch((error) => console.warn("[AvatarSettings] não foi possível ler a foto atual:", errorMessage(error)));
   }, []);
 
   function notifyUpdated(avatarUrl: string) {
@@ -77,15 +74,12 @@ export function AvatarSettings() {
       const blob = await squareAvatar(file);
       const formData = new FormData();
       formData.append("avatar", blob, "avatar.webp");
-      const data = await readResult(await fetch("/api/profile/avatar", {
-        method: "POST",
-        body: formData,
-      }));
+      const data = await apiFetch<{ avatar_url: string }>("/api/profile/avatar", { method: "POST", body: formData, timeout: 30000 });
       setUrl(data.avatar_url);
       notifyUpdated(data.avatar_url);
       toast.success("Foto de perfil atualizada");
-    } catch (error: any) {
-      toast.error("Não foi possível enviar a foto", { description: error?.message });
+    } catch (error) {
+      toast.error("Não foi possível enviar a foto", { description: errorMessage(error) });
     } finally {
       setSaving(false);
     }
@@ -100,12 +94,12 @@ export function AvatarSettings() {
 
     setSaving(true);
     try {
-      await readResult(await fetch("/api/profile/avatar", { method: "DELETE" }));
+      await apiFetch("/api/profile/avatar", { method: "DELETE" });
       setUrl("");
       notifyUpdated("");
       toast.success("Foto removida");
-    } catch (error: any) {
-      toast.error("Não foi possível remover", { description: error?.message });
+    } catch (error) {
+      toast.error("Não foi possível remover", { description: errorMessage(error) });
     } finally {
       setSaving(false);
     }

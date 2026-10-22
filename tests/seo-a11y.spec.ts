@@ -170,6 +170,19 @@ test.describe("acessibilidade (DOM renderizado)", () => {
     await expect(page.getByRole("textbox", { name: "Minha opinião" })).toBeVisible();
   });
 
+  // Fase 6: a nota digitada é salva no servidor (o painel passou para o cliente padrão).
+  test("avaliação: nota digitada é salva e sobrevive ao recarregar", async ({ page, request }) => {
+    await page.goto(`/title/movie/${MOVIE_FOR_REVIEW}`);
+    await page.getByRole("tab", { name: "Avaliações e resenhas" }).click();
+    const box = page.getByRole("spinbutton", { name: "Sua nota, de 0 a 10" });
+    const value = (Math.floor(Math.random() * 80) / 10 + 1).toFixed(1);
+    await box.fill(value);
+    await box.blur();
+    await expect
+      .poll(async () => Number((await (await request.get(`/api/library?tmdb_id=${MOVIE_FOR_REVIEW}&type=movie`)).json())?.personal_rating))
+      .toBe(Number(value));
+  });
+
   test("episódios: cada botão diz qual episódio (nomes únicos)", async ({ page, request }) => {
     const lookup = await request.get("/api/library?tmdb_id=1399&type=tv");
     let created: string | null = null;

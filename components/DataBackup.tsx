@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch, errorFromResponse, errorMessage } from "@/lib/api-client";
 import {
   ChangeEvent,
   useRef,
@@ -154,13 +155,12 @@ export function DataBackup() {
 
       // Lotes menores evitam o limite de duração das funções da Vercel.
       for (let start = 0; start < letterboxdRows.length; start += 40) {
-        const response = await fetch("/api/account/import/letterboxd", {
+        // Fase 6: apiFetch — um timeout da plataforma (página HTML) não aparece mais como "Unexpected token <".
+        const data = await apiFetch("/api/account/import/letterboxd", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ rows: letterboxdRows.slice(start, start + 40) }),
+          json: { rows: letterboxdRows.slice(start, start + 40) },
+          timeout: 60000,
         });
-        const data = await response.json();
-        if (!response.ok || data?.error) throw new Error(data?.error || "Não foi possível importar.");
 
         total.imported += Number(data.imported || 0);
         total.updated += Number(data.updated || 0);
@@ -182,7 +182,7 @@ export function DataBackup() {
     } catch (error) {
       // Lotes já enviados ficam aplicados; reimportar o mesmo arquivo é seguro (não duplica nada).
       toast.error("A importação parou no meio", {
-        description: `${error instanceof Error ? error.message : "Tente novamente."} Pode importar o mesmo arquivo de novo: o que já entrou não é duplicado.`,
+        description: `${errorMessage(error, "Tente novamente.")} Pode importar o mesmo arquivo de novo: o que já entrou não é duplicado.`,
       });
     } finally {
       setLetterboxdImporting(false);
@@ -235,21 +235,8 @@ export function DataBackup() {
           `/api/account/export?format=${format}`
         );
 
-      if (
-        !response.ok
-      ) {
-        const data =
-          await response
-            .json()
-            .catch(
-              () => null
-            );
-
-        throw new Error(
-          data?.error ||
-            "Não foi possível exportar."
-        );
-      }
+      // Download binário: o sucesso não é JSON; o erro vira o mesmo ApiError do apiFetch.
+      if (!response.ok) throw await errorFromResponse(response);
 
       const blob =
         await response.blob();
@@ -390,38 +377,7 @@ if (
         true
       );
 
-      const response =
-        await fetch(
-          "/api/account/import",
-          {
-            method:
-              "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify(
-                pendingBackup
-              ),
-          }
-        );
-
-      const data =
-        await response
-          .json();
-
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Não foi possível restaurar."
-        );
-      }
+      const data = await apiFetch("/api/account/import", { method: "POST", json: pendingBackup, timeout: 60000 });
 
       setPendingBackup(
         null

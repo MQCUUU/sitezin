@@ -1,3 +1,4 @@
+import { takeToken } from "@/lib/rate-limit";
 import {
   createHash,
 } from "crypto";
@@ -675,10 +676,17 @@ export async function POST(
     const count = Number(rlRows[0]?.request_count || 1);
     assistantAllowed = count <= 20;
   } catch (rateLimitError: any) {
-    console.error(
-      "Erro ao verificar limite do assistente:",
-      rateLimitError
-    );
+    /*
+     * Fase 6 (P3-08): continua "fail-open" — o limitador fora do ar não derruba o
+     * assistente —, mas não fica SEM limite: usa o mesmo teto em memória (por
+     * instância) e registra o evento com um marcador fácil de achar nos logs.
+     */
+    const local = takeToken(`assistant:${user.id}`, 20, 10 * 60 * 1000);
+    assistantAllowed = local.allowed;
+    console.warn("[rate-limit] armazenamento do limite do assistente indisponível; usando limite local", {
+      code: rateLimitError?.code,
+      message: rateLimitError?.message,
+    });
   }
 
   if (!assistantAllowed) {

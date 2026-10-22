@@ -166,22 +166,23 @@ export async function PUT(request: Request) {
     const isPublic = visibility === "public";
     const displayName = user.name || existingProfile?.display_name || username;
 
-    await sql`
-      INSERT INTO public.profiles (id, display_name, username, bio, visibility, is_public)
-      VALUES (${user.id}, ${displayName}, ${username}, ${bio}, ${visibility}, ${isPublic})
-      ON CONFLICT (id)
-      DO UPDATE SET username = EXCLUDED.username, bio = EXCLUDED.bio, visibility = EXCLUDED.visibility, is_public = EXCLUDED.is_public
-    `;
-
-    // 4. Atualizar profile_favorites
-    await sql`DELETE FROM public.profile_favorites WHERE user_id = ${user.id}`;
-
-    for (const item of favorites) {
-      await sql`
-        INSERT INTO public.profile_favorites (user_id, media_id, media_type, position)
-        VALUES (${user.id}, ${Number(item.media_id)}, ${item.media_type}, ${Number(item.position)})
-      `;
-    }
+    // 3 + 4. Perfil e vitrine numa transação só (Fase 6): antes eram chamadas separadas —
+    // se um INSERT da vitrine falhasse depois do DELETE, a vitrine inteira sumia.
+    await sql.transaction([
+      sql`
+        INSERT INTO public.profiles (id, display_name, username, bio, visibility, is_public)
+        VALUES (${user.id}, ${displayName}, ${username}, ${bio}, ${visibility}, ${isPublic})
+        ON CONFLICT (id)
+        DO UPDATE SET username = EXCLUDED.username, bio = EXCLUDED.bio, visibility = EXCLUDED.visibility, is_public = EXCLUDED.is_public
+      `,
+      sql`DELETE FROM public.profile_favorites WHERE user_id = ${user.id}`,
+      ...favorites.map(
+        (item: { media_id: unknown; media_type: string; position: unknown }) => sql`
+          INSERT INTO public.profile_favorites (user_id, media_id, media_type, position)
+          VALUES (${user.id}, ${Number(item.media_id)}, ${item.media_type}, ${Number(item.position)})
+        `
+      ),
+    ]);
 
     return NextResponse.json({ success: true, username, username_change: usernameChange });
   } catch (error: any) {

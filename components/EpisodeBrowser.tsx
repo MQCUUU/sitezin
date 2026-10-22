@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
+import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -186,6 +188,7 @@ export function EpisodeBrowser({
   onLibraryChange,
 }: EpisodeBrowserProps) {
   const router = useRouter();
+  const { handleError } = useLibraryAuth();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -276,10 +279,8 @@ export function EpisodeBrowser({
     setError(null);
     setRevealedSpoilers(new Set());
 
-    fetch(`/api/tv/${tvId}/season/${season}`)
-      .then(async (response) => {
-        if (!response.ok) throw new Error("season request failed");
-        const value = (await response.json()) as SeasonDetails;
+    apiFetch<SeasonDetails>(`/api/tv/${tvId}/season/${season}`)
+      .then((value) => {
         if (!cancelled) setSeasonData(value);
       })
       .catch(() => {
@@ -310,8 +311,8 @@ export function EpisodeBrowser({
     setProgressLoading(true);
     setProgressError(false);
 
-    fetch(`/api/episodes?library_id=${libraryId}&season=${season}`, { cache: "no-store" })
-      .then((response) => response.json())
+    // Fase 6: antes um 401/500 virava "nenhum episódio assistido" (o corpo de erro não é lista).
+    apiFetch(`/api/episodes?library_id=${libraryId}&season=${season}`, { cache: "no-store" })
       .then((value) => {
         if (!cancelled) setProgress(Array.isArray(value) ? value : []);
       })
@@ -378,27 +379,26 @@ export function EpisodeBrowser({
     });
 
     try {
-      const response = await fetch("/api/episodes", {
+      const data = await apiFetch("/api/episodes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        json: {
           library_id: libraryItem.id,
           season_number: season,
           episode_number: episode.episode_number,
           watched: next,
           released_episode_count: released.length,
           total_seasons: totalSeasons,
-        }),
+        },
       });
-      if (!response.ok) throw new Error("Falha ao salvar episódio.");
-      const data = await response.json();
       setProgress((current) => [
         ...current.filter((item) => item.episode_number !== episode.episode_number),
         data,
       ]);
       if (data.library) onLibraryChange?.(data.library);
-    } catch {
+    } catch (error) {
+      // Fase 6: antes só desfazia a marcação, sem dizer por quê.
       setProgress(previous);
+      handleError(error, undefined, "Não foi possível salvar o episódio");
     }
   }
 
@@ -408,22 +408,20 @@ export function EpisodeBrowser({
     const previous = progress;
     setProgress(released.map((episode) => ({ episode_number: episode.episode_number, watched: true })));
     try {
-      const response = await fetch("/api/episodes", {
+      const data = await apiFetch("/api/episodes", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        json: {
           library_id: libraryItem.id,
           season_number: season,
           episode_numbers: released.map((episode) => episode.episode_number),
           watched: true,
           total_seasons: totalSeasons,
-        }),
+        },
       });
-      if (!response.ok) throw new Error("Falha ao concluir temporada.");
-      const data = await response.json();
       if (data.library) onLibraryChange?.(data.library);
-    } catch {
+    } catch (error) {
       setProgress(previous);
+      handleError(error, undefined, "Não foi possível concluir a temporada");
     }
     setSaving(false);
   }

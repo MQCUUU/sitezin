@@ -9,7 +9,7 @@ import { LISTS_PAGE, isUuid, normalizeDescription, normalizeName, parseMediaType
  * Listas V2.7 — as listas DO USUÁRIO DA SESSÃO (nunca de um user_id vindo do cliente).
  *
  * `custom_lists` é a fonte canônica (inclusive `is_public`, desde a migration
- * db/migrations/2026-10-15_v2.7-lists-media.sql). `public.lists` segue como espelho
+ * db/legacy/migrations/2026-10-15_v2.7-lists-media.sql). `public.lists` segue como espelho
  * de compatibilidade, escrito na MESMA transação.
  *
  * GET  ?page=N                         listas (24 por página), com capa (até 4 pôsteres) e contagem

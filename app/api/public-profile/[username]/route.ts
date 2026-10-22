@@ -1,3 +1,4 @@
+import { limitPublicRequest } from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
@@ -28,6 +29,10 @@ function publicProfile(profile: Record<string, any>, bio: string | null) {
 }
 
 export async function GET(_request: Request, context: { params: Promise<{ username: string }> }) {
+  // Fase 6 (P3-08): endpoint público e caro — limite por IP (lib/rate-limit.ts).
+  const limited = limitPublicRequest(_request, "publicProfile");
+  if (limited) return limited;
+
   const { username } = await context.params;
   const sql = getDb();
 

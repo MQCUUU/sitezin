@@ -19,7 +19,8 @@ export function UsernameGate() {
     let cancelled = false;
     fetchProfileMe()
       .then((data) => { if (!cancelled) setRequired(Boolean(data?.authenticated && !data?.username)); })
-      .catch(() => null);
+      // Auxiliar: sem a leitura do perfil, o aviso de @ pendente só não aparece agora.
+      .catch((error) => console.warn("[UsernameGate]", error instanceof Error ? error.message : error));
     return () => { cancelled = true; };
   }, [pathname]);
 

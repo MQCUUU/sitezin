@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch, errorMessage } from "@/lib/api-client";
 import { useEffect, useId, useState } from "react";
 import { Globe, Loader2, Lock, X } from "lucide-react";
 
@@ -56,21 +57,15 @@ export function ListFormDialog({
     setError(null);
 
     try {
-      const response = await fetch("/api/lists", {
+      const result = await apiFetch("/api/lists", {
         method: editing ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...(editing ? { id: initial?.id } : {}), name, description, is_public: isPublic }),
+        json: { ...(editing ? { id: initial?.id } : {}), name, description, is_public: isPublic },
       });
-      const result = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        setError(result.error || "Não foi possível salvar a lista.");
-        return;
-      }
-
       onSaved(result);
-    } catch {
-      setError("Não foi possível salvar a lista. Verifique sua conexão.");
+    } catch (error) {
+      // Fase 6: a mensagem diz a causa (validação do servidor, sessão, rede…) — antes, todo erro de rede
+      // e de resposta inválida virava "Verifique sua conexão".
+      setError(errorMessage(error, "Não foi possível salvar a lista."));
     } finally {
       setSaving(false);
     }

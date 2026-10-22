@@ -1,12 +1,15 @@
 "use client";
 
+import { removeFromLibrary } from "@/lib/library/actions";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { Search } from "@/components/Search";
 import { isSearchable, MIN_QUERY_LENGTH } from "@/lib/search/rank";
 import { chunkLibraryStatePairs } from "@/lib/library-state-batches";
-import { apiFetch } from "@/lib/api-client";
+import { ApiError, apiFetch, errorFromResponse, isAbortError } from "@/lib/api-client";
+import { searchErrorKind } from "@/components/search/errorCopy";
+import type { SearchErrorKind } from "@/components/search/types";
 import { intentForMedia } from "@/lib/auth/pending-action";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 
@@ -103,7 +106,21 @@ async function cachedSearchJson(url: string, signal: AbortSignal) {
     // Storage bloqueado/cheio não pode impedir a pesquisa.
   }
 
-  const response = await fetch(url, { signal });
+  // Fase 6: falha de rede vira ApiError NETWORK_ERROR; erro HTTP leva o status junto (`errorStatus`)
+  // para a página dizer a causa (limite, servidor, pedido inválido) em vez de sempre "conexão".
+  let response: Response;
+  try {
+    response = await fetch(url, { signal });
+  } catch (error) {
+    if (isAbortError(error)) throw error;
+    throw new ApiError("Não foi possível se conectar ao servidor.", { code: "NETWORK_ERROR", retryable: true });
+  }
+
+  if (!response.ok) {
+    const failure = await errorFromResponse(response);
+    return { error: failure.message, errorStatus: response.status };
+  }
+
   const data = await safeJson(response);
 
   if (response.ok) {
@@ -151,7 +168,7 @@ function SearchPageContent() {
   const [library, setLibrary] = useState<LibraryState[]>([]);
 
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<SearchErrorKind | null>(null);
   const [retryTick, setRetryTick] = useState(0);
 
   /*
@@ -423,14 +440,14 @@ function SearchPageContent() {
       setResults([]);
       setUserResults([]);
       setLoading(false);
-      setError(false);
+      setError(null);
       return;
     }
 
     async function load() {
       try {
         setLoading(true);
-        setError(false);
+        setError(null);
         setPersonLoading(false);
         setPerson(null);
         setPersonCredits([]);
@@ -465,7 +482,7 @@ function SearchPageContent() {
 
         // V3.4: catálogo indisponível (TMDB/servidor) é erro, não "nenhum resultado".
         if (!usersOnly && !advancedResolved && searchData?.error) {
-          throw new Error(searchData.error);
+          throw new ApiError(searchData.error, { status: searchData.errorStatus ?? 500 });
         }
 
         setUserResults(Array.isArray(usersData?.users) ? usersData.users : []);
@@ -596,7 +613,7 @@ function SearchPageContent() {
         if (!cancelled) {
           setResults([]);
           setUserResults([]);
-          setError(true);
+          setError(searchErrorKind(error));
         }
       } finally {
         if (!cancelled) {
@@ -811,7 +828,7 @@ function SearchPageContent() {
     try {
       setProcessing(key);
 
-      await apiFetch(`/api/library/${existing.library_id}`, { method: "DELETE" });
+      await removeFromLibrary(existing.library_id);
 
       setLibrary((current) => current.filter((entry) => entry.library_id !== existing.library_id));
       setRemoveTarget(null);
@@ -868,7 +885,7 @@ function SearchPageContent() {
         ) : isBusy ? (
           <SearchResultsSkeleton />
         ) : error ? (
-          <SearchPageErrorState onRetry={handleRetry} />
+          <SearchPageErrorState onRetry={handleRetry} kind={error} />
         ) : results.length === 0 && userResults.length === 0 ? (
           <SearchPageEmptyState query={query} />
         ) : (

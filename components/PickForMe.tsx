@@ -1,5 +1,7 @@
 "use client";
 
+import { removeFromLibrary } from "@/lib/library/actions";
+import { apiFetch } from "@/lib/api-client";
 import {
   useEffect,
   useMemo,
@@ -561,7 +563,9 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
         ) ===
           "1"
       );
-    } catch {}
+    } catch {
+      // Intencional: armazenamento local indisponível (modo privado/cheio) — só perde a preferência.
+    }
   }, []);
 
   useEffect(() => {
@@ -1272,7 +1276,9 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
           next
         )
       );
-    } catch {}
+    } catch {
+      // Intencional: armazenamento local indisponível (modo privado/cheio) — só perde a preferência.
+    }
   }
 
   async function pick(
@@ -1376,25 +1382,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
             ),
         });
 
-      const response =
-        await fetch(
-          `/api/pick-for-me?${params.toString()}`
-        );
-
-      const data =
-        await safeJson(
-          response
-        );
-
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Não consegui escolher."
-        );
-      }
+      const data = await apiFetch(`/api/pick-for-me?${params.toString()}`);
 
       const roulette:
         PickResult[] =
@@ -1535,20 +1523,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
         true
       );
 
-      const response =
-        await fetch(
-          "/api/not-interested",
-          {
-            method:
-              "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify({
+      await apiFetch("/api/not-interested", { method: "POST", json: {
                 tmdb_id:
                   target.id,
 
@@ -1557,24 +1532,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
 
                 reason:
                   "not_interested",
-              }),
-          }
-        );
-
-      const data =
-        await safeJson(
-          response
-        );
-
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Não foi possível salvar sua preferência."
-        );
-      }
+              } });
 
       if (
         !rejected.includes(
@@ -1614,29 +1572,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                     target.media_type,
                 });
 
-              const undo =
-                await fetch(
-                  `/api/not-interested?${params.toString()}`,
-                  {
-                    method:
-                      "DELETE",
-                  }
-                );
-
-              const undoData =
-                await safeJson(
-                  undo
-                );
-
-              if (
-                !undo.ok ||
-                undoData?.error
-              ) {
-                throw new Error(
-                  undoData?.error ||
-                    "Não foi possível desfazer."
-                );
-              }
+              await apiFetch(`/api/not-interested?${params.toString()}`, { method: "DELETE" });
 
               persistRejected(
                 rejected.filter(
@@ -1934,29 +1870,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
         true
       );
 
-      const response =
-        await fetch(
-          `/api/library/${winner.library_id}`,
-          {
-            method:
-              "DELETE",
-          }
-        );
-
-      const data =
-        await safeJson(
-          response
-        );
-
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Erro ao remover."
-        );
-      }
+      await removeFromLibrary(winner.library_id);
 
       setWinner(
         (
@@ -3304,7 +3218,9 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                         ? "1"
                         : "0"
                     );
-                  } catch {}
+                  } catch {
+                    // Intencional: armazenamento local indisponível (modo privado/cheio) — só perde a preferência.
+                  }
                 }}
               />
 

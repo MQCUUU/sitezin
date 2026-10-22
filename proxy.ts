@@ -3,6 +3,7 @@ import { validateSessionData } from "@neondatabase/auth/server";
 
 import { getAuthCookieSecret } from "@/lib/auth/cookie-secret";
 import { episodeExists, listAccess, personExists, profileExists, titleExists } from "@/lib/resource-exists";
+import { allowedOriginsFromEnv, checkApiMutation } from "@/lib/api-guard";
 
 /*
  * ==========================================
@@ -101,6 +102,7 @@ function safeNextPath(raw: string | null): string | null {
 }
 
 const secret = getAuthCookieSecret();
+const ALLOWED_ORIGINS = allowedOriginsFromEnv(process.env);
 
 const baseUrl = (
   process.env.NEON_AUTH_BASE_URL?.trim() ||
@@ -261,8 +263,24 @@ async function isMissingResource(request: NextRequest, pathname: string): Promis
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // APIs cuidam da própria autenticação (retornando 401 JSON)
+  // APIs cuidam da própria autenticação (retornando 401 JSON). Fase 6: mutações passam
+  // antes por Origin/Content-Type/tamanho (lib/api-guard.ts).
   if (isApi(pathname)) {
+    const lengthHeader = request.headers.get("content-length");
+    const rejection = checkApiMutation({
+      method: request.method,
+      pathname,
+      origin: request.headers.get("origin"),
+      secFetchSite: request.headers.get("sec-fetch-site"),
+      host: request.headers.get("x-forwarded-host") || request.headers.get("host"),
+      contentType: request.headers.get("content-type"),
+      contentLength: lengthHeader === null ? null : Number(lengthHeader),
+      hasBody: Number(lengthHeader || 0) > 0 || request.headers.get("transfer-encoding") !== null,
+      allowedOrigins: ALLOWED_ORIGINS,
+    });
+    if (rejection) {
+      return NextResponse.json({ error: rejection.error }, { status: rejection.status, headers: { "Cache-Control": "no-store" } });
+    }
     return NextResponse.next({ request });
   }
 

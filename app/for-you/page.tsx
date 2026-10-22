@@ -1,5 +1,8 @@
 "use client";
 
+import { removeFromLibrary } from "@/lib/library/actions";
+import { useLibraryAuth } from "@/hooks/useLibraryAuth";
+import { apiFetch } from "@/lib/api-client";
 import { MediaPosterActions } from "@/components/media/MediaPosterActions";
 import { MediaPosterTags } from "@/components/media/MediaBadges";
 import { getLibraryVersion } from "@/lib/library-cache";
@@ -183,6 +186,8 @@ async function safeJson(
 }
 
 export default function ForYouPage() {
+  // Fase 6: erros das ações de biblioteca (401 = "Sua sessão expirou", resto = aviso amigável).
+  const libraryAuth = useLibraryAuth();
   const [
     shelves,
     setShelves,
@@ -386,7 +391,9 @@ export default function ForYouPage() {
         ) ===
           "1"
       );
-    } catch {}
+    } catch {
+      // Intencional: armazenamento local indisponível (modo privado/cheio) — só perde a preferência.
+    }
   }, []);
 
   useEffect(() => {
@@ -467,25 +474,7 @@ export default function ForYouPage() {
           true
         );
 
-        const response =
-          await fetch(
-            `/api/tmdb/${previewItem.media_type}/${previewItem.id}`
-          );
-
-        const data =
-          await safeJson(
-            response
-          );
-
-        if (
-          !response.ok ||
-          data?.error
-        ) {
-          throw new Error(
-            data?.error ||
-              "Erro ao carregar detalhes."
-          );
-        }
+        const data = await apiFetch(`/api/tmdb/${previewItem.media_type}/${previewItem.id}`);
 
         if (
           !cancelled
@@ -823,28 +812,10 @@ export default function ForYouPage() {
         );
       }
 
-      const response =
-        await fetch(
-          `/api/for-you?${queryFor(
+      const data = await apiFetch(`/api/for-you?${queryFor(
             nextPage,
             append
-          ).toString()}`
-        );
-
-      const data =
-        await safeJson(
-          response
-        );
-
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Erro ao carregar recomendações."
-        );
-      }
+          ).toString()}`);
 
       applyData(data, nextPage, append);
 
@@ -983,20 +954,11 @@ export default function ForYouPage() {
               response
             );
         }
-      } catch {}
+      } catch {
+        // Intencional: detalhes extras são opcionais; sem eles o título entra com os dados básicos.
+      }
 
-      const response =
-        await fetch(
-          "/api/library",
-          {
-            method:
-              "POST",
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-            body:
-              JSON.stringify({
+      const data = await apiFetch("/api/library", { method: "POST", json: {
                 media: {
                   ...item,
                   ...media,
@@ -1022,24 +984,7 @@ export default function ForYouPage() {
                   "want",
                 favorite:
                   false,
-              }),
-          }
-        );
-
-      const data =
-        await safeJson(
-          response
-        );
-
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Não foi possível adicionar."
-        );
-      }
+              } });
 
       setLibrary(
         (
@@ -1082,12 +1027,9 @@ export default function ForYouPage() {
           },
         ]
       );
-    } catch (
-      error
-    ) {
-      console.error(
-        error
-      );
+    } catch (error) {
+      // Fase 6: antes só ia para o console — o usuário não sabia que não foi adicionado.
+      libraryAuth.handleError(error, undefined, "Erro ao adicionar");
     } finally {
       setProcessing(
         null
@@ -1120,37 +1062,9 @@ export default function ForYouPage() {
         key
       );
 
-      const response =
-        await fetch(
-          `/api/library/${existing.library_id}`,
-          {
-            method:
-              "PATCH",
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-            body:
-              JSON.stringify({
+      const data = await apiFetch(`/api/library/${existing.library_id}`, { method: "PATCH", json: {
                 status,
-              }),
-          }
-        );
-
-      const data =
-        await safeJson(
-          response
-        );
-
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Erro ao alterar status."
-        );
-      }
+              } });
 
       patchLibrary(
         item,
@@ -1164,6 +1078,9 @@ export default function ForYouPage() {
       setOpenMenu(
         null
       );
+    } catch (error) {
+      // Fase 6: antes não havia catch — o erro sumia (rejeição solta) sem aviso.
+      libraryAuth.handleError(error, undefined, "Erro ao alterar status");
     } finally {
       setProcessing(
         null
@@ -1197,38 +1114,10 @@ export default function ForYouPage() {
         key
       );
 
-      const response =
-        await fetch(
-          `/api/library/${existing.library_id}`,
-          {
-            method:
-              "PATCH",
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-            body:
-              JSON.stringify({
+      const data = await apiFetch(`/api/library/${existing.library_id}`, { method: "PATCH", json: {
                 favorite:
                   next,
-              }),
-          }
-        );
-
-      const data =
-        await safeJson(
-          response
-        );
-
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Erro ao atualizar a curtida."
-        );
-      }
+              } });
 
       patchLibrary(
         item,
@@ -1238,6 +1127,9 @@ export default function ForYouPage() {
             next,
         }
       );
+    } catch (error) {
+      // Fase 6: antes não havia catch — o erro sumia (rejeição solta) sem aviso.
+      libraryAuth.handleError(error, undefined, "Erro ao atualizar a curtida");
     } finally {
       setProcessing(
         null
@@ -1271,38 +1163,10 @@ export default function ForYouPage() {
         key
       );
 
-      const response =
-        await fetch(
-          `/api/library/${existing.library_id}`,
-          {
-            method:
-              "PATCH",
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-            body:
-              JSON.stringify({
+      await apiFetch(`/api/library/${existing.library_id}`, { method: "PATCH", json: {
                 personal_rating:
                   rating,
-              }),
-          }
-        );
-
-      const data =
-        await safeJson(
-          response
-        );
-
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Erro ao alterar nota."
-        );
-      }
+              } });
 
       patchLibrary(
         item,
@@ -1311,6 +1175,9 @@ export default function ForYouPage() {
             rating,
         }
       );
+    } catch (error) {
+      // Fase 6: antes não havia catch — o erro sumia (rejeição solta) sem aviso.
+      libraryAuth.handleError(error, undefined, "Erro ao alterar sua nota");
     } finally {
       setProcessing(
         null
@@ -1364,29 +1231,7 @@ export default function ForYouPage() {
         key
       );
 
-      const response =
-        await fetch(
-          `/api/library/${existing.library_id}`,
-          {
-            method:
-              "DELETE",
-          }
-        );
-
-      const data =
-        await safeJson(
-          response
-        );
-
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Erro ao remover."
-        );
-      }
+      await removeFromLibrary(existing.library_id);
 
       setLibrary(
         (
@@ -1404,6 +1249,9 @@ export default function ForYouPage() {
       setRemoveTarget(
         null
       );
+    } catch (error) {
+      // Fase 6: antes não havia catch — o erro sumia (rejeição solta) sem aviso.
+      libraryAuth.handleError(error, undefined, "Erro ao remover");
     } finally {
       setProcessing(
         null
@@ -2204,7 +2052,9 @@ export default function ForYouPage() {
                         ? "1"
                         : "0"
                     );
-                  } catch {}
+                  } catch {
+                    // Intencional: armazenamento local indisponível (modo privado/cheio) — só perde a preferência.
+                  }
                 }}
               />
 

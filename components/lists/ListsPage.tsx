@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch, errorMessage, isApiError } from "@/lib/api-client";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -83,25 +84,17 @@ export function ListsPage() {
     else setLoadingMore(true);
 
     try {
-      const response = await fetch(`/api/lists?page=${target}`, { cache: "no-store" });
-
-      if (response.status === 401) {
-        setState("auth");
-        return;
-      }
-
-      if (!response.ok) throw new Error(String(response.status));
-
-      const result = await response.json();
+      const result = await apiFetch(`/api/lists?page=${target}`, { cache: "no-store" });
 
       setLists((current) => (target === 1 ? result.custom_lists : [...current, ...result.custom_lists]));
       setTotal(result.total);
       setPage(result.page);
       setTotalPages(result.total_pages);
       setState("ready");
-    } catch {
-      if (target === 1) setState("error");
-      else toast.error("Não foi possível carregar mais listas.");
+    } catch (error) {
+      if (isApiError(error, "UNAUTHENTICATED")) setState("auth");
+      else if (target === 1) setState("error");
+      else toast.error("Não foi possível carregar mais listas.", { description: errorMessage(error) });
     } finally {
       setLoadingMore(false);
     }
@@ -120,10 +113,11 @@ export function ListsPage() {
 
     if (!confirmed) return;
 
-    const response = await fetch(`/api/lists?id=${encodeURIComponent(list.id)}`, { method: "DELETE" });
-
-    if (!response.ok) {
-      toast.error("Não foi possível excluir a lista.");
+    // Fase 6: antes o fetch ficava fora de try — falha de rede virava erro sem aviso.
+    try {
+      await apiFetch(`/api/lists?id=${encodeURIComponent(list.id)}`, { method: "DELETE" });
+    } catch (error) {
+      toast.error("Não foi possível excluir a lista.", { description: errorMessage(error) });
       return;
     }
 

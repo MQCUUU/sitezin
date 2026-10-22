@@ -6,7 +6,7 @@ import { providersToTmdbFilter } from "@/lib/streaming-services";
  * Para você) para o filtro do TMDB (`id|id`), sempre escopado ao usuário
  * da sessão. Uma query; string vazia = usuário sem serviços configurados.
  * Depende da tabela `user_streaming_services`: se a migration
- * (supabase/v2.1-e-streaming-services.sql) não foi aplicada, o erro de
+ * (db/legacy/supabase/v2.1-e-streaming-services.sql) não foi aplicada, o erro de
  * schema propaga (500) — NÃO é mascarado como "sem serviços".
  */
 export const MY_SERVICES_SENTINEL = "mine";

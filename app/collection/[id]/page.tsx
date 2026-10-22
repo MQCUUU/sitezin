@@ -1,5 +1,7 @@
 "use client";
 
+import { removeFromLibrary } from "@/lib/library/actions";
+import { apiFetch } from "@/lib/api-client";
 import { MediaPosterActions } from "@/components/media/MediaPosterActions";
 import { MediaPosterTags } from "@/components/media/MediaBadges";
 import { Poster } from "@/components/Poster";
@@ -323,7 +325,9 @@ export default function CollectionPage() {
         ) ===
           "1"
       );
-    } catch {}
+    } catch {
+      // Intencional: armazenamento local indisponível (modo privado/cheio) — só perde a preferência.
+    }
   }, []);
 
   /*
@@ -486,25 +490,7 @@ export default function CollectionPage() {
           ""
         );
 
-        const collectionResponse =
-          await fetch(
-            `/api/collection/${params.id}`
-          );
-
-        const collectionData =
-          await safeJson(
-            collectionResponse
-          );
-
-        if (
-          !collectionResponse.ok ||
-          collectionData?.error
-        ) {
-          throw new Error(
-            collectionData?.error ||
-              "Não foi possível carregar a coleção."
-          );
-        }
+        const collectionData = await apiFetch(`/api/collection/${params.id}`);
 
         if (
           cancelled
@@ -1263,23 +1249,7 @@ export default function CollectionPage() {
         key
       );
 
-      const response =
-        await fetch(
-          `/api/library/${existing.library_id}`,
-          {
-            method:
-              "DELETE",
-          }
-        );
-
-      const data =
-        await safeJson(
-          response
-        );
-
-      if (!response.ok || data?.error) {
-        throw new ApiError(data?.error || "Não foi possível remover.", { status: response.status });
-      }
+      await removeFromLibrary(existing.library_id);
 
       setLibrary(
         (
@@ -1941,7 +1911,9 @@ export default function CollectionPage() {
                         ? "1"
                         : "0"
                     );
-                  } catch {}
+                  } catch {
+                    // Intencional: armazenamento local indisponível (modo privado/cheio) — só perde a preferência.
+                  }
                 }}
               />
 

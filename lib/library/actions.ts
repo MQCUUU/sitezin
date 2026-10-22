@@ -11,7 +11,7 @@
  * Erros chegam como ApiError (lib/api-client): `status === 401` = precisa
  * entrar; o chamador decide como avisar (useLibraryAuth).
  */
-import { apiFetch } from "../api-client";
+import { apiFetch, isApiError } from "../api-client";
 import type { LibraryIntent } from "../auth/pending-action";
 
 export type LibraryActionResult = {
@@ -62,4 +62,20 @@ export function createMutationQueue() {
     tail = run.catch(() => undefined);
     return run;
   };
+}
+
+/**
+ * Fase 6 — remover da Biblioteca. A API responde 404 quando não havia o que
+ * remover (mesma resposta para "não existe" e "é de outra conta": não vaza
+ * nada). Para a tela, "já não estava lá" é o resultado pedido — clique duplo
+ * ou outra aba não vira erro. Qualquer outro erro sobe (401, 5xx, rede).
+ */
+export async function removeFromLibrary(libraryId: string | number, fetcher: Fetcher = apiFetch): Promise<{ removed: boolean }> {
+  try {
+    await fetcher(`/api/library/${encodeURIComponent(String(libraryId))}`, { method: "DELETE" });
+    return { removed: true };
+  } catch (error) {
+    if (isApiError(error, "NOT_FOUND")) return { removed: false };
+    throw error;
+  }
 }

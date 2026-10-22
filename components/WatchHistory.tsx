@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api-client";
 import {
   useEffect,
   useMemo,
@@ -288,29 +289,9 @@ export function WatchHistory({
         ""
       );
 
-      const response =
-        await fetch(
-          `/api/watch-history?library_id=${encodeURIComponent(
+      const data = await apiFetch(`/api/watch-history?library_id=${encodeURIComponent(
             libraryId
-          )}`,
-          {
-            cache:
-              "no-store",
-          }
-        );
-
-      const data =
-        await response.json();
-
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Não foi possível carregar o histórico."
-        );
-      }
+          )}`, { cache: "no-store" });
 
       setEntries(
         Array.isArray(
@@ -475,20 +456,7 @@ export function WatchHistory({
         ""
       );
 
-      const response =
-        await fetch(
-          "/api/watch-history",
-          {
-            method:
-              "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify({
+      const data = await apiFetch("/api/watch-history", { method: "POST", json: {
                 library_id:
                   libraryId,
 
@@ -506,22 +474,7 @@ export function WatchHistory({
                       ),
 
                 comment,
-              }),
-          }
-        );
-
-      const data =
-        await response.json();
-
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Não foi possível registrar."
-        );
-      }
+              } });
 
       setEntries(
         (
@@ -619,20 +572,7 @@ export function WatchHistory({
         ""
       );
 
-      const response =
-        await fetch(
-          `/api/watch-history/${id}`,
-          {
-            method:
-              "PATCH",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify({
+      const data = await apiFetch(`/api/watch-history/${id}`, { method: "PATCH", json: {
                 watched_at:
                   new Date(
                     editDate
@@ -651,22 +591,7 @@ export function WatchHistory({
 
                 is_rewatch:
                   editRewatch,
-              }),
-          }
-        );
-
-      const data =
-        await response.json();
-
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Não foi possível editar."
-        );
-      }
+              } });
 
       setEntries(
         (
@@ -723,27 +648,7 @@ export function WatchHistory({
         true
       );
 
-      const response =
-        await fetch(
-          `/api/watch-history/${id}`,
-          {
-            method:
-              "DELETE",
-          }
-        );
-
-      const data =
-        await response.json();
-
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Não foi possível excluir."
-        );
-      }
+      await apiFetch(`/api/watch-history/${id}`, { method: "DELETE" });
 
       setEntries(
         (

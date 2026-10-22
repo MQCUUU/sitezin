@@ -4,7 +4,7 @@ import type { DayRange, EventRow, LibRow, SourceStat, ToolStat } from "./types";
 /*
  * Recomendações e descoberta — funções puras sobre user_events + biblioteca.
  *
- * Modelo de eventos (ver supabase/v2.3-insights.sql):
+ * Modelo de eventos (ver db/legacy/supabase/v2.3-insights.sql):
  *   rec_shown / rec_opened / rec_dismissed — 1 por EXPOSIÇÃO (exposure)
  *   library_added — 1 por ENTRADA na biblioteca, com a origem ATRIBUÍDA
  *     (last-touch por interação: clique dentro da ferramenta, ou o clique que

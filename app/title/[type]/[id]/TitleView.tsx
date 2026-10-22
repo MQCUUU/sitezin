@@ -1,5 +1,6 @@
 "use client";
 
+import { removeFromLibrary as deleteLibraryItem } from "@/lib/library/actions";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
@@ -229,13 +230,7 @@ export default function TitlePage({
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/tmdb/${type}/${id}`);
-      const data = await response.json();
-      if (!response.ok || data?.error) {
-        throw new Error(
-          data?.error || "Não foi possível carregar o título."
-        );
-      }
+      const data = await apiFetch(`/api/tmdb/${type}/${id}`);
 
       setDetails(data);
     } catch (err) {
@@ -444,27 +439,7 @@ export default function TitlePage({
 
           onAction:
             async () => {
-              const undo =
-                await fetch(
-                  `/api/library/${result.id}`,
-                  {
-                    method:
-                      "DELETE",
-                  }
-                );
-
-              const undoData =
-                await undo.json();
-
-              if (
-                !undo.ok ||
-                undoData?.error
-              ) {
-                throw new Error(
-                  undoData?.error ||
-                    "Não foi possível desfazer."
-                );
-              }
+              await deleteLibraryItem(result.id);
 
               setLibraryItem(
                 null
@@ -513,27 +488,7 @@ export default function TitlePage({
         true
       );
 
-      const response =
-        await fetch(
-          `/api/library/${libraryItem.id}`,
-          {
-            method:
-              "DELETE",
-          }
-        );
-
-      const result =
-        await response.json();
-
-      if (
-        !response.ok ||
-        result?.error
-      ) {
-        throw new Error(
-          result?.error ||
-            "Não foi possível remover da biblioteca."
-        );
-      }
+      await deleteLibraryItem(libraryItem.id);
 
       setLibraryItem(
         null
@@ -907,38 +862,10 @@ export default function TitlePage({
 
             onAction:
               async () => {
-                const undo =
-                  await fetch(
-                    `/api/library/${libraryId}`,
-                    {
-                      method:
-                        "PATCH",
-
-                      headers: {
-                        "Content-Type":
-                          "application/json",
-                      },
-
-                      body:
-                        JSON.stringify({
+                const undone = await apiFetch(`/api/library/${libraryId}`, { method: "PATCH", json: {
                           [field]:
                             oldValue,
-                        }),
-                    }
-                  );
-
-                const undone =
-                  await undo.json();
-
-                if (
-                  !undo.ok ||
-                  undone?.error
-                ) {
-                  throw new Error(
-                    undone?.error ||
-                      "Não foi possível desfazer."
-                  );
-                }
+                        } });
 
                 setLibraryItem(
                   (

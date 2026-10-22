@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch, errorMessage, isApiError } from "@/lib/api-client";
 import { ListCover } from "@/components/lists/ListCover";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -139,6 +140,8 @@ export default function PublicProfilePage() {
   const confirmAction = useConfirm();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  // Fase 6: falha ao carregar ≠ "perfil não existe".
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("activity");
   const [connectionModal, setConnectionModal] = useState<"followers" | "following" | null>(null);
   const [connectionSearch, setConnectionSearch] = useState("");
@@ -183,11 +186,9 @@ export default function PublicProfilePage() {
     const nextPage = options.append ? activityPageRef.current + 1 : 1;
 
     try {
-      const response = await fetch(`/api/public-profile/${encodeURIComponent(username)}/activity?page=${nextPage}`, {
+      const result = await apiFetch(`/api/public-profile/${encodeURIComponent(username)}/activity?page=${nextPage}`, {
         cache: "no-store",
       });
-      if (!response.ok) throw new Error(String(response.status));
-      const result = await response.json();
       const items = Array.isArray(result.items) ? result.items : [];
 
       activityPageRef.current = nextPage;
@@ -200,14 +201,32 @@ export default function PublicProfilePage() {
         loading: false,
         loaded: true,
       }));
-    } catch {
+    } catch (error) {
+      // Recuperável: a atividade fica como estava (o botão de carregar continua disponível).
+      console.warn("[perfil] atividade:", errorMessage(error));
       setActivityFeed((current) => ({ ...current, loading: false }));
     }
   }
 
   async function load() {
-    const response = await fetch(`/api/public-profile/${encodeURIComponent(username)}`, { cache: "no-store" });
-    setData(response.ok ? await response.json() : null); setLoading(false);
+    /*
+     * Fase 6: 404 = perfil não existe; outro erro mantém o que já estava na tela (a página recarrega
+     * ao voltar o foco — uma falha passageira não pode apagar o perfil) ou mostra o erro de verdade.
+     * Antes: qualquer erro virava "não existe" e falha de rede deixava a tela carregando para sempre.
+     */
+    try {
+      setData(await apiFetch(`/api/public-profile/${encodeURIComponent(username)}`, { cache: "no-store" }));
+      setLoadError(null);
+    } catch (error) {
+      if (isApiError(error, "NOT_FOUND")) {
+        setData(null);
+        setLoadError(null);
+      } else {
+        setLoadError(errorMessage(error, "Não foi possível carregar o perfil."));
+      }
+    } finally {
+      setLoading(false);
+    }
   }
   useEffect(() => { load(); }, [username]);
   useEffect(() => {
@@ -241,12 +260,7 @@ export default function PublicProfilePage() {
    */
   useEffect(() => {
     if (data?.social?.relationship !== "self") return;
-    fetch("/api/follows", { cache: "no-store" }).then(async (response) => {
-      if (response.ok) {
-        const summary = await response.json();
-        setConnectionCounts(summary.counts || null);
-      }
-    });
+    refreshConnectionCounts();
   }, [data?.social?.relationship]);
 
   async function loadConnectionList(type: ConnectionType, options: { append?: boolean } = {}) {
@@ -258,11 +272,9 @@ export default function PublicProfilePage() {
     const nextPage = options.append ? connectionLists[type].page + 1 : 1;
 
     try {
-      const response = await fetch(`/api/follows?type=${type}&page=${nextPage}&limit=${CONNECTION_PAGE_SIZE}`, {
+      const result = await apiFetch(`/api/follows?type=${type}&page=${nextPage}&limit=${CONNECTION_PAGE_SIZE}`, {
         cache: "no-store",
       });
-      if (!response.ok) throw new Error(String(response.status));
-      const result = await response.json();
       const items: PersonRow[] = Array.isArray(result.items) ? result.items : [];
 
       setConnectionLists((current) => ({
@@ -276,22 +288,20 @@ export default function PublicProfilePage() {
           loaded: true,
         },
       }));
-    } catch {
+    } catch (error) {
       setConnectionLists((current) => ({
         ...current,
         [type]: { ...current[type], loading: false },
       }));
-      toast.error("Não foi possível carregar essa lista.");
+      toast.error("Não foi possível carregar essa lista.", { description: errorMessage(error) });
     }
   }
 
   function refreshConnectionCounts() {
-    fetch("/api/follows", { cache: "no-store" }).then(async (response) => {
-      if (response.ok) {
-        const summary = await response.json();
-        setConnectionCounts(summary.counts || null);
-      }
-    });
+    // Recuperável: sem o resumo, as contagens ficam como estavam. Antes não havia catch (erro solto).
+    apiFetch("/api/follows", { cache: "no-store" })
+      .then((summary) => setConnectionCounts(summary?.counts || null))
+      .catch((error) => console.warn("[perfil] contagens de conexões:", errorMessage(error)));
   }
 
   useEffect(() => {
@@ -361,16 +371,19 @@ export default function PublicProfilePage() {
     }
     setBusy(true);
     const isFollowing = data.social.relationship === "accepted" || data.social.relationship === "pending";
-    const response = await fetch("/api/follows", isFollowing
-      ? { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, mode: "unfollow" }) }
-      : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username }) });
-    const result = await response.json();
-    if (response.ok) {
-      const next = isFollowing ? "none" : result.status;
+    try {
+      const result = await apiFetch("/api/follows", isFollowing
+        ? { method: "DELETE", json: { username, mode: "unfollow" } }
+        : { method: "POST", json: { username } });
+      const next = isFollowing ? "none" : result?.status;
       await load();
       toast.success(isFollowing ? "Você deixou de seguir" : next === "pending" ? "Solicitação enviada" : "Agora você está seguindo");
-    } else toast.error("Não foi possível atualizar", { description: result.error });
-    setBusy(false);
+    } catch (error) {
+      toast.error("Não foi possível atualizar", { description: errorMessage(error) });
+    } finally {
+      // Fase 6: antes, falha de rede deixava o botão preso.
+      setBusy(false);
+    }
   }
 
   async function quickFollow(person: PersonRow) {
@@ -379,10 +392,13 @@ export default function PublicProfilePage() {
       return;
     }
     const followed = data.social.viewer_following_usernames.includes(person.profile.username);
-    const response = await fetch("/api/follows", followed
-      ? { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: person.profile.username, mode: "unfollow" }) }
-      : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: person.profile.username }) });
-    if (!response.ok) return toast.error("Não foi possível atualizar a conexão.");
+    try {
+      await apiFetch("/api/follows", followed
+        ? { method: "DELETE", json: { username: person.profile.username, mode: "unfollow" } }
+        : { method: "POST", json: { username: person.profile.username } });
+    } catch (error) {
+      return toast.error("Não foi possível atualizar a conexão.", { description: errorMessage(error) });
+    }
     setData((current: any) => ({ ...current, social: { ...current.social, viewer_following_usernames: followed ? current.social.viewer_following_usernames.filter((name: string) => name !== person.profile.username) : [...current.social.viewer_following_usernames, person.profile.username] } }));
   }
 
@@ -398,23 +414,29 @@ export default function PublicProfilePage() {
       const [title, description] = labels[action as keyof typeof labels];
       if (!(await confirmAction({ title, description, confirmLabel: "Confirmar" }))) return;
     }
-    const response = action === "accept" || action === "reject"
-      ? await fetch("/api/follows", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ follower_id: row.follower_id || targetId, action }) })
-      : await fetch("/api/follows", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...(targetId ? { user_id: targetId } : { username: row.profile.username }), mode: action === "remove_follower" ? "remove_follower" : "unfollow" }) });
-    if (!response.ok) return toast.error("Não foi possível atualizar a conexão.");
+    try {
+      if (action === "accept" || action === "reject") {
+        await apiFetch("/api/follows", { method: "PATCH", json: { follower_id: row.follower_id || targetId, action } });
+      } else {
+        await apiFetch("/api/follows", { method: "DELETE", json: { ...(targetId ? { user_id: targetId } : { username: row.profile.username }), mode: action === "remove_follower" ? "remove_follower" : "unfollow" } });
+      }
+    } catch (error) {
+      return toast.error("Não foi possível atualizar a conexão.", { description: errorMessage(error) });
+    }
     refreshConnectionCounts();
     void loadConnectionList(connectionSubTab);
     toast.success(action === "accept" ? "Solicitação aceita" : action === "reject" ? "Solicitação recusada" : action === "remove_follower" ? "Seguidor removido" : action === "cancel" ? "Solicitação cancelada" : "Você deixou de seguir");
     load();
   }
 
-  async function createList() { if (!listName.trim()) return; const response=await fetch("/api/lists",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:listName})});const result=await response.json();if(!response.ok)return toast.error("Não foi possível criar a lista",{description:result.error});setData((current:any)=>({...current,lists:[{...result,items:[{count:0}]},...(current.lists||[])]}));setListName("");toast.success("Lista criada"); }
+  async function createList() { if (!listName.trim()) return; let result; try { result = await apiFetch("/api/lists", { method: "POST", json: { name: listName } }); } catch (error) { return toast.error("Não foi possível criar a lista", { description: errorMessage(error) }); }setData((current:any)=>({...current,lists:[{...result,items:[{count:0}]},...(current.lists||[])]}));setListName("");toast.success("Lista criada"); }
 
   const modalRows: PersonRow[] = connectionModal
     ? ((data?.social?.[connectionModal]) || []).map(normalizePerson).filter(Boolean) as PersonRow[]
     : [];
   const filteredRows = useMemo(() => modalRows.filter((row) => `${row.profile.display_name || ""} ${row.profile.username || ""}`.toLowerCase().includes(connectionSearch.trim().toLowerCase())), [modalRows, connectionSearch]);
   if (loading) return <><Search /><div className="empty"><Loader2 className="spin" /> Carregando perfil...</div></>;
+  if (!data && loadError) return <><Search /><div className="empty" role="alert">{loadError}</div></>;
   if (!data) return <><Search /><div className="empty"><LockKeyhole /> Este perfil não existe ou é privado.</div></>;
 
   const relationship = data.social?.relationship;

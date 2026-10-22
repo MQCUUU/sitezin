@@ -79,7 +79,8 @@ export function FollowRequestNotifier() {
         // Carga inicial
         void refresh(false);
       })
-      .catch(() => null);
+      // Auxiliar: o aviso de solicitações tenta de novo no próximo ciclo.
+      .catch((error) => console.warn("[FollowRequestNotifier]", error instanceof Error ? error.message : error));
 
     // Polling inteligente: a cada 30 segundos enquanto a página estiver visível
     const timer = setInterval(() => {

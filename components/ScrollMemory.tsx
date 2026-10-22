@@ -75,7 +75,9 @@ function writeReturnPosition(
       RETURN_POSITION_KEY,
       JSON.stringify(value)
     );
-  } catch {}
+  } catch {
+    // Intencional: armazenamento local indisponível (modo privado/cheio) — só perde a preferência.
+  }
 }
 
 function readPageScroll():
@@ -106,7 +108,9 @@ function writePageScroll(
       PAGE_SCROLL_KEY,
       JSON.stringify(store)
     );
-  } catch {}
+  } catch {
+    // Intencional: armazenamento local indisponível (modo privado/cheio) — só perde a preferência.
+  }
 }
 
 export function ScrollMemory() {

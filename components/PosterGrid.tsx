@@ -1,5 +1,6 @@
 "use client";
 
+import { removeFromLibrary } from "@/lib/library/actions";
 import { MediaPosterActions } from "@/components/media/MediaPosterActions";
 import { MediaPosterTags, MediaStatusTag } from "@/components/media/MediaBadges";
 import { TvNextEpisode } from "@/components/TvNextEpisode";
@@ -25,6 +26,8 @@ import { img } from "@/lib/tmdb";
 import type { LibraryItem } from "@/lib/types";
 import { STATUS_LABELS } from "@/lib/types";
 import { useToast } from "@/components/ToastProvider";
+import { useLibraryAuth } from "@/hooks/useLibraryAuth";
+import { apiFetch } from "@/lib/api-client";
 
 import { Poster } from "@/components/Poster";
 import { posterLoading } from "@/lib/poster-loading";
@@ -74,6 +77,8 @@ export function PosterGrid({
 }) {
   const toast =
     useToast();
+  // Fase 6: 401 numa ação vira "Sua sessão expirou" (padrão da Fase 1), nunca "Não autenticado".
+  const { handleError } = useLibraryAuth();
 
   const [processing, setProcessing] =
     useState<string | number | null>(null);
@@ -182,23 +187,7 @@ useEffect(() => {
       try {
         setPreviewDetailsLoading(true);
 
-        const response =
-          await fetch(
-            `/api/tmdb/${previewItem.media_type}/${previewItem.tmdb_id}`
-          );
-
-        const result =
-          await response.json();
-
-        if (
-          !response.ok ||
-          result?.error
-        ) {
-          throw new Error(
-            result?.error ||
-              "Erro ao carregar detalhes."
-          );
-        }
+        const result = await apiFetch(`/api/tmdb/${previewItem.media_type}/${previewItem.tmdb_id}`);
 
         if (!cancelled) {
           setPreviewDetails(result);
@@ -364,38 +353,10 @@ useEffect(() => {
         }
       );
 
-      const response =
-        await fetch(
-          `/api/library/${item.library_id}`,
-          {
-            method:
-              "PATCH",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify({
+      await apiFetch(`/api/library/${item.library_id}`, { method: "PATCH", json: {
                 favorite:
                   nextValue,
-              }),
-          }
-        );
-
-      const data =
-        await response.json();
-
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Não foi possível atualizar a curtida."
-        );
-      }
+              } });
 
       toast.success(
         nextValue
@@ -407,38 +368,10 @@ useEffect(() => {
 
           onAction:
             async () => {
-              const undo =
-                await fetch(
-                  `/api/library/${item.library_id}`,
-                  {
-                    method:
-                      "PATCH",
-
-                    headers: {
-                      "Content-Type":
-                        "application/json",
-                    },
-
-                    body:
-                      JSON.stringify({
+              await apiFetch(`/api/library/${item.library_id}`, { method: "PATCH", json: {
                         favorite:
                           oldValue,
-                      }),
-                  }
-                );
-
-              const undone =
-                await undo.json();
-
-              if (
-                !undo.ok ||
-                undone?.error
-              ) {
-                throw new Error(
-                  undone?.error ||
-                    "Não foi possível desfazer."
-                );
-              }
+                      } });
 
               patchItemLocal(
                 item.library_id,
@@ -465,15 +398,7 @@ useEffect(() => {
         }
       );
 
-      toast.error(
-        "Erro ao atualizar curtida",
-        {
-          description:
-            error instanceof Error
-              ? error.message
-              : "Tente novamente.",
-        }
-      );
+      handleError(error, undefined, "Erro ao atualizar curtida");
     } finally {
       setProcessing(
         null
@@ -503,38 +428,10 @@ useEffect(() => {
         }
       );
 
-      const response =
-        await fetch(
-          `/api/library/${item.library_id}`,
-          {
-            method:
-              "PATCH",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify({
+      await apiFetch(`/api/library/${item.library_id}`, { method: "PATCH", json: {
                 status:
                   nextStatus,
-              }),
-          }
-        );
-
-      const data =
-        await response.json();
-
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Não foi possível alterar o status."
-        );
-      }
+              } });
 
       setOpenStatusMenu(
         null
@@ -554,38 +451,10 @@ useEffect(() => {
 
           onAction:
             async () => {
-              const undo =
-                await fetch(
-                  `/api/library/${item.library_id}`,
-                  {
-                    method:
-                      "PATCH",
-
-                    headers: {
-                      "Content-Type":
-                        "application/json",
-                    },
-
-                    body:
-                      JSON.stringify({
+              await apiFetch(`/api/library/${item.library_id}`, { method: "PATCH", json: {
                         status:
                           oldStatus,
-                      }),
-                  }
-                );
-
-              const undone =
-                await undo.json();
-
-              if (
-                !undo.ok ||
-                undone?.error
-              ) {
-                throw new Error(
-                  undone?.error ||
-                    "Não foi possível desfazer."
-                );
-              }
+                      } });
 
               patchItemLocal(
                 item.library_id,
@@ -613,15 +482,7 @@ useEffect(() => {
         }
       );
 
-      toast.error(
-        "Erro ao alterar status",
-        {
-          description:
-            error instanceof Error
-              ? error.message
-              : "A alteração foi revertida.",
-        }
-      );
+      handleError(error, undefined, "Erro ao alterar status");
     } finally {
       setProcessing(
         null
@@ -654,38 +515,10 @@ useEffect(() => {
         }
       );
 
-      const response =
-        await fetch(
-          `/api/library/${item.library_id}`,
-          {
-            method:
-              "PATCH",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify({
+      await apiFetch(`/api/library/${item.library_id}`, { method: "PATCH", json: {
                 personal_rating:
                   rating,
-              }),
-          }
-        );
-
-      const data =
-        await response.json();
-
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Não foi possível alterar sua nota."
-        );
-      }
+              } });
 
       toast.success(
         rating ===
@@ -702,38 +535,10 @@ useEffect(() => {
 
           onAction:
             async () => {
-              const undo =
-                await fetch(
-                  `/api/library/${item.library_id}`,
-                  {
-                    method:
-                      "PATCH",
-
-                    headers: {
-                      "Content-Type":
-                        "application/json",
-                    },
-
-                    body:
-                      JSON.stringify({
+              await apiFetch(`/api/library/${item.library_id}`, { method: "PATCH", json: {
                         personal_rating:
                           oldRating,
-                      }),
-                  }
-                );
-
-              const undone =
-                await undo.json();
-
-              if (
-                !undo.ok ||
-                undone?.error
-              ) {
-                throw new Error(
-                  undone?.error ||
-                    "Não foi possível desfazer."
-                );
-              }
+                      } });
 
               patchItemLocal(
                 item.library_id,
@@ -761,15 +566,7 @@ useEffect(() => {
         }
       );
 
-      toast.error(
-        "Erro ao alterar sua nota",
-        {
-          description:
-            error instanceof Error
-              ? error.message
-              : "A alteração foi revertida.",
-        }
-      );
+      handleError(error, undefined, "Erro ao alterar sua nota");
     } finally {
       setProcessing(
         null
@@ -791,31 +588,7 @@ useEffect(() => {
         item.library_id
       );
 
-      const response =
-        await fetch(
-          `/api/library?id=${encodeURIComponent(
-            String(
-              item.library_id
-            )
-          )}`,
-          {
-            method:
-              "DELETE",
-          }
-        );
-
-      const data =
-        await response.json();
-
-      if (
-        !response.ok ||
-        data?.error
-      ) {
-        throw new Error(
-          data?.error ||
-            "Não foi possível remover."
-        );
-      }
+      await removeFromLibrary(item.library_id);
 
       setLocalItems(
         (
@@ -862,20 +635,7 @@ useEffect(() => {
 
           onAction:
             async () => {
-              const restore =
-                await fetch(
-                  "/api/library",
-                  {
-                    method:
-                      "POST",
-
-                    headers: {
-                      "Content-Type":
-                        "application/json",
-                    },
-
-                    body:
-                      JSON.stringify({
+              const restored = await apiFetch("/api/library", { method: "POST", json: {
                         media:
                           mediaPayload(
                             snapshot
@@ -897,22 +657,7 @@ useEffect(() => {
                           (snapshot as any)
                             .review ||
                           "",
-                      }),
-                  }
-                );
-
-              const restored =
-                await restore.json();
-
-              if (
-                !restore.ok ||
-                restored?.error
-              ) {
-                throw new Error(
-                  restored?.error ||
-                    "Não foi possível restaurar."
-                );
-              }
+                      } });
 
               const restoredItem:
                 LibraryItem = {
@@ -958,15 +703,7 @@ useEffect(() => {
         error
       );
 
-      toast.error(
-        "Erro ao remover",
-        {
-          description:
-            error instanceof Error
-              ? error.message
-              : "Não foi possível remover o título.",
-        }
-      );
+      handleError(error, undefined, "Erro ao remover");
     } finally {
       setProcessing(
         null

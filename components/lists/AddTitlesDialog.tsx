@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch, errorMessage, isAbortError } from "@/lib/api-client";
 import { useEffect, useId, useRef, useState } from "react";
 import { Check, Clapperboard, Loader2, Plus, Search as SearchIcon, X } from "lucide-react";
 
@@ -50,12 +51,8 @@ export function AddTitlesDialog({
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       setLoading(true);
-      fetch(`/api/search?q=${encodeURIComponent(term)}`, { signal: controller.signal })
-        .then(async (response) => {
-          if (!response.ok) throw new Error("search");
-
-          const data = (await response.json()) as { results?: Record<string, any>[] };
-
+      apiFetch<{ results?: Record<string, any>[] }>(`/api/search?q=${encodeURIComponent(term)}`, { signal: controller.signal })
+        .then((data) => {
           setResults(
             (data.results || [])
               .filter((r) => r.media_type === "movie" || r.media_type === "tv")
@@ -64,8 +61,8 @@ export function AddTitlesDialog({
           );
           setError(null);
         })
-        .catch((reason: Error) => {
-          if (reason.name !== "AbortError") setError("Não foi possível buscar agora. Tente de novo.");
+        .catch((reason) => {
+          if (!isAbortError(reason)) setError(errorMessage(reason, "Não foi possível buscar agora. Tente de novo."));
         })
         .finally(() => setLoading(false));
     }, 300);
@@ -95,19 +92,16 @@ export function AddTitlesDialog({
     setPending((current) => new Set(current).add(key));
 
     try {
-      const response = await fetch("/api/lists/items", {
+      await apiFetch("/api/lists/items", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ list_id: listId, tmdb_id: result.id, media_type: result.media_type }),
+        json: { list_id: listId, tmdb_id: result.id, media_type: result.media_type },
       });
-
-      if (!response.ok) throw new Error("add");
 
       onAdded(key);
       setStatus(`${result.title} adicionado à lista.`);
       refocus.current = true;
-    } catch {
-      setStatus(`Não foi possível adicionar ${result.title}.`);
+    } catch (error) {
+      setStatus(`Não foi possível adicionar ${result.title}. ${errorMessage(error, "")}`.trim());
     } finally {
       setPending((current) => {
         const next = new Set(current);

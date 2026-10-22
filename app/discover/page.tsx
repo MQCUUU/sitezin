@@ -1,5 +1,6 @@
 "use client";
 
+import { removeFromLibrary } from "@/lib/library/actions";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 
@@ -526,9 +527,7 @@ function DiscoverContent() {
     try {
       setProcessing(key);
 
-      await apiFetch(`/api/library/${item.library_id}`, {
-        method: "DELETE",
-      });
+      await removeFromLibrary(item.library_id);
 
       setData((current) => {
         if (!current) return current;
