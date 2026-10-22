@@ -6,6 +6,7 @@ import { dateKeyInTimeZone } from "@/lib/date-only";
 import { buildInsights } from "@/lib/insights/compute";
 import { optional } from "@/lib/insights/db-safe";
 import { INSIGHTS_TZ, normalizeParams } from "@/lib/insights/period";
+import { consumptionDay } from "@/lib/insights/consumption-day";
 import type { EntryRow, EpisodeDay, EventRow, HiddenRow, HourRow, InsightsInput, LibRow } from "@/lib/insights/types";
 
 /*
@@ -63,7 +64,9 @@ export async function GET(request: NextRequest) {
         SELECT
           m.id AS media_id, m.tmdb_id, m.media_type, m.title, m.poster_path,
           li.status, li.favorite, li.personal_rating, li.rewatch_count, li.completed_seasons,
-          to_char(li.watched_at AT TIME ZONE ${TZ}, 'YYYY-MM-DD') AS watched_day,
+          -- Hotfix: dia de consumo = data explícita OU evento de status (lib/insights/consumption-day.ts).
+          li.watched_at AS watched_at_ts,
+          sw.watched_event_at, sw.rewatched_event_at,
           to_char(li.added_at AT TIME ZONE ${TZ}, 'YYYY-MM-DD') AS added_day,
           to_char(li.updated_at AT TIME ZONE ${TZ}, 'YYYY-MM-DD') AS updated_day,
           extract(year FROM (CASE WHEN m.media_type = 'tv' THEN m.first_air_date ELSE m.release_date END))::int AS release_year,
@@ -76,6 +79,19 @@ export async function GET(request: NextRequest) {
           m.cast_names[1:5] AS cast_names, m.creator_names[1:3] AS creator_names
         FROM public.library_items li
         JOIN public.media m ON m.id = li.media_id
+        -- Transições deste item para Assistido/Reassistido (status_changed ou adição já com o status).
+        LEFT JOIN LATERAL (
+          SELECT
+            max(e.occurred_at) FILTER (WHERE COALESCE(e.metadata->>'to', e.metadata->>'status') = 'watched') AS watched_event_at,
+            max(e.occurred_at) FILTER (WHERE COALESCE(e.metadata->>'to', e.metadata->>'status') = 'rewatched') AS rewatched_event_at
+          FROM public.activity_events e
+          WHERE e.user_id = li.user_id
+            AND e.library_item_id = li.id
+            AND (
+              (e.event_type = 'status_changed' AND e.metadata->>'to' IN ('watched', 'rewatched'))
+              OR (e.event_type = 'library_added' AND e.metadata->>'status' IN ('watched', 'rewatched'))
+            )
+        ) sw ON li.status IN ('watched', 'rewatched')
         WHERE li.user_id = ${userId}
         ORDER BY li.updated_at DESC, li.id ASC
         LIMIT ${LIMIT}
@@ -118,7 +134,8 @@ export async function GET(request: NextRequest) {
               (snap.metadata->>'personal_rating')::numeric AS snap_rating,
               (snap.metadata->>'rewatch_count')::int AS snap_rewatch_count,
               (snap.metadata->>'completed_seasons')::int AS snap_completed_seasons,
-              to_char((snap.metadata->>'watched_at')::timestamptz AT TIME ZONE ${TZ}, 'YYYY-MM-DD') AS snap_watched_day,
+              (snap.metadata->>'watched_at')::timestamptz AS snap_watched_at,
+              sev.watched_event_at, sev.rewatched_event_at,
               to_char((snap.metadata->>'added_at')::timestamptz AT TIME ZONE ${TZ}, 'YYYY-MM-DD') AS snap_added_day,
               to_char(snap.occurred_at AT TIME ZONE ${TZ}, 'YYYY-MM-DD') AS removed_day,
               we.n AS entries, we.rewatches, we.last_rating,
@@ -138,6 +155,20 @@ export async function GET(request: NextRequest) {
             LEFT JOIN snap ON snap.media_id = cand.media_id
             LEFT JOIN we ON we.media_id = cand.media_id
             LEFT JOIN ep ON ep.media_id = cand.media_id
+            -- Hotfix: retrato sem data → transição para Assistido/Reassistido gravada ANTES da remoção.
+            LEFT JOIN LATERAL (
+              SELECT
+                max(e.occurred_at) FILTER (WHERE COALESCE(e.metadata->>'to', e.metadata->>'status') = 'watched') AS watched_event_at,
+                max(e.occurred_at) FILTER (WHERE COALESCE(e.metadata->>'to', e.metadata->>'status') = 'rewatched') AS rewatched_event_at
+              FROM public.activity_events e
+              WHERE e.user_id = ${userId}
+                AND e.media_id = cand.media_id
+                AND e.occurred_at <= snap.occurred_at
+                AND (
+                  (e.event_type = 'status_changed' AND e.metadata->>'to' IN ('watched', 'rewatched'))
+                  OR (e.event_type = 'library_added' AND e.metadata->>'status' IN ('watched', 'rewatched'))
+                )
+            ) sev ON snap.metadata->>'status' IN ('watched', 'rewatched')
             WHERE lib.media_id IS NULL
               OR (
                 -- Filme readicionado sem status de assistido: o consumo anterior continua contando.
@@ -234,7 +265,10 @@ export async function GET(request: NextRequest) {
           status: String(row.status),
           favorite: Boolean(row.favorite),
           rating: num(row.personal_rating),
-          watched_day: row.watched_day ?? null,
+          watched_day: consumptionDay(
+            { status: String(row.status), watchedAt: row.watched_at_ts, watchedEventAt: row.watched_event_at, rewatchedEventAt: row.rewatched_event_at },
+            TZ
+          ),
           added_day: row.added_day,
           updated_day: row.updated_day,
           rewatch_count: Number(row.rewatch_count || 0),
@@ -283,7 +317,13 @@ export async function GET(request: NextRequest) {
           status,
           favorite: false,
           rating: num(row.snap_rating) ?? num(row.last_rating),
-          watched_day: row.snap_watched_day ?? row.entry_day ?? null,
+          watched_day:
+            consumptionDay(
+              { status: String(row.snap_status ?? ""), watchedAt: row.snap_watched_at, watchedEventAt: row.watched_event_at, rewatchedEventAt: row.rewatched_event_at },
+              TZ
+            ) ??
+            row.entry_day ??
+            null,
           added_day: row.snap_added_day ?? lastDay,
           updated_day: lastDay,
           rewatch_count: row.snap_rewatch_count === null || row.snap_rewatch_count === undefined ? Number(row.rewatches || 0) : Number(row.snap_rewatch_count),
