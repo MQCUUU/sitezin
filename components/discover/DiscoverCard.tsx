@@ -70,6 +70,7 @@ export function DiscoverCard({
 
         <MediaPosterActions
           title={title}
+          year={itemYear}
           inLibrary={Boolean(item.in_library)}
           status={item.library_status}
           favorite={Boolean(item.favorite)}

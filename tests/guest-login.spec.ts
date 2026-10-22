@@ -139,9 +139,10 @@ test.describe("Fase 1 — visitante", () => {
     const { libraryPosts, unauthorized } = track(page);
     await page.goto("/search?q=matrix");
 
-    const card = page.getByRole("group", { name: "Ações para Matrix" }).first();
+    // Fase 5: o nome acessível inclui o ano — antes havia 6 grupos "Ações para Matrix" iguais.
+    const card = page.getByRole("group", { name: "Ações para Matrix (1999)" });
     await page.locator('a.poster-link[href="/title/movie/603"]').first().hover();
-    await card.getByRole("button", { name: "Adicionar Matrix como Quero assistir" }).click();
+    await card.getByRole("button", { name: "Adicionar Matrix (1999) como Quero assistir" }).click();
 
     await expect(toast(page, "Entre para salvar")).toContainText("adicionar “Matrix” à sua biblioteca");
     expect(libraryPosts).toEqual([]);

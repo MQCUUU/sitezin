@@ -81,6 +81,45 @@ const inFlight =
     Promise<any>
   >();
 
+/*
+ * Fase 5 — ponte proxy → renderização. O proxy confere se o título/pessoa/
+ * episódio existe (404 real, lib/resource-exists.ts) com o MESMO fetch que a
+ * página usa logo em seguida; só que o fetch do proxy não passa pelo Data
+ * Cache do Next, então a página buscava tudo de novo (medido: 2 consultas ao
+ * TMDB por visita fria). Aqui guardamos por 60 s, no processo, a resposta
+ * BEM-SUCEDIDA — erro, timeout e 404 nunca entram (lançam antes). Dados do
+ * TMDB são públicos (nada por usuário). `globalThis`: proxy e páginas são
+ * bundles separados no mesmo processo. Guardamos o texto e devolvemos um
+ * objeto novo a cada uso, como o Data Cache (ninguém altera o de outro).
+ */
+const RECENT_TTL_MS = 60_000;
+const RECENT_MAX = 50;
+
+type RecentEntry = { text: string; until: number };
+
+const recentStore = globalThis as typeof globalThis & {
+  __mcTmdbRecent?: Map<string, RecentEntry>;
+};
+const recent = (recentStore.__mcTmdbRecent ??= new Map<string, RecentEntry>());
+
+function readRecent(key: string): unknown {
+  const hit = recent.get(key);
+  if (!hit) return undefined;
+  if (hit.until <= Date.now()) {
+    recent.delete(key);
+    return undefined;
+  }
+  return JSON.parse(hit.text);
+}
+
+function rememberRecent(key: string, text: string) {
+  if (recent.size >= RECENT_MAX) {
+    const oldest = recent.keys().next().value;
+    if (oldest !== undefined) recent.delete(oldest);
+  }
+  recent.set(key, { text, until: Date.now() + RECENT_TTL_MS });
+}
+
 function sleep(
   ms: number
 ) {
@@ -167,6 +206,12 @@ async function tmdb(
    */
   const requestKey =
     `${path}|${revalidate}`;
+
+  const remembered = readRecent(requestKey);
+
+  if (remembered !== undefined) {
+    return remembered;
+  }
 
   const existing =
     inFlight.get(
@@ -288,7 +333,10 @@ async function tmdb(
             );
           }
 
-          return await response.json();
+          const text = await response.text();
+          const data = JSON.parse(text);
+          rememberRecent(requestKey, text);
+          return data;
         } catch (error) {
           const timeoutError =
             error instanceof
@@ -423,6 +471,17 @@ export async function translationsTMDB(
   return tmdb(`/${type}/${id}/translations`, {
     revalidate: TMDB_CACHE.DETAILS,
     tags: [`tmdb:${type}:${id}`],
+  });
+}
+
+/**
+ * Fase 5 — dados básicos de uma pessoa (metadata de compartilhamento e
+ * checagem de existência). Mesmo cache dos detalhes de título.
+ */
+export async function personTMDB(id: number | string) {
+  return tmdb(`/person/${id}?language=${getLanguage()}`, {
+    revalidate: TMDB_CACHE.DETAILS,
+    tags: [`tmdb:person:${id}`],
   });
 }
 

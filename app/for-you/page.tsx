@@ -1423,7 +1423,8 @@ export default function ForYouPage() {
         <Search />
       </div>
 
-      <main className="fy-page" data-rec-tool="for_you">
+      {/* Fase 5 (P2-10): <div> — o <main> é do layout raiz (antes havia um main dentro do outro). */}
+      <div className="fy-page" data-rec-tool="for_you">
 
         <section className="fy-hero">
           <div className="fy-hero-glow" />
@@ -2113,7 +2114,7 @@ export default function ForYouPage() {
           </>
         )}
 
-      </main>
+      </div>
 
       <MediaPreviewDialog
         open={Boolean(previewItem)}
@@ -2296,7 +2297,7 @@ function ShelfRow({
         </span>
       </div>
 
-      <CarouselRail className="fy-row">
+      <CarouselRail className="fy-row" label={shelf.title}>
         {shelf.results.map(
           (
             item:

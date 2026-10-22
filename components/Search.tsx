@@ -38,6 +38,7 @@ export function Search({ syncedQuery }: { syncedQuery?: string } = {}) {
     loading,
     searchState,
     focused,
+    errorKind,
     mediaResults,
     userResults,
     personResults,
@@ -92,7 +93,7 @@ export function Search({ syncedQuery }: { syncedQuery?: string } = {}) {
         <SearchEmptyState query={trimmedQuery} listboxId={listboxId} optionId={`${listboxId}-empty`} />
       )}
 
-      {focused && searchState === "error" && <SearchErrorState listboxId={listboxId} />}
+      {focused && searchState === "error" && <SearchErrorState listboxId={listboxId} kind={errorKind} />}
 
       {focused && searchState === "results" && (
         <div className="results universal-search-results mc-search-dropdown">

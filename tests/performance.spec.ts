@@ -42,7 +42,7 @@ test.describe("temporada sem busca duplicada", () => {
 
     await page.goto(`/title/tv/${TV}`);
     await expect(page.getByLabel("Selecionar temporada")).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByRole("button", { name: /Marcar episódio como assistido|Desmarcar episódio/ }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Marcar episódio 1 da temporada 1 como (não )?assistido$/ })).toBeVisible();
     await page.waitForLoadState("networkidle");
 
     expect(seasons).toEqual([`GET /api/tv/${TV}/season/1`]);

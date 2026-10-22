@@ -6,6 +6,7 @@ import type {
   CollectionResult,
   MediaResult,
   PersonResult,
+  SearchErrorKind,
   SearchState,
   SearchSuggestion,
   SearchTab,
@@ -74,6 +75,8 @@ export function useSearchSuggestions(syncedQuery?: string) {
   const [results, setResults] = useState<SearchSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  // Fase 5: o porquê da falha — 429 não é "sem conexão" (pendência da Fase 2).
+  const [errorKind, setErrorKind] = useState<SearchErrorKind>("unavailable");
   const [focused, setFocused] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
 
@@ -225,6 +228,7 @@ export function useSearchSuggestions(syncedQuery?: string) {
 
         if (!response.ok) {
           setResults([]);
+          setErrorKind(response.status === 429 ? "rate-limit" : "unavailable");
           setError(true);
           return;
         }
@@ -248,6 +252,8 @@ export function useSearchSuggestions(syncedQuery?: string) {
 
         console.error("Erro na busca universal:", err);
         setResults([]);
+        // fetch só lança (fora o abort) quando a requisição nem chegou ao servidor.
+        setErrorKind("network");
         setError(true);
       } finally {
         if (requestRef.current === controller) {
@@ -506,6 +512,7 @@ export function useSearchSuggestions(syncedQuery?: string) {
     results,
     loading,
     error,
+    errorKind,
     searchState,
     focused,
     activeIndex,

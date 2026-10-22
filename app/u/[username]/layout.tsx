@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { getDb } from "@/lib/db/neon";
+import { DEFAULT_SHARE_IMAGE } from "@/lib/share-metadata";
 
 /*
  * I1 — mesmo padrão de app/title/[type]/[id]/layout.tsx: a página em si
@@ -59,13 +60,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         title: heading,
         description,
         url: `/u/${profile.username}`,
-        images: profile.avatar_url ? [{ url: profile.avatar_url, alt: name }] : undefined,
+        // Fase 5: sem avatar, a imagem padrão do app (antes: card sem imagem).
+        images: [profile.avatar_url ? { url: profile.avatar_url, alt: name } : DEFAULT_SHARE_IMAGE],
       },
       twitter: {
         card: profile.avatar_url ? "summary" : "summary",
         title: heading,
         description,
-        images: profile.avatar_url ? [profile.avatar_url] : undefined,
+        images: [profile.avatar_url || DEFAULT_SHARE_IMAGE.url],
       },
     };
   } catch {

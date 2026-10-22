@@ -74,6 +74,7 @@ export function SearchMediaCard({
 
         <MediaPosterActions
           title={title}
+          year={year}
           inLibrary={Boolean(libraryItem)}
           status={libraryItem?.status}
           favorite={Boolean(libraryItem?.favorite)}

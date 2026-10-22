@@ -1327,6 +1327,7 @@ function ActionButtons({
     <MediaPosterActions
       inline={inline}
       title={item.title}
+      year={(item.media_type === "tv" ? item.first_air_date : item.release_date)?.slice(0, 4)}
       inLibrary
       status={item.status}
       favorite={Boolean(item.favorite)}

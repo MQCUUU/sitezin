@@ -30,6 +30,11 @@ import { MEDIA_STATUS_OPTIONS, mediaStatusLabel } from "@/lib/media-status";
 
 export type MediaPosterActionsProps = {
   title: string;
+  /**
+   * Fase 5 (P2-10): ano só para os nomes acessíveis — títulos homônimos
+   * ("Matrix" ×6 numa busca) viravam botões indistinguíveis no leitor de tela.
+   */
+  year?: string | number | null;
   inLibrary: boolean;
   status?: string | null;
   favorite?: boolean;
@@ -52,7 +57,8 @@ const MARGIN = 12;
 const GAP = 8;
 
 export function MediaPosterActions({
-  title,
+  title: visibleTitle,
+  year,
   inLibrary,
   status,
   favorite = false,
@@ -65,6 +71,7 @@ export function MediaPosterActions({
   onAddToList,
   inline = false,
 }: MediaPosterActionsProps) {
+  const title = year ? `${visibleTitle} (${year})` : visibleTitle;
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<MenuPosition | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);

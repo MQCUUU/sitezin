@@ -756,6 +756,14 @@ a.series-episode-row {
   color: var(--mc-color-danger);
 }
 
+/* Fase 5 (contraste): no tema claro o texto secundário é escuro, mas o botão fica sobre o scrim
+   escuro do hero (sempre claro-sobre-escuro, ver .mc-title-hero-layer acima) — dava ~1,3:1,
+   quase invisível. Segue a regra do scrim; hover/foco (vermelho) continuam valendo. */
+:root[data-theme="light"] .mc-title-hero-layer .title-remove-btn:not(:hover):not(:focus-visible) {
+  color: color-mix(in srgb, #f3f4f8 86%, transparent);
+  border-color: color-mix(in srgb, #f3f4f8 34%, transparent);
+}
+
 /* Fase 3: em telas estreitas os dois botões do hero ficam lado a lado com ~140px cada —
    "Remover da biblioteca" quebrava em 2–3 linhas. Lá o rótulo visível vira "Remover"
    (ícone de lixeira + nome acessível completo); a fonte não diminui. */

@@ -3,7 +3,8 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
-export function CarouselRail({ children, className = "" }: { children: ReactNode; className?: string }) {
+/** `label` (Fase 5): nome do carrossel nas setas — várias prateleiras na mesma página tinham setas com o mesmo nome. */
+export function CarouselRail({ children, className = "", label }: { children: ReactNode; className?: string; label?: string }) {
   const railRef = useRef<HTMLDivElement>(null);
   const [edges, setEdges] = useState({ start: true, end: false });
   const updateEdges = useCallback(() => {
@@ -56,8 +57,8 @@ export function CarouselRail({ children, className = "" }: { children: ReactNode
   }, [children, updateEdges]);
 
   return <div className="media-carousel">
-    <button type="button" className="media-carousel-arrow previous" aria-label="Ver títulos anteriores" disabled={edges.start} onClick={() => move(-1)}><ChevronLeft/></button>
+    <button type="button" className="media-carousel-arrow previous" aria-label={label ? `Ver títulos anteriores: ${label}` : "Ver títulos anteriores"} disabled={edges.start} onClick={() => move(-1)}><ChevronLeft/></button>
     <div ref={railRef} className={`media-carousel-rail ${className}`} onScroll={updateEdges}>{children}</div>
-    <button type="button" className="media-carousel-arrow next" aria-label="Ver próximos títulos" disabled={edges.end} onClick={() => move(1)}><ChevronRight/></button>
+    <button type="button" className="media-carousel-arrow next" aria-label={label ? `Ver próximos títulos: ${label}` : "Ver próximos títulos"} disabled={edges.end} onClick={() => move(1)}><ChevronRight/></button>
   </div>;
 }

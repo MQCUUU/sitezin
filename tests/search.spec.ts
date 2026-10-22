@@ -145,4 +145,16 @@ test.describe("Fase 2 — busca", () => {
     await expect(page.getByText("Não foi possível buscar agora")).toBeVisible();
     await expect(page.getByText(/Nenhum resultado/)).toHaveCount(0);
   });
+
+  // Fase 5: limite de buscas (429) não é falha de conexão.
+  test("429 nas sugestões: 'muitas buscas', nunca 'verifique sua conexão'", async ({ page }) => {
+    await page.route("**/api/search/suggest*", (route) => route.fulfill({ status: 429, contentType: "application/json", body: "{}" }));
+    await page.goto("/discover");
+    const box = page.getByRole("combobox").first();
+    await box.click();
+    await box.fill("limite de busca");
+    await expect(page.getByText("Muitas buscas em pouco tempo")).toBeVisible();
+    await expect(page.getByText("Aguarde um momento e tente novamente.")).toBeVisible();
+    await expect(page.getByText(/Verifique sua conexão/)).toHaveCount(0);
+  });
 });

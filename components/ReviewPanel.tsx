@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import {
   Check,
   MessageSquare,
@@ -93,6 +93,8 @@ export function ReviewPanel({
   );
 
   const [review, setReview] = useState(initialReview || "");
+  // Fase 5 (P2-10): ids para ligar os campos aos textos visíveis que já os descrevem.
+  const fieldId = useId();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [scores, setScores] = useState<Record<string, number | "">>({});
@@ -531,6 +533,8 @@ export function ReviewPanel({
               step="0.1"
               value={rating}
               placeholder="0.0"
+              aria-label="Sua nota, de 0 a 10"
+              aria-describedby={`${fieldId}-rating-hint`}
               onChange={(event) =>
                 setRating(
                   event.target.value
@@ -545,7 +549,7 @@ export function ReviewPanel({
 
           </div>
 
-          <div className="rating-hint">
+          <div className="rating-hint" id={`${fieldId}-rating-hint`}>
             <span>
               Você pode usar qualquer decimal.
             </span>
@@ -689,6 +693,7 @@ export function ReviewPanel({
                             min="0"
                             max="10"
                             step="0.1"
+                            aria-label={`Nota de ${category.name}, de 0 a 10`}
                             value={
                               numericValue
                             }
@@ -765,6 +770,7 @@ export function ReviewPanel({
                   )
                 }
                 placeholder="Ex.: História"
+                aria-label="Nome da nova categoria"
                 onKeyDown={(event) => {
                   if (
                     event.key ===
@@ -811,11 +817,11 @@ export function ReviewPanel({
           </div>
 
           <div>
-            <strong>
+            <strong id={`${fieldId}-opinion`}>
               Minha opinião
             </strong>
 
-            <span>
+            <span id={`${fieldId}-opinion-hint`}>
               O que você achou desse
               filme ou série?
             </span>
@@ -826,6 +832,8 @@ export function ReviewPanel({
         <textarea
           value={review}
           maxLength={2000}
+          aria-labelledby={`${fieldId}-opinion`}
+          aria-describedby={`${fieldId}-opinion-hint`}
           onChange={(event) => {
             setReview(
               event.target.value

@@ -68,6 +68,9 @@ export type SearchTab = "all" | "movies" | "actors" | "users";
  */
 export type SearchState = "idle" | "loading" | "results" | "no-results" | "error";
 
+/** Fase 5: por que a busca falhou — cada caso tem a sua mensagem. */
+export type SearchErrorKind = "rate-limit" | "network" | "unavailable";
+
 /** Stable key/id shared between React `key` and the DOM `id` used for
  * `aria-activedescendant` — one function so they can never drift apart. */
 export function getResultKey(item: SearchSuggestion): string {

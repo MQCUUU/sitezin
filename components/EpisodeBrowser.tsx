@@ -72,6 +72,7 @@ function EpisodeRow({
   onToggleSpoiler,
   onToggleWatched,
   href,
+  seasonNumber,
 }: {
   episode: EpisodeSummary;
   isWatched: boolean;
@@ -81,17 +82,29 @@ function EpisodeRow({
   onToggleSpoiler: () => void;
   onToggleWatched: () => void;
   href: string;
+  seasonNumber: number;
 }) {
   const status = getEpisodeReleaseStatus(episode.air_date);
   const isFuture = status === "future";
   const isUnknown = status === "unknown";
   const hideOverview = isFuture && !spoilerRevealed;
 
+  /*
+   * Fase 5 (P2-10): todo botão de episódio diz QUAL episódio — antes, 20 botões
+   * "Marcar episódio como assistido" iguais para o leitor de tela. Número (não o
+   * título): títulos se repetem ("Episódio 1", "Piloto"…), o número não.
+   */
+  const which = `episódio ${episode.episode_number} da temporada ${seasonNumber}`;
   const watchDisabledReason = isFuture
     ? "Episódio ainda não foi lançado"
     : isUnknown
       ? "Data de estreia indisponível"
       : null;
+  const watchLabel = watchDisabledReason
+    ? `${watchDisabledReason}: ${which}`
+    : isWatched
+      ? `Marcar ${which} como não assistido`
+      : `Marcar ${which} como assistido`;
 
   return (
     <article className={`episode-row ${isWatched ? "watched" : ""}`}>
@@ -153,10 +166,7 @@ function EpisodeRow({
           disabled={saving || !!watchDisabledReason}
           title={watchDisabledReason || undefined}
           onClick={onToggleWatched}
-          aria-label={
-            watchDisabledReason ||
-            (isWatched ? "Desmarcar episódio" : "Marcar episódio como assistido")
-          }
+          aria-label={watchLabel}
         >
           <Check size={16} aria-hidden="true" />
         </button>
@@ -495,6 +505,7 @@ export function EpisodeBrowser({
               onToggleSpoiler={() => toggleSpoiler(episode.episode_number)}
               onToggleWatched={() => toggle(episode)}
               href={`/title/tv/${tvId}/season/${season}/episode/${episode.episode_number}`}
+              seasonNumber={season}
             />
           ))}
         </div>

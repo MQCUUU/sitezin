@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { validateSessionData } from "@neondatabase/auth/server";
 
 import { getAuthCookieSecret } from "@/lib/auth/cookie-secret";
+import { episodeExists, listAccess, personExists, profileExists, titleExists } from "@/lib/resource-exists";
 
 /*
  * ==========================================
@@ -157,6 +158,106 @@ async function isSessionAuthenticated(request: NextRequest): Promise<boolean> {
   }
 }
 
+/*
+ * ==========================================
+ * FASE 5 (P3-05) — 404 REAL PARA RECURSO INEXISTENTE
+ * ==========================================
+ *
+ * Com app/loading.tsx na raiz, a página responde em streaming e o 200 já saiu
+ * quando ela chama notFound() ("soft 404"). Aqui, antes de renderizar, as
+ * rotas dinâmicas públicas checam se o recurso existe (lib/resource-exists):
+ * comprovadamente inexistente → a resposta é a página 404 do app com status
+ * 404. Falha temporária (TMDB/banco fora, timeout) → segue normal.
+ *
+ * Só em GET/HEAD de documento: navegação client-side (cabeçalho `rsc`) e prefetch
+ * continuam como antes (a página mostra o "não encontrado" dela).
+ */
+const NOT_FOUND_REWRITE = "/_mc/nao-encontrado";
+
+const TITLE_RE = /^\/title\/([^/]+)\/([^/]+)\/?$/;
+const EPISODE_RE = /^\/title\/tv\/([^/]+)\/season\/([^/]+)\/episode\/([^/]+)\/?$/;
+const PERSON_RE = /^\/person\/([^/]+)\/?$/;
+const PROFILE_RE = /^\/u\/([^/]+)\/?$/;
+const LIST_RE = /^\/lists\/([^/]+)\/?$/;
+
+function isDocumentRequest(request: NextRequest): boolean {
+  return (
+    (request.method === "GET" || request.method === "HEAD") && // HEAD: verificadores de link
+    !request.headers.get("rsc") &&
+    !request.headers.get("next-router-prefetch")
+  );
+}
+
+function decodeSegment(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Id do usuário pela assinatura local do session_data (sem rede).
+ * `null` = sem sessão nenhuma; `undefined` = há token mas não dá para saber
+ * o usuário sem consultar o Neon Auth (nesse caso não decidimos nada aqui).
+ */
+async function sessionUserId(request: NextRequest): Promise<string | null | undefined> {
+  const sessionDataCookie =
+    request.cookies.get("__Secure-neon-auth.local.session_data")?.value ||
+    request.cookies.get("neon-auth.local.session_data")?.value;
+
+  if (sessionDataCookie) {
+    try {
+      const result = await validateSessionData(sessionDataCookie, secret);
+      const id = result.valid ? result.payload?.user?.id : null;
+      if (id) return String(id);
+    } catch {
+      // assinatura inválida/expirada: trata como "não sei"
+    }
+  }
+
+  const hasToken = [
+    "__Secure-neon-auth.session_token",
+    "neon-auth.session_token",
+    "__Secure-better-auth.session_token",
+    "better-auth.session_token",
+  ].some((name) => request.cookies.get(name)?.value);
+
+  return hasToken || sessionDataCookie ? undefined : null;
+}
+
+async function isMissingResource(request: NextRequest, pathname: string): Promise<boolean> {
+  let match: RegExpMatchArray | null;
+
+  if ((match = pathname.match(EPISODE_RE))) {
+    return (await episodeExists(match[1], match[2], match[3])) === false;
+  }
+  if ((match = pathname.match(TITLE_RE))) {
+    return (await titleExists(match[1], match[2])) === false;
+  }
+  if ((match = pathname.match(PERSON_RE))) {
+    return (await personExists(match[1])) === false;
+  }
+  if ((match = pathname.match(PROFILE_RE))) {
+    return (await profileExists(decodeSegment(match[1]))) === false;
+  }
+  if ((match = pathname.match(LIST_RE))) {
+    const access = await listAccess(decodeSegment(match[1]));
+    if (!access) return false; // banco fora: a página decide
+    if (!access.exists) return true;
+    if (access.isPublic) return false;
+    /*
+     * Lista privada: a política do app é "privada ≡ inexistente" para quem não
+     * é o dono (mesmo 404 da API /api/lists/items). Quando não dá para saber o
+     * usuário sem rede, segue para a página (que aplica a mesma regra).
+     */
+    const viewer = await sessionUserId(request);
+    if (viewer === undefined) return false;
+    return viewer !== access.ownerId;
+  }
+  return false;
+}
+
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
@@ -170,6 +271,9 @@ export async function proxy(request: NextRequest) {
 
   // Páginas públicas comuns não precisam de verificação de autenticação no middleware
   if (!isPrivate && !isGuestOnly) {
+    if (isDocumentRequest(request) && (await isMissingResource(request, pathname))) {
+      return NextResponse.rewrite(new URL(NOT_FOUND_REWRITE, request.url), { status: 404 });
+    }
     return NextResponse.next({ request });
   }
 

@@ -1,5 +1,7 @@
 import { AlertTriangle, Sparkles } from "lucide-react";
 
+import type { SearchErrorKind } from "./types";
+
 export type SearchEmptyStateProps = {
   query: string;
   listboxId: string;
@@ -34,6 +36,26 @@ export function SearchEmptyState({ query, listboxId, optionId }: SearchEmptyStat
 
 export type SearchErrorStateProps = {
   listboxId: string;
+  kind?: SearchErrorKind;
+};
+
+/*
+ * Fase 5 — cada falha com a sua causa (antes, tudo virava "Verifique sua
+ * conexão", inclusive o limite de buscas, HTTP 429).
+ */
+const ERROR_COPY: Record<SearchErrorKind, { title: string; hint: string }> = {
+  "rate-limit": {
+    title: "Muitas buscas em pouco tempo",
+    hint: "Aguarde um momento e tente novamente.",
+  },
+  network: {
+    title: "Não foi possível buscar agora",
+    hint: "Verifique sua conexão e tente novamente.",
+  },
+  unavailable: {
+    title: "Não foi possível buscar agora",
+    hint: "A busca está indisponível no momento. Tente novamente em instantes.",
+  },
 };
 
 /**
@@ -42,7 +64,9 @@ export type SearchErrorStateProps = {
  * failed fetch visually distinct instead of silently pretending nothing
  * was found.
  */
-export function SearchErrorState({ listboxId }: SearchErrorStateProps) {
+export function SearchErrorState({ listboxId, kind = "unavailable" }: SearchErrorStateProps) {
+  const copy = ERROR_COPY[kind];
+
   return (
     <div className="results" role="listbox" id={listboxId}>
       <div className="search-smart-empty" role="option" aria-selected="false">
@@ -51,8 +75,8 @@ export function SearchErrorState({ listboxId }: SearchErrorStateProps) {
         </span>
 
         <span>
-          <strong>Não foi possível buscar agora</strong>
-          <small>Verifique sua conexão e tente novamente.</small>
+          <strong>{copy.title}</strong>
+          <small>{copy.hint}</small>
         </span>
       </div>
     </div>

@@ -218,7 +218,7 @@ export default function AssistantPage() {
             MyCatalog AI
           </div>
 
-          <h1>
+          <h1 id="ai-assistant-title">
             O que você quer assistir?
           </h1>
 
@@ -231,7 +231,10 @@ export default function AssistantPage() {
       </section>
 
       <section className="section ai-chat-box panel">
+        {/* Fase 5 (P2-10): o título visível é o rótulo; o atalho de teclado é a descrição. */}
         <textarea
+          aria-labelledby="ai-assistant-title"
+          aria-describedby="ai-assistant-hint"
           value={
             message
           }
@@ -258,7 +261,7 @@ export default function AssistantPage() {
         />
 
         <div className="ai-chat-actions">
-          <span className="muted">
+          <span className="muted" id="ai-assistant-hint">
             Enter para enviar · Shift+Enter para quebrar linha
           </span>
 
