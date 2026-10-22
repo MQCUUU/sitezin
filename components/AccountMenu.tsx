@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/account-menu.css";
 import { fetchProfileMe, invalidateProfileMe } from "@/lib/profile-me";
 import {
   useEffect,
@@ -33,30 +35,6 @@ type AccountUser = {
       any
     >;
 };
-
-interface UserMetadata {
-  display_name?: string;
-  full_name?: string;
-  name?: string;
-  avatar_url?: string;
-  picture?: string;
-}
-
-interface AccountMenuState {
-  user: AccountUser | null;
-  ready: boolean;
-  open: boolean;
-}
-
-interface AuthSession {
-  user: AccountUser | null;
-}
-
-interface AuthSubscription {
-  subscription: {
-    unsubscribe(): void;
-  };
-}
 
 function displayName(
   user: AccountUser

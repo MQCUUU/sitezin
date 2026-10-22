@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/search-suggest.css";
 import { useId } from "react";
 import { Drama, Film, Layers3, UserRound, Users } from "lucide-react";
 

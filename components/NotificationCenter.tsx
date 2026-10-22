@@ -1,4 +1,6 @@
 "use client";
+
+import "@/styles/features/account-menu.css";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell, CalendarClock, Check, CheckCheck, Tv2 } from "lucide-react";

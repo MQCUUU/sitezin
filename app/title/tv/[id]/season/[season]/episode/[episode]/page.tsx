@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/episode.css";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -54,7 +56,7 @@ export default function EpisodePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const { handleError } = useLibraryAuth();
+  const { handleError, state: authState } = useLibraryAuth();
   const [releasedCount, setReleasedCount] = useState(0);
   const [contentTab, setContentTab] = useState<"details" | "journal">("details");
   const [spoilerRevealed, setSpoilerRevealed] = useState(false);
@@ -64,6 +66,9 @@ export default function EpisodePage() {
       setLoading(false);
       return;
     }
+
+    // Fase 7: espera saber se há sessão — visitante não consulta a biblioteca (evita o 401 no console).
+    if (authState === "loading") return;
 
     let cancelled = false;
 
@@ -77,10 +82,12 @@ export default function EpisodePage() {
         apiFetch(`/api/tv/${params.id}/season/${seasonNumber}`),
         apiFetch(`/api/tmdb/tv/${params.id}`),
         // Visitante (401) não tem biblioteca: é ausência, não erro.
-        apiFetch(`/api/library?tmdb_id=${params.id}&type=tv`, { cache: "no-store" }).catch((error) => {
-          if (isApiError(error, "UNAUTHENTICATED")) return null;
-          throw error;
-        }),
+        authState === "guest"
+          ? Promise.resolve(null)
+          : apiFetch(`/api/library?tmdb_id=${params.id}&type=tv`, { cache: "no-store" }).catch((error) => {
+              if (isApiError(error, "UNAUTHENTICATED")) return null;
+              throw error;
+            }),
       ]);
 
       const episodesList: EpisodeSummary[] = Array.isArray(seasonData?.episodes) ? seasonData.episodes : [];
@@ -121,7 +128,7 @@ export default function EpisodePage() {
     return () => {
       cancelled = true;
     };
-  }, [params.id, seasonNumber, episodeNumber, paramsValid]);
+  }, [params.id, seasonNumber, episodeNumber, paramsValid, authState]);
 
   async function save(watched: boolean) {
     if (!library?.id) return;
@@ -191,8 +198,8 @@ export default function EpisodePage() {
           <div className="episode-detail-meta">
             {episode.air_date || "Sem data"}
             {episode.runtime ? ` · ${episode.runtime} min` : ""}
-            {episode.vote_average ? <span><Star size={13} /> {Number(episode.vote_average).toFixed(1)}</span> : null}
-            {isFuture && <span className="episode-future-badge"><Clock size={11} aria-hidden="true" /> Futuro</span>}
+            {episode.vote_average ? <span><Star size={14} /> {Number(episode.vote_average).toFixed(1)}</span> : null}
+            {isFuture && <span className="episode-future-badge"><Clock size={12} aria-hidden="true" /> Futuro</span>}
           </div>
           {hideOverview ? (
             <p className="episode-spoiler-hidden">
@@ -211,7 +218,7 @@ export default function EpisodePage() {
       {contentTab === "journal" && (library ? <div className="episode-journal panel">
         <h2>Seu progresso</h2>
         <label>Data assistida<input type="date" value={watchedAt} onChange={(event) => setWatchedAt(event.target.value)} /></label>
-        <label className="episode-rewatch"><input type="checkbox" checked={rewatch} onChange={(event) => setRewatch(event.target.checked)} /><RotateCcw size={15} /> Foi uma reassistida</label>
+        <label className="episode-rewatch"><input type="checkbox" checked={rewatch} onChange={(event) => setRewatch(event.target.checked)} /><RotateCcw size={16} /> Foi uma reassistida</label>
         <label>Comentário<textarea maxLength={4000} value={comment} onChange={(event) => setComment(event.target.value)} placeholder="O que achou deste episódio?" /></label>
         {watchActionDisabled && !progress?.watched && (
           <p className="episode-journal-locked">{watchDisabledReason} — ainda não é possível marcar este episódio como assistido.</p>
@@ -224,7 +231,7 @@ export default function EpisodePage() {
             title={watchActionDisabled && !progress?.watched ? watchDisabledReason || undefined : undefined}
             onClick={() => save(true)}
           >
-            {saving ? <Loader2 className="spin" size={15} /> : progress?.watched ? <Save size={15} /> : <Check size={15} />} {progress?.watched ? "Salvar alterações" : "Marcar como assistido"}
+            {saving ? <Loader2 className="spin" size={16} /> : progress?.watched ? <Save size={16} /> : <Check size={16} />} {progress?.watched ? "Salvar alterações" : "Marcar como assistido"}
           </button>
         </div>
       </div> : <div className="panel episode-journal">Adicione a série à biblioteca para registrar este episódio.</div>)}

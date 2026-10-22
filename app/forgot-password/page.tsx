@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/auth.css";
 import {
   FormEvent,
   useState,
@@ -137,7 +139,7 @@ export default function ForgotPasswordPage() {
         {sent ? (
           <div className="auth-success-message">
             <Send
-              size={21}
+              size={22}
             />
 
             <strong>

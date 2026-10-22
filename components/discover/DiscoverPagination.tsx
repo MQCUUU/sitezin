@@ -1,3 +1,4 @@
+import "@/styles/features/discover.css";
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 

@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/home-smart.css";
 import { apiFetch, errorMessage } from "@/lib/api-client";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 import { useEffect, useState } from "react";
@@ -312,11 +314,11 @@ export function SmartQueue({ genres }: { genres: string[] }) {
 
             <div className="smart-queue-actions">
               <button type="button" className="btn primary" onClick={() => run(false)} disabled={loading}>
-                {loading ? <Loader2 size={15} className="spin" /> : <Sparkles size={15} />}
+                {loading ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
                 Sugerir
               </button>
               <button type="button" className="btn" onClick={() => run(true)} disabled={loading}>
-                <Shuffle size={15} />
+                <Shuffle size={16} />
                 Surpreenda-me
               </button>
             </div>
@@ -378,7 +380,7 @@ export function SmartQueue({ genres }: { genres: string[] }) {
                             {result.vote_average ? (
                               <>
                                 {result.year ? " · " : ""}
-                                <Star size={11} fill="currentColor" aria-hidden="true" /> {Number(result.vote_average).toFixed(1)}
+                                <Star size={12} fill="currentColor" aria-hidden="true" /> {Number(result.vote_average).toFixed(1)}
                               </>
                             ) : null}
                             {duration ? ` · ${duration}` : ""}

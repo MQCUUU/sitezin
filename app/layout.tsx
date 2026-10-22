@@ -6,14 +6,12 @@ import "@/styles/overlays.css";
 import "@/styles/shell.css";
 import "@/styles/topbar.css";
 import "@/styles/media-card.css";
-import "@/styles/home.css";
 import "@/styles/home-depth.css";
 import "@/styles/discover.css";
 import "@/styles/search.css";
 import "@/styles/title.css";
 import "@/styles/media-preview.css";
 import "@/styles/media-unified.css";
-import "@/styles/settings-clean.css";
 // Fase 4: insights/calendar/diary.css vão só nas rotas que os usam (não no Login, Home, Busca…).
 import "@/styles/library.css";
 import "@/styles/lists.css";

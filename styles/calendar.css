@@ -221,7 +221,7 @@
 .cal-hero-personal {
   width: fit-content;
   padding: 5px 12px;
-  border-radius: 999px;
+  border-radius: var(--mc-radius-pill);
   font-size: var(--mc-fs-sm);
   font-weight: 650;
   background: color-mix(in srgb, var(--accent) 45%, rgba(0, 0, 0, 0.3));
@@ -417,7 +417,7 @@
   gap: 12px;
   justify-items: start;
   padding: 26px 24px;
-  border-radius: 18px;
+  border-radius: var(--mc-radius-lg);
   border: 1px dashed color-mix(in srgb, var(--text) 16%, transparent);
   background: color-mix(in srgb, var(--text) 3%, transparent);
 }
@@ -492,7 +492,7 @@
   margin-left: auto;
   min-width: 22px;
   padding: 1px 7px;
-  border-radius: 999px;
+  border-radius: var(--mc-radius-pill);
   font-size: var(--mc-fs-xs);
   font-weight: 700;
   text-align: center;
@@ -513,7 +513,7 @@
   width: fit-content;
   padding: 4px 8px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--mc-radius-sm);
   background: transparent;
   color: var(--accent);
   font-size: var(--mc-fs-sm);
@@ -686,7 +686,7 @@
 .cal-skel-line {
   width: 180px;
   height: 20px;
-  border-radius: 8px;
+  border-radius: var(--mc-radius-sm);
 }
 
 .cal-skel-card {
@@ -716,7 +716,7 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 620px) {
   .cal-controls {
     gap: 10px;
   }

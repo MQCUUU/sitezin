@@ -1,3 +1,4 @@
+import "@/styles/features/search-page.css";
 import { SearchMediaCard } from "./SearchMediaCard";
 import type { LibraryState, SearchItem } from "./types";
 

@@ -610,7 +610,6 @@ export function buildInsights(input: InsightsInput, raw: Partial<InsightsParams>
 
   const titles = guard("titles", () => {
     const movies = consumed.filter((c) => c.row.type === "movie");
-    const seriesConsumed = consumed.filter((c) => c.row.type === "tv");
     const runtimes = movies.map((c) => c.row.runtime).filter((r): r is number => Boolean(r && r > 0));
     const movieRatings = movies.map((c) => c.row.rating).filter((r): r is number => r !== null);
     const genreTop = buckets(movies, (c) => c.row.genres, () => null)[0];

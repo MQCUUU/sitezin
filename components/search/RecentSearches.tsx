@@ -1,3 +1,4 @@
+import "@/styles/features/search-suggest.css";
 import { useEffect, useRef } from "react";
 import { Clock, Film, Layers3, Search as SearchIcon, UserRound, X } from "lucide-react";
 

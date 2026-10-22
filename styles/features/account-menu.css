@@ -1,0 +1,299 @@
+/*
+ * Menu da conta, notificações e popovers do topo.
+ *
+ * Fase 7: reunido de app/globals.css (mesma ordem de cascata).
+ * Carregado pelos componentes que usam estas classes, não pelo layout raiz.
+ */
+
+.account-slot-loading {
+    width: 72px;
+    height: 38px;
+}
+.account-auth-actions {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+.account-auth-actions .btn {
+    padding: 0 12px;
+}
+.account-avatar-button {
+    min-height: 40px;
+    padding: 3px 7px 3px 3px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid var(--border);
+    border-radius: var(--mc-radius-pill);
+    background: color-mix(in srgb, var(--panel) 94%, transparent);
+    color: var(--muted);
+    box-shadow: 0 8px 25px rgba(0,0,0,.16);
+    backdrop-filter: blur(14px);
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease, transform .15s ease;
+}
+.account-avatar-button:hover,
+.account-avatar-button.active {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+    color: var(--text);
+}
+.account-dropdown-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.account-dropdown-user strong,
+.account-dropdown-user span {
+    display: block;
+}
+.account-dropdown-user strong {
+    overflow: hidden;
+    font-size: var(--mc-fs-xs);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.account-dropdown-user > div > span {
+    margin-top: 3px;
+    overflow: hidden;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.account-dropdown-divider {
+    height: 1px;
+    background: var(--border);
+}
+.account-dropdown > a,
+.account-dropdown > button {
+    width: 100%;
+    min-height: 37px;
+    padding: 0 9px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--muted);
+    text-decoration: none;
+    text-align: left;
+    font: inherit;
+    font-size: var(--mc-fs-xs);
+    font-weight: 750;
+    cursor: pointer;
+}
+.account-dropdown > a:hover,
+.account-dropdown > button:hover {
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
+    color: var(--text);
+}
+.account-dropdown .account-signout {
+    color: #ef6a6a;
+}
+@media (max-width: 620px) {
+    .account-signup-button {
+        display: none !important;
+    }
+}
+@media (max-width: 620px) {
+    .account-login-button {
+        min-width: 38px;
+        padding: 0 9px !important;
+    }
+}
+/* Menu de conta enxuto */
+.account-dropdown {
+    width: 230px;
+    padding: 8px;
+    border-radius: 14px;
+    box-shadow: var(--shadow-popover)
+}
+.account-dropdown-user {
+    padding: 9px
+}
+.account-dropdown-user>div {
+    min-width: 0
+}
+.account-dropdown-user strong,.account-dropdown-user span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap
+}
+.account-dropdown>a,.account-signout {
+    min-height: 40px;
+    padding: 0 10px;
+    border-radius: 9px;
+    font-size: var(--mc-fs-xs);
+    font-weight: 750
+}
+.account-dropdown-divider {
+    margin: 6px 2px
+}
+.account-signout {
+    color: var(--danger)
+}
+.notification-bell {
+    position: relative;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--control-border);
+    border-radius: 50%;
+    background: color-mix(in srgb,var(--panel) 94%,transparent);
+    color: var(--text);
+    box-shadow: 0 8px 24px #0003;
+    backdrop-filter: blur(16px)
+}
+.notification-bell.active {
+    border-color: var(--accent);
+    color: var(--accent)
+}
+.notification-bell b {
+    position: absolute;
+    top: -4px;
+    right: -5px;
+    min-width: 19px;
+    height: 19px;
+    padding: 0 5px;
+    display: grid;
+    place-items: center;
+    border: 2px solid var(--bg);
+    border-radius: var(--mc-radius-pill);
+    background: var(--danger);
+    color: #fff;
+    font-size: var(--mc-fs-xs)
+}
+.notification-dropdown {
+    position: absolute;
+    top: 49px;
+    right: 0;
+    width: min(390px,calc(100vw - 24px));
+    overflow: hidden;
+    border: 1px solid var(--control-border);
+    border-radius: var(--mc-radius-lg);
+    background: color-mix(in srgb,var(--panel) 98%,transparent);
+    box-shadow: var(--shadow-popover);
+    backdrop-filter: blur(20px)
+}
+.notification-dropdown>header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 15px;
+    border-bottom: 1px solid var(--border)
+}
+.notification-dropdown>header strong,.notification-dropdown>header small {
+    display: block
+}
+.notification-dropdown>header small {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs)
+}
+.notification-dropdown>header button {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border: 0;
+    background: transparent;
+    color: var(--accent);
+    font-size: var(--mc-fs-xs);
+    font-weight: 800
+}
+.notification-list {
+    max-height: min(58vh,470px);
+    overflow-y: auto
+}
+.notification-list article {
+    display: grid;
+    grid-template-columns: 34px minmax(0,1fr) 32px;
+    align-items: start;
+    gap: 9px;
+    padding: 12px 13px;
+    border-bottom: 1px solid color-mix(in srgb,var(--border) 70%,transparent)
+}
+.notification-list article.unread {
+    background: color-mix(in srgb,var(--accent) 7%,transparent)
+}
+.notification-list article>span {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    background: color-mix(in srgb,var(--accent) 13%,transparent);
+    color: var(--accent)
+}
+.notification-list article a {
+    min-width: 0
+}
+.notification-list article strong,.notification-list article p,.notification-list article small {
+    display: block;
+    margin: 0
+}
+.notification-list article strong {
+    font-size: var(--mc-fs-xs)
+}
+.notification-list article p {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs)
+}
+.notification-list article small {
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs)
+}
+.notification-list article>button {
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--muted);
+    position: relative
+}
+.notification-list article>button::before {
+    content: "";
+    position: absolute;
+    inset: -4px
+}
+.notification-list article>button:hover {
+    background: var(--panel2);
+    color: var(--accent)
+}
+.notification-empty {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    padding: 35px 20px;
+    color: var(--muted);
+    text-align: center
+}
+.notification-empty strong {
+    color: var(--text);
+    font-size: var(--mc-fs-xs)
+}
+.notification-empty small {
+    font-size: var(--mc-fs-xs)
+}
+.notification-settings-link {
+    display: block;
+    padding: 12px;
+    text-align: center;
+    color: var(--accent);
+    font-size: var(--mc-fs-xs);
+    font-weight: 800
+}
+@media (max-width:620px) {
+    .notification-dropdown {
+        position: fixed;
+        top: 60px;
+        right: 10px;
+        left: 10px;
+        width: auto;
+        max-height: calc(100dvh - 150px)
+    }
+}

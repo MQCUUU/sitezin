@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/states.css";
 import React from "react";
 import {
   AlertTriangle,

@@ -1,0 +1,72 @@
+/*
+ * Aviso de @ pendente.
+ *
+ * Fase 7: reunido de app/globals.css (mesma ordem de cascata).
+ * Carregado pelos componentes que usam estas classes, não pelo layout raiz.
+ */
+
+.username-gate {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(5,7,11,.92);
+    backdrop-filter: blur(18px)
+}
+.username-gate-icon {
+    width: 52px;
+    height: 52px;
+    display: grid;
+    place-items: center;
+    border-radius: 15px;
+    background: color-mix(in srgb,var(--accent) 15%,transparent);
+    color: var(--accent)
+}
+.username-gate-card h2 {
+    margin: 0;
+    font-size: 25px
+}
+.username-gate-card>p {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.6
+}
+.username-gate-card label {
+    display: grid;
+    gap: 7px;
+    font-size: var(--mc-fs-xs);
+    font-weight: 800
+}
+.username-gate-card label>div {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background: var(--bg);
+    overflow: hidden
+}
+.username-gate-card label b {
+    padding-left: 12px;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+    white-space: nowrap
+}
+.username-gate-card input {
+    min-width: 0;
+    flex: 1;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--text);
+    padding: 12px 10px
+}
+.username-gate-card .btn {
+    justify-content: center
+}
+.username-gate-card>small {
+    text-align: center;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs)
+}

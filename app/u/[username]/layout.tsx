@@ -1,3 +1,4 @@
+import "@/styles/features/profile.css";
 import type { Metadata } from "next";
 
 import { getDb } from "@/lib/db/neon";

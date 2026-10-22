@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/profile.css";
 import { apiFetch, errorMessage } from "@/lib/api-client";
 import { ChangeEvent, useEffect, useState } from "react";
 import { Camera, Loader2, Trash2, Upload } from "lucide-react";
@@ -114,12 +116,12 @@ export function AvatarSettings() {
       <p>O MyCatalog recorta e redimensiona automaticamente para 512 × 512, sem deformar.</p>
       <div>
         <label className="btn primary">
-          {saving ? <Loader2 className="spin" size={15} /> : <Upload size={15} />}
+          {saving ? <Loader2 className="spin" size={16} /> : <Upload size={16} />}
           Escolher imagem
           <input type="file" accept="image/jpeg,image/png,image/webp" disabled={saving} onChange={upload} />
         </label>
         {url && <button className="btn" disabled={saving} onClick={remove}>
-          <Trash2 size={15} /> Remover
+          <Trash2 size={16} /> Remover
         </button>}
       </div>
       <small>JPG, PNG ou WebP · máximo de 5 MB</small>

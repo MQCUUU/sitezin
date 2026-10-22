@@ -2,21 +2,14 @@ import { MediaPosterActions } from "@/components/media/MediaPosterActions";
 import { MediaPosterTags } from "@/components/media/MediaBadges";
 import Link from "next/link";
 import {
-  Check,
-  ChevronDown,
-  Eye,
-  Heart,
-  Loader2,
-  Plus,
   Star,
-  Trash2,
 } from "lucide-react";
 
-import { MediaCard, MediaCardActions, MediaCardImage, MediaCardMeta } from "@/components/media";
+import { MediaCard, MediaCardImage, MediaCardMeta } from "@/components/media";
 import { Poster } from "@/components/Poster";
 import { posterLoading } from "@/lib/poster-loading";
 
-import { DISCOVER_STATUS_OPTIONS, getStatusLabel, type DiscoverItem } from "./types";
+import { type DiscoverItem } from "./types";
 
 export type DiscoverCardProps = {
   item: DiscoverItem;
@@ -41,10 +34,8 @@ export type DiscoverCardProps = {
 export function DiscoverCard({
   item,
   isProcessing,
-  isMenuOpen,
   onPreview,
   onAdd,
-  onToggleStatusMenu,
   onToggleFavorite,
   onUpdateStatus,
   onRequestRemove,
@@ -52,7 +43,6 @@ export function DiscoverCard({
 }: DiscoverCardProps) {
   const title = item.title || item.name || "Sem título";
   const itemYear = (item.release_date || item.first_air_date || "").slice(0, 4);
-  const key = `${item.media_type}-${item.id}`;
 
   return (
     <MediaCard className="discover-card">

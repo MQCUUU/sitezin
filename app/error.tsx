@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/states.css";
 import {
   useEffect,
 } from "react";

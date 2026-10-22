@@ -1,3 +1,4 @@
+import "@/styles/features/title-detail.css";
 import Link from "next/link";
 import { CalendarDays, Clock3, Layers3, Play } from "lucide-react";
 

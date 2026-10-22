@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/person.css";
 import { MediaPosterTags } from "@/components/media/MediaBadges";
 import {
   useEffect,
@@ -632,7 +634,7 @@ export default function PersonPage() {
           <div className="person-hero-copy">
             <div className="person-kicker">
               <Sparkles
-                size={15}
+                size={16}
               />
 
               {translateDepartment(
@@ -769,7 +771,7 @@ export default function PersonPage() {
             {person.birthday && (
               <div className="person-info-row">
                 <Cake
-                  size={17}
+                  size={18}
                 />
 
                 <div>
@@ -789,7 +791,7 @@ export default function PersonPage() {
             {person.deathday && (
               <div className="person-info-row">
                 <CalendarDays
-                  size={17}
+                  size={18}
                 />
 
                 <div>
@@ -809,7 +811,7 @@ export default function PersonPage() {
             {person.place_of_birth && (
               <div className="person-info-row">
                 <MapPin
-                  size={17}
+                  size={18}
                 />
 
                 <div>
@@ -828,7 +830,7 @@ export default function PersonPage() {
 
             <div className="person-info-row">
               <BriefcaseBusiness
-                size={17}
+                size={18}
               />
 
               <div>
@@ -847,7 +849,7 @@ export default function PersonPage() {
             {careerYears && (
               <div className="person-info-row">
                 <Clapperboard
-                  size={17}
+                  size={18}
                 />
 
                 <div>
@@ -1170,7 +1172,7 @@ function PersonCreditCard({
             0 && (
             <span className="rating">
               <Star
-                size={11}
+                size={12}
                 fill="currentColor"
               />
 

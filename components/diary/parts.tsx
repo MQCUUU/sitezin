@@ -100,12 +100,12 @@ export function Moment({ moment }: { moment: DiaryMoment }) {
         {extra ? <p className="dy-detail">{extra}</p> : null}
         {mark ? (
           <p className="dy-milestone">
-            <Flag size={13} aria-hidden="true" /> {mark}
+            <Flag size={14} aria-hidden="true" /> {mark}
           </p>
         ) : null}
         {moment.rating !== null ? (
           <p className="dy-rating">
-            <Star size={13} fill="currentColor" aria-hidden="true" />
+            <Star size={14} fill="currentColor" aria-hidden="true" />
             <span>{formatRating(moment.rating)}</span>
           </p>
         ) : null}
@@ -172,7 +172,7 @@ export function Group({ group }: { group: DiaryGroup }) {
     <section className={`dy-group is-${group.kind}`}>
       <button type="button" className="dy-group-head" aria-expanded={open} aria-controls={id} onClick={() => setOpen((v) => !v)}>
         <span className="dy-group-icon" aria-hidden="true">
-          <Icon size={15} />
+          <Icon size={16} />
         </span>
         <span className="dy-group-text">
           <strong>{groupTitle(group)}</strong>
@@ -180,7 +180,7 @@ export function Group({ group }: { group: DiaryGroup }) {
         </span>
         <span className="dy-group-toggle">
           {open ? "Ocultar" : "Ver detalhes"}
-          <ChevronDown size={15} aria-hidden="true" />
+          <ChevronDown size={16} aria-hidden="true" />
         </span>
       </button>
       {open && group.kind === "unlinked" ? (

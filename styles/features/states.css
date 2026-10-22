@@ -1,0 +1,178 @@
+/*
+ * Estados de carregamento, erro e vazio (skeletons).
+ *
+ * Fase 7: reunido de app/globals.css (mesma ordem de cascata).
+ * Carregado pelos componentes que usam estas classes, não pelo layout raiz.
+ */
+
+.mc-route-error {
+    min-height: calc(100vh - 90px);
+    padding: 24px;
+    display: grid;
+    place-items: center;
+}
+.mc-error-state {
+    width: min(560px, 100%);
+    min-height: 230px;
+    padding: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 10px;
+    border: 1px solid var(--border);
+    border-radius: 17px;
+    background: color-mix(in srgb, var(--panel) 97%, transparent);
+    text-align: center;
+}
+.mc-error-state.compact {
+    min-height: 125px;
+    padding: 17px;
+}
+.mc-error-icon {
+    width: 46px;
+    height: 46px;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
+    color: #f59e0b;
+    background: color-mix(in srgb, #f59e0b 9%, transparent);
+}
+.mc-error-state.compact
+.mc-error-icon {
+    width: 37px;
+    height: 37px;
+}
+.mc-error-copy strong,
+.mc-error-copy span {
+    display: block;
+}
+.mc-error-copy strong {
+    color: var(--text);
+    font-size: var(--mc-fs-md);
+}
+.mc-error-copy span {
+    max-width: 450px;
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+    line-height: 1.55;
+}
+.mc-error-actions {
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    flex-wrap: wrap;
+}
+.mc-error-code {
+    color: var(--accent);
+    font-size: 38px;
+    font-weight: 950;
+    letter-spacing: -.05em;
+}
+/* PAGE */
+.mc-page-skeleton,
+.mc-detail-skeleton {
+    width: 100%;
+    padding: 0 0 40px;
+}
+.mc-page-skeleton > section {
+    padding: 22px 0 0;
+}
+.mc-skeleton-search {
+    width: min(560px, 65%);
+    height: 38px;
+}
+.mc-skeleton-hero {
+    height: 205px;
+    margin-top: 24px;
+    border-radius: 16px;
+}
+.mc-skeleton-section-title {
+    width: 190px;
+    height: 21px;
+    margin-bottom: 13px;
+}
+/* POSTERS */
+.mc-skeleton-poster-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 14px;
+}
+.mc-skeleton-poster-card {
+    min-width: 0;
+}
+.mc-skeleton-poster {
+    aspect-ratio: 2 / 3;
+    border-radius: var(--mc-radius-md);
+}
+.mc-skeleton-title {
+    width: 82%;
+    height: 10px;
+    margin-top: 9px;
+}
+.mc-skeleton-meta {
+    width: 48%;
+    height: 8px;
+    margin-top: 6px;
+}
+/* DETAIL */
+.mc-detail-skeleton-hero {
+    margin-top: 24px;
+    display: grid;
+    grid-template-columns: 225px minmax(0, 1fr);
+    gap: 25px;
+}
+.mc-detail-skeleton-poster {
+    aspect-ratio: 2 / 3;
+    border-radius: 14px;
+}
+.mc-detail-skeleton-copy {
+    padding-top: 20px;
+}
+.mc-detail-skeleton-actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 8px;
+}
+.mc-detail-skeleton-actions
+.mc-skeleton {
+    width: 110px;
+    height: 37px;
+}
+@media (max-width: 1024px) {
+    .mc-skeleton-poster-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+@media (max-width: 700px) {
+    .mc-route-error {
+        padding: 14px;
+    }
+}
+@media (max-width: 700px) {
+    .mc-error-state {
+        min-height: 210px;
+        padding: 22px 17px;
+    }
+}
+@media (max-width: 700px) {
+    .mc-skeleton-search {
+        width: 100%;
+    }
+}
+@media (max-width: 700px) {
+    .mc-skeleton-poster-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 11px;
+    }
+}
+@media (max-width: 700px) {
+    .mc-detail-skeleton-hero {
+        grid-template-columns: 120px minmax(0, 1fr);
+        gap: 15px;
+    }
+}
+/* MOBILE */

@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/insights.css";
 import "@/styles/insights.css";
 
 import Link from "next/link";
@@ -94,7 +96,7 @@ function RetrospectiveContent() {
       <header className="ins-header ins-header--sub">
         <div>
           <Link href="/insights" className="ins-back">
-            <ArrowLeft size={15} aria-hidden="true" /> Insights
+            <ArrowLeft size={16} aria-hidden="true" /> Insights
           </Link>
           <span className="ins-eyebrow">Retrospectiva</span>
           <h1>
@@ -297,7 +299,7 @@ function RetrospectiveContent() {
                         <small>{item.type === "tv" ? "Série" : "Filme"}</small>
                       </span>
                       <span className="ins-top-rating">
-                        <Star size={13} fill="currentColor" aria-hidden="true" /> {dec(item.rating)}
+                        <Star size={14} fill="currentColor" aria-hidden="true" /> {dec(item.rating)}
                       </span>
                     </Link>
                   </li>
@@ -325,7 +327,7 @@ function RetrospectiveContent() {
             {c.movies + c.series ? `; ${pct(c.movieMinutes / Math.max(1, c.minutes))} em filmes` : ""}). O registro dia a dia está no{" "}
             <Link href="/diary">Diário</Link>.{" "}
             <Link href={`/insights?period=${year}`} className="ins-link">
-              Ver {year} no Insights <ArrowRight size={13} aria-hidden="true" />
+              Ver {year} no Insights <ArrowRight size={14} aria-hidden="true" />
             </Link>
           </p>
         </div>

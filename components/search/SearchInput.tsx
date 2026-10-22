@@ -1,3 +1,4 @@
+import "@/styles/features/search-suggest.css";
 import { forwardRef, useSyncExternalStore } from "react";
 import { Search as SearchIcon, Loader2 } from "lucide-react";
 

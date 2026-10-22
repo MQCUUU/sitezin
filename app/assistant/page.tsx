@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/assistant.css";
 import { apiFetch } from "@/lib/api-client";
 import { Poster } from "@/components/Poster";
 import { MediaPosterTags } from "@/components/media/MediaBadges";
@@ -22,7 +24,6 @@ import {
 } from "@/components/Search";
 
 import {
-  img,
 } from "@/lib/tmdb";
 
 export default function AssistantPage() {

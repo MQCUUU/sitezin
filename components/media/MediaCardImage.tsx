@@ -1,3 +1,4 @@
+import "@/styles/features/media.css";
 import type { HTMLAttributes } from "react";
 
 import { cx } from "@/components/ui/cx";

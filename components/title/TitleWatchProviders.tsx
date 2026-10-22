@@ -1,3 +1,4 @@
+import "@/styles/features/title-detail.css";
 import { ExternalLink } from "lucide-react";
 
 import { normalizeWatchProviders } from "@/components/media/providers/normalize";

@@ -1,3 +1,5 @@
+import "@/styles/features/collection.css";
+
 import type { Metadata } from "next";
 
 /*

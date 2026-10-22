@@ -166,7 +166,11 @@ export async function GET(req: NextRequest) {
   try {
     [signals, hiddenRows] = (await Promise.all([
       sql.query(SIGNALS_SQL, [userId]),
-      sql.query(`SELECT media_type, tmdb_id FROM public.user_hidden_titles WHERE user_id = $1`, [userId]).catch(() => []),
+      sql.query(`SELECT media_type, tmdb_id FROM public.user_hidden_titles WHERE user_id = $1`, [userId]).catch((error: unknown) => {
+        // Sem a lista de ocultos o Para você ainda funciona; só registra.
+        console.warn("[for-you] ocultos indisponíveis:", error instanceof Error ? error.message : String(error));
+        return [];
+      }),
     ])) as [typeof signals, typeof hiddenRows];
   } catch (error) {
     return respostaDeErro(error, "GET /api/for-you");

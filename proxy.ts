@@ -4,40 +4,13 @@ import { validateSessionData } from "@neondatabase/auth/server";
 import { getAuthCookieSecret } from "@/lib/auth/cookie-secret";
 import { episodeExists, listAccess, personExists, profileExists, titleExists } from "@/lib/resource-exists";
 import { allowedOriginsFromEnv, checkApiMutation } from "@/lib/api-guard";
+import { isPrivatePath, pathMatches } from "@/lib/private-routes";
 
 /*
- * ==========================================
- * ROTAS PRIVADAS DO MYCATALOG
- * ==========================================
- *
- * Essas páginas não devem renderizar sem
- * uma sessão Neon Auth ativa.
+ * Rotas privadas (não renderizam sem sessão Neon Auth ativa): fonte única em
+ * lib/private-routes.ts (Fase 7), compartilhada com SessionSync e robots.ts.
  */
-const PRIVATE_ROUTES = [
-  "/library",
-  "/for-you",
-  "/assistant",
-  "/diary",
-  "/calendar",
-  "/ranking",
-  "/stats",
-  "/retrospective",
-  "/favorites",
-  "/profile",
-  "/settings",
-  "/insights",
-] as const;
-
-/*
- * V2.1-B — "/lists" (a tela "Minhas listas") é pessoal, igual às rotas
- * acima, mas não pode usar o mesmo `pathMatches` por prefixo: uma
- * lista individual pública (`/lists/[id]`) é pública por design
- * (confirmado em fases anteriores) e `pathMatches("/lists/abc",
- * "/lists")` daria `true` (bate no `startsWith("/lists/")`), o que
- * bloquearia a lista pública também. Por isso "/lists" usa correspondência
- * EXATA — só a listagem "minhas listas" é privada, nunca `/lists/*`.
- */
-const PRIVATE_EXACT_ROUTES = ["/lists"] as const;
+const isPrivatePage = isPrivatePath;
 
 /*
  * Rotas exclusivas para visitantes sem sessão.
@@ -46,17 +19,6 @@ const GUEST_ONLY_ROUTES = [
   "/login",
   "/signup",
 ] as const;
-
-function pathMatches(pathname: string, route: string): boolean {
-  return pathname === route || pathname.startsWith(`${route}/`);
-}
-
-function isPrivatePage(pathname: string): boolean {
-  return (
-    PRIVATE_ROUTES.some((route) => pathMatches(pathname, route)) ||
-    PRIVATE_EXACT_ROUTES.some((route) => pathname === route)
-  );
-}
 
 function isGuestOnlyPage(pathname: string): boolean {
   return GUEST_ONLY_ROUTES.some((route) => pathMatches(pathname, route));
@@ -117,7 +79,22 @@ const baseUrl = (
  * 2. Slow Path: Se houver apenas session_token (ou token opaco), consulta o Neon Auth upstream.
  *    NUNCA confia apenas na presença de cookies com nomes arbitrários.
  */
-async function isSessionAuthenticated(request: NextRequest): Promise<boolean> {
+/*
+ * Fase 7: "não deu para verificar" (provedor com 429/5xx/timeout) é diferente de
+ * "sem sessão". Antes as duas respostas viravam `false`: com o provedor oscilando,
+ * a página privada mandava para o login e o login (numa resposta seguinte OK)
+ * devolvia para a página — laço de redirecionamento. Agora só redireciona com
+ * resposta definitiva; na dúvida a página abre e as APIs (que sempre exigem
+ * sessão) respondem 401 normalmente.
+ */
+type SessionCheck = "authenticated" | "guest" | "unknown";
+
+async function checkSession(request: NextRequest): Promise<SessionCheck> {
+  const authenticated = await isSessionAuthenticated(request);
+  return authenticated === null ? "unknown" : authenticated ? "authenticated" : "guest";
+}
+
+async function isSessionAuthenticated(request: NextRequest): Promise<boolean | null> {
   // 1. Fast Path: Assinatura criptográfica HMAC do session_data
   const sessionDataCookie =
     request.cookies.get("__Secure-neon-auth.local.session_data")?.value ||
@@ -152,11 +129,13 @@ async function isSessionAuthenticated(request: NextRequest): Promise<boolean> {
       signal: AbortSignal.timeout(4000),
     });
 
-    if (!res.ok) return false;
-    const data = await res.json().catch(() => null);
+    if (res.status === 401 || res.status === 403) return false;
+    if (!res.ok) return null; // 429/5xx: não sabemos
+    const data = await res.json().catch(() => undefined);
+    if (data === undefined) return null;
     return Boolean(data && data.session && data.user);
   } catch {
-    return false;
+    return null; // timeout/rede: não sabemos
   }
 }
 
@@ -295,12 +274,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next({ request });
   }
 
-  const authenticated = await isSessionAuthenticated(request);
+  const session = await checkSession(request);
+  const authenticated = session === "authenticated";
 
   /*
-   * PÁGINA PRIVADA SEM SESSÃO
+   * PÁGINA PRIVADA SEM SESSÃO (só com resposta definitiva — ver checkSession)
    */
-  if (isPrivate && !authenticated) {
+  if (isPrivate && session === "guest") {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.search = "";

@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/search-page.css";
 import { useEffect, useRef, useState } from "react";
 import { Clock, Search as SearchIcon, X } from "lucide-react";
 

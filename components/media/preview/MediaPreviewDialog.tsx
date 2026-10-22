@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/media.css";
 import { useId, type ReactNode } from "react";
 import { X } from "lucide-react";
 

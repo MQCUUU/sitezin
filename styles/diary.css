@@ -224,7 +224,7 @@
 .dy-poster {
   display: block;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: var(--mc-radius-sm);
   background: color-mix(in srgb, var(--text) 8%, var(--panel));
 }
 
@@ -249,7 +249,7 @@
 
 .dy-poster-link {
   display: block;
-  border-radius: 8px;
+  border-radius: var(--mc-radius-sm);
 }
 
 .dy-body {
@@ -298,7 +298,7 @@ a.dy-title:hover {
   width: fit-content;
   margin: 4px 0 0;
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: var(--mc-radius-pill);
   font-size: var(--mc-fs-sm);
   font-weight: 700;
   color: var(--accent);
@@ -510,7 +510,7 @@ a.dy-compact-title:hover {
   gap: 10px;
   max-width: 860px;
   padding: 44px 20px;
-  border-radius: 18px;
+  border-radius: var(--mc-radius-lg);
   border: 1px dashed color-mix(in srgb, var(--text) 14%, transparent);
   text-align: center;
   color: var(--muted);
@@ -541,7 +541,7 @@ a.dy-compact-title:hover {
   gap: 4px 12px;
   margin: 8px 0 0;
   padding: 10px 14px;
-  border-radius: 12px;
+  border-radius: var(--mc-radius-md);
   font-size: var(--mc-fs-md);
   color: color-mix(in srgb, var(--text) 85%, transparent);
   background: color-mix(in srgb, var(--accent) 10%, transparent);
@@ -557,7 +557,7 @@ a.dy-compact-title:hover {
 .dy-more-btn {
   min-height: 42px;
   padding: 0 20px;
-  border-radius: 12px;
+  border-radius: var(--mc-radius-md);
   border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
   background: color-mix(in srgb, var(--text) 5%, transparent);
   color: var(--text);
@@ -603,7 +603,7 @@ a.dy-compact-title:hover {
 .dy-skel-poster {
   width: 56px;
   height: 84px;
-  border-radius: 8px;
+  border-radius: var(--mc-radius-sm);
 }
 
 .dy-skel-text {
@@ -636,7 +636,7 @@ a.dy-compact-title:hover {
 }
 
 /* ---------- celular / tablet ---------- */
-@media (max-width: 640px) {
+@media (max-width: 620px) {
   .dy-controls {
     display: grid;
     gap: 10px;

@@ -1,3 +1,4 @@
+import "@/styles/features/media.css";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { cx } from "@/components/ui/cx";
 

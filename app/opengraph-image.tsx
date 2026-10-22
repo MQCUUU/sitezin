@@ -11,7 +11,7 @@ import { BRAND_ACCENT, brandMarkSvg } from "@/lib/brand";
  * nome em cor fixa, uma frase, e um brilho discreto no destaque oficial.
  * Tudo centralizado: sobrevive ao corte quadrado de WhatsApp/Telegram.
  */
-export const runtime = "edge";
+// Fase 7: runtime Node (padrão). O Edge está obsoleto e impedia a geração estática da imagem.
 export const alt = "MyCatalog — seu catálogo pessoal de filmes e séries";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";

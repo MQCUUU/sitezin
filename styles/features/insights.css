@@ -1,0 +1,21 @@
+/*
+ * Estatísticas, ranking e retrospectiva (complemento de styles/insights.css).
+ *
+ * Fase 7: reunido de app/globals.css (mesma ordem de cascata).
+ * Carregado pelos componentes que usam estas classes, não pelo layout raiz.
+ */
+
+/* V2.1-E — card compartilhável da Retrospectiva */
+.retrospective-share-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 10px 0;
+}
+.retrospective-share-canvas {
+    width: min(360px, 100%);
+    height: auto;
+    aspect-ratio: 1080 / 1350;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,.12);
+}

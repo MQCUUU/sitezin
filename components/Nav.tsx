@@ -1,10 +1,13 @@
 "use client";
 
+
+import "@/styles/features/nav.css";
 import Link from "next/link";
 import { BrandLogo, BrandMark } from "@/components/brand/BrandMark";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuthState } from "@/hooks/useLibraryAuth";
+import { useModal } from "@/hooks/useModal";
 
 import {
   House,
@@ -90,23 +93,8 @@ export function Nav() {
   const [moreOpen, setMoreOpen] = useState(false);
   useEffect(() => setMoreOpen(false), [pathname]);
 
-  useEffect(() => {
-    if (!moreOpen) return;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setMoreOpen(false);
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [moreOpen]);
+  // Fase 7: Escape, laço do Tab, foco inicial/devolução e trava de rolagem (useModal → lib/modal-a11y).
+  const moreSheetRef = useModal(moreOpen, () => setMoreOpen(false));
 
   /*
    * ==========================================
@@ -265,7 +253,7 @@ export function Nav() {
         </button>
       </nav>
       {moreOpen && <div className="mobile-more-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setMoreOpen(false)}>
-        <section className="mobile-more-sheet" aria-label="Mais páginas" role="dialog" aria-modal="true">
+        <section ref={moreSheetRef as React.RefObject<HTMLElement>} className="mobile-more-sheet" aria-label="Mais páginas" role="dialog" aria-modal="true">
           <header><strong>Todas as páginas</strong><button className="mc-focusable" onClick={() => setMoreOpen(false)} aria-label="Fechar"><X size={20} /></button></header>
           <div>
             {[items[4], items[5], items[6], items[7]].map(([href, label, Icon]) => <Link key={href} href={href} prefetch={prefetchFor(href)} className={`mc-focusable ${isActive(href) ? "active" : ""}`} aria-current={isActive(href) ? "page" : undefined}><Icon size={20} /><span>{label}</span></Link>)}

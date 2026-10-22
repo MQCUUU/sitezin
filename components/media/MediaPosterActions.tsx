@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/media.css";
 import {
   Check,
   ChevronDown,
@@ -349,7 +351,9 @@ export function MediaPosterActions({
                 className="mc-pa-menu-item mc-pa-menu-item--danger"
                 disabled={busy}
                 onClick={() => {
-                  close(false);
+                  // Fase 7: foco volta ao botão de status antes da confirmação abrir — ao
+                  // cancelar, o diálogo devolve o foco para ele (antes caía no <body>).
+                  close(true);
                   onRemove();
                 }}
               >

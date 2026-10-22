@@ -1,3 +1,4 @@
+import "@/styles/features/library-page.css";
 import { Check, CircleDashed, CirclePlay, ListChecks, Repeat } from "lucide-react";
 
 import type { LibraryProgress } from "@/lib/library/progress";
@@ -25,7 +26,7 @@ export function SeriesProgressLine({ progress }: { progress?: LibraryProgress | 
 
   return (
     <p className={`lib-progress lib-progress--${progress.state}`}>
-      <Icon size={13} aria-hidden="true" />
+      <Icon size={14} aria-hidden="true" />
       <span>{progress.card}</span>
     </p>
   );

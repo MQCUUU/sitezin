@@ -1,3 +1,4 @@
+import "@/styles/features/search-suggest.css";
 import { AlertTriangle, Sparkles } from "lucide-react";
 
 import { SEARCH_ERROR_COPY } from "./errorCopy";

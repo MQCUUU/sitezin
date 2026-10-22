@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/pick-for-me.css";
 import { removeFromLibrary } from "@/lib/library/actions";
 import { apiFetch } from "@/lib/api-client";
 import {
@@ -2033,7 +2035,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                 <div className="pick-heading">
                   <div className="pick-heading-icon">
                     <Shuffle
-                      size={21}
+                      size={22}
                     />
                   </div>
 
@@ -2074,7 +2076,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                     }
                   >
                     <Sparkles
-                      size={15}
+                      size={16}
                     />
                     Qualquer
                   </button>
@@ -2094,7 +2096,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                     }
                   >
                     <Film
-                      size={15}
+                      size={16}
                     />
                     Filme
                   </button>
@@ -2114,7 +2116,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                     }
                   >
                     <Tv
-                      size={15}
+                      size={16}
                     />
                     Série
                   </button>
@@ -2619,7 +2621,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                     }
                   >
                     <WandSparkles
-                      size={17}
+                      size={18}
                     />
 
                     Surpreenda-me
@@ -2722,7 +2724,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                     <>
                       <div className="pick-winner-label">
                         <Sparkles
-                          size={15}
+                          size={16}
                         />
 
                         ESCOLHIDO PARA VOCÊ
@@ -2773,7 +2775,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                           0 && (
                           <span className="rating">
                             <Star
-                              size={13}
+                              size={14}
                               fill="currentColor"
                             />
 
@@ -2959,7 +2961,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                                 }
                               >
                                 <Check
-                                  size={15}
+                                  size={16}
                                 />
 
                                 {statusLabel(
@@ -2967,7 +2969,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                                 )}
 
                                 <ChevronDown
-                                  size={13}
+                                  size={14}
                                 />
                               </button>
 
@@ -3004,7 +3006,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                                         {winner.library_status ===
                                           value && (
                                           <Check
-                                            size={13}
+                                            size={14}
                                           />
                                         )}
                                       </button>
@@ -3084,7 +3086,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                           }
                         >
                           <Filter
-                            size={15}
+                            size={16}
                           />
 
                           Alterar filtros
@@ -3101,7 +3103,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                           }
                         >
                           <EyeOff
-                            size={15}
+                            size={16}
                           />
 
                           Não tenho interesse
@@ -3115,7 +3117,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                           }
                         >
                           <X
-                            size={15}
+                            size={16}
                           />
 
                           Não quero esse
@@ -3253,7 +3255,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                 }
               >
                 <Trash2
-                  size={15}
+                  size={16}
                 />
                 Remover
               </button>
@@ -3510,7 +3512,7 @@ function MultiPicker({
                     option.label
                   }
                   <X
-                    size={10}
+                    size={12}
                   />
                 </button>
               )

@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/title-detail.css";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CalendarDays, ChevronRight, Clock3, Radio, Tv } from "lucide-react";
@@ -84,7 +86,7 @@ export function SeriesSchedule({ tvId, inProduction }: { tvId: number | string; 
     return (
       <section className="section mc-title-section title-series-schedule-section">
         <p className="series-schedule-compact muted">
-          <CalendarDays size={15} aria-hidden="true" /> Em produção — sem data anunciada para o próximo episódio.
+          <CalendarDays size={16} aria-hidden="true" /> Em produção — sem data anunciada para o próximo episódio.
         </p>
       </section>
     );
@@ -103,7 +105,7 @@ export function SeriesSchedule({ tvId, inProduction }: { tvId: number | string; 
           </div>
 
           <Link href="/calendar" className="btn" prefetch={authState === "authenticated" ? undefined : false}>
-            <CalendarDays size={15} aria-hidden="true" />
+            <CalendarDays size={16} aria-hidden="true" />
             Ver calendário
           </Link>
         </div>
@@ -129,12 +131,12 @@ export function SeriesSchedule({ tvId, inProduction }: { tvId: number | string; 
             <h3>{next.name || `Episódio ${next.episode_number}`}</h3>
             <div className="series-next-meta">
               <span>
-                <CalendarDays size={13} aria-hidden="true" />
+                <CalendarDays size={14} aria-hidden="true" />
                 {longDate(next.air_date, today)}
               </span>
               {next.runtime ? (
                 <span>
-                  <Clock3 size={13} aria-hidden="true" />
+                  <Clock3 size={14} aria-hidden="true" />
                   {next.runtime} min
                 </span>
               ) : null}

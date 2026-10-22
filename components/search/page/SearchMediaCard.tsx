@@ -1,22 +1,16 @@
+import "@/styles/features/search-page.css";
 import { MediaPosterActions } from "@/components/media/MediaPosterActions";
 import { MediaPosterTags } from "@/components/media/MediaBadges";
 import Link from "next/link";
 import {
-  Check,
-  ChevronDown,
-  Eye,
-  Heart,
-  Loader2,
-  Plus,
   Star,
-  Trash2,
 } from "lucide-react";
 
-import { MediaCard, MediaCardActions, MediaCardImage, MediaCardMeta } from "@/components/media";
+import { MediaCard, MediaCardImage, MediaCardMeta } from "@/components/media";
 import { Poster } from "@/components/Poster";
 import { posterLoading } from "@/lib/poster-loading";
 
-import { STATUS_OPTIONS, getStatusLabel, getTitle, type LibraryState, type SearchItem } from "./types";
+import { getTitle, type LibraryState, type SearchItem } from "./types";
 
 export type SearchMediaCardProps = {
   item: SearchItem;
@@ -45,10 +39,8 @@ export function SearchMediaCard({
   item,
   libraryItem,
   isProcessing,
-  isMenuOpen,
   onPreview,
   onAdd,
-  onToggleStatusMenu,
   onToggleFavorite,
   onUpdateStatus,
   onRequestRemove,
@@ -56,7 +48,6 @@ export function SearchMediaCard({
 }: SearchMediaCardProps) {
   const title = getTitle(item);
   const year = (item.release_date || item.first_air_date || "").slice(0, 4);
-  const key = `${item.media_type}-${item.id}`;
 
   return (
     <MediaCard className="discover-card">

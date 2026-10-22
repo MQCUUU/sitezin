@@ -102,3 +102,72 @@ people_media (índice antigo, substituído por search_*), playing_with_neon.
 
 Funções sem trigger no banco: `handle_new_user`, `handle_new_user_profile`
 (herança do Supabase; o perfil hoje é criado por `POST /api/auth/profile`).
+
+## Fase 7 — tabelas provavelmente obsoletas (evidência, 2026-10-22, TEST)
+
+Consulta somente leitura (`pg_constraint`, `pg_depend`/`pg_rewrite`, `pg_trigger`,
+`pg_proc.prosrc`) + busca no código (`app`, `lib`, `components`, `hooks`, `scripts`)
++ `git log -G`. **Nada foi apagado.** Toda FK listada é `ON DELETE CASCADE`, então
+nenhuma delas trava a exclusão de conta ou de item.
+
+| Tabela | Linhas (TEST) | Uso no código hoje | Última referência no git | FK sai → / entra ← | View / trigger / função | Risco de remover | Recomendação |
+|---|---|---|---|---|---|---|---|
+| list_items | 0 | nenhum | 224e2a8 (2026-09-27, Listas V2.7 trocou por custom_list_items) | → lists, neon_auth.user | — | baixo | remover junto com `lists` quando o espelho for desligado |
+| category_ratings | 0 | nenhum | nunca | → rating_categories, library_items | — | baixo | remover (com rating_categories) |
+| rating_categories | 0 | nenhum | 48209df (V3.4) | → neon_auth.user · ← category_ratings | — | baixo | remover depois de category_ratings |
+| library_tags | 0 | nenhum | 48209df (V3.4 removeu /api/tags) | → library_items, personal_tags | — | baixo | remover |
+| personal_tags | 0 | nenhum | 48209df (V3.4) | → neon_auth.user · ← library_tags | — | baixo | remover depois de library_tags |
+| movie_tags | 0 | nenhum | 48209df (V3.4) | → tags, neon_auth.user | — | baixo | remover |
+| tags | 0 | nenhum | 48209df (V3.4) | → neon_auth.user · ← movie_tags | — | baixo | remover depois de movie_tags |
+| tmdb_cache | 0 | nenhum | nunca | — | — | baixo | remover |
+| friendships | 1 | nenhum (substituída por `follows`) | 48209df (V3.4) | → neon_auth.user ×2 | — | baixo (conferir a linha em PROD antes) | exportar a(s) linha(s) e remover |
+| characters | 870 | nenhum (índice antigo) | nunca | ← character_media | — | médio (dados de índice; regeneráveis) | backup e remover com character_media |
+| character_media | 1032 | nenhum | nunca | → characters, media, people | — | médio | backup e remover |
+| people | 1414 | nenhum (substituída por search_people) | nunca | ← character_media, people_media | — | médio | backup e remover por último do grupo |
+| people_media | 1454 | nenhum | nunca | → media, people | — | médio | backup e remover |
+| playing_with_neon | 10 | nenhum (exemplo da Neon) | nunca | — | — | nenhum | remover |
+
+Ordem segura para uma futura limpeza (só com backup e autorização): filhas antes
+das mães — category_ratings → rating_categories; library_tags → personal_tags;
+movie_tags → tags; character_media e people_media → characters e people;
+list_items (junto com a decisão sobre `lists`); tmdb_cache; friendships;
+playing_with_neon. Em PROD, repetir esta consulta antes (contagens podem diferir).
+
+## Fase 7 — adoção da baseline em PROD (preparado, NÃO executado)
+
+Objetivo: registrar em PROD que o schema atual corresponde à `0001_baseline.sql`,
+para que migrations futuras rodem pelo runner. Não altera nenhuma tabela do app:
+cria `public.schema_migrations` (com RLS) e insere uma linha.
+
+Antes:
+1. `npm run db:drift -- --a TEST_DATABASE_URL --b PROD_DATABASE_URL` — esperado: só
+   a diferença conhecida de nome de constraint em `user_events`. Qualquer outra
+   diferença: parar e investigar.
+2. Backup/branch do PROD na Neon (branch a partir do ponto atual).
+3. Confirmar que não há deploy em andamento.
+
+Comando (uma vez, revisado, com as duas travas do runner):
+```
+MIGRATE_ALLOW_PROD=1 npm run db:migrate -- --env PROD_DATABASE_URL --baseline --allow-prod
+```
+
+Conferir:
+- `npm run db:migrate -- --env PROD_DATABASE_URL --status` → 0001 registrada, 0 pendentes.
+- `SELECT filename, checksum FROM public.schema_migrations` → uma linha, checksum igual ao do repositório.
+- `SELECT relrowsecurity FROM pg_class WHERE relname = 'schema_migrations'` → `true`.
+
+Rollback (se algo der errado): `DROP TABLE public.schema_migrations;` — volta ao
+estado anterior; nenhuma tabela do app é tocada pela baseline.
+
+## Fase 7 — modelo de autorização (RLS)
+
+- RLS está ligado nas tabelas do app, sem policies.
+- O app conecta como **dono** das tabelas (papel com `bypassrls`): o RLS **não**
+  filtra nada para o app. Ele só impede que outros papéis (ex.: `anon`,
+  `authenticated`, `PUBLIC`) leiam ou escrevam.
+- A autorização real é a camada da API: cada rota obtém a sessão
+  (`auth.getSession()`), usa o `user_id` dela e filtra/valida a posse em todas as
+  queries (`WHERE user_id = …`, checagem de dono antes de alterar/apagar). Os testes
+  de autorização com duas contas (`tests/api-authz.spec.ts`) cobrem isso.
+- Consequência: uma rota nova que esquecer o filtro por `user_id` vaza dados —
+  o banco não protege. Toda rota nova precisa do mesmo padrão e de teste de posse.

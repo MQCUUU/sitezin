@@ -1,3 +1,4 @@
+import "@/styles/features/title-detail.css";
 import Link from "next/link";
 import { Star } from "lucide-react";
 
@@ -18,7 +19,6 @@ export type TitleRelatedSectionProps = {
  * de details, self-filter/dedupe/limite já aplicados lá.
  */
 export function TitleRelatedSection({
-  type,
   recommendations,
 }: TitleRelatedSectionProps) {
   if (recommendations.length === 0) {

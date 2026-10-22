@@ -1,3 +1,4 @@
+import "@/styles/features/discover.css";
 export type DiscoverHeaderProps = {
   totalLabel: string | null;
 };

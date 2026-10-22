@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/library-page.css";
 import { removeFromLibrary } from "@/lib/library/actions";
 import { MediaPosterActions } from "@/components/media/MediaPosterActions";
 import { MediaPosterTags, MediaStatusTag } from "@/components/media/MediaBadges";
@@ -10,19 +12,12 @@ import {
   Heart,
   Trash2,
   Loader2,
-  Eye,
-  ChevronDown,
-  Play,
-  Check,
-  Clock,
   Grid3X3,
   LayoutGrid,
   List,
-  ListPlus,
   Star,
 } from "lucide-react";
 
-import { img } from "@/lib/tmdb";
 import type { LibraryItem } from "@/lib/types";
 import { STATUS_LABELS } from "@/lib/types";
 import { useToast } from "@/components/ToastProvider";
@@ -36,16 +31,16 @@ import {
   MediaCard,
   MediaCardImage,
   MediaCardMeta,
-  MediaCardActions,
 } from "@/components/media";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { MediaPreviewDialog } from "@/components/media/preview/MediaPreviewDialog";
 import { WatchProviderList } from "@/components/media/preview/WatchProviderList";
 import { fromLibraryItem } from "@/components/media/preview/adapters";
 import { normalizeWatchProviders } from "@/components/media/providers";
 import { LIBRARY_ACTION_COPY } from "@/lib/library/remove";
+import { useModal } from "@/hooks/useModal";
 
 type ViewMode =
   | "grid"
@@ -103,44 +98,10 @@ export function PosterGrid({
 
 /*
  * Escape/scroll-lock for previewItem now come from MediaPreviewDialog's
- * underlying Dialog (C2.4) — this effect covers removeTarget only.
+ * underlying Dialog (C2.4). Fase 7: a confirmação de remoção usa useModal
+ * (Escape, laço do Tab, foco inicial em "Cancelar"/devolução, trava de rolagem).
  */
-useEffect(() => {
-  if (!removeTarget) {
-    return;
-  }
-
-  const previousOverflow =
-    document.body.style.overflow;
-
-  function handleModalKeyDown(
-    event: KeyboardEvent,
-  ) {
-    if (event.key !== "Escape") {
-      return;
-    }
-
-    setRemoveTarget(null);
-  }
-
-  document.body.style.overflow =
-    "hidden";
-
-  document.addEventListener(
-    "keydown",
-    handleModalKeyDown,
-  );
-
-  return () => {
-    document.body.style.overflow =
-      previousOverflow;
-
-    document.removeEventListener(
-      "keydown",
-      handleModalKeyDown,
-    );
-  };
-}, [removeTarget]);
+const removeDialogRef = useModal(Boolean(removeTarget), () => setRemoveTarget(null), false, ".mycatalog-confirm-actions .btn:not(.danger)");
 
   const [
   skipRemoveConfirm,
@@ -929,6 +890,7 @@ useEffect(() => {
           }
         >
           <div
+  ref={removeDialogRef as React.RefObject<HTMLDivElement>}
   className="mycatalog-confirm-modal"
   role="alertdialog"
   aria-modal="true"

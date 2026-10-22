@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getSiteUrl } from "@/lib/site-url";
+import { PRIVATE_EXACT_ROUTES, PRIVATE_ROUTES } from "@/lib/private-routes";
 
 const siteUrl = getSiteUrl();
 
@@ -27,19 +28,9 @@ export default function robots(): MetadataRoute.Robots {
         disallow: [
           "/api/",
           "/auth/",
-          "/library",
-          "/favorites",
-          "/profile",
-          "/settings",
-          "/stats",
-          "/diary",
-          "/calendar",
-          "/ranking",
-          "/retrospective",
-          "/for-you",
-          "/assistant",
-          "/insights",
-          "/lists$", // "$" = só a página exata "/lists" ("minhas listas"); "/lists/[id]" (lista pública individual) não é bloqueada aqui de propósito — continua noindex por herança do root, decisão de indexação futura documentada em docs/V2.1-C-PUBLIC-EXPERIENCE-SEO.md
+          // Fase 7: rotas privadas da fonte única (lib/private-routes.ts).
+          ...PRIVATE_ROUTES,
+          ...PRIVATE_EXACT_ROUTES.map((route) => `${route}$`), // "$" = só a página exata "/lists" ("minhas listas"); "/lists/[id]" (lista pública individual) não é bloqueada aqui de propósito — continua noindex por herança do root, decisão de indexação futura documentada em docs/V2.1-C-PUBLIC-EXPERIENCE-SEO.md
           "/collection/",
           "/login",
           "/signup",

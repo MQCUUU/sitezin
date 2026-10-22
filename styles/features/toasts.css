@@ -1,0 +1,196 @@
+/*
+ * Avisos (toasts) e desfazer.
+ *
+ * Fase 7: reunido de app/globals.css (mesma ordem de cascata).
+ * Carregado pelos componentes que usam estas classes, não pelo layout raiz.
+ */
+
+.mycatalog-toast-region {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 10000;
+    width: min(410px, calc(100vw - 28px));
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+}
+.mycatalog-toast {
+    position: relative;
+    min-height: 64px;
+    padding: 11px 42px 11px 12px;
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 9px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--panel) 96%, transparent);
+    color: var(--text);
+    box-shadow: 0 18px 55px rgba(0, 0, 0, .36);
+    backdrop-filter: blur(18px);
+    pointer-events: auto;
+    animation: mycatalogToastIn .22s cubic-bezier(.2, .8, .2, 1);
+}
+.mycatalog-toast-icon {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    color: var(--accent);
+}
+.mycatalog-toast-copy {
+    min-width: 0;
+}
+.mycatalog-toast-copy strong,
+.mycatalog-toast-copy span {
+    display: block;
+}
+.mycatalog-toast-copy strong {
+    overflow: hidden;
+    color: var(--text);
+    font-size: var(--mc-fs-xs);
+    font-weight: 850;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.mycatalog-toast-copy span {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+    line-height: 1.4;
+}
+.mycatalog-toast-action {
+    min-height: 31px;
+    padding: 0 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--border));
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
+    color: var(--accent);
+    font: inherit;
+    font-size: var(--mc-fs-xs);
+    font-weight: 850;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+.mycatalog-toast-action:hover:not(:disabled) {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--accent) 52%, var(--border));
+    background: color-mix(in srgb, var(--accent) 11%, transparent);
+}
+.mycatalog-toast-action:disabled {
+    opacity: .65;
+    cursor: default;
+}
+.mycatalog-toast-close {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    width: 27px;
+    height: 27px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: var(--mc-radius-sm);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+}
+.mycatalog-toast-close:hover {
+    background: color-mix(in srgb, var(--text) 5%, transparent);
+    color: var(--text);
+}
+.mycatalog-toast-progress {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    transform-origin: left center;
+    background: color-mix(in srgb, var(--accent) 65%, transparent);
+    animation-name: mycatalogToastProgress;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+    pointer-events: none;
+}
+.mycatalog-toast-success
+.mycatalog-toast-progress {
+    background: color-mix(in srgb, #22c55e 70%, transparent);
+}
+.mycatalog-toast-error
+.mycatalog-toast-progress {
+    background: color-mix(in srgb, #ef4444 70%, transparent);
+}
+@media (
+  max-width:
+    620px
+) {
+    .mycatalog-toast-region {
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        width: auto;
+    }
+}
+@media (
+  max-width:
+    620px
+) {
+    .mycatalog-toast {
+        grid-template-columns: 31px minmax(0, 1fr);
+        padding: 10px 38px 10px 10px;
+    }
+}
+@media (
+  max-width:
+    620px
+) {
+    .mycatalog-toast-action {
+        grid-column: 2;
+        width: fit-content;
+    }
+}
+@media (
+  max-width:
+    620px
+) {
+    .mycatalog-toast-icon {
+        width: 31px;
+        height: 31px;
+    }
+}
+@media (max-width:760px) {
+    .toast-viewport {
+        left: 12px!important;
+        right: 12px!important;
+        bottom: calc(82px + env(safe-area-inset-bottom))!important;
+        width: auto!important;
+        max-width: none!important
+    }
+}
+@keyframes mycatalogToastIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+@keyframes mycatalogToastProgress {
+    from {
+        transform: scaleX(1);
+    }
+    to {
+        transform: scaleX(0);
+    }
+}

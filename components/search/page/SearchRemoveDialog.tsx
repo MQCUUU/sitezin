@@ -1,4 +1,8 @@
+"use client";
+
 import { Trash2 } from "lucide-react";
+
+import { useModal } from "@/hooks/useModal";
 
 import { getTitle, type SearchItem } from "./types";
 
@@ -19,6 +23,8 @@ export function SearchRemoveDialog({
   onCancel,
   onConfirm,
 }: SearchRemoveDialogProps) {
+  // Escape, laço do Tab, foco inicial/devolução e trava de rolagem (Fase 7).
+  const modalRef = useModal(true, onCancel, false, ".mycatalog-confirm-actions .btn:not(.danger)");
   const title = getTitle(item);
 
   return (
@@ -26,6 +32,7 @@ export function SearchRemoveDialog({
       if (event.target === event.currentTarget) onCancel();
     }}>
       <div
+        ref={modalRef as React.RefObject<HTMLDivElement>}
         className="mycatalog-confirm-modal"
         role="alertdialog"
         aria-modal="true"

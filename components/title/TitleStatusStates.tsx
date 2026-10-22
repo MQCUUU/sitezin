@@ -1,3 +1,4 @@
+import "@/styles/features/title-detail.css";
 import { AlertTriangle, SearchX } from "lucide-react";
 
 import { Search } from "@/components/Search";

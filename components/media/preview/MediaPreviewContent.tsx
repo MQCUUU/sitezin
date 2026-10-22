@@ -1,3 +1,4 @@
+import "@/styles/features/media.css";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Film, Star, Tv } from "lucide-react";

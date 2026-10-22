@@ -1,0 +1,142 @@
+/*
+ * Assistente de IA.
+ *
+ * Fase 7: reunido de app/globals.css, styles/media-unified.css (mesma ordem de cascata).
+ * Carregado pelos componentes que usam estas classes, não pelo layout raiz.
+ */
+
+.ai-assistant-hero {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 25px;
+}
+.ai-assistant-icon {
+    width: 56px;
+    height: 56px;
+    flex: 0 0 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.ai-assistant-hero h1 {
+    margin: 5px 0 6px;
+}
+.ai-assistant-hero p {
+    margin: 0;
+}
+.ai-chat-box {
+    padding: 16px;
+}
+.ai-chat-box textarea {
+    width: 100%;
+    min-height: 120px;
+    resize: vertical;
+    padding: 15px;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    outline: none;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+}
+.ai-chat-box textarea:focus {
+    border-color: var(--accent);
+}
+.ai-chat-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 10px;
+}
+.ai-chat-actions > span {
+    font-size: var(--mc-fs-xs);
+}
+.ai-answer {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+}
+.ai-answer > svg {
+    flex-shrink: 0;
+    color: var(--accent);
+}
+.ai-answer p {
+    margin: 5px 0 0;
+    color: var(--muted);
+    line-height: 1.55;
+    font-size: var(--mc-fs-sm);
+}
+.ai-result-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 16px;
+}
+.ai-result-reason {
+    margin: 7px 0 0;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+    line-height: 1.4;
+}
+@media (max-width: 1100px) {
+    .ai-result-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+@media (max-width: 700px) {
+    .ai-assistant-hero {
+        align-items: flex-start;
+        padding: 18px;
+    }
+}
+@media (max-width: 700px) {
+    .ai-chat-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}
+@media (max-width: 700px) {
+    .ai-result-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+}
+.ai-answer-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.ai-cache-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 0 8px;
+    border: 1px solid color-mix(in srgb, var(--good) 30%, var(--border));
+    border-radius: var(--mc-radius-pill);
+    background: color-mix(in srgb, var(--good) 9%, transparent);
+    color: var(--good);
+    font-size: var(--mc-fs-xs);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+.ai-cache-saving {
+    display: block;
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+}
+.ai-cache-saving strong {
+    color: var(--good);
+}
+.ai-applied {
+    display: block;
+    margin-top: 8px;
+    font-size: var(--mc-fs-sm);
+    color: var(--muted);
+}

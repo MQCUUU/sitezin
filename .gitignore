@@ -42,3 +42,6 @@ Thumbs.db
 # Next.js agent files
 AGENTS.md
 CLAUDE.md
+
+# Fase 7: gerado pelo Next (docs: "Add it to .gitignore"). Ainda rastreado: rodar `git rm --cached next-env.d.ts` no próximo commit.
+next-env.d.ts

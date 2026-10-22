@@ -8,7 +8,6 @@ import {
   clampPage,
   eligiblePage,
   genreForType,
-  pageSlice,
   sortPool,
   MIN_RATING_VOTES,
   NEWEST_MIN_VOTES,

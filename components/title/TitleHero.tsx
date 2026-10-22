@@ -1,3 +1,4 @@
+import "@/styles/features/title-detail.css";
 import { Heart, Plus, RefreshCw, Star, Trash2, Film, Tv } from "lucide-react";
 
 import { Poster } from "@/components/Poster";

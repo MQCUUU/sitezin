@@ -43,6 +43,13 @@ const contentSecurityPolicy = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
 
+  /*
+   * Fase 7: raiz fixa no projeto. Sem isso o Next procurava lockfiles acima da
+   * pasta e avisava sobre um package-lock.json solto fora do repositório.
+   */
+  turbopack: { root: process.cwd() },
+  outputFileTracingRoot: process.cwd(),
+
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "image.tmdb.org" },

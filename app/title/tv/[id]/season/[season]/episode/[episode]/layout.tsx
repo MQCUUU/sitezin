@@ -1,3 +1,4 @@
+import "@/styles/features/episode.css";
 import type { Metadata } from "next";
 
 import { DEFAULT_SHARE_IMAGE, episodeShareTitle, shareDescription } from "@/lib/share-metadata";

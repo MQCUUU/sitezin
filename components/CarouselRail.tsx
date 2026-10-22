@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/media.css";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 

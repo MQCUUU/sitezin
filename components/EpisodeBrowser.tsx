@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/title-detail.css";
 import { apiFetch } from "@/lib/api-client";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 import Link from "next/link";

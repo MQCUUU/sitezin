@@ -1,3 +1,4 @@
+import "@/styles/features/discover.css";
 import { SlidersHorizontal } from "lucide-react";
 
 // Fase 4: botão leve; o PickForMe (grande) é baixado só ao abrir.

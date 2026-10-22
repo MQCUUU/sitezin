@@ -1,3 +1,4 @@
+import "@/styles/features/title-detail.css";
 import Link from "next/link";
 import { PlayCircle } from "lucide-react";
 

@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/for-you.css";
 import { removeFromLibrary } from "@/lib/library/actions";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 import { apiFetch } from "@/lib/api-client";
@@ -21,15 +23,11 @@ import { DEFAULT_FOR_YOU_QUERY, parseForYouQuery, serializeForYouQuery, type For
 import {
   Bot,
   CalendarDays,
-  Check,
   ChevronDown,
-  Eye,
   Film,
   Filter,
   Gem,
-  Heart,
   Loader2,
-  Plus,
   RotateCcw,
   Sparkles,
   Star,
@@ -47,7 +45,6 @@ import {
 } from "@/components/Search";
 
 import {
-  img,
 } from "@/lib/tmdb";
 
 import { MediaPreviewDialog } from "@/components/media/preview/MediaPreviewDialog";
@@ -87,15 +84,6 @@ function isValidForYouPayload(data: any): boolean {
   );
 }
 
-const STATUS_OPTIONS = [
-  ["want", "Quero assistir"],
-  ["watching", "Assistindo"],
-  ["watched", "Assistido"],
-  ["paused", "Pausado"],
-  ["dropped", "Abandonado"],
-  ["rewatching", "Reassistindo"],
-  ["rewatched", "Reassistido"],
-] as const;
 
 type Shelf = {
   id: string;
@@ -138,20 +126,6 @@ type LibraryItem = {
     null;
 };
 
-function getStatusLabel(
-  status?:
-    string |
-    null
-) {
-  return (
-    STATUS_OPTIONS.find(
-      ([value]) =>
-        value ===
-        status
-    )?.[1] ||
-    "Na biblioteca"
-  );
-}
 
 async function safeJson(
   response:
@@ -1316,7 +1290,7 @@ export default function ForYouPage() {
           <div className="fy-profile-card">
             <div className="fy-profile-icon">
               <Sparkles
-                size={21}
+                size={22}
               />
             </div>
 
@@ -1456,7 +1430,7 @@ export default function ForYouPage() {
             }
           >
             <Filter
-              size={15}
+              size={16}
             />
             Filtros
 
@@ -1897,7 +1871,7 @@ export default function ForYouPage() {
                       <SmartQueue genres={filters.genres} />
 
                       <p className="fy-assistant-link">
-                        <Bot size={15} strokeWidth={2} aria-hidden="true" />
+                        <Bot size={16} strokeWidth={2} aria-hidden="true" />
                         <span>Prefere conversar?</span>
                         <Link href="/assistant">Abrir Assistente</Link>
                       </p>
@@ -2086,7 +2060,7 @@ export default function ForYouPage() {
                 }
               >
                 <Trash2
-                  size={15}
+                  size={16}
                 />
                 Remover
               </button>
@@ -2195,8 +2169,6 @@ function ShelfRow({
 
 function MovieCard({
   item,
-  openMenu,
-  setOpenMenu,
   setPreviewItem,
   getLibraryItem,
   processing,
@@ -2238,9 +2210,6 @@ function MovieCard({
     processing ===
     key;
 
-  const menuOpen =
-    openMenu ===
-    key;
 
   return (
     <article className="fy-card-wrap">
@@ -2309,7 +2278,7 @@ function MovieCard({
             0 && (
             <span className="fy-rating">
               <Star
-                size={11}
+                size={12}
                 fill="currentColor"
               />
               {Number(

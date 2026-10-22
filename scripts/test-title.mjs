@@ -133,7 +133,7 @@ function tvRow({ status = "watching", seasons, last, showStatus = "Ended", count
 const eps = (list) => list.flatMap(([s, from, to]) => Array.from({ length: to - from + 1 }, (_, i) => [s, from + i]));
 const fakeSql = (watched, mediaId) => {
   const calls = [];
-  const sql = async (strings, ...values) => {
+  const sql = async (strings) => {
     calls.push(strings.join("?"));
     return watched.map(([s, e]) => ({ media_id: mediaId, season_number: s, episode_number: e }));
   };

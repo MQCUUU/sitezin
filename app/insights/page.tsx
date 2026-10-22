@@ -1,3 +1,4 @@
+import "@/styles/features/insights.css";
 import "@/styles/insights.css";
 import type { Metadata } from "next";
 

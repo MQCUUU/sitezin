@@ -529,21 +529,28 @@ export async function POST(
     item.media = existingMedia;
     item.created = created;
 
-    if (!created) {
-      return NextResponse.json(item as unknown as LibraryItem);
-    }
-
     /*
      * V2.5 — readição: visualizações de uma passagem anterior pela Biblioteca
      * (preservadas com library_item_id NULL ao remover) voltam a apontar para o
-     * item novo do MESMO título e usuário. Nada é duplicado nem recriado: a
-     * história é a mesma, só ganha de novo o vínculo com o estado atual.
+     * item do MESMO título e usuário. Nada é duplicado nem recriado.
+     *
+     * Fase 7: fica fora da transação do INSERT (Fase 0), então é auto-reparável:
+     * roda também quando o item já existia (só pega entradas ainda órfãs) e, se
+     * falhar, não derruba a resposta — o próximo "adicionar" refaz o vínculo.
      */
-    await sql`
-      UPDATE public.watch_entries
-      SET library_item_id = ${item.id}
-      WHERE user_id = ${userId} AND media_id = ${existingMedia.id} AND library_item_id IS NULL
-    `;
+    try {
+      await sql`
+        UPDATE public.watch_entries
+        SET library_item_id = ${item.id}
+        WHERE user_id = ${userId} AND media_id = ${existingMedia.id} AND library_item_id IS NULL
+      `;
+    } catch (linkErr) {
+      console.warn("[library] re-vínculo do histórico adiado:", linkErr instanceof Error ? linkErr.message : String(linkErr));
+    }
+
+    if (!created) {
+      return NextResponse.json(item as unknown as LibraryItem);
+    }
 
     /*
      * 3. Registrar no diário (safe / não-bloqueante) — só a criação gera evento.

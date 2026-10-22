@@ -1,3 +1,4 @@
+import "@/styles/features/media.css";
 import { ProviderLogo } from "@/components/media/providers/ProviderLogo";
 import type { WatchProviderItem } from "@/components/media/providers/types";
 

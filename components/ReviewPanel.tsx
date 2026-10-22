@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/title-detail.css";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   Check,
@@ -320,7 +322,7 @@ export function ReviewPanel({
         <div className="review-main-rating">
 
           <div className="review-kicker">
-            <Star size={17} fill="currentColor" />
+            <Star size={18} fill="currentColor" />
             Minha avaliação
           </div>
 
@@ -470,7 +472,7 @@ export function ReviewPanel({
                   setShowAddCategory(true)
                 }
               >
-                <Plus size={17} />
+                <Plus size={18} />
                 Criar categoria
               </button>
 
@@ -543,7 +545,7 @@ export function ReviewPanel({
                             aria-label={`Remover categoria ${category.name}`}
                           >
                             <Trash2
-                              size={15}
+                              size={16}
                             />
                           </button>
 
@@ -592,7 +594,7 @@ export function ReviewPanel({
                   setShowAddCategory(true)
                 }
               >
-                <Plus size={17} />
+                <Plus size={18} />
                 Adicionar categoria
               </button>
 

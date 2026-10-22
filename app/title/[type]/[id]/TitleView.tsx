@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/title-detail.css";
 import { removeFromLibrary as deleteLibraryItem } from "@/lib/library/actions";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";

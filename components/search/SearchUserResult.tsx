@@ -1,3 +1,4 @@
+import "@/styles/features/search-suggest.css";
 import Link from "next/link";
 import { ArrowRight, UserRound } from "lucide-react";
 

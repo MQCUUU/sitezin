@@ -7,10 +7,11 @@
  *   md  18  ações de destaque (hero do título, CTA)
  *   lg  22  cabeçalhos de seção, estados vazios pequenos
  *
- * Ícones decorativos grandes (estados vazios, heróis) usam 24px+ por design.
- * Valores fora da escala (11, 13, 15, 17, 19, 21) foram migrados nos
- * componentes compartilhados (auth, topo, cards, título, biblioteca, busca,
- * descobrir, listas); páginas específicas seguem na próxima fase visual.
+ * Exceções aceitas: 20px em ícones de bloco (cartões de recurso, ícone de
+ * diálogo de confirmação, resultado da busca) e 24px+ em ícones decorativos
+ * grandes (estados vazios, heróis).
+ * Fase 7: os valores fora da escala (10, 11, 13, 15, 17, 19, 21) foram
+ * migrados para o valor da escala mais próximo em todo o app.
  */
 export const ICON_SIZE = {
   xxs: 12,

@@ -1,3 +1,4 @@
+import "@/styles/features/title-detail.css";
 import type { Metadata } from "next";
 import { detailsTMDB, img } from "@/lib/tmdb";
 import { getSiteUrl } from "@/lib/site-url";

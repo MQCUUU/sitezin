@@ -90,7 +90,7 @@ export function Poster({
     const element = imageRef.current;
 
     if (element?.complete && element.naturalWidth > 0) setLoaded(true);
-  });
+  }, [path]);
 
   /*
    * V2.2-A — dois problemas percebidos pelo usuário:

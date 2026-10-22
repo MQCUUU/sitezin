@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/title-detail.css";
 import { apiFetch } from "@/lib/api-client";
 import {
   useEffect,
@@ -728,7 +730,7 @@ export function WatchHistory({
         <div className="watch-history-stats">
           <div>
             <History
-              size={17}
+              size={18}
             />
 
             <strong>
@@ -747,7 +749,7 @@ export function WatchHistory({
 
           <div>
             <RefreshCcw
-              size={17}
+              size={18}
             />
 
             <strong>
@@ -763,7 +765,7 @@ export function WatchHistory({
 
           <div>
             <Star
-              size={17}
+              size={18}
             />
 
             <strong>
@@ -782,7 +784,7 @@ export function WatchHistory({
 
           <div>
             <CalendarDays
-              size={17}
+              size={18}
             />
 
             <strong>
@@ -1186,7 +1188,7 @@ export function WatchHistory({
               }
             >
               <X
-                size={17}
+                size={18}
               />
             </button>
 
@@ -1343,12 +1345,12 @@ export function WatchHistory({
               >
                 {saving ? (
                   <Loader2
-                    size={15}
+                    size={16}
                     className="spin"
                   />
                 ) : (
                   <Check
-                    size={15}
+                    size={16}
                   />
                 )}
 

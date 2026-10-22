@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/settings.css";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -212,7 +214,7 @@ export function AccountPrivacy() {
     return (
       <section className="panel settings-panel account-settings-panel">
         <div className="account-settings-loading" role="status">
-          <Loader2 size={19} className="spin" aria-hidden="true" />
+          <Loader2 size={18} className="spin" aria-hidden="true" />
           Carregando sua conta…
         </div>
       </section>
@@ -238,7 +240,7 @@ export function AccountPrivacy() {
       <section id="account" className="panel settings-panel account-settings-panel" aria-labelledby="account-title">
         <div className="settings-panel-head">
           <div className="settings-icon">
-            <UserRound size={19} aria-hidden="true" />
+            <UserRound size={18} aria-hidden="true" />
           </div>
           <div>
             <h2 id="account-title">Conta</h2>
@@ -262,7 +264,7 @@ export function AccountPrivacy() {
         <div className="account-settings-grid">
           <form className="account-settings-card" onSubmit={saveName}>
             <div className="account-settings-card-head">
-              <UserRound size={17} aria-hidden="true" />
+              <UserRound size={18} aria-hidden="true" />
               <div>
                 <strong>Nome de exibição</strong>
                 <span>Aparece no seu perfil e para quem você segue.</span>
@@ -284,7 +286,7 @@ export function AccountPrivacy() {
 
           <div className="account-settings-card">
             <div className="account-settings-card-head">
-              <Mail size={17} aria-hidden="true" />
+              <Mail size={18} aria-hidden="true" />
               <div>
                 <strong>E-mail</strong>
                 <span>Usado para entrar e recuperar a conta. Só você vê.</span>
@@ -304,7 +306,7 @@ export function AccountPrivacy() {
       <section id="security" className="panel settings-panel account-settings-panel" aria-labelledby="security-title">
         <div className="settings-panel-head">
           <div className="settings-icon">
-            <KeyRound size={19} aria-hidden="true" />
+            <KeyRound size={18} aria-hidden="true" />
           </div>
           <div>
             <h2 id="security-title">Senha</h2>
@@ -316,7 +318,7 @@ export function AccountPrivacy() {
           <label>
             <span>Senha atual</span>
             <div className="account-password-input">
-              <LockKeyhole size={15} aria-hidden="true" />
+              <LockKeyhole size={16} aria-hidden="true" />
               <input
                 type={showPasswords ? "text" : "password"}
                 autoComplete="current-password"
@@ -330,7 +332,7 @@ export function AccountPrivacy() {
           <label>
             <span>Nova senha</span>
             <div className="account-password-input">
-              <KeyRound size={15} aria-hidden="true" />
+              <KeyRound size={16} aria-hidden="true" />
               <input
                 type={showPasswords ? "text" : "password"}
                 autoComplete="new-password"
@@ -346,7 +348,7 @@ export function AccountPrivacy() {
                 aria-pressed={showPasswords}
                 onClick={() => setShowPasswords((value) => !value)}
               >
-                {showPasswords ? <EyeOff size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />}
+                {showPasswords ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
               </button>
             </div>
             {newPassword && (
@@ -366,7 +368,7 @@ export function AccountPrivacy() {
           <label>
             <span>Confirmar nova senha</span>
             <div className="account-password-input">
-              <Check size={15} aria-hidden="true" />
+              <Check size={16} aria-hidden="true" />
               <input
                 type={showPasswords ? "text" : "password"}
                 autoComplete="new-password"
@@ -400,7 +402,7 @@ export function AccountPrivacy() {
       >
         <div className="settings-panel-head">
           <div className="settings-icon danger">
-            <AlertTriangle size={19} aria-hidden="true" />
+            <AlertTriangle size={18} aria-hidden="true" />
           </div>
           <div>
             <h2 id="danger-title">Zona de risco</h2>

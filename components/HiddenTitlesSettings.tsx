@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/settings.css";
 import { apiFetch, errorMessage } from "@/lib/api-client";
 import { useState } from "react";
 import { EyeOff, Loader2, Undo2 } from "lucide-react";
@@ -85,7 +87,7 @@ export function HiddenTitlesSettings() {
     <section className="panel settings-panel account-settings-panel" aria-labelledby="hidden-titles-title">
       <div className="settings-panel-head">
         <div className="settings-icon">
-          <EyeOff size={19} aria-hidden="true" />
+          <EyeOff size={18} aria-hidden="true" />
         </div>
         <div>
           <h2 id="hidden-titles-title">Não tenho interesse</h2>

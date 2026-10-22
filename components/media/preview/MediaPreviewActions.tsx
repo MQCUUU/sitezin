@@ -1,3 +1,4 @@
+import "@/styles/features/media.css";
 import { Plus } from "lucide-react";
 
 import type { MediaPreviewActionsConfig, MediaPreviewData } from "./types";

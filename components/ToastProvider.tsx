@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/toasts.css";
 import {
   createContext,
   useCallback,

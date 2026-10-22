@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/auth.css";
 import {
   FormEvent,
   useEffect,
@@ -34,7 +36,7 @@ import { authClient } from "@/lib/auth/client";
 import {
   useToast,
 } from "@/components/ToastProvider";
-import { authErrorMessage, authFormPasswordError, authRedirectOrigin, PASSWORD_HINT } from "@/lib/auth-client";
+import { authErrorMessage, authFormPasswordError, PASSWORD_HINT } from "@/lib/auth-client";
 import { describeIntent, peekPendingAction, takePendingAction } from "@/lib/auth/pending-action";
 import { runLibraryAction } from "@/lib/library/actions";
 import { mediaStatusLabel } from "@/lib/media-status";
@@ -695,7 +697,8 @@ export function AuthPage({
                         .value
                     )
                   }
-                  placeholder="Mínimo de 8 caracteres"
+                  /* No login não sugere regra de senha: contas antigas podem ter senha mais curta (Fase 0). */
+                  placeholder={isSignup ? "Mínimo de 8 caracteres" : undefined}
                 />
 
                 <button

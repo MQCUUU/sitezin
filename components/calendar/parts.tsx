@@ -8,6 +8,7 @@ import { Poster } from "@/components/Poster";
 import { img } from "@/lib/tmdb";
 import { addDays, capitalize, dayHeading, daysBetween, longDate, monthKey, relativeWhen, startOfWeek, weekday, WEEKDAYS_SHORT } from "@/lib/calendar/dates";
 import type { CalendarEvent } from "@/lib/calendar/types";
+import { lockScroll, trapTab } from "@/lib/modal-a11y";
 
 import { detailLabel, eventAria, personalLine, typeLabel } from "./copy";
 
@@ -36,7 +37,7 @@ export function EventCard({ event, compact = false }: { event: CalendarEvent; co
       ) : (
         <span className="cal-card-body">
           <span className="cal-card-type">
-            {event.media_type === "tv" ? <Tv size={13} aria-hidden="true" /> : <Film size={13} aria-hidden="true" />}
+            {event.media_type === "tv" ? <Tv size={14} aria-hidden="true" /> : <Film size={14} aria-hidden="true" />}
             {typeLabel(event)}
             {detail ? <em>· {detail}</em> : null}
           </span>
@@ -225,24 +226,31 @@ export function DayDetails({ day, events, today, onClose }: { day: string; event
   const personal = events.filter((e) => e.relationship);
   const other = events.filter((e) => !e.relationship);
 
+  // onClose por ref: callback inline do pai não reinicia o efeito (o foco não "pula").
+  const closeRef = useRef(onClose);
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
 
     panel.current?.focus();
 
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") closeRef.current();
+      else trapTab(event, panel.current); // Fase 7: Tab/Shift+Tab não saem do painel
     };
 
     document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
+    const unlockScroll = lockScroll();
 
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
+      unlockScroll();
       previous?.focus?.();
     };
-  }, [onClose]);
+  }, []);
 
   return (
     <div className="cal-sheet-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
@@ -259,7 +267,7 @@ export function DayDetails({ day, events, today, onClose }: { day: string; event
         {day <= today ? (
           <Link href={`/diary?date=${day}`} className="cal-diary-link">
             Ver o que você assistiu neste dia no Diário
-            <ChevronRight size={15} aria-hidden="true" />
+            <ChevronRight size={16} aria-hidden="true" />
           </Link>
         ) : null}
         {personal.length ? (

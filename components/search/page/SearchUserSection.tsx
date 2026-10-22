@@ -1,3 +1,4 @@
+import "@/styles/features/search-page.css";
 import Link from "next/link";
 import { UserRound } from "lucide-react";
 

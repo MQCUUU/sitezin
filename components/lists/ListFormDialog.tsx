@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/lists.css";
 import { apiFetch, errorMessage } from "@/lib/api-client";
 import { useEffect, useId, useState } from "react";
 import { Globe, Loader2, Lock, X } from "lucide-react";

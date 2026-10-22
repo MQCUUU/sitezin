@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/lists.css";
 import { apiFetch, errorMessage, isApiError } from "@/lib/api-client";
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";

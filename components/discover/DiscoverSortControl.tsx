@@ -1,3 +1,4 @@
+import "@/styles/features/discover.css";
 import { useRef } from "react";
 import { Flame, Sparkles, Star } from "lucide-react";
 

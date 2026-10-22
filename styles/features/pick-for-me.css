@@ -1,0 +1,894 @@
+/*
+ * Escolha pra mim (modal completo; carrega com o chunk lazy do PickForMe).
+ *
+ * Fase 7: reunido de app/globals.css, styles/media-unified.css (mesma ordem de cascata).
+ * Carregado pelos componentes que usam estas classes, não pelo layout raiz.
+ */
+
+.pick-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    padding: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,.68);
+    backdrop-filter: blur(10px);
+}
+.pick-modal {
+    position: relative;
+    width: min(920px, 100%);
+    max-height: min(860px, calc(100vh - 44px));
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 24px;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 4%, var(--panel)), var(--panel) 42%);
+    box-shadow: 0 28px 90px rgba(0,0,0,.45);
+}
+.pick-close {
+    position: absolute;
+    right: 16px;
+    top: 16px;
+    z-index: 5;
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background: var(--panel);
+    color: var(--muted);
+    cursor: pointer;
+}
+.pick-heading {
+    padding-right: 45px;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+}
+.pick-heading-icon {
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    display: grid;
+    place-items: center;
+    border-radius: 14px;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 11%, transparent);
+}
+.pick-heading h2 {
+    margin: 3px 0 5px;
+    font-size: var(--mc-fs-2xl);
+}
+/* V2.9 — filtros herdados de Descobrir e regra do "Surpreenda-me" */
+.pick-heading .pick-inherited {
+    margin-top: 8px;
+    font-size: var(--mc-fs-sm);
+    color: var(--muted);
+}
+.pick-heading .pick-inherited strong {
+    color: var(--accent);
+}
+.pick-surprise-hint {
+    margin: 0 0 10px;
+    font-size: var(--mc-fs-sm);
+}
+.pick-heading p {
+    max-width: 650px;
+    margin: 0;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+    line-height: 1.55;
+}
+.pick-type-tabs {
+    margin-top: 20px;
+    padding: 4px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    border: 1px solid var(--border);
+    border-radius: var(--mc-radius-md);
+    background: var(--bg);
+}
+.pick-type-tabs button {
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: var(--mc-fs-xs);
+    font-weight: 800;
+    cursor: pointer;
+}
+.pick-type-tabs button.active {
+    color: var(--on-accent, #fff);
+    /* Fase 3: aba selecionada = destaque sólido + texto pelo contraste (igual às demais abas). */
+    background: var(--accent);
+}
+.pick-form-grid {
+    margin-top: 13px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+.pick-form-grid label {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.pick-form-grid label > span,
+.pick-mode-title {
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+    font-weight: 800;
+}
+.pick-form-grid select,
+.pick-form-grid input {
+    width: 100%;
+    height: 40px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    outline: none;
+    background: var(--bg);
+    color: var(--text);
+    color-scheme: dark;
+    font: inherit;
+    font-size: var(--mc-fs-xs);
+}
+.pick-form-grid select:focus,
+.pick-form-grid input:focus {
+    border-color: var(--accent);
+}
+.pick-mode-title {
+    margin-top: 17px;
+    margin-bottom: 7px;
+}
+.pick-mode-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+.pick-mode-grid button {
+    min-height: 76px;
+    padding: 11px;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background: var(--bg);
+    color: var(--text);
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+.pick-mode-grid button:hover,
+.pick-mode-grid button.active {
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+    background: color-mix(in srgb, var(--accent) 6%, var(--bg));
+}
+.pick-mode-grid button.active strong {
+    color: var(--accent);
+}
+.pick-mode-grid strong,
+.pick-mode-grid span {
+    display: block;
+}
+.pick-mode-grid strong {
+    font-size: var(--mc-fs-xs);
+}
+.pick-mode-grid span {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+    line-height: 1.35;
+}
+.pick-toggle-grid {
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+.pick-toggle-grid > button {
+    min-height: 58px;
+    padding: 9px 11px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background: transparent;
+    color: var(--text);
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+.pick-toggle-grid > button.active {
+    border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+    background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+.pick-toggle-grid > button > span {
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--border);
+    border-radius: var(--mc-radius-sm);
+    color: var(--accent);
+    font-size: var(--mc-fs-xs);
+    font-weight: 900;
+}
+.pick-toggle-grid button.active > span {
+    border-color: var(--accent);
+}
+.pick-toggle-grid strong,
+.pick-toggle-grid small {
+    display: block;
+}
+.pick-toggle-grid strong {
+    font-size: var(--mc-fs-xs);
+}
+.pick-toggle-grid small {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+}
+.pick-filter-footer {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+}
+.pick-reset {
+    min-height: 31px;
+    padding: 0 9px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: var(--mc-fs-xs);
+    font-weight: 700;
+    cursor: pointer;
+}
+.pick-error {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border: 1px solid color-mix(in srgb, #ef4444 28%, var(--border));
+    border-radius: 10px;
+    background: color-mix(in srgb, #ef4444 6%, transparent);
+    color: #f87171;
+    font-size: var(--mc-fs-xs);
+}
+.pick-main-actions {
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: .7fr 1.3fr;
+    gap: 8px;
+}
+.pick-go {
+    box-shadow: 0 10px 28px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+/* RESULTADO */
+.pick-result-layout {
+    min-height: 545px;
+    display: grid;
+    grid-template-columns: 285px minmax(0, 1fr);
+    gap: 28px;
+    align-items: center;
+}
+.pick-result-visual {
+    min-width: 0;
+}
+.pick-result-poster {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--mc-radius-lg);
+    background: var(--bg);
+    box-shadow: 0 22px 55px rgba(0,0,0,.28);
+}
+.pick-result-poster img,
+.pick-empty-poster {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+}
+.pick-empty-poster {
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+}
+.pick-result-layout.spinning
+.pick-result-poster {
+    animation: pickPosterPulse .26s ease-in-out infinite alternate;
+}
+.pick-spin-overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: rgba(5,8,14,.28);
+    color: white;
+    backdrop-filter: blur(1px);
+}
+.pick-result-copy {
+    min-width: 0;
+}
+.pick-winner-label {
+    width: fit-content;
+    min-height: 28px;
+    padding: 0 9px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+    border-radius: var(--mc-radius-pill);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    color: var(--accent);
+    font-size: var(--mc-fs-xs);
+    font-weight: 900;
+}
+.pick-result-copy h2 {
+    margin: 10px 0 9px;
+    font-size: clamp(27px, 4vw, 43px);
+    line-height: 1.04;
+    letter-spacing: -.025em;
+    overflow-wrap: anywhere;
+}
+.pick-result-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+}
+.pick-result-meta > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.pick-result-meta .rating {
+    color: var(--mc-color-rating);
+}
+.pick-genres {
+    margin-top: 11px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.pick-genres span {
+    min-height: 25px;
+    padding: 0 8px;
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: var(--mc-radius-pill);
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+    font-weight: 700;
+}
+.pick-overview {
+    margin: 14px 0 0;
+    max-height: 108px;
+    overflow: auto;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+    line-height: 1.7;
+}
+/* STREAMING */
+.pick-watch {
+    margin-top: 13px;
+    padding: 11px;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background: var(--bg);
+}
+.pick-watch > strong {
+    display: block;
+    margin-bottom: 8px;
+    font-size: var(--mc-fs-xs);
+}
+.pick-provider-line {
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+.pick-provider-line > span {
+    width: 58px;
+    flex: 0 0 58px;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+}
+.pick-provider-line > div {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+.pick-provider-line > div > div {
+    position: relative;
+    width: 27px;
+    height: 27px;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--panel);
+}
+.pick-provider-line img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+/* NOTA */
+.pick-personal-rating {
+    margin-top: 12px;
+    padding: 11px;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background: var(--bg);
+}
+.pick-personal-rating > div:first-child {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.pick-personal-rating span {
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+}
+.pick-personal-rating strong {
+    font-size: var(--mc-fs-xs);
+}
+.pick-rating-buttons {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+.pick-rating-buttons button {
+    min-width: 27px;
+    height: 27px;
+    padding: 0 6px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: var(--mc-fs-xs);
+    font-weight: 800;
+    cursor: pointer;
+}
+.pick-rating-buttons button:hover,
+.pick-rating-buttons button.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+.pick-rating-buttons button.clear {
+    width: auto;
+}
+/* AÇÕES */
+.pick-library-actions {
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+}
+.pick-status-wrap {
+    position: relative;
+}
+.pick-status-button {
+    min-width: 150px;
+}
+.pick-status-menu button {
+    width: 100%;
+    min-height: 32px;
+    padding: 0 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: var(--mc-fs-xs);
+    font-weight: 700;
+    cursor: pointer;
+}
+.pick-status-menu button:hover,
+.pick-status-menu button.active {
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    color: var(--text);
+}
+.pick-status-menu button.active {
+    color: var(--accent);
+}
+.pick-status-menu > div {
+    height: 1px;
+    margin: 5px 2px;
+    background: var(--border);
+}
+.pick-status-menu button.remove {
+    justify-content: flex-start;
+    color: #ef4444;
+}
+.pick-favorite.active {
+    color: var(--accent);
+}
+.pick-reroll-actions {
+    margin-top: 9px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+}
+/* GIRANDO */
+.pick-spinning-copy h2 {
+    margin: 8px 0;
+    font-size: clamp(25px, 4vw, 40px);
+}
+.pick-spinning-copy p {
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+}
+.pick-dots {
+    margin-top: 17px;
+    display: flex;
+    gap: 6px;
+}
+.pick-dots span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pickDot .9s ease-in-out infinite;
+}
+.pick-dots span:nth-child(2) {
+    animation-delay: .12s;
+}
+.pick-dots span:nth-child(3) {
+    animation-delay: .24s;
+}
+@media (max-width: 760px) {
+    .pick-backdrop {
+        padding: 10px;
+        align-items: flex-end;
+    }
+}
+@media (max-width: 760px) {
+    .pick-modal {
+        max-height: 91vh;
+        padding: 17px;
+        border-radius: 20px 20px 12px 12px;
+    }
+}
+@media (max-width: 760px) {
+    .pick-form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 760px) {
+    .pick-mode-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 760px) {
+    .pick-result-layout {
+        min-height: 0;
+        grid-template-columns: 125px minmax(0, 1fr);
+        gap: 15px;
+        align-items: start;
+    }
+}
+@media (max-width: 760px) {
+    .pick-result-copy h2 {
+        font-size: 24px;
+    }
+}
+@media (max-width: 760px) {
+    .pick-overview,
+  .pick-watch,
+  .pick-personal-rating,
+  .pick-library-actions,
+  .pick-reroll-actions {
+        grid-column: 1 / -1;
+    }
+}
+@media (max-width: 520px) {
+    .pick-form-grid,
+  .pick-toggle-grid {
+        grid-template-columns: 1fr;
+    }
+}
+@media (max-width: 520px) {
+    .pick-main-actions {
+        grid-template-columns: 1fr;
+    }
+}
+@media (max-width: 520px) {
+    .pick-result-layout {
+        display: block;
+    }
+}
+@media (max-width: 520px) {
+    .pick-result-poster {
+        width: 125px;
+        margin-bottom: 15px;
+    }
+}
+@media (max-width: 520px) {
+    .pick-mode-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+.pick-field {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.pick-field > span {
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+    font-weight: 800;
+}
+.pick-multi {
+    position: relative;
+    min-width: 0;
+}
+.pick-multi-trigger {
+    width: 100%;
+    height: 40px;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: var(--mc-fs-xs);
+    cursor: pointer;
+}
+.pick-multi.open
+.pick-multi-trigger,
+.pick-multi-trigger:focus {
+    border-color: var(--accent);
+}
+.pick-multi-trigger > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.pick-multi-chips {
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+.pick-multi-chips button,
+.pick-multi-chips > span {
+    min-height: 23px;
+    padding: 0 7px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
+    border-radius: var(--mc-radius-pill);
+    background: color-mix(in srgb, var(--accent) 6%, transparent);
+    color: var(--accent);
+    font: inherit;
+    font-size: var(--mc-fs-xs);
+    font-weight: 800;
+}
+.pick-multi-chips button {
+    cursor: pointer;
+}
+.pick-multi-popover {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 7px);
+    z-index: 80;
+    min-width: 230px;
+    padding: 7px;
+    border: 1px solid var(--border);
+    border-radius: var(--mc-radius-md);
+    background: color-mix(in srgb, var(--panel) 98%, transparent);
+    box-shadow: 0 18px 55px rgba(0, 0, 0, .38);
+    backdrop-filter: blur(16px);
+}
+.pick-multi-search {
+    display: flex;
+    gap: 5px;
+}
+.pick-multi-search input {
+    min-width: 0;
+    flex: 1;
+    height: 34px;
+    padding: 0 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--mc-radius-sm);
+    outline: none;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: var(--mc-fs-xs);
+}
+.pick-multi-search input:focus {
+    border-color: var(--accent);
+}
+.pick-multi-search button {
+    padding: 0 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--mc-radius-sm);
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: var(--mc-fs-xs);
+    font-weight: 800;
+    cursor: pointer;
+}
+.pick-multi-options {
+    max-height: 250px;
+    margin-top: 6px;
+    overflow-y: auto;
+    display: grid;
+    gap: 3px;
+}
+.pick-multi-options > button {
+    width: 100%;
+    min-height: 35px;
+    padding: 5px 7px;
+    display: grid;
+    grid-template-columns: 25px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 7px;
+    border: 0;
+    border-radius: var(--mc-radius-sm);
+    background: transparent;
+    color: var(--muted);
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+.pick-multi-options > button:hover,
+.pick-multi-options > button.active {
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
+    color: var(--text);
+}
+.pick-multi-options > button.active {
+    color: var(--accent);
+}
+.pick-multi-options img,
+.pick-multi-check {
+    width: 25px;
+    height: 25px;
+    border-radius: 7px;
+    object-fit: cover;
+}
+.pick-multi-check {
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--border);
+    font-size: var(--mc-fs-xs);
+    font-weight: 900;
+}
+.pick-multi-options button.active
+.pick-multi-check {
+    border-color: var(--accent);
+}
+.pick-multi-options strong {
+    min-width: 0;
+    overflow: hidden;
+    font-size: var(--mc-fs-xs);
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.pick-multi-options small {
+    padding: 3px 5px;
+    border-radius: var(--mc-radius-pill);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    color: var(--accent);
+    font-size: var(--mc-fs-xs);
+    font-weight: 900;
+}
+.pick-not-interested {
+    color: var(--muted);
+}
+.pick-not-interested:hover {
+    border-color: color-mix(in srgb, #f59e0b 30%, var(--border));
+    color: #f59e0b;
+}
+@media (max-width: 520px) {
+    .pick-multi-popover {
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        top: auto;
+        bottom: 12px;
+        max-height: 56vh;
+    }
+}
+@media (max-width: 520px) {
+    .pick-multi-options {
+        max-height: 42vh;
+    }
+}
+@keyframes pickPosterPulse {
+    from {
+        transform: scale(.985);
+        opacity: .82;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+@keyframes pickDot {
+    0%,
+  100% {
+        transform: translateY(0);
+        opacity: .35;
+    }
+    50% {
+        transform: translateY(-5px);
+        opacity: 1;
+    }
+}
+/* RESPONSIVO */
+/* "Por que este pra você" (Escolha pra mim) */
+.pick-why {
+    margin: 10px 0 12px;
+    padding: 10px 12px;
+    border-radius: var(--mc-radius-md);
+    border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+    background: color-mix(in srgb, var(--accent) 9%, transparent);
+    font-size: var(--mc-fs-sm);
+}
+.pick-why strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: var(--mc-fs-xs);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--accent) 60%, #fff);
+}
+.pick-why ul {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 2px;
+    color: var(--mc-color-text-secondary, var(--muted));
+}

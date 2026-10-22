@@ -1,0 +1,155 @@
+/*
+ * Navegação lateral e menu mobile.
+ *
+ * Fase 7: reunido de app/globals.css (mesma ordem de cascata).
+ * Carregado pelos componentes que usam estas classes, não pelo layout raiz.
+ */
+
+.brand {
+    font-weight: 900;
+    letter-spacing: -.6px;
+    padding: 0 10px 24px
+}
+.brand span {
+    color: var(--accent)
+}
+.nav {
+    display: grid;
+    gap: 5px
+}
+.nav a {
+    padding: 11px 12px;
+    border-radius: 10px;
+    color: var(--muted);
+    display: flex;
+    gap: 11px;
+    align-items: center
+}
+.mobile-nav {
+    display: none
+}
+@media (max-width:760px) {
+    .mobile-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: color-mix(in srgb,var(--panel) 92%,transparent);
+        backdrop-filter: blur(12px);
+        border-top: 1px solid var(--line);
+        z-index: 50;
+        justify-content: space-around;
+        padding: 9px
+    }
+}
+@media (max-width:760px) {
+    .mobile-nav a {
+        font-size: var(--mc-fs-xs);
+        color: var(--muted);
+        display: grid;
+        justify-items: center;
+        gap: 3px
+    }
+}
+html[data-theme="light"] .nav a:hover,html[data-theme="light"] .nav a.active {
+    color: #111318
+}
+html[data-density="compact"] .nav a {
+    padding: 9px 11px
+}
+/* Mobile shell: mantém todas as áreas acessíveis e evita estouros horizontais. */
+.mobile-more-backdrop,.mobile-more-sheet {
+    display: none
+}
+@media (max-width:760px) {
+    .mobile-nav {
+        padding-bottom: calc(8px + env(safe-area-inset-bottom))
+    }
+}
+@media (max-width:760px) {
+    .mobile-nav>a,.mobile-nav>button {
+        min-width: 0;
+        flex: 1;
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        font-size: var(--mc-fs-xs);
+        display: grid;
+        place-items: center;
+        gap: 3px;
+        padding: 2px
+    }
+}
+@media (max-width:760px) {
+    .mobile-more-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 70;
+        display: flex;
+        align-items: flex-end;
+        background: #0009;
+        backdrop-filter: blur(4px)
+    }
+}
+@media (max-width:760px) {
+    .mobile-more-sheet {
+        display: block;
+        width: 100%;
+        max-height: 78dvh;
+        padding: 18px max(16px,env(safe-area-inset-right)) calc(22px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+        overflow-y: auto;
+        border: 1px solid var(--line);
+        border-radius: 22px 22px 0 0;
+        background: var(--panel)
+    }
+}
+@media (max-width:760px) {
+    .mobile-more-sheet header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px
+    }
+}
+@media (max-width:760px) {
+    .mobile-more-sheet header button {
+        width: 44px;
+        border: 0;
+        border-radius: 50%;
+        background: var(--panel2);
+        color: var(--text)
+    }
+}
+@media (max-width:760px) {
+    .mobile-more-sheet>div {
+        display: grid;
+        grid-template-columns: repeat(2,minmax(0,1fr));
+        gap: 9px
+    }
+}
+@media (max-width:760px) {
+    .mobile-more-sheet a {
+        min-width: 0;
+        min-height: 64px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        background: var(--bg)
+    }
+}
+@media (max-width: 480px) {
+    .mobile-more-sheet>div {
+        grid-template-columns: 1fr
+    }
+}
+/* V2.1-B — atalho secundário (Assistente IA) no sheet "Mais" do mobile */
+.mobile-more-secondary {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--line);
+    margin-top: 4px;
+    padding-top: 13px
+}

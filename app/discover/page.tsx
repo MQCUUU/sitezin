@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/discover.css";
 import { removeFromLibrary } from "@/lib/library/actions";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
@@ -137,27 +139,9 @@ function DiscoverContent() {
   const [previewDetailsLoading, setPreviewDetailsLoading] = useState(false);
 
   /*
-   * Only `removeTarget` needs this anymore — the Quick Peek's Escape/scroll
-   * lock now comes from `MediaPreviewDialog`'s underlying `Dialog` (C2.2).
+   * Escape/scroll lock: Quick Peek via `MediaPreviewDialog` (Dialog) e a
+   * confirmação de remoção via `useModal` dentro de `DiscoverRemoveDialog` (Fase 7).
    */
-  useEffect(() => {
-    if (!removeTarget) return;
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setRemoveTarget(null);
-      }
-    };
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", onKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [removeTarget]);
 
   useEffect(() => {
     let cancelled = false;

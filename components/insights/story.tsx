@@ -121,7 +121,7 @@ function Notes({ data, section, max = 2, exclude = [] }: { data: Data; section: 
     <ul className="ins-notes">
       {items.map((i: Insight) => (
         <li key={i.id}>
-          <Sparkles size={15} aria-hidden="true" />
+          <Sparkles size={16} aria-hidden="true" />
           <span>{i.message}</span>
           <HowTo>{i.evidence}</HowTo>
         </li>
@@ -542,7 +542,7 @@ export function TasteChapter({ data, index }: { data: Data; index: number }) {
                       {row.count} {p.unit}
                       {row.avg !== null ? (
                         <b>
-                          <Star size={11} fill="currentColor" aria-hidden="true" /> {dec(row.avg)}
+                          <Star size={12} fill="currentColor" aria-hidden="true" /> {dec(row.avg)}
                         </b>
                       ) : null}
                     </span>
@@ -983,7 +983,7 @@ export function EvolutionChapter({ data, index }: { data: Data; index: number })
                 <span style={{ width: `${c.unit === "rating" ? c.to * 10 : c.to * 100}%` }} className="is-to" />
               </span>
               <span className="ins-change-values">
-                {c.unit === "rating" ? dec(c.from) : pct(c.from)} <ArrowRight size={13} aria-hidden="true" /> <strong>{c.unit === "rating" ? dec(c.to) : pct(c.to)}</strong>
+                {c.unit === "rating" ? dec(c.from) : pct(c.from)} <ArrowRight size={14} aria-hidden="true" /> <strong>{c.unit === "rating" ? dec(c.to) : pct(c.to)}</strong>
               </span>
             </li>
           ))}
@@ -1143,7 +1143,7 @@ export function FavoritesChapter({ data, index }: { data: Data; index: number })
                 <small>{item.type === "tv" ? "Série" : "Filme"}</small>
               </span>
               <span className="ins-top-rating">
-                <Star size={13} fill="currentColor" aria-hidden="true" /> {dec(item.rating)}
+                <Star size={14} fill="currentColor" aria-hidden="true" /> {dec(item.rating)}
               </span>
             </Link>
           </li>

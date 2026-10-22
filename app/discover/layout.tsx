@@ -1,3 +1,4 @@
+import "@/styles/features/discover.css";
 import type { Metadata } from "next";
 
 /*

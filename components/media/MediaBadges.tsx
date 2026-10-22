@@ -1,3 +1,4 @@
+import "@/styles/features/media.css";
 import { Check, CircleMinus, Clock, Pause, Play, Repeat, RotateCcw, Film, Tv } from "lucide-react";
 import type { ReactNode } from "react";
 

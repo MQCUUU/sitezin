@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/account-menu.css";
 import { useEffect } from "react";
 import type { HTMLAttributes, ReactNode, RefObject } from "react";
 

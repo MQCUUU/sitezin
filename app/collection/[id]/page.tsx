@@ -1,5 +1,8 @@
 "use client";
 
+
+
+import "@/styles/features/collection.css";
 import { removeFromLibrary } from "@/lib/library/actions";
 import { apiFetch } from "@/lib/api-client";
 import { MediaPosterActions } from "@/components/media/MediaPosterActions";
@@ -10,6 +13,7 @@ import { ApiError } from "@/lib/api-client";
 import { intentForMedia, type LibraryIntent } from "@/lib/auth/pending-action";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -22,19 +26,14 @@ import {
 import Link from "next/link";
 
 import {
-  Check,
-  ChevronDown,
   Clock3,
-  Eye,
   Film,
-  Heart,
   Layers3,
   Loader2,
   Plus,
   Sparkles,
   Star,
   Trash2,
-  X,
 } from "lucide-react";
 
 import {
@@ -54,15 +53,6 @@ import { WatchProviderList } from "@/components/media/preview/WatchProviderList"
 import { fromLooseMediaItem } from "@/components/media/preview/adapters";
 import { normalizeWatchProviders } from "@/components/media/providers";
 
-const STATUS_OPTIONS = [
-  ["want", "Quero assistir"],
-  ["watching", "Assistindo"],
-  ["watched", "Assistido"],
-  ["paused", "Pausado"],
-  ["dropped", "Abandonado"],
-  ["rewatching", "Reassistindo"],
-  ["rewatched", "Reassistido"],
-] as const;
 
 type CollectionMovie = {
   id: number;
@@ -133,20 +123,6 @@ async function safeJson(
   return response.json();
 }
 
-function statusLabel(
-  status?:
-    string |
-    null
-) {
-  return (
-    STATUS_OPTIONS.find(
-      ([value]) =>
-        value ===
-        status
-    )?.[1] ||
-    "Na biblioteca"
-  );
-}
 
 function formatRuntime(
   minutes:
@@ -644,20 +620,11 @@ export default function CollectionPage() {
     runGuarded(undefined, "Não foi possível atualizar a coleção", run);
   }
 
-  function getLibraryItem(
-    movie:
-      CollectionMovie
-  ) {
-    return library.find(
-      (
-        item
-      ) =>
-        item.tmdb_id ===
-        Number(
-          movie.id
-        )
-    );
-  }
+  // useCallback: as listas memorizadas abaixo dependem dele (e, por ele, de `library`).
+  const getLibraryItem = useCallback(
+    (movie: CollectionMovie) => library.find((item) => item.tmdb_id === Number(movie.id)),
+    [library]
+  );
 
   function patchLibrary(
     movie:
@@ -715,7 +682,7 @@ export default function CollectionPage() {
         ).length,
       [
         movies,
-        library,
+        getLibraryItem,
       ]
     );
 
@@ -734,7 +701,7 @@ export default function CollectionPage() {
         ).length,
       [
         movies,
-        library,
+        getLibraryItem,
       ]
     );
 
@@ -856,7 +823,7 @@ export default function CollectionPage() {
       },
       [
         movies,
-        library,
+        getLibraryItem,
         filter,
         sort,
       ]
@@ -1430,7 +1397,7 @@ export default function CollectionPage() {
           <div className="collection-hero-copy">
             <div className="collection-kicker">
               <Layers3
-                size={15}
+                size={16}
               />
 
               Coleção / Franquia
@@ -1945,7 +1912,7 @@ export default function CollectionPage() {
                 }
               >
                 <Trash2
-                  size={15}
+                  size={16}
                 />
                 Remover
               </button>
@@ -1962,8 +1929,6 @@ function CollectionCard({
   index,
   libraryItem,
   processing,
-  menuOpen,
-  setOpenMenu,
   setPreviewItem,
   addToLibrary,
   updateStatus,
@@ -2048,7 +2013,7 @@ function CollectionCard({
             0 && (
             <span>
               <Clock3
-                size={11}
+                size={12}
               />
               {formatRuntime(
                 Number(
@@ -2065,7 +2030,7 @@ function CollectionCard({
             0 && (
             <span className="rating">
               <Star
-                size={11}
+                size={12}
                 fill="currentColor"
               />
               {Number(

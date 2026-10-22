@@ -1,3 +1,4 @@
+import "@/styles/features/discover.css";
 import { Film, Layers3, Tv } from "lucide-react";
 
 import type { DiscoverType } from "@/lib/discover/params";

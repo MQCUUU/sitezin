@@ -1,0 +1,703 @@
+/*
+ * Para você.
+ *
+ * Fase 7: reunido de app/globals.css, styles/media-card.css (mesma ordem de cascata).
+ * Carregado pelos componentes que usam estas classes, não pelo layout raiz.
+ */
+
+.fy-page {
+    width: 100%;
+    padding: 4px 32px 48px;
+}
+/* HERO */
+.fy-hero {
+    position: relative;
+    min-height: 190px;
+    margin: 18px 0 14px;
+    padding: 28px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 28px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, var(--panel)), var(--panel) 48%, color-mix(in srgb, var(--accent) 3%, var(--panel)));
+}
+.fy-hero-glow {
+    position: absolute;
+    width: 360px;
+    height: 360px;
+    right: -120px;
+    top: -190px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    filter: blur(60px);
+    pointer-events: none;
+}
+.fy-hero-copy,
+.fy-profile-card {
+    position: relative;
+    z-index: 1;
+}
+.fy-hero h1 {
+    margin: 6px 0 8px;
+    font-size: clamp(32px, 4vw, 48px);
+    letter-spacing: -.035em;
+}
+.fy-hero-copy > p {
+    max-width: 670px;
+    margin: 0;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+    line-height: 1.6;
+}
+/* "Personalizado" na cor de destaque escolhida em Aparência (mesmo padrão de "Minha coleção") */
+.fy-hero .eyebrow {
+    color: var(--accent);
+}
+.fy-based-on {
+    margin-top: 15px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+    font-size: var(--mc-fs-xs);
+}
+.fy-based-on span {
+    color: var(--muted);
+}
+.fy-based-on strong {
+    color: var(--text);
+}
+.fy-profile-card {
+    min-width: 255px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--bg) 74%, transparent);
+    backdrop-filter: blur(14px);
+}
+.fy-profile-icon {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--mc-radius-md);
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 11%, transparent);
+}
+.fy-profile-card strong,
+.fy-profile-card span {
+    display: block;
+}
+.fy-profile-card strong {
+    font-size: var(--mc-fs-xs);
+}
+.fy-profile-card span {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+}
+/* PROFILE GENRES */
+.fy-profile-genres {
+    margin: 10px 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+}
+.fy-profile-genres > span {
+    margin-right: 2px;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+    font-weight: 700;
+}
+.fy-profile-genres button {
+    height: 28px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--mc-radius-pill);
+    background: var(--panel);
+    color: var(--muted);
+    font: inherit;
+    font-size: var(--mc-fs-xs);
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.fy-profile-genres button:hover,
+.fy-profile-genres button.active {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+    background: color-mix(in srgb, var(--accent) 7%, var(--panel));
+}
+/* TOOLBAR */
+.fy-toolbar {
+    margin: 14px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.fy-tabs {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--border);
+    border-radius: var(--mc-radius-md);
+    background: var(--panel);
+}
+.fy-tabs button {
+    min-height: 34px;
+    padding: 0 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: var(--mc-fs-xs);
+    font-weight: 800;
+    cursor: pointer;
+}
+.fy-tabs button:hover {
+    color: var(--text);
+}
+.fy-tabs button.active {
+    color: var(--on-accent, #fff);
+    /* Fase 3: aba selecionada = destaque sólido + texto pelo contraste (igual às demais abas). */
+    background: var(--accent);
+    box-shadow: 0 5px 18px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.fy-filter-button:hover,
+.fy-filter-button.active {
+    border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+    color: var(--accent);
+}
+.fy-filter-count {
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--mc-radius-pill);
+    background: var(--accent);
+    color: var(--on-accent, #fff);
+    font-size: var(--mc-fs-xs);
+}
+/* FILTER PANEL */
+.fy-filter-panel {
+    margin-bottom: 24px;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--panel);
+}
+.fy-filter-title {
+    margin-bottom: 15px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+.fy-filter-title strong,
+.fy-filter-title span {
+    display: block;
+}
+.fy-filter-title strong {
+    font-size: var(--mc-fs-xs);
+}
+.fy-filter-title span {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+}
+.fy-filter-title > button {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+}
+.fy-filter-fields {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+}
+.fy-filter-fields label {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.fy-filter-fields label > span {
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+    font-weight: 800;
+}
+.fy-filter-fields select,
+.fy-filter-fields input {
+    width: 100%;
+    height: 40px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    outline: none;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: var(--mc-fs-xs);
+    color-scheme: dark;
+}
+.fy-filter-fields select:focus,
+.fy-filter-fields input:focus {
+    border-color: var(--accent);
+}
+.fy-toggle-grid {
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+.fy-toggle-grid > button {
+    min-height: 58px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background: var(--bg);
+    color: var(--text);
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+.fy-toggle-grid > button.active {
+    border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+    background: color-mix(in srgb, var(--accent) 6%, var(--bg));
+}
+.fy-toggle-check {
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: var(--mc-radius-sm);
+    color: var(--accent);
+    font-size: var(--mc-fs-xs);
+    font-weight: 900;
+}
+.fy-toggle-grid button.active
+.fy-toggle-check {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.fy-toggle-grid strong,
+.fy-toggle-grid small {
+    display: block;
+}
+.fy-toggle-grid strong {
+    font-size: var(--mc-fs-xs);
+}
+.fy-toggle-grid small {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+}
+.fy-reset {
+    margin-top: 12px;
+    min-height: 34px;
+    padding: 0 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: var(--mc-fs-xs);
+    font-weight: 700;
+    cursor: pointer;
+}
+/* SHELVES */
+.fy-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.fy-shelf {
+    min-width: 0;
+    padding: 20px 0 24px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+}
+.fy-shelf:last-child {
+    border-bottom: 0;
+}
+.fy-shelf-head {
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+}
+.fy-shelf-icon {
+    width: 39px;
+    height: 39px;
+    flex: 0 0 39px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 11px;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.fy-shelf-title h2 {
+    margin: 0;
+    font-size: var(--mc-fs-xl);
+    line-height: 1.15;
+}
+.fy-shelf-title p {
+    margin: 4px 0 0;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+}
+.fy-shelf-count {
+    flex: 0 0 auto;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+}
+.fy-row {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(145px, 1fr);
+    grid-template-rows: 1fr;
+    gap: 12px;
+    padding: 2px 2px 8px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+}
+.fy-row::-webkit-scrollbar {
+    height: 6px;
+}
+.fy-row::-webkit-scrollbar-thumb {
+    border-radius: var(--mc-radius-pill);
+    background: color-mix(in srgb, var(--muted) 30%, transparent);
+}
+/* CARD */
+.fy-poster {
+    /*
+   * HOTFIX V2.2-A — `.fy-poster` é um <a> (inline por padrão). Com o <img> em
+   * fluxo o box inline "envolvia" a imagem; o `Poster` (next/image `fill`)
+   * é position:absolute e não dá tamanho a um inline, e `aspect-ratio` não
+   * vale para inline → o poster colapsava para ~2×22 px (invisível, mesmo
+   * com a imagem carregada). Bloco + largura total reserva o 2:3 de verdade.
+   */
+    display: block;
+    width: 100%;
+    position: relative;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: var(--panel);
+    transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+.fy-poster img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+}
+.fy-no-poster {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+}
+.fy-rating {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    color: var(--mc-color-rating);
+}
+/* LOAD MORE */
+.fy-load-more {
+    margin: 25px 0 8px;
+    padding: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    background: color-mix(in srgb, var(--accent) 4%, var(--panel));
+}
+.fy-load-more > div {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+}
+.fy-load-more > div > svg {
+    color: var(--accent);
+}
+.fy-load-more strong,
+.fy-load-more span {
+    display: block;
+}
+.fy-load-more strong {
+    font-size: var(--mc-fs-xs);
+}
+.fy-load-more span {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+}
+/* ERROR */
+.fy-error {
+    min-height: 260px;
+    padding: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 8px;
+    border: 1px dashed var(--border);
+    border-radius: 16px;
+    color: var(--muted);
+    text-align: center;
+}
+.fy-error > svg {
+    color: var(--accent);
+}
+.fy-error strong {
+    color: var(--text);
+    font-size: var(--mc-fs-xs);
+}
+.fy-error span {
+    max-width: 520px;
+    font-size: var(--mc-fs-xs);
+}
+/* SKELETON */
+.fy-skeleton-title {
+    width: 260px;
+    height: 24px;
+    margin-bottom: 14px;
+    border-radius: var(--mc-radius-sm);
+    background: color-mix(in srgb, var(--text) 7%, transparent);
+    animation: fyPulse 1.3s ease-in-out infinite;
+}
+.fy-skeleton-card {
+    width: 145px;
+}
+.fy-skeleton-card > div {
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    border-radius: 13px;
+    background: color-mix(in srgb, var(--text) 7%, transparent);
+    animation: fyPulse 1.3s ease-in-out infinite;
+}
+.fy-skeleton-card > span,
+.fy-skeleton-card > small {
+    display: block;
+    margin-top: 7px;
+    border-radius: 5px;
+    background: color-mix(in srgb, var(--text) 7%, transparent);
+    animation: fyPulse 1.3s ease-in-out infinite;
+}
+.fy-skeleton-card > span {
+    width: 90%;
+    height: 12px;
+}
+.fy-skeleton-card > small {
+    width: 55%;
+    height: 9px;
+}
+@media (min-width: 1500px) {
+    .fy-row {
+        grid-auto-columns: minmax(155px, 1fr);
+    }
+}
+@media (max-width: 1024px) {
+    .fy-filter-fields {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+@media (max-width: 760px) {
+    .fy-page {
+        padding: 4px 16px 90px;
+    }
+}
+@media (max-width: 760px) {
+    .fy-hero {
+        min-height: 0;
+        padding: 20px;
+        align-items: stretch;
+        flex-direction: column;
+    }
+}
+@media (max-width: 760px) {
+    .fy-profile-card {
+        min-width: 0;
+    }
+}
+@media (max-width: 760px) {
+    .fy-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}
+@media (max-width: 760px) {
+    .fy-tabs {
+        width: 100%;
+    }
+}
+@media (max-width: 760px) {
+    .fy-tabs button {
+        flex: 1;
+    }
+}
+@media (max-width: 760px) {
+    .fy-filter-button {
+        justify-content: center;
+    }
+}
+@media (max-width: 760px) {
+    .fy-filter-fields {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 760px) {
+    .fy-toggle-grid {
+        grid-template-columns: 1fr;
+    }
+}
+@media (max-width: 760px) {
+    .fy-row {
+        grid-auto-columns: minmax(130px, 42vw);
+    }
+}
+@media (max-width: 760px) {
+    .fy-shelf-count {
+        display: none;
+    }
+}
+@media (max-width: 760px) {
+    .fy-load-more {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}
+@media (max-width: 480px) {
+    .fy-filter-fields {
+        grid-template-columns: 1fr;
+    }
+}
+@media (max-width: 480px) {
+    .fy-row {
+        grid-auto-columns: 42vw;
+    }
+}
+.fy-card-wrap {
+    position: relative;
+    min-width: 145px;
+    scroll-snap-align: start;
+}
+.fy-card-poster-wrap {
+    position: relative;
+}
+.fy-card-body {
+    display: block;
+    padding-top: 8px;
+    color: inherit;
+    text-decoration: none;
+}
+.fy-card-body > p {
+    margin: 6px 0 0;
+    display: -webkit-box;
+    min-height: 26px;
+    max-height: 26px;
+    overflow: hidden;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+    line-height: 13px;
+}
+/*
+ * Impede o menu de status de ser cortado
+ * pelas prateleiras horizontais.
+ */
+.fy-row {
+    overflow-x: auto;
+    overflow-y: visible;
+}
+.fy-shelf {
+    overflow: visible;
+}
+.fy-card-wrap {
+    overflow: visible;
+}
+/* V2.8 — atalho compacto do Assistente em "Para você" (a página funciona sem IA) */
+.fy-ai-entry {
+    margin: 6px 0 30px
+}
+.fy-ai-entry .fy-assistant-link {
+    margin: 10px 0 0
+}
+.fy-assistant-link {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: -6px 0 18px;
+    color: var(--muted);
+    font-size: var(--mc-fs-md)
+}
+.fy-assistant-link svg {
+    color: var(--accent);
+    flex: none
+}
+.fy-assistant-link a {
+    color: var(--accent);
+    font-weight: 650;
+    text-decoration: none
+}
+.fy-assistant-link a:hover,.fy-assistant-link a:focus-visible {
+    text-decoration: underline
+}
+@keyframes fyPulse {
+    0%,
+  100% {
+        opacity: .45;
+    }
+    50% {
+        opacity: .9;
+    }
+}
+/* RESPONSIVO */
+.fy-card-body > strong {
+    margin-top: 0;
+}

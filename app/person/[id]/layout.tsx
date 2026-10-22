@@ -1,3 +1,4 @@
+import "@/styles/features/person.css";
 import type { Metadata } from "next";
 
 import { DEFAULT_SHARE_IMAGE, shareDescription } from "@/lib/share-metadata";

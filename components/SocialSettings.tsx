@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/settings.css";
 import { apiFetch, errorMessage } from "@/lib/api-client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -100,13 +102,13 @@ export function SocialSettings() {
             Quem pode ver seu perfil e cada parte dele. Seu e-mail nunca aparece para outras pessoas.
           </p>
         </div>
-        <Users size={21} aria-hidden="true" />
+        <Users size={22} aria-hidden="true" />
       </div>
 
       <div className="panel social-preferences">
         {status === "loading" && (
           <p className="muted" role="status">
-            <Loader2 className="spin" size={15} aria-hidden="true" /> Carregando…
+            <Loader2 className="spin" size={16} aria-hidden="true" /> Carregando…
           </p>
         )}
 
@@ -154,7 +156,7 @@ export function SocialSettings() {
 
             <div className="set-save-row">
               <button type="button" className="btn primary" disabled={saving || !dirty} onClick={saveSettings}>
-                {saving ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <Check size={15} aria-hidden="true" />}{" "}
+                {saving ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <Check size={16} aria-hidden="true" />}{" "}
                 Salvar privacidade
               </button>
               <span className="muted" role="status" aria-live="polite">
@@ -172,7 +174,7 @@ export function SocialSettings() {
             <p className="muted">Aceite pedidos e gerencie conexões no seu perfil.</p>
           </div>
           <Link className="btn primary" href={username ? `/u/${username}?tab=connections` : "/profile"}>
-            <Users size={15} aria-hidden="true" /> Abrir minhas conexões
+            <Users size={16} aria-hidden="true" /> Abrir minhas conexões
           </Link>
         </div>
       )}

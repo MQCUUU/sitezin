@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/account-menu.css";
 import { useEffect } from "react";
 
 const MENU_SELECTOR = [

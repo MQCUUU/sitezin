@@ -1,3 +1,4 @@
+import "@/styles/features/title-detail.css";
 import { ReviewPanel } from "@/components/ReviewPanel";
 import { WatchHistory } from "@/components/WatchHistory";
 import type { LibraryItem, LibraryItemUpdate, TitleType } from "./types";

@@ -1,3 +1,4 @@
+import "@/styles/features/title-detail.css";
 import type { TvProgress } from "@/lib/tv-progress";
 
 /*

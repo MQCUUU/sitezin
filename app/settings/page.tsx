@@ -1,5 +1,7 @@
 'use client';
 
+
+import "@/styles/features/settings.css";
 import { apiFetch, errorMessage } from '@/lib/api-client';
 import { Suspense, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -246,7 +248,7 @@ function AppearanceSection() {
             savePreferences(DEFAULT_PREFERENCES);
           }}
         >
-          <RotateCcw size={15} aria-hidden="true" />
+          <RotateCcw size={16} aria-hidden="true" />
           Restaurar aparência padrão
         </button>
       </div>
@@ -421,7 +423,7 @@ function RatingsSection() {
             onKeyDown={(event) => event.key === 'Enter' && add()}
           />
           <button type="button" className="btn primary" onClick={add} disabled={!name.trim()}>
-            <Plus size={15} aria-hidden="true" />
+            <Plus size={16} aria-hidden="true" />
             Adicionar
           </button>
         </div>

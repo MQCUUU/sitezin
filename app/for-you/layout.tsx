@@ -1,3 +1,4 @@
+import "@/styles/features/for-you.css";
 import type { Metadata } from "next";
 
 // V3.5: a página é 'use client' (não exporta metadata); o título da aba vem daqui.

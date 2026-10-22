@@ -1,4 +1,8 @@
+"use client";
+
 import { Loader2, Trash2 } from "lucide-react";
+
+import { useModal } from "@/hooks/useModal";
 
 import type { DiscoverItem } from "./types";
 
@@ -19,11 +23,14 @@ export function DiscoverRemoveDialog({
   onCancel,
   onConfirm,
 }: DiscoverRemoveDialogProps) {
+  // Escape, laço do Tab, foco inicial/devolução e trava de rolagem (Fase 7).
+  const modalRef = useModal(true, onCancel, false, ".mycatalog-confirm-actions .btn:not(.danger)");
   const title = item.title || item.name || "este título";
 
   return (
     <div className="mycatalog-confirm-backdrop" onClick={onCancel}>
       <div
+        ref={modalRef as React.RefObject<HTMLDivElement>}
         className="mycatalog-confirm-modal"
         role="alertdialog"
         aria-modal="true"

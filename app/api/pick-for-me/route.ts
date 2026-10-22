@@ -4,7 +4,7 @@ import {
   seedRecommendations,
   type UserTaste,
 } from "@/lib/taste-server";
-import { personalBonus, tasteKey } from "@/lib/taste-profile";
+import { personalBonus } from "@/lib/taste-profile";
 import { getDb } from "@/lib/db/neon";
 import {
   NextRequest,

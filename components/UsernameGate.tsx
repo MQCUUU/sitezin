@@ -1,7 +1,10 @@
 "use client";
 
+
+import "@/styles/features/username-gate.css";
 import { fetchProfileMe } from "@/lib/profile-me";
 import { FormEvent, useEffect, useState } from "react";
+import { useModal } from "@/hooks/useModal";
 import { usePathname } from "next/navigation";
 import { AtSign, Loader2 } from "lucide-react";
 
@@ -13,6 +16,8 @@ export function UsernameGate() {
   const [username, setUsername] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  // Fase 7: modal obrigatório — trava a rolagem e prende o Tab; Escape não fecha (travado).
+  const gateRef = useModal(required, () => {}, true, "input");
 
   useEffect(() => {
     if (AUTH_PATHS.some((path) => pathname.startsWith(path))) return;
@@ -38,5 +43,5 @@ export function UsernameGate() {
   }
 
   if (!required) return null;
-  return <div className="username-gate" role="dialog" aria-modal="true"><form className="username-gate-card" onSubmit={submit}><div className="username-gate-icon"><AtSign size={24} /></div><span className="eyebrow">COMPLETE SEU PERFIL</span><h2>Escolha seu @ de usuário</h2><p>O @ agora identifica seu único perfil no MyCatalog. Você precisa defini-lo para continuar usando o site.</p><label><span>Seu endereço</span><div><b>mycatalog.com/u/</b><input autoFocus value={username} onChange={(event) => setUsername(event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))} minLength={3} maxLength={24} placeholder="seu_usuario" /></div></label>{error && <div className="auth-error">{error}</div>}<button className="btn primary" disabled={saving}>{saving ? <Loader2 className="spin" size={16} /> : <AtSign size={16} />} Salvar e continuar</button><small>Seu perfil começa privado: só seguidores que você aceitar podem vê-lo.</small></form></div>;
+  return <div className="username-gate" role="dialog" aria-modal="true" aria-labelledby="username-gate-title"><form ref={gateRef as React.RefObject<HTMLFormElement>} className="username-gate-card" onSubmit={submit}><div className="username-gate-icon"><AtSign size={24} /></div><span className="eyebrow">COMPLETE SEU PERFIL</span><h2 id="username-gate-title">Escolha seu @ de usuário</h2><p>O @ agora identifica seu único perfil no MyCatalog. Você precisa defini-lo para continuar usando o site.</p><label><span>Seu endereço</span><div><b>mycatalog.com/u/</b><input value={username} onChange={(event) => setUsername(event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))} minLength={3} maxLength={24} placeholder="seu_usuario" /></div></label>{error && <div className="auth-error">{error}</div>}<button className="btn primary" disabled={saving}>{saving ? <Loader2 className="spin" size={16} /> : <AtSign size={16} />} Salvar e continuar</button><small>Seu perfil começa privado: só seguidores que você aceitar podem vê-lo.</small></form></div>;
 }

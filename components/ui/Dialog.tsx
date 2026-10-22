@@ -4,10 +4,9 @@ import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 
-import { cx } from "./cx";
+import { lockScroll, trapTab } from "@/lib/modal-a11y";
 
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+import { cx } from "./cx";
 
 export type DialogProps = {
   open: boolean;
@@ -38,9 +37,8 @@ export function Dialog({
   useEffect(() => {
     if (!open) return;
 
-    const previousOverflow = document.body.style.overflow;
     const previousActive = document.activeElement as HTMLElement | null;
-    document.body.style.overflow = "hidden";
+    const unlockScroll = lockScroll();
     panelRef.current?.focus();
 
     function handleKeyDown(event: KeyboardEvent) {
@@ -49,33 +47,13 @@ export function Dialog({
         onClose();
         return;
       }
-
-      if (event.key !== "Tab") return;
-
-      const panel = panelRef.current;
-      if (!panel) return;
-
-      const focusable = Array.from(
-        panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
-      );
-      if (!focusable.length) return;
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
+      trapTab(event, panelRef.current);
     }
 
     document.addEventListener("keydown", handleKeyDown, true);
 
     return () => {
-      document.body.style.overflow = previousOverflow;
+      unlockScroll();
       document.removeEventListener("keydown", handleKeyDown, true);
       previousActive?.focus?.();
     };

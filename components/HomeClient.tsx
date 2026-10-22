@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/home-smart.css";
 import { getLibraryVersion } from "@/lib/library-cache";
 import { useEffect, useMemo, useState } from "react";
 
@@ -645,7 +647,7 @@ export default function HomeClient() {
           <PickForMeLauncher />
 
           <Link href="/calendar" className="btn">
-            <CalendarDays size={15} />
+            <CalendarDays size={16} />
             Calendário
           </Link>
         </div>
@@ -755,7 +757,7 @@ export default function HomeClient() {
                       </div>
 
                       <div className="home-agenda-type">
-                        {event.media_type === "tv" ? <Tv size={13} aria-hidden="true" /> : <Film size={13} aria-hidden="true" />}
+                        {event.media_type === "tv" ? <Tv size={14} aria-hidden="true" /> : <Film size={14} aria-hidden="true" />}
                         {typeLabel(event)}
                         {extra ? ` · ${extra}` : ""}
                       </div>

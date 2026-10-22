@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/insights.css";
 import { useRef, useState } from "react";
 import { Download, ImageIcon, Share2 } from "lucide-react";
 import {
@@ -101,15 +103,15 @@ export function RetrospectiveShare({ data }: { data: RetrospectiveCardData }) {
 
       <div className="retrospective-share-actions">
         <button type="button" className="btn primary" onClick={generate}>
-          <ImageIcon size={15} />
+          <ImageIcon size={16} />
           Gerar card
         </button>
         <button type="button" className="btn" onClick={onShare} disabled={!generated}>
-          <Share2 size={15} />
+          <Share2 size={16} />
           Compartilhar
         </button>
         <button type="button" className="btn" onClick={onDownload} disabled={!generated}>
-          <Download size={15} />
+          <Download size={16} />
           Baixar
         </button>
       </div>

@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/settings.css";
 import { apiFetch, errorMessage } from "@/lib/api-client";
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Save, Tv } from "lucide-react";
@@ -125,7 +127,7 @@ export function StreamingServicesSettings() {
     <section className="panel streaming-settings" aria-labelledby="streaming-settings-title">
       <div className="settings-panel-head">
         <div className="settings-icon">
-          <Tv size={19} />
+          <Tv size={18} />
         </div>
         <div>
           <h2 id="streaming-settings-title">Meus serviços de streaming</h2>
@@ -177,7 +179,7 @@ export function StreamingServicesSettings() {
 
           <div className="streaming-actions">
             <button type="button" className="btn primary" onClick={save} disabled={saving || !dirty}>
-              {saving ? <Loader2 size={15} className="spin" /> : <Save size={15} />}
+              {saving ? <Loader2 size={16} className="spin" /> : <Save size={16} />}
               Salvar serviços
             </button>
             {selected.size > 0 && (

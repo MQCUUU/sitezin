@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/lists.css";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { MoreHorizontal } from "lucide-react";
 

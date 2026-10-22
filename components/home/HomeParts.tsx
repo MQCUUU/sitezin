@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/home-smart.css";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import {
@@ -99,7 +101,7 @@ export function SmartQueueCta() {
       </span>
       <span className="home-queue-action">
         Sugerir agora
-        <ArrowRight size={15} aria-hidden="true" />
+        <ArrowRight size={16} aria-hidden="true" />
       </span>
     </Link>
   );
@@ -132,7 +134,7 @@ export function SummaryStrip({
         <SummaryCard
           href="/library?status=watching"
           tone="watching"
-          icon={<Play size={15} />}
+          icon={<Play size={16} />}
           label="Em andamento"
           value={totals.watching}
           stack={watching}
@@ -143,7 +145,7 @@ export function SummaryStrip({
         <SummaryCard
           href="/library?status=want"
           tone="queue"
-          icon={<Clock size={15} />}
+          icon={<Clock size={16} />}
           label="Na fila"
           value={totals.want}
           stack={want}
@@ -154,7 +156,7 @@ export function SummaryStrip({
         <SummaryCard
           href="/library?favorite=true"
           tone="liked"
-          icon={<Heart size={15} />}
+          icon={<Heart size={16} />}
           label="Curtidos"
           value={totals.favorites}
           stack={liked}
@@ -165,7 +167,7 @@ export function SummaryStrip({
         <SummaryCard
           href="/ranking"
           tone="rated"
-          icon={<Star size={15} />}
+          icon={<Star size={16} />}
           label="Avaliados"
           value={totals.rated}
           stack={best}
@@ -194,7 +196,7 @@ export function HomeEmpty() {
           <strong>{item.title}</strong>
           <small>{item.text}</small>
           <span className="home-empty-go">
-            Abrir <ArrowRight size={13} aria-hidden="true" />
+            Abrir <ArrowRight size={14} aria-hidden="true" />
           </span>
         </Link>
       ))}
@@ -295,12 +297,12 @@ export function HomeHero({
 
         <div className="home-focus-actions">
           <Link href={href} className="btn primary">
-            {kind === "watching" ? <Play size={15} /> : <ArrowRight size={15} />}
+            {kind === "watching" ? <Play size={16} /> : <ArrowRight size={16} />}
             {action}
           </Link>
           {kind !== "discover" && (
             <Link href="/discover" className="btn">
-              <Compass size={15} />
+              <Compass size={16} />
               Quero outra coisa
             </Link>
           )}

@@ -1,3 +1,4 @@
+import "@/styles/features/search-page.css";
 import { MediaCardSkeleton } from "@/components/media";
 import { Skeleton } from "@/components/ui/Skeleton";
 

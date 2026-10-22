@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/settings.css";
 import { apiFetch, errorFromResponse, errorMessage } from "@/lib/api-client";
 import {
   ChangeEvent,
@@ -425,7 +427,7 @@ if (
       <div className="settings-panel-head">
         <div className="settings-icon">
           <Database
-            size={19}
+            size={18}
           />
         </div>
 
@@ -444,7 +446,7 @@ if (
         <article className="data-backup-card">
           <div className="data-backup-card-icon">
             <FileJson
-              size={19}
+              size={18}
             />
           </div>
 
@@ -474,12 +476,12 @@ if (
             {exporting ===
             "json" ? (
               <Loader2
-                size={15}
+                size={16}
                 className="spin"
               />
             ) : (
               <Download
-                size={15}
+                size={16}
               />
             )}
 
@@ -490,7 +492,7 @@ if (
         <article className="data-backup-card">
           <div className="data-backup-card-icon">
             <FileSpreadsheet
-              size={19}
+              size={18}
             />
           </div>
 
@@ -520,12 +522,12 @@ if (
             {exporting ===
             "csv" ? (
               <Loader2
-                size={15}
+                size={16}
                 className="spin"
               />
             ) : (
               <Download
-                size={15}
+                size={16}
               />
             )}
 
@@ -536,7 +538,7 @@ if (
         <article className="data-backup-card restore">
           <div className="data-backup-card-icon">
             <ArchiveRestore
-              size={19}
+              size={18}
             />
           </div>
 
@@ -572,7 +574,7 @@ if (
             }
           >
             <Upload
-              size={15}
+              size={16}
             />
 
             Selecionar backup
@@ -581,7 +583,7 @@ if (
 
         <article className="data-backup-card restore">
           <div className="data-backup-card-icon">
-            <FileSpreadsheet size={19} />
+            <FileSpreadsheet size={18} />
           </div>
 
           <div>
@@ -599,14 +601,14 @@ if (
           />
 
           <button type="button" className="btn" onClick={() => letterboxdInputRef.current?.click()}>
-            <Upload size={15} /> Selecionar CSV
+            <Upload size={16} /> Selecionar CSV
           </button>
         </article>
       </div>
 
       <div className="data-backup-safety">
         <ShieldCheck
-          size={17}
+          size={18}
         />
 
         <div>
@@ -670,12 +672,12 @@ if (
               >
                 {importing ? (
                   <Loader2
-                    size={15}
+                    size={16}
                     className="spin"
                   />
                 ) : (
                   <ArchiveRestore
-                    size={15}
+                    size={16}
                   />
                 )}
 
@@ -699,7 +701,7 @@ if (
             <div className="mycatalog-confirm-actions">
               <button type="button" className="btn" disabled={letterboxdImporting} onClick={() => { setLetterboxdRows([]); setLetterboxdName(""); }}>Cancelar</button>
               <button type="button" className="btn primary" disabled={letterboxdImporting} onClick={importLetterboxd}>
-                {letterboxdImporting ? <Loader2 size={15} className="spin" /> : <Upload size={15} />}
+                {letterboxdImporting ? <Loader2 size={16} className="spin" /> : <Upload size={16} />}
                 {letterboxdImporting ? "Localizando filmes..." : "Importar"}
               </button>
             </div>

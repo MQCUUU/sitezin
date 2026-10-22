@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react";
 
+import { focusableIn, lockScroll, trapTab } from "@/lib/modal-a11y";
+
 /*
  * ============================================================
  * ARQUIVO NOVO — hooks/useModal.ts
@@ -36,25 +38,37 @@ import { useEffect, useRef } from "react";
  * ============================================================
  */
 
-/* Tudo que pode receber foco por teclado. */
-const FOCAVEIS = [
-  "a[href]",
-  "button:not([disabled])",
-  "input:not([disabled])",
-  "select:not([disabled])",
-  "textarea:not([disabled])",
-  '[tabindex]:not([tabindex="-1"])',
-].join(",");
+/* Fase 7: trava de rolagem e laço do Tab vêm de lib/modal-a11y (iguais ao Dialog). */
 
 export function useModal(
   aberto: boolean,
   aoFechar: () => void,
-  travado = false
+  travado = false,
+  /** Seletor do elemento que recebe o foco ao abrir (ex.: o campo de busca); padrão: o primeiro focável. */
+  focoInicial?: string
 ) {
   const ref = useRef<HTMLElement>(null);
 
   /* Guarda quem tinha o foco antes de abrir. */
   const anterior = useRef<HTMLElement | null>(null);
+
+  /*
+   * aoFechar por ref: com callback inline do pai, cada re-render refazia o
+   * efeito (devolvia o foco e focava o primeiro de novo — o foco "pulava").
+   */
+  const fecharRef = useRef(aoFechar);
+  /*
+   * travado e focoInicial também por ref (Fase 7): quando `travado` mudava, o efeito
+   * reiniciava e guardava como "quem abriu" um elemento de DENTRO do modal — ao
+   * fechar, o foco ia para um elemento que já não existe.
+   */
+  const travadoRef = useRef(travado);
+  const focoInicialRef = useRef(focoInicial);
+  useEffect(() => {
+    fecharRef.current = aoFechar;
+    travadoRef.current = travado;
+    focoInicialRef.current = focoInicial;
+  }, [aoFechar, travado, focoInicial]);
 
   useEffect(() => {
     if (!aberto) return;
@@ -66,45 +80,24 @@ export function useModal(
      * e chegar ao fim continua rolando a página atrás — o
      * "scroll chaining".
      */
-    const overflowOriginal = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const soltarRolagem = lockScroll();
 
-    /* Foca o primeiro elemento do modal. */
-    const focarPrimeiro = () => {
-      const alvos = ref.current?.querySelectorAll<HTMLElement>(FOCAVEIS);
-      alvos?.[0]?.focus();
-    };
-
-    /* requestAnimationFrame: espera o modal existir no DOM. */
-    const raf = requestAnimationFrame(focarPrimeiro);
+    /* Foca o primeiro elemento do modal (rAF: espera o modal existir no DOM). */
+    const raf = requestAnimationFrame(() => {
+      const caixa = ref.current;
+      if (!caixa || caixa.contains(document.activeElement)) return;
+      const alvo = focoInicialRef.current ? caixa.querySelector<HTMLElement>(focoInicialRef.current) : null;
+      (alvo ?? focusableIn(caixa)[0] ?? caixa)?.focus();
+    });
 
     const aoTeclar = (evento: KeyboardEvent) => {
-      if (evento.key === "Escape" && !travado) {
+      if (evento.key === "Escape" && !travadoRef.current) {
         evento.preventDefault();
-        aoFechar();
+        fecharRef.current();
         return;
       }
-
-      if (evento.key !== "Tab") return;
-
-      const alvos = ref.current?.querySelectorAll<HTMLElement>(FOCAVEIS);
-      if (!alvos || alvos.length === 0) return;
-
-      const primeiro = alvos[0];
-      const ultimo = alvos[alvos.length - 1];
-
-      /*
-       * O laço: Shift+Tab no primeiro volta para o último, e
-       * Tab no último volta para o primeiro. É isso que impede
-       * o foco de vazar para trás do overlay.
-       */
-      if (evento.shiftKey && document.activeElement === primeiro) {
-        evento.preventDefault();
-        ultimo.focus();
-      } else if (!evento.shiftKey && document.activeElement === ultimo) {
-        evento.preventDefault();
-        primeiro.focus();
-      }
+      /* O laço do Tab impede o foco de vazar para trás do overlay. */
+      trapTab(evento, ref.current);
     };
 
     document.addEventListener("keydown", aoTeclar);
@@ -112,7 +105,7 @@ export function useModal(
     return () => {
       cancelAnimationFrame(raf);
       document.removeEventListener("keydown", aoTeclar);
-      document.body.style.overflow = overflowOriginal;
+      soltarRolagem();
 
       /*
        * Devolve o foco ao botão que abriu o modal. Sem isso, ao
@@ -121,7 +114,7 @@ export function useModal(
        */
       anterior.current?.focus?.();
     };
-  }, [aberto, aoFechar, travado]);
+  }, [aberto]);
 
   return ref;
 }

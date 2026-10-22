@@ -1,3 +1,4 @@
+import "@/styles/features/media.css";
 import { WatchProviderRow } from "./WatchProviderRow";
 import { WATCH_PROVIDER_KIND_LABELS } from "@/components/media/providers/types";
 import type { WatchProviderData } from "@/components/media/providers/types";

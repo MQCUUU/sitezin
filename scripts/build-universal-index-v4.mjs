@@ -1661,8 +1661,7 @@ async function processPage(
       pending,
 
       async (
-        item,
-        index
+        item
       ) => {
         const value =
           await loadTitle(

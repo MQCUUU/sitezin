@@ -1,0 +1,115 @@
+/*
+ * Página de episódio.
+ *
+ * Fase 7: reunido de app/globals.css (mesma ordem de cascata).
+ * Carregado pelos componentes que usam estas classes, não pelo layout raiz.
+ */
+
+.episode-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 16px;
+    color: var(--muted)
+}
+.episode-detail-image {
+    min-height: 350px;
+    background: var(--bg)
+}
+.episode-detail-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover
+}
+.episode-detail-image-fallback {
+    width: 100%;
+    height: 100%;
+    min-height: 350px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-weight: 800;
+    font-size: var(--mc-fs-2xl)
+}
+.episode-detail-copy {
+    padding: 34px;
+    align-self: center
+}
+.episode-detail-copy h1 {
+    margin: 8px 0 12px;
+    font-size: clamp(28px,4vw,44px)
+}
+.episode-detail-copy p {
+    color: var(--muted);
+    line-height: 1.7
+}
+.episode-detail-meta {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs)
+}
+.episode-detail-meta span {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center
+}
+.episode-detail-copy small {
+    color: var(--muted)
+}
+.episode-journal {
+    margin-top: 18px;
+    display: grid;
+    gap: 14px
+}
+.episode-journal h2 {
+    margin: 0
+}
+.episode-journal label {
+    display: grid;
+    gap: 7px;
+    font-size: var(--mc-fs-xs);
+    font-weight: 700
+}
+.episode-journal textarea {
+    min-height: 120px;
+    resize: vertical
+}
+.episode-journal .episode-rewatch {
+    display: flex;
+    align-items: center
+}
+.episode-journal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px
+}
+.episode-journal-locked {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: color-mix(in srgb,var(--muted) 12%,var(--panel));
+    color: var(--muted);
+    font-size: var(--mc-fs-xs)
+}
+@media (max-width:700px) {
+    .episode-detail-hero {
+        grid-template-columns: 1fr
+    }
+}
+@media (max-width:700px) {
+    .episode-detail-image {
+        min-height: 210px
+    }
+}
+@media (max-width:700px) {
+    .episode-detail-copy {
+        padding: 22px
+    }
+}
+@media (max-width:700px) {
+    .episode-journal-actions {
+        flex-direction: column
+    }
+}

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
 
-import { dec, durationLabel, monthShort, nf } from "./ui";
+import { durationLabel, monthShort, nf } from "./ui";
 
 /* Gráficos em CSS/SVG — todos com rótulo, tooltip nativo e fallback textual. */
 

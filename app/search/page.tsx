@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/search-page.css";
 import { removeFromLibrary } from "@/lib/library/actions";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -269,28 +271,9 @@ function SearchPageContent() {
   }, [openLibraryMenu]);
 
   /*
-   * Remove confirm dialog only — the Quick Peek's Escape/scroll lock now
-   * comes from `MediaPreviewDialog`'s underlying `Dialog` (C2.2).
+   * Escape/scroll lock: Quick Peek via `MediaPreviewDialog` (Dialog) e a
+   * confirmação de remoção via `useModal` dentro de `SearchRemoveDialog` (Fase 7).
    */
-  useEffect(() => {
-    if (!removeTarget) return;
-
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setRemoveTarget(null);
-      }
-    }
-
-    window.addEventListener("keydown", onKeyDown);
-
-    return () => {
-      document.body.style.overflow = previous;
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [removeTarget]);
 
   /*
    * Streaming, gêneros e detalhes

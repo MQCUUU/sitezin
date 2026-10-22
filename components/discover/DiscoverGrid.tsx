@@ -1,3 +1,4 @@
+import "@/styles/features/discover.css";
 import { DiscoverCard } from "./DiscoverCard";
 import type { DiscoverItem } from "./types";
 
@@ -19,7 +20,6 @@ export type DiscoverGridProps = {
 export function DiscoverGrid({
   items,
   personalFiltersNote,
-  perPage,
   hiddenCount = 0,
   processingKey,
   openLibraryMenu,

@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/lists.css";
 import { useState } from "react";
 import { Clapperboard } from "lucide-react";
 

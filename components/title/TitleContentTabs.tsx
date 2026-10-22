@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/title-detail.css";
 import { useRef } from "react";
 import type { KeyboardEvent } from "react";
 

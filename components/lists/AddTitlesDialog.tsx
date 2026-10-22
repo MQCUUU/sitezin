@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/lists.css";
 import { apiFetch, errorMessage, isAbortError } from "@/lib/api-client";
 import { useEffect, useId, useRef, useState } from "react";
 import { Check, Clapperboard, Loader2, Plus, Search as SearchIcon, X } from "lucide-react";

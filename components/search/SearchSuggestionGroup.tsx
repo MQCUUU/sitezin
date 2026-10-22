@@ -1,3 +1,4 @@
+import "@/styles/features/search-suggest.css";
 import type { ReactNode } from "react";
 
 export type SearchSuggestionGroupProps = {

@@ -1,3 +1,4 @@
+import "@/styles/features/discover.css";
 import { Check, Plus, RotateCcw, X } from "lucide-react";
 
 import { COUNTRIES, type FilterResponse } from "./types";

@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/insights.css";
 import "@/styles/insights.css";
 
 import Link from "next/link";
@@ -78,7 +80,7 @@ function RankingContent() {
       <header className="ins-header ins-header--sub">
         <div>
           <Link href="/insights#favoritos" className="ins-back">
-            <ArrowLeft size={15} aria-hidden="true" /> Insights
+            <ArrowLeft size={16} aria-hidden="true" /> Insights
           </Link>
           <span className="ins-eyebrow">Ranking</span>
           <h1>Suas maiores notas</h1>
@@ -140,7 +142,7 @@ function RankingContent() {
                   </span>
                   <strong>{item.title}</strong>
                   <span className="ins-top-rating">
-                    <Star size={13} fill="currentColor" aria-hidden="true" /> {item.personal_rating !== null ? dec(Number(item.personal_rating)) : "—"}
+                    <Star size={14} fill="currentColor" aria-hidden="true" /> {item.personal_rating !== null ? dec(Number(item.personal_rating)) : "—"}
                   </span>
                 </Link>
               </li>
@@ -161,7 +163,7 @@ function RankingContent() {
                       <small>{item.media_type === "tv" ? "Série" : "Filme"}</small>
                     </span>
                     <span className="ins-top-rating">
-                      <Star size={13} fill="currentColor" aria-hidden="true" /> {item.personal_rating !== null ? dec(Number(item.personal_rating)) : "—"}
+                      <Star size={14} fill="currentColor" aria-hidden="true" /> {item.personal_rating !== null ? dec(Number(item.personal_rating)) : "—"}
                     </span>
                   </Link>
                 </li>

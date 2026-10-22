@@ -1,5 +1,7 @@
 "use client";
 
+
+import "@/styles/features/settings.css";
 import { apiFetch, errorMessage } from "@/lib/api-client";
 import { useEffect, useState } from "react";
 import { Bell, Loader2, Save } from "lucide-react";
@@ -75,7 +77,7 @@ export function NotificationSettings() {
     <section className="panel notification-settings" aria-labelledby="notification-settings-title">
       <div className="settings-panel-head">
         <div className="settings-icon">
-          <Bell size={19} aria-hidden="true" />
+          <Bell size={18} aria-hidden="true" />
         </div>
         <div>
           <h2 id="notification-settings-title">Notificações</h2>
@@ -133,7 +135,7 @@ export function NotificationSettings() {
 
           <div className="set-save-row">
             <button type="button" className="btn primary" disabled={saving || !dirty} onClick={save}>
-              {saving ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <Save size={15} aria-hidden="true" />}{" "}
+              {saving ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <Save size={16} aria-hidden="true" />}{" "}
               Salvar notificações
             </button>
             <span className="muted" role="status" aria-live="polite">
