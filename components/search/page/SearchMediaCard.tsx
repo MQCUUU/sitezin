@@ -14,6 +14,7 @@ import {
 
 import { MediaCard, MediaCardActions, MediaCardImage, MediaCardMeta } from "@/components/media";
 import { Poster } from "@/components/Poster";
+import { posterLoading } from "@/lib/poster-loading";
 
 import { STATUS_OPTIONS, getStatusLabel, getTitle, type LibraryState, type SearchItem } from "./types";
 
@@ -28,6 +29,8 @@ export type SearchMediaCardProps = {
   onToggleFavorite: (item: SearchItem) => void;
   onUpdateStatus: (item: SearchItem, status: string) => void;
   onRequestRemove: (item: SearchItem) => void;
+  /** Fase 4: posição na grade (lib/poster-loading.ts). */
+  position?: number;
 };
 
 /**
@@ -49,6 +52,7 @@ export function SearchMediaCard({
   onToggleFavorite,
   onUpdateStatus,
   onRequestRemove,
+  position,
 }: SearchMediaCardProps) {
   const title = getTitle(item);
   const year = (item.release_date || item.first_air_date || "").slice(0, 4);
@@ -59,6 +63,7 @@ export function SearchMediaCard({
       <MediaCardImage>
         <Link href={`/title/${item.media_type}/${item.id}`} className="poster-link">
           <Poster
+            {...posterLoading(position)}
             path={item.poster_path ?? null}
             alt={title}
             sizes="(max-width:700px) 46vw, (max-width:1100px) 24vw, 170px"

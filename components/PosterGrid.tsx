@@ -27,6 +27,7 @@ import { STATUS_LABELS } from "@/lib/types";
 import { useToast } from "@/components/ToastProvider";
 
 import { Poster } from "@/components/Poster";
+import { posterLoading } from "@/lib/poster-loading";
 import { CarouselRail } from "@/components/CarouselRail";
 import {
   MediaCard,
@@ -1141,10 +1142,11 @@ useEffect(() => {
               : "grid mc-media-grid"
           }
         >
-          {localItems.map((item) => (
+          {localItems.map((item, position) => (
             <Card
               key={item.library_id}
               item={item}
+              position={position}
               {...cardActionProps}
             />
           ))}
@@ -1338,7 +1340,7 @@ function ActionButtons({
   );
 }
 
-function Card({ item, ...actionProps }: CardActionProps & { item: LibraryItem }) {
+function Card({ item, position, ...actionProps }: CardActionProps & { item: LibraryItem; position?: number }) {
   const date = item.media_type === "tv" ? item.first_air_date : item.release_date;
   const year = date ? new Date(date).getFullYear() : null;
 
@@ -1346,7 +1348,7 @@ function Card({ item, ...actionProps }: CardActionProps & { item: LibraryItem })
     <MediaCard>
       <MediaCardImage>
         <Link href={`/title/${item.media_type}/${item.tmdb_id}`} className="poster-link">
-          <Poster path={item.poster_path} alt={item.title} sizes="(max-width:700px) 46vw, (max-width:1100px) 24vw, 170px" />
+          <Poster path={item.poster_path} alt={item.title} sizes="(max-width:700px) 46vw, (max-width:1100px) 24vw, 170px" {...posterLoading(position)} />
         </Link>
 
         <MediaPosterTags type={item.media_type} status={item.status} />

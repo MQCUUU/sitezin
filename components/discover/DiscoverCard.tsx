@@ -14,6 +14,7 @@ import {
 
 import { MediaCard, MediaCardActions, MediaCardImage, MediaCardMeta } from "@/components/media";
 import { Poster } from "@/components/Poster";
+import { posterLoading } from "@/lib/poster-loading";
 
 import { DISCOVER_STATUS_OPTIONS, getStatusLabel, type DiscoverItem } from "./types";
 
@@ -27,6 +28,8 @@ export type DiscoverCardProps = {
   onToggleFavorite: (item: DiscoverItem) => void;
   onUpdateStatus: (item: DiscoverItem, status: string) => void;
   onRequestRemove: (item: DiscoverItem) => void;
+  /** Fase 4: posição na grade (1ª linha carrega antes — lib/poster-loading.ts). */
+  position?: number;
 };
 
 /**
@@ -45,6 +48,7 @@ export function DiscoverCard({
   onToggleFavorite,
   onUpdateStatus,
   onRequestRemove,
+  position,
 }: DiscoverCardProps) {
   const title = item.title || item.name || "Sem título";
   const itemYear = (item.release_date || item.first_air_date || "").slice(0, 4);
@@ -55,6 +59,7 @@ export function DiscoverCard({
       <MediaCardImage>
         <Link href={`/title/${item.media_type}/${item.id}`} className="poster-link">
           <Poster
+            {...posterLoading(position)}
             path={item.poster_path}
             alt={title}
             sizes="(max-width:700px) 46vw, (max-width:1100px) 24vw, 170px"

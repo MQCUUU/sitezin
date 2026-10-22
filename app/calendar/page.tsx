@@ -1,3 +1,4 @@
+import "@/styles/calendar.css";
 import type { Metadata } from "next";
 
 // V3.5: título da aba ("Calendário · MyCatalog").

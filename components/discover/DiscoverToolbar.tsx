@@ -1,6 +1,7 @@
 import { SlidersHorizontal } from "lucide-react";
 
-import { PickForMe } from "@/components/PickForMe";
+// Fase 4: botão leve; o PickForMe (grande) é baixado só ao abrir.
+import { PickForMeLauncher } from "@/components/PickForMeLauncher";
 import type { DiscoverParams } from "@/lib/discover/params";
 
 import { DiscoverSortControl } from "./DiscoverSortControl";
@@ -27,7 +28,7 @@ export function DiscoverToolbar({
         <DiscoverTabs value={params.type} onChange={(type) => onChange({ type })} />
 
         <div className="discover-toolbar-actions mc-discover-toolbar-actions">
-          <PickForMe
+          <PickForMeLauncher
             inherit={{
               type: params.type,
               genre: params.genre,

@@ -316,7 +316,20 @@ export type PickInherit = {
   onlyNew: boolean;
 };
 
-export function PickForMe({ inherit }: { inherit?: PickInherit } = {}) {
+/*
+ * Fase 4 (P2-06): este componente é grande e só serve quando o usuário abre
+ * "Escolha pra mim". As telas usam PickForMeLauncher (botão leve), que baixa
+ * este módulo sob demanda e o monta com `hideTrigger`; `openRequest` (contador)
+ * abre o painel a cada clique no botão do launcher. Uso direto continua igual.
+ */
+export type PickForMeProps = {
+  inherit?: PickInherit;
+  hideTrigger?: boolean;
+  openRequest?: number;
+  onMounted?: () => void;
+};
+
+export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMounted }: PickForMeProps = {}) {
   const toast =
     useToast();
 
@@ -2013,29 +2026,48 @@ export function PickForMe({ inherit }: { inherit?: PickInherit } = {}) {
       4
     );
 
+  function openPicker() {
+    setOpen(
+      true
+    );
+
+    setStep(
+      winner
+        ? "result"
+        : "filters"
+    );
+  }
+
+  // Fase 4: cada clique no botão do launcher incrementa `openRequest` e abre o painel.
+  const lastOpenRequest = useRef(0);
+
+  useEffect(() => {
+    if (!openRequest || openRequest === lastOpenRequest.current) return;
+    lastOpenRequest.current = openRequest;
+    openPicker();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só reage a um novo pedido de abertura
+  }, [openRequest]);
+
+  useEffect(() => {
+    onMounted?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- avisa uma vez, na montagem
+  }, []);
+
   return (
     <>
-      <button
-        type="button"
-        className="btn pick-trigger"
-        onClick={() => {
-          setOpen(
-            true
-          );
+      {!hideTrigger && (
+        <button
+          type="button"
+          className="btn pick-trigger"
+          onClick={openPicker}
+        >
+          <Shuffle
+            size={16}
+          />
 
-          setStep(
-            winner
-              ? "result"
-              : "filters"
-          );
-        }}
-      >
-        <Shuffle
-          size={16}
-        />
-
-        Escolha pra mim
-      </button>
+          Escolha pra mim
+        </button>
+      )}
 
       {open && (
         <div

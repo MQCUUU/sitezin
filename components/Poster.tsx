@@ -60,6 +60,9 @@ type PosterProps = {
    * priorizar tudo é o mesmo que não priorizar nada.
    */
   priority?: boolean;
+  /** Fase 4: posição na grade decide eager/lazy (lib/poster-loading.ts). */
+  loading?: "eager" | "lazy";
+  fetchPriority?: "high";
 };
 
 export function Poster({
@@ -69,6 +72,8 @@ export function Poster({
   tmdbSize = "w500",
   className,
   priority = false,
+  loading,
+  fetchPriority,
 }: PosterProps) {
   const imageRef = useRef<HTMLImageElement>(null);
   const [loaded, setLoaded] = useState(false);
@@ -108,10 +113,13 @@ export function Poster({
       sizes={sizes}
       className={`mc-poster-fade${className ? ` ${className}` : ""}`}
       priority={priority}
+      loading={priority ? undefined : loading}
+      fetchPriority={priority ? undefined : fetchPriority}
       unoptimized={usePlaceholder}
       onLoad={() => setLoaded(true)}
       onError={() => setFailed(true)}
-      style={{ objectFit: "cover", opacity: loaded || usePlaceholder || priority ? 1 : 0 }}
+      // Fase 4: o candidato a LCP não espera o fade (opacidade 0 adiaria a pintura).
+      style={{ objectFit: "cover", opacity: loaded || usePlaceholder || priority || fetchPriority === "high" ? 1 : 0 }}
     />
   );
 }

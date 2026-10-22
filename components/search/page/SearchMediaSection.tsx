@@ -13,6 +13,8 @@ export type SearchMediaSectionProps = {
   onToggleFavorite: (item: SearchItem) => void;
   onUpdateStatus: (item: SearchItem, status: string) => void;
   onRequestRemove: (item: SearchItem) => void;
+  /** Fase 4: só a 1ª seção exibida carrega a 1ª linha de pôsteres antes (LCP). */
+  priority?: boolean;
 };
 
 export function SearchMediaSection({
@@ -27,6 +29,7 @@ export function SearchMediaSection({
   onToggleFavorite,
   onUpdateStatus,
   onRequestRemove,
+  priority = false,
 }: SearchMediaSectionProps) {
   return (
     <section className="section search-results-section">
@@ -39,7 +42,7 @@ export function SearchMediaSection({
       </div>
 
       <div className="discover-grid mc-media-grid">
-        {items.map((item) => {
+        {items.map((item, position) => {
           const key = `${item.media_type}-${item.id}`;
           const libraryItem = library.find(
             (entry) => entry.tmdb_id === Number(item.id) && entry.media_type === item.media_type
@@ -49,6 +52,7 @@ export function SearchMediaSection({
             <SearchMediaCard
               key={key}
               item={item}
+              position={priority ? position : undefined}
               libraryItem={libraryItem}
               isProcessing={processing === key}
               isMenuOpen={openLibraryMenu === key}

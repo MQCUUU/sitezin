@@ -98,6 +98,12 @@ const nextConfig: NextConfig = {
         destination: "/library?favorite=true",
         permanent: false,
       },
+      // Fase 4 (P3-06): destino fixo — 307 antes de renderizar (antes: 200 + o app inteiro subia e só então redirecionava).
+      {
+        source: "/stats",
+        destination: "/insights",
+        permanent: false,
+      },
     ];
   },
 

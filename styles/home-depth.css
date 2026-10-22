@@ -788,3 +788,16 @@
 @media (max-width: 900px) and (min-width: 701px) {
   .home-summary-strip[data-count="1"] { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Fase 4 (P2-08): no estado neutro (sessão carregando) o bloco do hero tem a altura aproximada do
+   conteúdo que vem a seguir — hero de visitante (~359/406px) ou saudação + hero do logado (~387px).
+   Com 220/300px o conteúdo real "empurrava" a página ao chegar. Só o skeleton neutro muda. */
+.home-session-skeleton .home-skel-hero {
+  height: 360px;
+}
+
+@media (max-width: 700px) {
+  .home-session-skeleton .home-skel-hero {
+    height: 400px;
+  }
+}

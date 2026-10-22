@@ -42,13 +42,14 @@ export function DiscoverGrid({
 
       <section className="section">
         <div className="discover-grid mc-media-grid">
-          {items.map((item) => {
+          {items.map((item, position) => {
             const key = `${item.media_type}-${item.id}`;
 
             return (
               <DiscoverCard
                 key={key}
                 item={item}
+                position={position}
                 isProcessing={processingKey === key}
                 isMenuOpen={openLibraryMenu === key}
                 onPreview={onPreview}

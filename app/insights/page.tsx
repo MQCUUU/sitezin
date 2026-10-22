@@ -1,3 +1,4 @@
+import "@/styles/insights.css";
 import type { Metadata } from "next";
 
 import { InsightsPage } from "@/components/insights/InsightsPage";

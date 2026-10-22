@@ -21,7 +21,8 @@ import { Search } from "@/components/Search";
 import { Poster } from "@/components/Poster";
 import { CarouselRail } from "@/components/CarouselRail";
 import { PosterGrid } from "@/components/PosterGrid";
-import { PickForMe } from "@/components/PickForMe";
+// Fase 4: botão leve; o PickForMe (grande) é baixado só ao abrir.
+import { PickForMeLauncher } from "@/components/PickForMeLauncher";
 import { ErrorState } from "@/components/AsyncState";
 import { authClient } from "@/lib/auth/client";
 import { Reveal } from "@/components/ui/premium";
@@ -477,12 +478,14 @@ export default function HomeClient() {
    */
   if (!authReady) {
     return (
-      <div className="home-smart" aria-busy="true">
+      // Fase 4 (P2-08): key por variante — a troca neutra → visitante/logada substitui o conteúdo em vez de
+      // "mover" o mesmo <section> (o React reaproveitava o nó e o navegador contava um layout shift).
+      <div key="home-neutral" className="home-smart" aria-busy="true">
         <div className="topbar home-topbar">
           <Search />
         </div>
 
-        <section className="section">
+        <section className="section home-session-skeleton">
           <HomeSkeleton />
         </section>
       </div>
@@ -495,7 +498,7 @@ export default function HomeClient() {
     !user
   ) {
     return (
-      <div className="home-smart">
+      <div key="home-guest" className="home-smart">
         <div className="topbar home-topbar">
           <Search />
         </div>
@@ -634,12 +637,12 @@ export default function HomeClient() {
   /* -------------------------------------------------- autenticado */
 
   return (
-    <div className="home-smart">
+    <div key="home-auth" className="home-smart">
       <div className="topbar home-topbar">
         <Search />
 
         <div className="home-top-actions">
-          <PickForMe />
+          <PickForMeLauncher />
 
           <Link href="/calendar" className="btn">
             <CalendarDays size={15} />

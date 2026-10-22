@@ -880,6 +880,7 @@ function SearchPageContent() {
               <>
             {series.length > 0 && (
               <SearchMediaSection
+                priority
                 title={person ? `Séries com ${person.name}` : "Séries"}
                 items={series}
                 library={library}
@@ -923,6 +924,7 @@ function SearchPageContent() {
               <>
             {movies.length > 0 && (
               <SearchMediaSection
+                priority
                 title={
                   person
                     ? `Filmes com ${person.name}`

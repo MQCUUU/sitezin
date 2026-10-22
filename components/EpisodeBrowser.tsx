@@ -236,58 +236,89 @@ export function EpisodeBrowser({
 
   const [seasonData, setSeasonData] = useState<SeasonDetails | null>(null);
   const [progress, setProgress] = useState<EpisodeProgressRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [seasonLoading, setSeasonLoading] = useState(true);
+  const [progressLoading, setProgressLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progressError, setProgressError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [retryToken, setRetryToken] = useState(0);
   const [revealedSpoilers, setRevealedSpoilers] = useState<Set<number>>(new Set());
 
+  /*
+   * Fase 4 (P3-11): episódios da temporada e progresso do usuário em efeitos
+   * SEPARADOS. Antes um efeito só dependia também de `libraryItem?.id`: quando
+   * o item da biblioteca chegava (depois da página), a temporada era buscada de
+   * novo (/api/tv/{id}/season/N 2×). Agora a temporada só é buscada quando a
+   * série/temporada muda (ou em "tentar de novo"); a chegada do item só busca
+   * o progresso. A tela espera os dois (sem "não assistido" piscando).
+   */
+  const libraryId = libraryItem?.id ?? null;
+
   useEffect(() => {
     if (season === null) {
-      setLoading(false);
+      setSeasonLoading(false);
       setSeasonData(null);
       return;
     }
 
     let cancelled = false;
+    setSeasonLoading(true);
+    setError(null);
+    setRevealedSpoilers(new Set());
 
-    async function load() {
-      setLoading(true);
-      setError(null);
-      setRevealedSpoilers(new Set());
-
-      try {
-        const requests: Promise<Response>[] = [fetch(`/api/tv/${tvId}/season/${season}`)];
-        if (libraryItem?.id) {
-          requests.push(fetch(`/api/episodes?library_id=${libraryItem.id}&season=${season}`, { cache: "no-store" }));
-        }
-
-        const responses = await Promise.all(requests);
-        if (!responses[0].ok) {
-          throw new Error("season request failed");
-        }
-
-        const values = await Promise.all(responses.map((response) => response.json()));
-        if (cancelled) return;
-
-        setSeasonData(values[0] as SeasonDetails);
-        setProgress(Array.isArray(values[1]) ? values[1] : []);
-        setLoading(false);
-      } catch {
+    fetch(`/api/tv/${tvId}/season/${season}`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error("season request failed");
+        const value = (await response.json()) as SeasonDetails;
+        if (!cancelled) setSeasonData(value);
+      })
+      .catch(() => {
         if (!cancelled) {
           setError("Não foi possível carregar os episódios desta temporada.");
           setSeasonData(null);
-          setLoading(false);
         }
-      }
-    }
+      })
+      .finally(() => {
+        if (!cancelled) setSeasonLoading(false);
+      });
 
-    load();
     return () => {
       cancelled = true;
     };
-  }, [tvId, season, libraryItem?.id, retryToken]);
+  }, [tvId, season, retryToken]);
 
+  useEffect(() => {
+    if (season === null || !libraryId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- mesmo padrão do efeito da temporada (sincroniza com a busca externa)
+      setProgress([]);
+      setProgressLoading(false);
+      setProgressError(false);
+      return;
+    }
+
+    let cancelled = false;
+    setProgressLoading(true);
+    setProgressError(false);
+
+    fetch(`/api/episodes?library_id=${libraryId}&season=${season}`, { cache: "no-store" })
+      .then((response) => response.json())
+      .then((value) => {
+        if (!cancelled) setProgress(Array.isArray(value) ? value : []);
+      })
+      .catch(() => {
+        if (!cancelled) setProgressError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setProgressLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [libraryId, season, retryToken]);
+
+  const loading = seasonLoading || progressLoading;
+  const loadError = error ?? (progressError ? "Não foi possível carregar os episódios desta temporada." : null);
   const episodes = seasonData?.episodes || [];
 
   const watched = useMemo(
@@ -437,21 +468,21 @@ export function EpisodeBrowser({
         </div>
       )}
 
-      {!loading && error && (
+      {!loading && loadError && (
         <div className="episode-browser-error" role="alert">
           <AlertTriangle size={18} aria-hidden="true" />
-          <span>{error}</span>
+          <span>{loadError}</span>
           <button type="button" className="btn" onClick={() => setRetryToken((value) => value + 1)}>
             Tentar novamente
           </button>
         </div>
       )}
 
-      {!loading && !error && seasonData && episodes.length === 0 && (
+      {!loading && !loadError && seasonData && episodes.length === 0 && (
         <div className="episode-browser-empty">Nenhum episódio disponível para esta temporada.</div>
       )}
 
-      {!loading && !error && episodes.length > 0 && (
+      {!loading && !loadError && episodes.length > 0 && (
         <div className="episode-list">
           {episodes.map((episode) => (
             <EpisodeRow

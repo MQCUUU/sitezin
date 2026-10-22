@@ -14,9 +14,7 @@ import "@/styles/title.css";
 import "@/styles/media-preview.css";
 import "@/styles/media-unified.css";
 import "@/styles/settings-clean.css";
-import "@/styles/insights.css";
-import "@/styles/calendar.css";
-import "@/styles/diary.css";
+// Fase 4: insights/calendar/diary.css vão só nas rotas que os usam (não no Login, Home, Busca…).
 import "@/styles/library.css";
 import "@/styles/lists.css";
 import "@/styles/brand.css";

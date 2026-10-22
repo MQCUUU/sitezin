@@ -198,3 +198,10 @@
   margin-top: var(--mc-space-4);
   font-size: var(--mc-fs-xs);
 }
+
+/* Fase 4 (P3-02): o <Image fill> do pôster fica dentro de .poster-link; o bloco de contenção
+   agora é explícito (antes o link era static e o fill funcionava por acaso, via .poster). Mesmo
+   tamanho — só deixa de depender do ancestral. */
+.poster-link {
+  position: relative;
+}

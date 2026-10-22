@@ -1,5 +1,7 @@
 "use client";
 
+import "@/styles/insights.css";
+
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
