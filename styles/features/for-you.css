@@ -394,14 +394,11 @@
     gap: 12px;
     padding: 2px 2px 8px;
     scroll-snap-type: x proximity;
-    scrollbar-width: thin;
+    /* Navegação pelas setas (como no carrossel da Home); a barra de rolagem fica escondida. */
+    scrollbar-width: none;
 }
 .fy-row::-webkit-scrollbar {
-    height: 6px;
-}
-.fy-row::-webkit-scrollbar-thumb {
-    border-radius: var(--mc-radius-pill);
-    background: color-mix(in srgb, var(--muted) 30%, transparent);
+    display: none;
 }
 /* CARD */
 .fy-poster {
