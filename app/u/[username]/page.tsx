@@ -29,7 +29,8 @@ type ConnectionCounts = { followers: number; following: number; incoming: number
 const mediaOf = (row: any) => Array.isArray(row?.media) ? row.media[0] : row?.media;
 const normalizePerson = (row: any): PersonRow | null => {
   const profile = Array.isArray(row?.profile) ? row.profile[0] : row?.profile;
-  return profile?.id ? { ...row, profile } : null;
+  // O perfil público não expõe id: a pessoa é identificada pelo username.
+  return profile?.id || profile?.username ? { ...row, profile } : null;
 };
 
 function PosterRow({ items, empty }: { items: any[]; empty: string }) {
