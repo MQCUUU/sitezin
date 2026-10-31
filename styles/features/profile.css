@@ -617,8 +617,29 @@
     align-items: center;
     gap: 10px
 }
+/* Mini foto fixa: a regra genérica de imagens (width:100%) não pode esticá-la. */
+.profile-connections-list>div>a>img,
+.profile-connections-list>div>a>span {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--surface-2, rgba(255,255,255,.06));
+    font-size: var(--mc-fs-xs);
+    font-weight: 700
+}
+.profile-connections-list>div>a>div {
+    min-width: 0
+}
+.profile-connections-list>div>.btn {
+    flex: none
+}
 .profile-connections-list strong,.profile-connections-list small {
-    display: block
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap
 }
 .profile-connections-list small {
     color: var(--muted);
