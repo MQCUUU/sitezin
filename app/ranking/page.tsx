@@ -11,6 +11,7 @@ import { ArrowLeft, Star } from "lucide-react";
 
 import { Search } from "@/components/Search";
 import { Poster } from "@/components/Poster";
+import { ConnectedPosterActions } from "@/components/media/ConnectedPosterActions";
 import { MediaTypeTag } from "@/components/media/MediaBadges";
 import { dec } from "@/components/insights/ui";
 
@@ -132,14 +133,18 @@ function RankingContent() {
           <ol className="ins-podium" aria-label="Top 3">
             {podium.map((item, i) => (
               <li key={item.library_id} className={`is-${i + 1}`}>
-                <Link href={`/title/${item.media_type}/${item.tmdb_id}`} className="mc-focusable">
-                  <span className="ins-podium-poster">
+                {/* Pôster com os botões (ver rápido/status/curtir) FORA do link do título. */}
+                <span className="ins-podium-poster mc-pa-host">
+                  <Link href={`/title/${item.media_type}/${item.tmdb_id}`} tabIndex={-1} aria-hidden="true" className="ins-podium-poster-link">
                     <Poster path={item.poster_path} alt="" sizes="(max-width: 700px) 30vw, 220px" />
-                    <span className="mc-tag-slot mc-tag-slot--top">
-                      <MediaTypeTag type={item.media_type} />
-                    </span>
-                    <span className="ins-podium-rank">{i + 1}</span>
+                  </Link>
+                  <span className="mc-tag-slot mc-tag-slot--top">
+                    <MediaTypeTag type={item.media_type} />
                   </span>
+                  <span className="ins-podium-rank">{i + 1}</span>
+                  <ConnectedPosterActions media={{ tmdbId: Number(item.tmdb_id), mediaType: item.media_type, title: item.title, posterPath: item.poster_path }} />
+                </span>
+                <Link href={`/title/${item.media_type}/${item.tmdb_id}`} className="mc-focusable">
                   <strong>{item.title}</strong>
                   <span className="ins-top-rating">
                     <Star size={14} fill="currentColor" aria-hidden="true" /> {item.personal_rating !== null ? dec(Number(item.personal_rating)) : "—"}

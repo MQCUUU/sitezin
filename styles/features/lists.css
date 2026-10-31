@@ -504,7 +504,8 @@
 .lst-item-remove {
     position: absolute;
     top: 8px;
-    right: 8px;
+    /* canto esquerdo: o direito é dos botões do pôster (ver rápido/status/curtir) */
+    left: 8px;
     display: grid;
     place-items: center;
     width: 32px;
@@ -822,4 +823,35 @@
     flex-wrap: wrap;
     justify-content: center;
     gap: var(--mc-space-8);
+}
+
+/* Atalho fixo para a Watchlist automática (topo de /lists). */
+.lst-watchlist-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 0 0 18px;
+    padding: 14px 16px;
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+    border-radius: var(--mc-radius-lg);
+    background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+    color: var(--text);
+    text-decoration: none;
+}
+.lst-watchlist-card > svg:first-child {
+    flex: none;
+    color: var(--accent);
+}
+.lst-watchlist-card > span {
+    display: grid;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+.lst-watchlist-card small {
+    color: var(--muted);
+    font-size: var(--mc-fs-sm);
+}
+.lst-watchlist-card:hover {
+    border-color: var(--accent);
 }

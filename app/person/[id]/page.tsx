@@ -11,6 +11,9 @@ import {
 
 import {
   useParams,
+  usePathname,
+  useRouter,
+  useSearchParams,
 } from "next/navigation";
 
 import Link from "next/link";
@@ -36,6 +39,7 @@ import {
 import {
   SmartBackButton,
 } from "@/components/SmartBackButton";
+import { ConnectedPosterActions } from "@/components/media/ConnectedPosterActions";
 
 import {
   img,
@@ -244,19 +248,41 @@ export default function PersonPage() {
   ] =
     useState("");
 
-  const [
-    showAllMovies,
-    setShowAllMovies,
-  ] =
-    useState(false);
+  /*
+   * Aba e "ver todos" ficam na URL (?tab=acting&ver=filmes,series), trocados com
+   * `replace` (não enchem o histórico). Assim, abrir um filme da filmografia e
+   * voltar devolve a mesma aba, a lista do mesmo tamanho e — pelo ScrollMemory —
+   * a mesma posição de rolagem. Antes ficavam só na memória e voltavam para a
+   * Biografia.
+   */
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const contentTab: "bio" | "acting" | "other" = tabParam === "acting" || tabParam === "other" ? tabParam : "bio";
+  const expanded = new Set((searchParams.get("ver") || "").split(",").filter(Boolean));
+  const showAllMovies = expanded.has("filmes");
+  const showAllSeries = expanded.has("series");
 
-  const [
-    showAllSeries,
-    setShowAllSeries,
-  ] =
-    useState(false);
-
-  const [contentTab, setContentTab] = useState<"bio" | "acting" | "other">("bio");
+  const updateQuery = (mutate: (params: URLSearchParams) => void) => {
+    const params = new URLSearchParams(searchParams.toString());
+    mutate(params);
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  };
+  const setContentTab = (value: "bio" | "acting" | "other") =>
+    updateQuery((params) => {
+      if (value === "bio") params.delete("tab");
+      else params.set("tab", value);
+    });
+  const toggleExpanded = (key: "filmes" | "series") =>
+    updateQuery((params) => {
+      const next = new Set(expanded);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      if (next.size) params.set("ver", [...next].join(","));
+      else params.delete("ver");
+    });
 
   useEffect(() => {
     let cancelled =
@@ -931,14 +957,7 @@ export default function PersonPage() {
           expanded={
             showAllMovies
           }
-          onToggle={() =>
-            setShowAllMovies(
-              (
-                value
-              ) =>
-                !value
-            )
-          }
+          onToggle={() => toggleExpanded("filmes")}
         />
       )}
 
@@ -961,14 +980,7 @@ export default function PersonPage() {
           expanded={
             showAllSeries
           }
-          onToggle={() =>
-            setShowAllSeries(
-              (
-                value
-              ) =>
-                !value
-            )
-          }
+          onToggle={() => toggleExpanded("series")}
         />
       )}
       {contentTab === "acting" && movies.length === 0 && series.length === 0 && <div className="empty">Nenhum trabalho como ator encontrado.</div>}
@@ -1114,16 +1126,19 @@ function PersonCreditCard({
     item.job ||
     "";
 
+  const href = `/title/${item.media_type}/${item.id}`;
+
   return (
-    <Link
-      href={`/title/${item.media_type}/${item.id}`}
+    <div
       className={
         featured
           ? "person-work-card featured"
           : "person-work-card"
       }
     >
-      <div className="person-work-poster">
+      {/* Pôster (atalho decorativo) + botões do pôster FORA do link; o link acessível é o nome. */}
+      <div className="person-work-poster mc-pa-host">
+        <Link href={href} tabIndex={-1} aria-hidden="true" className="person-work-poster-link">
         {item.poster_path ? (
           <img
             src={img(
@@ -1148,11 +1163,15 @@ function PersonCreditCard({
             )}
           </div>
         )}
+        </Link>
 
         <MediaPosterTags type={item.media_type} />
+        <ConnectedPosterActions
+          media={{ tmdbId: Number(item.id), mediaType: item.media_type === "tv" ? "tv" : "movie", title, year, posterPath: item.poster_path ?? null, voteAverage: Number(item.vote_average || 0) || null }}
+        />
       </div>
 
-      <div className="person-work-body">
+      <Link href={href} className="person-work-body">
         <strong>
           {
             title
@@ -1192,7 +1211,7 @@ function PersonCreditCard({
             }
           </span>
         )}
-      </div>
-    </Link>
+      </Link>
+    </div>
   );
 }

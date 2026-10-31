@@ -21,6 +21,7 @@ function publicProfile(profile: Record<string, any>, bio: string | null) {
     username: profile.username,
     bio,
     avatar_url: profile.avatar_url,
+    banner_url: profile.banner_url ?? null,
     is_public: profile.is_public,
     visibility: profile.visibility,
     follow_policy: profile.follow_policy,
@@ -38,7 +39,7 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
 
   const profileRows = await sql`
     SELECT
-      id, display_name, username, bio, avatar_url, is_public, visibility,
+      id, display_name, username, bio, avatar_url, banner_url, is_public, visibility,
       follow_policy, followers_visibility, following_visibility,
       activity_visibility, diary_visibility, lists_visibility,
       likes_visibility, created_at

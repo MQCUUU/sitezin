@@ -444,3 +444,15 @@
         grid-template-columns: repeat(3,minmax(140px,1fr))
     }
 }
+
+/* Pôster com botões do pôster (ver rápido/status/curtir): link do pôster e corpo como links separados. */
+.person-work-poster-link {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+.person-work-body {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+}

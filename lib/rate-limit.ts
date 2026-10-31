@@ -24,6 +24,7 @@ export const PUBLIC_LIMITS = {
   users: { limit: 60, windowMs: 60_000 },
   username: { limit: 30, windowMs: 60_000 },
   publicProfile: { limit: 90, windowMs: 60_000 },
+  communityReviews: { limit: 90, windowMs: 60_000 },
 } as const;
 
 /** 429 pronto (mesmo formato de erro das outras rotas) ou null se pode seguir. */

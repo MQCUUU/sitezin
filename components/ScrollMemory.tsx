@@ -1,683 +1,259 @@
 "use client";
 
-import {
-  useEffect,
-  useRef,
-} from "react";
+import { useEffect, useRef } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 
-import {
-  usePathname,
-  useSearchParams,
-} from "next/navigation";
+/*
+ * Posição de rolagem por ENTRADA do histórico da aba.
+ *
+ * - Voltar/avançar (botão do navegador ou o "Voltar" do app) e F5: a página volta
+ *   exatamente para onde estava.
+ * - Link novo (navegação normal): abre no topo, como sempre.
+ *
+ * Antes (bug): a restauração usava um MutationObserver no <body> que nunca era
+ * desligado — qualquer mudança no DOM depois (imagem, carrossel, aviso, dados
+ * chegando) jogava a página de volta para a posição salva, e ainda agendava mais
+ * três "pulos". Por isso a rolagem "voltava para um lugar travado".
+ *
+ * Agora a restauração acontece uma vez por volta: espera o conteúdo ter altura
+ * suficiente (até RESTORE_MAX_MS), aplica, reaplica só enquanto a página ainda
+ * cresce logo depois e PARA de vez. Qualquer gesto do usuário (rodinha, toque,
+ * tecla, clique na barra) cancela na hora.
+ *
+ * As entradas ficam numa pilha em sessionStorage (por aba): sobrevive ao F5 e
+ * distingue a mesma URL aberta duas vezes no histórico.
+ */
 
-export const RETURN_POSITION_KEY =
-  "mycatalog:return-position-v2";
+const STACK_KEY = "mycatalog:history-stack-v3";
+const POS_KEY = "mycatalog:history-scroll-v3";
+const RESTORE_MAX_MS = 6000;
+const SETTLE_MS = 1200;
 
-const PAGE_SCROLL_KEY =
-  "mycatalog:page-scroll-v2";
+type Stack = { entries: string[]; index: number };
+type Positions = Record<string, number>;
 
-type ReturnPosition = {
-  url: string;
-  windowY: number;
-  mainY: number;
-  restoreRequested: boolean;
-  savedAt: number;
-};
-
-type PageScrollStore = Record<
-  string,
-  {
-    windowY: number;
-    mainY: number;
-    savedAt: number;
+function read<T>(key: string, fallback: T): T {
+  try {
+    const raw = sessionStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
   }
->;
+}
 
-function getCurrentUrl() {
-  return (
-    window.location.pathname +
-    window.location.search
+function write(key: string, value: unknown) {
+  try {
+    sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Armazenamento indisponível (modo privado/cheio): só perde a posição salva.
+  }
+}
+
+/** URL atual no mesmo formato do usePathname + useSearchParams (para comparar com a pilha). */
+function currentLocation() {
+  const qs = new URLSearchParams(window.location.search).toString();
+  return window.location.pathname + (qs ? `?${qs}` : "");
+}
+
+function entryKey(stack: Stack) {
+  return `${stack.index}:${stack.entries[stack.index] ?? ""}`;
+}
+
+/*
+ * Voltar/avançar: o roteador do Next re-renderiza dentro do próprio ouvinte de
+ * popstate, ANTES de um ouvinte registrado num efeito nosso rodar. Por isso o
+ * ouvinte fica no nível do módulo, na fase de CAPTURA (roda antes do ouvinte comum
+ * do Next), e só marca QUANDO e PARA ONDE foi a última volta.
+ */
+let lastPop = { at: 0, url: "" };
+let lastReplace = { at: 0, url: "" };
+if (typeof window !== "undefined") {
+  // Navigation API (Chrome/Edge/Safari/Firefox recentes): `navigate` do tipo "traverse"
+  // dispara ANTES de o roteador tratar a volta — é o sinal confiável.
+  const navigation = (window as unknown as { navigation?: EventTarget }).navigation;
+  navigation?.addEventListener("navigate", (event) => {
+    const e = event as Event & { navigationType?: string; destination?: { url?: string } };
+    if (!e.destination?.url) return;
+    const dest = new URL(e.destination.url);
+    const qs = new URLSearchParams(dest.search).toString();
+    const destUrl = dest.pathname + (qs ? `?${qs}` : "");
+    if (e.navigationType === "traverse") lastPop = { at: Date.now(), url: destUrl };
+    // Troca de aba/filtro com router.replace: a entrada do histórico é a MESMA.
+    if (e.navigationType === "replace") lastReplace = { at: Date.now(), url: destUrl };
+  });
+  // Reserva para navegadores sem a Navigation API.
+  // capture: na própria janela, ouvintes de captura rodam antes dos comuns (o do Next).
+  window.addEventListener(
+    "popstate",
+    () => {
+      lastPop = { at: Date.now(), url: currentLocation() };
+    },
+    { capture: true }
   );
 }
 
-function getMain() {
-  return document.querySelector(
-    "main.main"
-  ) as HTMLElement | null;
+/** Há uma página anterior DENTRO do app nesta aba? (usado pelo "Voltar" do app) */
+export function hasInAppHistory(): boolean {
+  if (typeof window === "undefined") return false;
+  const stack = read<Stack>(STACK_KEY, { entries: [], index: -1 });
+  return stack.index > 0 && stack.entries[stack.index] === currentLocation();
 }
 
-function readReturnPosition():
-  | ReturnPosition
-  | null {
-  try {
-    const raw =
-      sessionStorage.getItem(
-        RETURN_POSITION_KEY
-      );
-
-    if (!raw) {
-      return null;
-    }
-
-    return JSON.parse(
-      raw
-    ) as ReturnPosition;
-  } catch {
-    return null;
-  }
+function scrollY() {
+  return Math.max(window.scrollY, document.querySelector<HTMLElement>("main.main")?.scrollTop ?? 0);
 }
 
-function writeReturnPosition(
-  value: ReturnPosition
-) {
-  try {
-    sessionStorage.setItem(
-      RETURN_POSITION_KEY,
-      JSON.stringify(value)
-    );
-  } catch {
-    // Intencional: armazenamento local indisponível (modo privado/cheio) — só perde a preferência.
-  }
-}
-
-function readPageScroll():
-  PageScrollStore {
-  try {
-    const raw =
-      sessionStorage.getItem(
-        PAGE_SCROLL_KEY
-      );
-
-    if (!raw) {
-      return {};
-    }
-
-    return JSON.parse(
-      raw
-    ) as PageScrollStore;
-  } catch {
-    return {};
-  }
-}
-
-function writePageScroll(
-  store: PageScrollStore
-) {
-  try {
-    sessionStorage.setItem(
-      PAGE_SCROLL_KEY,
-      JSON.stringify(store)
-    );
-  } catch {
-    // Intencional: armazenamento local indisponível (modo privado/cheio) — só perde a preferência.
-  }
+function scrollToY(y: number) {
+  window.scrollTo({ top: y, left: 0, behavior: "instant" as ScrollBehavior });
 }
 
 export function ScrollMemory() {
-  const pathname =
-    usePathname();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const url = pathname + (searchParams.toString() ? `?${searchParams.toString()}` : "");
 
-  const searchParams =
-    useSearchParams();
-
-  const restoringRef =
-    useRef(false);
-
-  const currentUrl =
-    pathname +
-    (
-      searchParams.toString()
-        ? `?${searchParams.toString()}`
-        : ""
-    );
-
-  /*
-   * ==========================================
-   * RESTAURAÇÃO NATIVA MANUAL
-   * ==========================================
-   */
+  /** Restauração em andamento: não grava posição enquanto isso. */
+  const restoringRef = useRef(false);
+  const firstRef = useRef(true);
 
   useEffect(() => {
-    if (
-      "scrollRestoration" in
-      window.history
-    ) {
-      window.history.scrollRestoration =
-        "manual";
-    }
+    if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";
   }, []);
 
-  /*
-   * ==========================================
-   * SALVAR SCROLL DA PÁGINA ATUAL
-   * ==========================================
-   *
-   * Isso é o que faz o F5 voltar
-   * exatamente para o mesmo lugar.
-   */
-
   useEffect(() => {
-    const main =
-      getMain();
-
-    let frame:
-      number | null =
-      null;
-
-    function saveCurrentPage() {
-      if (
-        restoringRef.current
-      ) {
-        return;
-      }
-
-      if (
-        frame !== null
-      ) {
-        cancelAnimationFrame(
-          frame
-        );
-      }
-
-      frame =
-        requestAnimationFrame(
-          () => {
-            const store =
-              readPageScroll();
-
-            store[currentUrl] = {
-              windowY:
-                window.scrollY,
-
-              mainY:
-                main?.scrollTop ||
-                0,
-
-              savedAt:
-                Date.now(),
-            };
-
-            writePageScroll(
-              store
-            );
-          }
-        );
-    }
-
-    window.addEventListener(
-      "scroll",
-      saveCurrentPage,
-      {
-        passive: true,
-      }
-    );
-
-    main?.addEventListener(
-      "scroll",
-      saveCurrentPage,
-      {
-        passive: true,
-      }
-    );
-
-    window.addEventListener(
-      "pagehide",
-      saveCurrentPage
-    );
-
-    document.addEventListener(
-      "pointerdown",
-      saveCurrentPage,
-      true
-    );
-
-    return () => {
-      if (
-        !restoringRef.current
-      ) {
-        const store =
-          readPageScroll();
-
-        store[currentUrl] = {
-          windowY:
-            window.scrollY,
-
-          mainY:
-            main?.scrollTop ||
-            0,
-
-          savedAt:
-            Date.now(),
-        };
-
-        writePageScroll(
-          store
-        );
-      }
-
-      window.removeEventListener(
-        "scroll",
-        saveCurrentPage
-      );
-
-      main?.removeEventListener(
-        "scroll",
-        saveCurrentPage
-      );
-
-      window.removeEventListener(
-        "pagehide",
-        saveCurrentPage
-      );
-
-      document.removeEventListener(
-        "pointerdown",
-        saveCurrentPage,
-        true
-      );
-
-      if (
-        frame !== null
-      ) {
-        cancelAnimationFrame(
-          frame
-        );
-      }
-    };
-  }, [
-    currentUrl,
-  ]);
-
-  /*
-   * ==========================================
-   * SALVAR ORIGEM ANTES DE ABRIR /title/
-   * ==========================================
-   */
-
-  useEffect(() => {
-    function saveOrigin(
-      event: PointerEvent
-    ) {
-      const target =
-        event.target as
-          | HTMLElement
-          | null;
-
-      if (!target) {
-        return;
-      }
-
-      const anchor =
-        target.closest(
-          "a"
-        ) as
-          | HTMLAnchorElement
-          | null;
-
-      if (!anchor) {
-        return;
-      }
-
-      let destination: URL;
-
-      try {
-        destination =
-          new URL(
-            anchor.href,
-            window.location.origin
-          );
-      } catch {
-        return;
-      }
-
-      if (
-        destination.origin !==
-        window.location.origin
-      ) {
-        return;
-      }
-
-      if (
-        !destination.pathname.startsWith(
-          "/title/"
-        )
-      ) {
-        return;
-      }
-
-      if (
-        window.location.pathname.startsWith(
-          "/title/"
-        )
-      ) {
-        return;
-      }
-
-      const main =
-        getMain();
-
-      writeReturnPosition({
-        url:
-          getCurrentUrl(),
-
-        windowY:
-          window.scrollY,
-
-        mainY:
-          main?.scrollTop ||
-          0,
-
-        restoreRequested:
-          false,
-
-        savedAt:
-          Date.now(),
-      });
-    }
-
-    document.addEventListener(
-      "pointerdown",
-      saveOrigin,
-      true
-    );
-
-    return () => {
-      document.removeEventListener(
-        "pointerdown",
-        saveOrigin,
-        true
-      );
-    };
-  }, []);
-
-  /*
-   * ==========================================
-   * FUNÇÃO DE RESTAURAÇÃO
-   * ==========================================
-   */
-
-  useEffect(() => {
-    const returnPosition =
-      readReturnPosition();
-
-    const pageStore =
-      readPageScroll();
-
-    const pagePosition =
-      pageStore[currentUrl];
-
-    /*
-     * PRIORIDADE 1:
-     * retorno pelo SmartBackButton.
-     *
-     * PRIORIDADE 2:
-     * restauração normal da própria página,
-     * usada principalmente no F5.
-     */
-
-    let targetWindow = 0;
-    let targetMain = 0;
-    let isReturnRestore =
-      false;
-
-    if (
-      returnPosition &&
-      returnPosition.restoreRequested &&
-      returnPosition.url ===
-        currentUrl
-    ) {
-      targetWindow =
-        Math.max(
-          0,
-          returnPosition.windowY ||
-            0
-        );
-
-      targetMain =
-        Math.max(
-          0,
-          returnPosition.mainY ||
-            0
-        );
-
-      isReturnRestore =
-        true;
-    } else if (
-      pagePosition
-    ) {
-      targetWindow =
-        Math.max(
-          0,
-          pagePosition.windowY ||
-            0
-        );
-
-      targetMain =
-        Math.max(
-          0,
-          pagePosition.mainY ||
-            0
-        );
-    }
-
-    if (
-      targetWindow <= 0 &&
-      targetMain <= 0
-    ) {
-      return;
-    }
-
-    restoringRef.current =
-      true;
-
-    let cancelled =
-      false;
-
-    const start =
-      Date.now();
-
-    const maxWait =
-      20000;
-
-    function restore() {
-      if (
-        cancelled
-      ) {
-        return;
-      }
-
-      const main =
-        getMain();
-
-      const windowMax =
-        Math.max(
-          0,
-          document.documentElement
-            .scrollHeight -
-            window.innerHeight
-        );
-
-      const mainMax =
-        main
-          ? Math.max(
-              0,
-              main.scrollHeight -
-                main.clientHeight
-            )
-          : 0;
-
-      const windowReady =
-        targetWindow === 0 ||
-        windowMax >=
-          targetWindow;
-
-      const mainReady =
-        targetMain === 0 ||
-        mainMax >=
-          targetMain;
-
-      if (
-        windowReady &&
-        mainReady
-      ) {
-        if (
-          targetWindow > 0
-        ) {
-          window.scrollTo({
-            top:
-              targetWindow,
-
-            left: 0,
-
-            behavior:
-              "instant",
-          });
-        }
-
-        if (
-          main &&
-          targetMain > 0
-        ) {
-          main.scrollTop =
-            targetMain;
-        }
-
-        /*
-         * Repetimos porque páginas como
-         * /calendar podem mudar de altura
-         * logo depois do primeiro render.
-         */
-
-        const delays =
-          [
-            80,
-            250,
-            600,
-          ];
-
-        delays.forEach(
-          (
-            delay
-          ) => {
-            window.setTimeout(
-              () => {
-                if (
-                  cancelled
-                ) {
-                  return;
-                }
-
-                if (
-                  targetWindow > 0
-                ) {
-                  window.scrollTo({
-                    top:
-                      targetWindow,
-
-                    left: 0,
-
-                    behavior:
-                      "instant",
-                  });
-                }
-
-                if (
-                  main &&
-                  targetMain > 0
-                ) {
-                  main.scrollTop =
-                    targetMain;
-                }
-              },
-              delay
-            );
-          }
-        );
-
-        window.setTimeout(
-          () => {
-            if (
-              cancelled
-            ) {
-              return;
-            }
-
-            /*
-             * Se foi retorno do botão Voltar,
-             * marca a restauração como consumida.
-             */
-
-            if (
-              isReturnRestore &&
-              returnPosition
-            ) {
-              writeReturnPosition({
-                ...returnPosition,
-
-                restoreRequested:
-                  false,
-              });
-            }
-
-            restoringRef.current =
-              false;
-          },
-          700
-        );
-
-        return;
-      }
-
-      if (
-        Date.now() -
-          start <
-        maxWait
-      ) {
-        window.setTimeout(
-          restore,
-          80
-        );
+    /* ---------- 1. onde estamos na pilha desta aba ---------- */
+    const stack = read<Stack>(STACK_KEY, { entries: [], index: -1 });
+    const isFirst = firstRef.current;
+    firstRef.current = false;
+    // Esta mudança de URL veio do voltar/avançar? (marcado pelo ouvinte do módulo)
+    const isPop = lastPop.url === url && Date.now() - lastPop.at < 3000;
+    if (isPop) lastPop = { at: 0, url: "" };
+    let shouldRestore = false;
+
+    if (isFirst) {
+      const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+      const reloadOrTraverse = nav?.type === "reload" || nav?.type === "back_forward";
+
+      if (reloadOrTraverse && stack.entries[stack.index] === url) {
+        shouldRestore = true; // F5 ou volta de outro site: mesma entrada
+      } else if (reloadOrTraverse && stack.entries[stack.index - 1] === url) {
+        stack.index -= 1;
+        shouldRestore = true;
+      } else if (reloadOrTraverse && stack.entries[stack.index + 1] === url) {
+        stack.index += 1;
+        shouldRestore = true;
       } else {
-        restoringRef.current =
-          false;
+        stack.entries = [...stack.entries.slice(0, stack.index + 1), url];
+        stack.index = stack.entries.length - 1;
       }
+    } else if (isPop) {
+      if (stack.entries[stack.index - 1] === url) stack.index -= 1;
+      else if (stack.entries[stack.index + 1] === url) stack.index += 1;
+      else {
+        // Salto de mais de uma entrada: procura a mais próxima com essa URL.
+        const back = stack.entries.lastIndexOf(url, Math.max(0, stack.index - 1));
+        if (back >= 0) stack.index = back;
+        else {
+          stack.entries = [...stack.entries.slice(0, stack.index + 1), url];
+          stack.index = stack.entries.length - 1;
+        }
+      }
+      shouldRestore = true;
+    } else if (stack.entries[stack.index] !== url && lastReplace.url === url && Date.now() - lastReplace.at < 3000) {
+      // router.replace (aba/filtro): atualiza a entrada atual, sem criar outra.
+      lastReplace = { at: 0, url: "" };
+      stack.entries[stack.index] = url;
+    } else if (stack.entries[stack.index] !== url) {
+      // Navegação normal (link/router.push): nova entrada.
+      stack.entries = [...stack.entries.slice(0, stack.index + 1), url].slice(-200);
+      stack.index = stack.entries.length - 1;
+      const positions = read<Positions>(POS_KEY, {});
+      delete positions[entryKey(stack)];
+      write(POS_KEY, positions);
+    }
+    write(STACK_KEY, stack);
+    const key = entryKey(stack);
+
+    /* ---------- 2. grava a posição desta entrada enquanto o usuário rola ---------- */
+    let frame: number | null = null;
+    const save = () => {
+      if (restoringRef.current) return;
+      if (frame !== null) cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        // Já saiu desta página (o Next rola ao topo na navegação nova): não grava por cima.
+        if (currentLocation() !== url) return;
+        const positions = read<Positions>(POS_KEY, {});
+        positions[key] = scrollY();
+        write(POS_KEY, positions);
+      });
+    };
+    // Grava também no clique (antes de qualquer navegação começar).
+    const saveNow = () => {
+      if (restoringRef.current || currentLocation() !== url) return;
+      const positions = read<Positions>(POS_KEY, {});
+      positions[key] = scrollY();
+      write(POS_KEY, positions);
+    };
+    window.addEventListener("scroll", save, { passive: true });
+    window.addEventListener("pagehide", saveNow);
+    document.addEventListener("pointerdown", saveNow, true);
+
+    /* ---------- 3. restauração única (voltar/avançar/F5) ---------- */
+    const target = shouldRestore ? read<Positions>(POS_KEY, {})[key] ?? 0 : 0;
+    let stopRestore = () => {};
+
+    if (target > 0) {
+      restoringRef.current = true;
+      const started = Date.now();
+      let appliedAt = 0;
+      let timer: number | null = null;
+      let stopped = false;
+
+      const finish = () => {
+        if (stopped) return;
+        stopped = true;
+        restoringRef.current = false;
+        if (timer !== null) window.clearTimeout(timer);
+        resize.disconnect();
+        for (const type of ["wheel", "touchstart", "keydown", "pointerdown"] as const) window.removeEventListener(type, finish, true);
+      };
+
+      const tick = () => {
+        if (stopped) return;
+        const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+        const now = Date.now();
+
+        if (max >= target || now - started > RESTORE_MAX_MS) {
+          const y = Math.min(target, max);
+          if (Math.abs(window.scrollY - y) > 1) scrollToY(y);
+          if (!appliedAt) appliedAt = now;
+          // Reaplica só por um instante, enquanto a página termina de crescer; depois para.
+          if (now - appliedAt > SETTLE_MS || (max >= target && Math.abs(window.scrollY - target) <= 1 && now - appliedAt > 300)) {
+            finish();
+            return;
+          }
+        }
+        timer = window.setTimeout(tick, 60);
+      };
+
+      // Conteúdo que cresce (dados carregando) dispara nova tentativa — sem observar o DOM inteiro.
+      const resize = new ResizeObserver(() => tick());
+      resize.observe(document.body);
+      // O usuário mexeu: a restauração termina na hora e nunca mais puxa a página.
+      for (const type of ["wheel", "touchstart", "keydown", "pointerdown"] as const) window.addEventListener(type, finish, { capture: true, passive: true });
+      tick();
+      stopRestore = finish;
     }
 
-    const observer =
-      new MutationObserver(
-        restore
-      );
-
-    observer.observe(
-      document.body,
-      {
-        childList: true,
-        subtree: true,
-      }
-    );
-
-    const initial =
-      window.setTimeout(
-        restore,
-        30
-      );
-
     return () => {
-      cancelled =
-        true;
-
-      observer.disconnect();
-
-      clearTimeout(
-        initial
-      );
-
-      restoringRef.current =
-        false;
+      stopRestore();
+      if (frame !== null) cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", save);
+      window.removeEventListener("pagehide", saveNow);
+      document.removeEventListener("pointerdown", saveNow, true);
     };
-  }, [
-    currentUrl,
-  ]);
+  }, [url]);
 
   return null;
 }

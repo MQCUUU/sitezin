@@ -6,6 +6,7 @@ import { apiFetch, errorMessage, isApiError } from "@/lib/api-client";
 import { ListCover } from "@/components/lists/ListCover";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useModal } from "@/hooks/useModal";
+import { ConnectedPosterActions } from "@/components/media/ConnectedPosterActions";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Activity, Ban, BookOpen, Check, Film, Heart, List, Loader2, LockKeyhole, MessageSquareText, Pencil, PlusCircle, Repeat, Search as SearchIcon, Star, Trophy, UserCheck, UserMinus, UserPlus, Users, X } from "lucide-react";
@@ -16,6 +17,7 @@ import { CarouselRail } from "@/components/CarouselRail";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { ProfileShowcaseEditor } from "@/components/ProfileShowcaseEditor";
 import { AvatarSettings } from "@/components/AvatarSettings";
+import { BannerSettings } from "@/components/BannerSettings";
 
 type Tab = "activity" | "reviews" | "likes" | "lists" | "connections";
 type PersonRow = { follower_id?: string; following_id?: string; profile: { id?: string; username: string; display_name: string; avatar_url?: string } };
@@ -32,7 +34,7 @@ const normalizePerson = (row: any): PersonRow | null => {
 
 function PosterRow({ items, empty }: { items: any[]; empty: string }) {
   if (!items.length) return <div className="profile-tab-empty">{empty}</div>;
-  return <CarouselRail className="profile-media-row profile-media-carousel">{items.map((row, index) => { const media = mediaOf(row); return media && <Link href={`/title/${media.media_type}/${media.tmdb_id}`} key={row.id || `${media.media_type}-${media.tmdb_id}-${index}`}><div>{media.poster_path ? <img src={img(media.poster_path, "w342")} alt={media.title} /> : <Film />}</div><strong>{media.title}</strong>{row.personal_rating != null && <small><Star size={12} fill="currentColor" /> {Number(row.personal_rating).toFixed(1)}</small>}</Link>; })}</CarouselRail>;
+  return <CarouselRail className="profile-media-row profile-media-carousel">{items.map((row, index) => { const media = mediaOf(row); return media && <div className="profile-poster-cell mc-pa-host" key={row.id || `${media.media_type}-${media.tmdb_id}-${index}`}><Link href={`/title/${media.media_type}/${media.tmdb_id}`}><div>{media.poster_path ? <img src={img(media.poster_path, "w342")} alt={media.title} /> : <Film />}</div><strong>{media.title}</strong>{row.personal_rating != null && <small><Star size={12} fill="currentColor" /> {Number(row.personal_rating).toFixed(1)}</small>}</Link><ConnectedPosterActions media={{ tmdbId: Number(media.tmdb_id), mediaType: media.media_type === "tv" ? "tv" : "movie", title: media.title, posterPath: media.poster_path ?? null }} /></div>; })}</CarouselRail>;
 }
 
 function ReviewList({ items }: { items: any[] }) {
@@ -441,15 +443,24 @@ export default function PublicProfilePage() {
   const favoriteMovies = data.favorites.filter((item: any) => item.media_type === "movie").slice(0, 5);
   const favoriteSeries = data.favorites.filter((item: any) => item.media_type === "tv").slice(0, 5);
   return <><Search />{/* Fase 5 (P2-10): <div> — o <main> é do layout raiz. */}<div className="public-profile profile-v2">
+    {/* Banner do perfil (como em outras redes); sem banner, o cabeçalho fica como antes. */}
+    <div className={`profile-v2-top${data.profile.banner_url ? " has-banner" : ""}`}>
+    {data.profile.banner_url ? (
+      <div className="profile-v2-banner">
+        {/* eslint-disable-next-line @next/next/no-img-element -- imagem do Blob, como o avatar */}
+        <img src={data.profile.banner_url} alt="" />
+      </div>
+    ) : null}
     <header className="profile-v2-hero panel">
       {data.profile.avatar_url ? <img src={data.profile.avatar_url} alt={data.profile.display_name} /> : <div className="public-profile-avatar">{data.profile.display_name?.slice(0, 2).toUpperCase()}</div>}
       <div className="profile-v2-copy"><span>@{data.profile.username}</span><h1>{data.profile.display_name}</h1>{data.profile.bio && <p>{data.profile.bio}</p>}<div className="profile-v2-counts"><button disabled={relationship !== "self" && data.social.followers == null} onClick={() => setConnectionModal("followers")}><strong>{data.social.followers_count}</strong> seguidores</button><button disabled={relationship !== "self" && data.social.following == null} onClick={() => setConnectionModal("following")}><strong>{data.social.following_count}</strong> seguindo</button></div></div>
       {relationship === "self" ? <button className={`btn profile-v2-action ${editingProfile ? "" : "primary"}`} onClick={() => setEditingProfile((value) => !value)}>{editingProfile ? <X size={16}/> : <Pencil size={16} />}{editingProfile ? "Fechar edição" : "Editar perfil"}</button> : data.social.can_follow && <button className={`btn profile-v2-action ${relationship === "none" ? "primary" : ""}`} disabled={busy} onClick={toggleFollow}>{busy ? <Loader2 className="spin" size={16} /> : relationship === "accepted" ? <UserCheck size={16} /> : <UserPlus size={16} />}{relationship === "accepted" ? "Seguindo" : relationship === "pending" ? "Solicitação enviada" : "Seguir"}</button>}
     </header>
-    {relationship === "self" && editingProfile && <section className="profile-inline-editor"><div className="profile-inline-editor-head"><div><span className="eyebrow">EDITAR PERFIL</span><h2>Personalize sua página</h2><p className="muted">Foto, informações e seus Top 5 ficam todos aqui.</p></div><Link className="btn" href="/settings">Configurações da conta</Link></div><AvatarSettings/><ProfileShowcaseEditor/></section>}
+    </div>
+    {relationship === "self" && editingProfile && <section className="profile-inline-editor"><div className="profile-inline-editor-head"><div><span className="eyebrow">EDITAR PERFIL</span><h2>Personalize sua página</h2><p className="muted">Foto, informações e seus Top 5 ficam todos aqui.</p></div><Link className="btn" href="/settings">Configurações da conta</Link></div><AvatarSettings/><BannerSettings current={data.profile.banner_url ?? null} onChange={(banner_url) => setData((d: typeof data) => (d ? { ...d, profile: { ...d.profile, banner_url } } : d))} /><ProfileShowcaseEditor/></section>}
     {data.locked && <section className="panel profile-locked"><LockKeyhole size={30} /><h2>Este perfil é privado</h2><p>Comece a seguir e aguarde a aprovação para ver atividades, favoritos e listas.</p></section>}
 
-    {/* V3.3: Top 5 vazio não vira duas linhas em branco — some para quem visita; o dono vê onde configurar. */}{!data.locked && (favoriteMovies.length > 0 || favoriteSeries.length > 0) && <section className="panel profile-top5-fold">{favoriteMovies.length > 0 && <div><span className="eyebrow">TOP 5 FILMES</span><div className="profile-top5-row">{favoriteMovies.map((item:any)=><Link href={`/title/movie/${item.media.tmdb_id}`} key={`movie-${item.position}`}>{item.media.poster_path?<img loading="lazy" src={img(item.media.poster_path,"w342")} alt={item.media.title}/>:<Film/>}<small>{item.media.title}</small></Link>)}</div></div>}{favoriteSeries.length > 0 && <div><span className="eyebrow">TOP 5 SÉRIES</span><div className="profile-top5-row">{favoriteSeries.map((item:any)=><Link href={`/title/tv/${item.media.tmdb_id}`} key={`tv-${item.position}`}>{item.media.poster_path?<img loading="lazy" src={img(item.media.poster_path,"w342")} alt={item.media.title}/>:<Film/>}<small>{item.media.title}</small></Link>)}</div></div>}</section>}{!data.locked && relationship === "self" && favoriteMovies.length === 0 && favoriteSeries.length === 0 && <section className="panel profile-top5-fold profile-top5-empty"><p className="muted">Seu Top 5 de filmes e séries aparece aqui. Escolha em <strong>Editar perfil</strong>, entre os títulos que você já assistiu.</p></section>}
+    {/* V3.3: Top 5 vazio não vira duas linhas em branco — some para quem visita; o dono vê onde configurar. */}{!data.locked && (favoriteMovies.length > 0 || favoriteSeries.length > 0) && <section className="panel profile-top5-fold">{favoriteMovies.length > 0 && <div><span className="eyebrow">TOP 5 FILMES</span><div className="profile-top5-row">{favoriteMovies.map((item:any)=><div className="profile-poster-cell mc-pa-host" key={`movie-${item.position}`}><Link href={`/title/movie/${item.media.tmdb_id}`}>{item.media.poster_path?<img loading="lazy" src={img(item.media.poster_path,"w342")} alt={item.media.title}/>:<Film/>}<small>{item.media.title}</small></Link><ConnectedPosterActions media={{ tmdbId: Number(item.media.tmdb_id), mediaType: "movie", title: item.media.title, posterPath: item.media.poster_path ?? null }} /></div>)}</div></div>}{favoriteSeries.length > 0 && <div><span className="eyebrow">TOP 5 SÉRIES</span><div className="profile-top5-row">{favoriteSeries.map((item:any)=><div className="profile-poster-cell mc-pa-host" key={`tv-${item.position}`}><Link href={`/title/tv/${item.media.tmdb_id}`}>{item.media.poster_path?<img loading="lazy" src={img(item.media.poster_path,"w342")} alt={item.media.title}/>:<Film/>}<small>{item.media.title}</small></Link><ConnectedPosterActions media={{ tmdbId: Number(item.media.tmdb_id), mediaType: "tv", title: item.media.title, posterPath: item.media.poster_path ?? null }} /></div>)}</div></div>}</section>}{!data.locked && relationship === "self" && favoriteMovies.length === 0 && favoriteSeries.length === 0 && <section className="panel profile-top5-fold profile-top5-empty"><p className="muted">Seu Top 5 de filmes e séries aparece aqui. Escolha em <strong>Editar perfil</strong>, entre os títulos que você já assistiu.</p></section>}
 
     <nav className="profile-tabs" role="tablist" aria-label="Conteúdo do perfil">{([['activity','Atividade',BookOpen],['reviews','Reviews',MessageSquareText],['likes','Curtidos',Heart],['lists','Listas',List],['connections',relationship === "self" && connectionCounts?.incoming ? `Solicitações (${connectionCounts.incoming})` : 'Seguidores / Seguindo',Users]] as const).map(([value,label,Icon]) => <button key={value} type="button" role="tab" aria-selected={tab === value} className={tab === value ? "active" : ""} onClick={() => setTab(value)}><Icon size={16} />{label}</button>)}</nav>
     <section className="panel profile-tab-content">

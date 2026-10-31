@@ -2411,3 +2411,143 @@ a.series-episode-row {
  * viewport that leaves under 150px for the text column next to a
  * fixed-width poster, not the ~700px of a phone at that same CSS width.
  */
+
+/*
+ * Avaliações da comunidade (aba "Avaliações e resenhas"): quem você segue primeiro.
+ */
+.title-community-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 14px;
+    color: var(--muted);
+    font-size: var(--mc-fs-sm);
+}
+.title-community-summary svg,
+.title-community-summary strong {
+    color: var(--mc-color-rating);
+}
+.title-community-group {
+    margin: 18px 0 10px;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+.title-community-list {
+    display: grid;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.title-community-card {
+    display: grid;
+    gap: 8px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--mc-radius-lg);
+    background: var(--panel);
+}
+.title-community-card header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+.title-community-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    color: var(--text);
+    text-decoration: none;
+}
+.title-community-user:hover strong {
+    color: var(--accent);
+}
+.title-community-avatar {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--accent) 22%, var(--panel));
+    color: var(--text);
+    font-size: var(--mc-fs-xs);
+    font-weight: 800;
+}
+.title-community-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.title-community-names {
+    display: grid;
+    min-width: 0;
+}
+.title-community-names strong,
+.title-community-names small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.title-community-names small {
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+}
+.title-community-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: var(--mc-radius-pill);
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    color: var(--accent);
+    font-size: var(--mc-fs-xs);
+    font-weight: 750;
+}
+.title-community-rating {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    color: var(--mc-color-rating);
+    font-weight: 800;
+}
+.title-community-text {
+    margin: 0;
+    line-height: 1.55;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+.title-community-text.is-clamped {
+    display: -webkit-box;
+    -webkit-line-clamp: 6;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.title-community-toggle {
+    justify-self: start;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    font-size: var(--mc-fs-sm);
+    font-weight: 700;
+    cursor: pointer;
+}
+.title-community-date {
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+}
+.title-community-more {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
+}

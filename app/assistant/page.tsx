@@ -4,7 +4,7 @@
 import "@/styles/features/assistant.css";
 import { apiFetch } from "@/lib/api-client";
 import { Poster } from "@/components/Poster";
-import { MediaPosterTags } from "@/components/media/MediaBadges";
+import { ConnectedPosterActions } from "@/components/media/ConnectedPosterActions";
 import {
   useState,
 } from "react";
@@ -379,28 +379,30 @@ export default function AssistantPage() {
                   );
 
                 return (
-                  <Link
+                  <div
                     key={`${type}-${item.id}`}
-                    href={`/title/${type}/${item.id}`}
                     className="card ai-result-card"
                   >
-                    <div className="poster">
-                      <Poster
-                        path={item.poster_path}
-                        alt={title}
-                        sizes="(max-width: 700px) 45vw, 190px"
-                      />
-                      <MediaPosterTags
-                        type={type}
-                        status={item.library_status}
+                    {/* Pôster + botões do pôster (fora do link); tags de tipo/status ao vivo. */}
+                    <div className="poster mc-pa-host">
+                      <Link href={`/title/${type}/${item.id}`} tabIndex={-1} aria-hidden="true">
+                        <Poster
+                          path={item.poster_path}
+                          alt=""
+                          sizes="(max-width: 700px) 45vw, 190px"
+                        />
+                      </Link>
+                      <ConnectedPosterActions
+                        tags
+                        media={{ tmdbId: Number(item.id), mediaType: type, title: title || "Sem título", year, posterPath: item.poster_path ?? null, voteAverage: Number(item.vote_average || 0) || null }}
                       />
                     </div>
 
-                    <strong className="card-title">
+                    <Link href={`/title/${type}/${item.id}`} className="card-title">
                       {
                         title
                       }
-                    </strong>
+                    </Link>
 
                     <div className="card-meta">
                       <span>
@@ -430,7 +432,7 @@ export default function AssistantPage() {
                         }
                       </p>
                     )}
-                  </Link>
+                  </div>
                 );
               }
             )}

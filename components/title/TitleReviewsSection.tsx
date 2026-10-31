@@ -1,10 +1,13 @@
 import "@/styles/features/title-detail.css";
 import { ReviewPanel } from "@/components/ReviewPanel";
 import { WatchHistory } from "@/components/WatchHistory";
+import { TitleCommunityReviews } from "./TitleCommunityReviews";
 import type { LibraryItem, LibraryItemUpdate, TitleType } from "./types";
 
 export type TitleReviewsSectionProps = {
   type: TitleType;
+  /** TMDB id do título (avaliações da comunidade). */
+  tmdbId: number;
   libraryItem: LibraryItem | null;
   onWatchHistoryChange: (item: LibraryItemUpdate) => void;
   onRatingChange: (value: number | null) => void;
@@ -20,6 +23,7 @@ export type TitleReviewsSectionProps = {
  */
 export function TitleReviewsSection({
   type,
+  tmdbId,
   libraryItem,
   onWatchHistoryChange,
   onRatingChange,
@@ -92,6 +96,11 @@ export function TitleReviewsSection({
           </section>
         </div>
       )}
+
+      {/* Notas e resenhas de outras pessoas (quem você segue primeiro). */}
+      <div role="tabpanel" id="title-tabpanel-reviews-4" aria-labelledby="title-tab-reviews">
+        <TitleCommunityReviews type={type === "tv" ? "tv" : "movie"} tmdbId={tmdbId} />
+      </div>
     </>
   );
 }

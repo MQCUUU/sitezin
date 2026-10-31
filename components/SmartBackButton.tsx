@@ -1,94 +1,30 @@
 "use client";
 
-import {
-  ArrowLeft,
-} from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 
-import {
-  RETURN_POSITION_KEY,
-} from "@/components/ScrollMemory";
+import { hasInAppHistory } from "@/components/ScrollMemory";
 
-type ReturnPosition = {
-  url: string;
-  windowY: number;
-  mainY: number;
-  restoreRequested: boolean;
-  savedAt: number;
-};
+/*
+ * "Voltar" do app = o mesmo que o botão voltar do navegador quando a página
+ * anterior é do próprio site: volta pelo histórico (sem recarregar) e o
+ * ScrollMemory devolve a página exatamente onde estava rolada.
+ * Sem página anterior no site (link externo, aba nova): vai para a Início.
+ *
+ * Antes: recarregava a página inteira de origem (location.replace) e só
+ * funcionava para quem saiu de uma lista para um título.
+ */
+export function SmartBackButton({ fallback = "/" }: { fallback?: string }) {
+  const router = useRouter();
 
-export function SmartBackButton() {
   function goBack() {
-    try {
-      const raw =
-        sessionStorage.getItem(
-          RETURN_POSITION_KEY
-        );
-
-      if (raw) {
-        const saved =
-          JSON.parse(
-            raw
-          ) as ReturnPosition;
-
-        if (
-          saved?.url &&
-          !saved.url.startsWith(
-            "/title/"
-          )
-        ) {
-          /*
-           * Diz ao ScrollMemory que a próxima
-           * abertura da página de origem deve
-           * restaurar a posição salva.
-           */
-          sessionStorage.setItem(
-            RETURN_POSITION_KEY,
-            JSON.stringify({
-              ...saved,
-
-              restoreRequested:
-                true,
-            })
-          );
-
-          /*
-           * Faz uma navegação completa para
-           * a página de origem. No seu caso
-           * isso é útil porque páginas como
-           * /calendar montam o conteúdo via
-           * fetch depois de abrir.
-           *
-           * replace evita deixar o /title/
-           * como uma página extra no histórico.
-           */
-          window.location.replace(
-            saved.url
-          );
-
-          return;
-        }
-      }
-    } catch {
-      // Cai no fallback abaixo.
-    }
-
-    /*
-     * Se não houver origem salva,
-     * volta normalmente.
-     */
-    window.history.back();
+    if (hasInAppHistory()) router.back();
+    else router.push(fallback);
   }
 
   return (
-    <button
-      type="button"
-      className="btn title-back-btn"
-      onClick={goBack}
-    >
-      <ArrowLeft
-        size={18}
-      />
-
+    <button type="button" className="btn title-back-btn" onClick={goBack}>
+      <ArrowLeft size={18} />
       Voltar
     </button>
   );

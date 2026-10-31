@@ -4,6 +4,7 @@
 import "@/styles/features/lists.css";
 import { apiFetch, errorMessage, isApiError } from "@/lib/api-client";
 import Link from "next/link";
+import { ConnectedPosterActions } from "@/components/media/ConnectedPosterActions";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Link2, ListOrdered, Pencil, Plus, Search as SearchIcon, Trash2, X } from "lucide-react";
@@ -364,6 +365,7 @@ function DetailContent() {
 
             return (
               <li key={item.media_id} className="lst-item">
+                <div className="lst-item-media mc-pa-host">
                 <Link href={href} className="lst-item-poster" tabIndex={reorder ? -1 : 0} aria-label={`${item.title}${year ? `, ${year}` : ""}`}>
                   {item.poster_path ? (
                     <img src={img(item.poster_path, "w342")} alt="" loading="lazy" decoding="async" />
@@ -374,6 +376,13 @@ function DetailContent() {
                   )}
                   {reorder ? <span className="lst-item-rank">{item.rank}</span> : null}
                 </Link>
+                {/* Botões do pôster (ver rápido/status/curtir), fora do link; somem ao reordenar. */}
+                {!reorder ? (
+                  <ConnectedPosterActions
+                    media={{ tmdbId: Number(item.tmdb_id), mediaType: item.media_type === "tv" ? "tv" : "movie", title: item.title, year, posterPath: item.poster_path ?? null, releaseDate: (item.media_type === "tv" ? item.first_air_date : item.release_date) ?? null }}
+                  />
+                ) : null}
+                </div>
                 <div className="lst-item-text">
                   <Link href={href} className="lst-item-title" tabIndex={-1}>
                     {item.title}

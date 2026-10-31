@@ -21,6 +21,7 @@ import {
 
 import { Search } from "@/components/Search";
 import { Poster } from "@/components/Poster";
+import { ConnectedPosterActions } from "@/components/media/ConnectedPosterActions";
 import { CarouselRail } from "@/components/CarouselRail";
 import { PosterGrid } from "@/components/PosterGrid";
 // Fase 4: botão leve; o PickForMe (grande) é baixado só ao abrir.
@@ -614,20 +615,23 @@ export default function HomeClient() {
 
             <CarouselRail className="home-guest-trending-rail">
               {trendingGuest.map((item) => (
-                <Link
-                  key={`${item.media_type}-${item.id}`}
-                  href={`/title/${item.media_type}/${item.id}`}
-                  className="home-guest-trending-item"
-                >
-                  <div className="poster">
-                    <Poster
-                      path={item.poster_path}
-                      alt=""
-                      sizes="150px"
+                <div key={`${item.media_type}-${item.id}`} className="home-guest-trending-item">
+                  <div className="poster mc-pa-host">
+                    <Link href={`/title/${item.media_type}/${item.id}`} tabIndex={-1} aria-hidden="true">
+                      <Poster
+                        path={item.poster_path}
+                        alt=""
+                        sizes="150px"
+                      />
+                    </Link>
+                    <ConnectedPosterActions
+                      media={{ tmdbId: Number(item.id), mediaType: item.media_type === "tv" ? "tv" : "movie", title: item.title || item.name || "Sem título", posterPath: item.poster_path }}
                     />
                   </div>
-                  <span>{item.title || item.name}</span>
-                </Link>
+                  <Link href={`/title/${item.media_type}/${item.id}`} className="home-guest-trending-name">
+                    {item.title || item.name}
+                  </Link>
+                </div>
               ))}
             </CarouselRail>
           </section>

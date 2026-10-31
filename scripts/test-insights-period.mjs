@@ -109,3 +109,37 @@ test("um título conta uma vez no período, mesmo com nota e status alterados", 
   const lib = [movie({ watched_day: "2026-02-10", rating: 9, updated_day: "2026-03-01" })];
   assert.equal(insights(lib, "year", "2026-03-20").summary.cur.movies, 1);
 });
+
+/* ------------------------------------------------ séries marcadas como Assistidas */
+
+function series(over) {
+  return movie({ type: "tv", runtime: 50, episodes_count: 10, seasons_count: 1, ...over });
+}
+function insightsWith(library, episodes, period, today) {
+  return buildInsights({ library, episodes, entries: [], hours: [], hidden: [], events: null, today }, { period });
+}
+
+test("série Assistida sem episódios marcados conta no ano em que foi marcada (todos os episódios, duração estimada)", () => {
+  const lib = [series({ watched_day: "2026-03-05", added_day: "2025-01-01" })];
+  const cur = insightsWith(lib, [], "year", "2026-03-20").summary.cur;
+  assert.equal(cur.series, 1);
+  assert.equal(cur.episodes, 10);
+  assert.equal(cur.minutes, 500);
+  assert.equal(insightsWith(lib, [], "last_year", "2026-03-20").summary.cur.series, 0);
+  const march = insightsWith(lib, [], "year", "2026-03-20").activity.monthly.find((m) => m.month === "2026-03");
+  assert.equal(march.episodes, 10);
+});
+
+test("série com episódios marcados continua contando por episódio (sem somar a série inteira de novo)", () => {
+  const s = series({ watched_day: "2026-03-05" });
+  const eps = [{ media_id: s.media_id, day: "2026-02-10", n: 3, regular: 3, rewatch: 0 }];
+  const cur = insightsWith([s], eps, "year", "2026-03-20").summary.cur;
+  assert.equal(cur.series, 1);
+  assert.equal(cur.episodes, 3);
+});
+
+test("série Assistida sem data (legado) só entra em Todo o período; 'Assistindo' sem episódios não entra no ano", () => {
+  assert.equal(insightsWith([series({ watched_day: null })], [], "year", "2026-03-20").summary.cur.series, 0);
+  assert.equal(insightsWith([series({ watched_day: null })], [], "all", "2026-03-20").summary.cur.series, 1);
+  assert.equal(insightsWith([series({ status: "watching", watched_day: null })], [], "year", "2026-03-20").summary.cur.series, 0);
+});

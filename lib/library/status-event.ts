@@ -79,7 +79,9 @@ export async function applyStatusTransition(
         rewatch_count = COALESCE(rewatch_count, 0) + ${increment ? 1 : 0}::int,
         current_season = ${derived.current_season},
         completed_seasons = ${derived.completed_seasons},
-        stopped_season = ${derived.stopped_season}
+        stopped_season = ${derived.stopped_season},
+        -- Watchlist: sair de "Quero assistir" limpa a posição (voltar = fim da fila).
+        watchlist_position = CASE WHEN ${transition.to}::text = 'want' THEN watchlist_position ELSE NULL END
       WHERE id = ${libraryItemId} AND user_id = ${userId} AND status = ${transition.from}
       RETURNING id, media_id, rewatch_count, current_season, stopped_season
     ),

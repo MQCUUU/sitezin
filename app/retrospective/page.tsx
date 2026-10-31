@@ -11,6 +11,7 @@ import { ArrowLeft, ArrowRight, Sparkles, Star } from "lucide-react";
 
 import { Search } from "@/components/Search";
 import { Poster } from "@/components/Poster";
+import { ConnectedPosterActions } from "@/components/media/ConnectedPosterActions";
 import { RetrospectiveShare } from "@/components/RetrospectiveShare";
 import { Heatmap } from "@/components/insights/charts";
 import { MonthlyChart, type MonthMetric } from "@/components/insights/charts-story";
@@ -28,19 +29,23 @@ import type { InsightsPayload, RatedRef } from "@/lib/insights/types";
 
 function Pick({ label, item, extra }: { label: string; item: RatedRef; extra?: string }) {
   return (
-    <Link href={`/title/${item.type}/${item.tmdb_id}`} className="ins-retro-pick mc-focusable">
-      <span className="ins-retro-pick-poster">
-        <Poster path={item.poster_path} alt="" sizes="160px" />
+    <div className="ins-retro-pick">
+      {/* Pôster com os botões do pôster, fora do link do título. */}
+      <span className="ins-retro-pick-poster mc-pa-host">
+        <Link href={`/title/${item.type}/${item.tmdb_id}`} tabIndex={-1} aria-hidden="true" className="ins-poster-link">
+          <Poster path={item.poster_path} alt="" sizes="160px" />
+        </Link>
+        <ConnectedPosterActions media={{ tmdbId: Number(item.tmdb_id), mediaType: item.type === "tv" ? "tv" : "movie", title: item.title, posterPath: item.poster_path ?? null }} />
       </span>
-      <span className="ins-retro-pick-text">
+      <Link href={`/title/${item.type}/${item.tmdb_id}`} className="ins-retro-pick-text mc-focusable">
         <span className="ins-kicker">{label}</span>
         <strong>{item.title}</strong>
         <small>
           <Star size={12} fill="currentColor" aria-hidden="true" /> {dec(item.rating)}
           {extra ? ` · ${extra}` : ""}
         </small>
-      </span>
-    </Link>
+      </Link>
+    </div>
   );
 }
 

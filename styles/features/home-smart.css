@@ -463,9 +463,11 @@
     gap: 6px;
     scroll-snap-align: start
 }
-.home-guest-trending-item>span {
+.home-guest-trending-item>span,
+.home-guest-trending-name {
     font-size: var(--mc-fs-xs);
     color: var(--muted);
+    text-decoration: none;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap

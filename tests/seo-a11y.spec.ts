@@ -193,6 +193,9 @@ test.describe("acessibilidade (DOM renderizado)", () => {
       await page.goto("/title/tv/1399");
       const first = page.getByRole("button", { name: /^Marcar episódio 1 da temporada 1 como (não )?assistido$/ });
       await expect(first).toBeVisible({ timeout: 20_000 });
+      // O mesmo nome existe na barra de "próximo episódio", que carrega antes da lista:
+      // espera a LISTA de episódios antes de contar.
+      await expect(page.locator(".episode-check").nth(3)).toBeVisible({ timeout: 20_000 });
       const names = await page.locator(".episode-check").evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
       expect(names.length).toBeGreaterThan(3);
       expect(new Set(names).size).toBe(names.length);

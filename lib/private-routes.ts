@@ -23,6 +23,7 @@ export const PRIVATE_ROUTES = [
   "/profile",
   "/settings",
   "/insights",
+  "/watchlist",
 ] as const;
 
 export const PRIVATE_EXACT_ROUTES = ["/lists"] as const;

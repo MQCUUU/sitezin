@@ -93,7 +93,7 @@ function episodeMinutes(row: LibRow) {
   return row.runtime && row.runtime > 0 ? row.runtime : DEFAULT_EPISODE_MINUTES;
 }
 
-type Consumed = { row: LibRow; minutes: number; episodes: number };
+type Consumed = { row: LibRow; minutes: number; episodes: number; day?: string | null };
 
 type Ctx = {
   input: InsightsInput;
@@ -110,7 +110,23 @@ type Ctx = {
    * watched_at junto com as reassistidas contaria a mesma sessão duas vezes.
    */
   firstDay: Map<number, string | null>;
+  /** Séries com pelo menos um episódio registrado (em qualquer data). */
+  seriesWithEpisodes: Set<number>;
 };
+
+const SERIES_DONE = new Set(["watched", "rewatched"]);
+
+/**
+ * Série marcada como Assistida SEM nenhum episódio registrado: conta inteira no dia
+ * em que foi marcada (watched_day = data explícita ou evento de status), com o total
+ * de episódios dela e a duração estimada. Quem marca episódios continua contando por
+ * episódio — nunca as duas coisas para a mesma série (sem contagem dupla).
+ */
+function wholeSeries(ctx: Ctx, row: LibRow): { day: string | null; episodes: number; minutes: number } | null {
+  if (row.type !== "tv" || !SERIES_DONE.has(row.status) || ctx.seriesWithEpisodes.has(row.media_id)) return null;
+  const episodes = Math.max(0, Number(row.episodes_count) || 0);
+  return { day: row.watched_day, episodes, minutes: episodes * episodeMinutes(row) };
+}
 
 /** Dia da 1ª visualização de um filme (ver Ctx.firstDay). */
 function firstViewDay(ctx: Ctx, row: LibRow): string | null {
@@ -145,6 +161,12 @@ function consume(ctx: Ctx, range: DayRange): Consumed[] {
     }
 
     const n = episodesByMedia.get(row.media_id) ?? 0;
+    const whole = n === 0 ? wholeSeries(ctx, row) : null;
+
+    if (whole) {
+      if (inRange(whole.day, range)) out.push({ row, minutes: whole.minutes, episodes: whole.episodes, day: whole.day });
+      continue;
+    }
 
     // "Todo período": série concluída por import (sem episódios) também conta.
     if (n === 0 && (isBounded || !SERIES_STARTED.has(row.status) || row.status === "want")) continue;
@@ -171,6 +193,7 @@ function core(ctx: Ctx, range: DayRange): Core {
       if (first) active.add(first);
     } else {
       seriesMin += c.minutes;
+      if (c.day) active.add(c.day);
     }
   }
 
@@ -287,7 +310,8 @@ export function buildInsights(input: InsightsInput, raw: Partial<InsightsParams>
     if (!current || entry.day < current) firstDay.set(entry.media_id, entry.day);
   }
 
-  const ctx: Ctx = { input, lib: all, state: lib, byId, eps: input.episodes.filter((ep) => byId.has(ep.media_id)), firstDay };
+  const eps = input.episodes.filter((ep) => byId.has(ep.media_id));
+  const ctx: Ctx = { input, lib: all, state: lib, byId, eps, firstDay, seriesWithEpisodes: new Set(eps.filter((ep) => ep.n > 0).map((ep) => ep.media_id)) };
   const failed: SectionKey[] = [];
 
   function guard<T>(key: SectionKey, run: () => T): T | null {
@@ -326,6 +350,18 @@ export function buildInsights(input: InsightsInput, raw: Partial<InsightsParams>
         e.movies += 1;
         e.minutes += movieMinutes(row);
       }
+    }
+
+    // Séries marcadas como Assistidas sem episódios registrados (ver wholeSeries).
+    for (const row of all) {
+      const whole = wholeSeries(ctx, row);
+
+      if (!whole || !whole.day) continue;
+
+      const e = touch(whole.day);
+
+      e.eps += whole.episodes;
+      e.minutes += whole.minutes;
     }
 
     for (const ep of ctx.eps) {

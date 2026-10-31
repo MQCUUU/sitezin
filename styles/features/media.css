@@ -722,3 +722,11 @@
         transform: none;
     }
 }
+
+/*
+ * Botões do pôster em qualquer cartão (ConnectedPosterActions): o bloco do pôster
+ * só precisa ser posicionado — os botões ficam por cima, fora do link.
+ */
+.mc-pa-host {
+    position: relative;
+}

@@ -2,48 +2,9 @@ import { NextResponse } from "next/server";
 import { put, del } from "@vercel/blob";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
+import { ALLOWED_IMAGE_TYPES as ALLOWED_MIME_TYPES, imageExtension as getExtension, isValidImageBuffer, isVercelBlobUrl } from "@/lib/profile/image-upload";
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5 MB
-
-const ALLOWED_MIME_TYPES = new Set([
-  "image/webp",
-  "image/jpeg",
-  "image/png",
-]);
-
-function isValidImageBuffer(buffer: Buffer, mime: string): boolean {
-  if (buffer.length < 4) return false;
-  if (mime === "image/webp") {
-    return (
-      buffer.length >= 12 &&
-      buffer.subarray(0, 4).toString("ascii") === "RIFF" &&
-      buffer.subarray(8, 12).toString("ascii") === "WEBP"
-    );
-  }
-  if (mime === "image/png") {
-    return (
-      buffer.length >= 8 &&
-      buffer[0] === 0x89 &&
-      buffer[1] === 0x50 &&
-      buffer[2] === 0x4e &&
-      buffer[3] === 0x47
-    );
-  }
-  if (mime === "image/jpeg") {
-    return buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
-  }
-  return false;
-}
-
-function getExtension(mime: string): string {
-  if (mime === "image/png") return "png";
-  if (mime === "image/jpeg") return "jpg";
-  return "webp";
-}
-
-function isVercelBlobUrl(url: unknown): boolean {
-  return typeof url === "string" && url.includes("blob.vercel-storage.com");
-}
 
 async function authenticatedProfile() {
   const session = await auth.getSession().catch(() => null);

@@ -10,6 +10,7 @@ import { useAuthState } from "@/hooks/useLibraryAuth";
 import { useModal } from "@/hooks/useModal";
 
 import {
+  Bookmark,
   House,
   Library,
   ChartNoAxesCombined,
@@ -58,6 +59,8 @@ const items = [
   ["/calendar", "Calendário", CalendarDays],
   ["/insights", "Insights", ChartNoAxesCombined],
   ["/lists", "Listas", List],
+  // Watchlist automática: tudo que está como "Quero assistir", em ordem de prioridade.
+  ["/watchlist", "Watchlist", Bookmark],
 ] as const;
 
 /*
@@ -256,7 +259,7 @@ export function Nav() {
         <section ref={moreSheetRef as React.RefObject<HTMLElement>} className="mobile-more-sheet" aria-label="Mais páginas" role="dialog" aria-modal="true">
           <header><strong>Todas as páginas</strong><button className="mc-focusable" onClick={() => setMoreOpen(false)} aria-label="Fechar"><X size={20} /></button></header>
           <div>
-            {[items[4], items[5], items[6], items[7]].map(([href, label, Icon]) => <Link key={href} href={href} prefetch={prefetchFor(href)} className={`mc-focusable ${isActive(href) ? "active" : ""}`} aria-current={isActive(href) ? "page" : undefined}><Icon size={20} /><span>{label}</span></Link>)}
+            {[items[4], items[5], items[6], items[7], items[8]].map(([href, label, Icon]) => <Link key={href} href={href} prefetch={prefetchFor(href)} className={`mc-focusable ${isActive(href) ? "active" : ""}`} aria-current={isActive(href) ? "page" : undefined}><Icon size={20} /><span>{label}</span></Link>)}
             {secondaryItems.map(([href, label, Icon]) => <Link key={href} href={href} prefetch={prefetchFor(href)} className={`mc-focusable mobile-more-secondary ${isActive(href) ? "active" : ""}`} aria-current={isActive(href) ? "page" : undefined}><Icon size={20} /><span>{label}</span></Link>)}
           </div>
         </section>

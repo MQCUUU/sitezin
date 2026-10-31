@@ -442,7 +442,8 @@
     grid-template-columns: repeat(6,minmax(0,1fr));
     gap: 13px
 }
-.profile-media-row>a>div {
+.profile-media-row>a>div,
+.profile-media-row>.profile-poster-cell>a>div {
     aspect-ratio: 2/3;
     display: grid;
     place-items: center;
@@ -1203,4 +1204,101 @@
     display: flex;
     align-items: center;
     gap: 14px;
+}
+
+/* Pôsteres do perfil com botões do pôster: cada item é uma célula posicionada com o link e os botões lado a lado. */
+.profile-poster-cell {
+    min-width: 0;
+}
+.profile-poster-cell > a {
+    display: block;
+    min-width: 0;
+    color: inherit;
+    text-decoration: none;
+}
+
+/*
+ * Banner do perfil: faixa larga no topo do cartão do perfil; a foto sobrepõe a
+ * borda de baixo, como em outras redes. Sem banner, o cabeçalho fica como antes.
+ */
+.profile-v2-top {
+    display: grid;
+}
+.profile-v2-banner {
+    height: clamp(130px, 22vw, 260px);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-bottom: 0;
+    border-radius: var(--mc-radius-lg) var(--mc-radius-lg) 0 0;
+    background: var(--panel);
+}
+.profile-v2-banner img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.profile-v2-top.has-banner .profile-v2-hero {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    padding-top: 18px;
+}
+.profile-v2-top.has-banner .profile-v2-hero > img,
+.profile-v2-top.has-banner .profile-v2-hero > .public-profile-avatar {
+    align-self: flex-start;
+    margin-top: -64px;
+    box-shadow: 0 0 0 4px var(--panel);
+    background: var(--panel);
+}
+@media (max-width: 700px) {
+    .profile-v2-top.has-banner .profile-v2-hero > img,
+    .profile-v2-top.has-banner .profile-v2-hero > .public-profile-avatar {
+        margin-top: -48px;
+    }
+}
+
+/* Editor do banner (mesmo padrão do editor de foto). */
+.banner-upload {
+    display: grid;
+    gap: 14px;
+    padding: 20px;
+}
+.banner-upload-preview {
+    display: grid;
+    place-items: center;
+    height: 120px;
+    overflow: hidden;
+    border: 1px dashed var(--border);
+    border-radius: var(--mc-radius-md);
+    background: color-mix(in srgb, var(--text) 4%, var(--panel));
+    color: var(--muted);
+}
+.banner-upload-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.banner-upload-copy {
+    display: grid;
+    gap: 6px;
+}
+.banner-upload-copy p {
+    margin: 0;
+    font-size: var(--mc-fs-sm);
+}
+.banner-upload-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+}
+.banner-upload-actions label input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+.banner-upload-actions label {
+    position: relative;
 }

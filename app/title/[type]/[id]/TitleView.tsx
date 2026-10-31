@@ -1239,6 +1239,7 @@ export default function TitlePage({
       {contentTab === "reviews" && (
         <TitleReviewsSection
           type={type}
+          tmdbId={Number(id)}
           libraryItem={libraryItem}
           onWatchHistoryChange={handleWatchHistoryChange}
           onRatingChange={(value) =>

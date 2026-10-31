@@ -5,6 +5,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { ArrowRight, Info, Sparkles, Star } from "lucide-react";
 
 import { Poster } from "@/components/Poster";
+import { ConnectedPosterActions } from "@/components/media/ConnectedPosterActions";
 import { MediaTypeTag } from "@/components/media/MediaBadges";
 import { SOURCE_LABEL, hourLabel, monthName } from "@/lib/insights/rules";
 import type { Insight, InsightsPayload, SectionKey, TitleRef } from "@/lib/insights/types";
@@ -178,13 +179,17 @@ function PosterStrip({ items, caption }: { items: TitleRef[]; caption: (item: Ti
     <ul className="ins-posters">
       {items.map((item, index) => (
         <li key={`${item.type}-${item.tmdb_id}`}>
-          <Link href={`/title/${item.type}/${item.tmdb_id}`} className="mc-focusable">
-            <span className="ins-poster">
+          {/* Pôster com os botões do pôster (ver rápido/status/curtir) fora do link do título. */}
+          <span className="ins-poster mc-pa-host">
+            <Link href={`/title/${item.type}/${item.tmdb_id}`} tabIndex={-1} aria-hidden="true" className="ins-poster-link">
               <Poster path={item.poster_path} alt="" sizes="150px" />
-              <span className="mc-tag-slot mc-tag-slot--top">
-                <MediaTypeTag type={item.type} />
-              </span>
+            </Link>
+            <span className="mc-tag-slot mc-tag-slot--top">
+              <MediaTypeTag type={item.type} />
             </span>
+            <ConnectedPosterActions media={{ tmdbId: Number(item.tmdb_id), mediaType: item.type === "tv" ? "tv" : "movie", title: item.title, posterPath: item.poster_path ?? null }} />
+          </span>
+          <Link href={`/title/${item.type}/${item.tmdb_id}`} className="mc-focusable">
             <strong>{item.title}</strong>
             <small>{caption(item, index)}</small>
           </Link>

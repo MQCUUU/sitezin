@@ -21,6 +21,7 @@ test("prefixo parecido não conta (/libraryx, /settingsfoo) e páginas públicas
   }
 });
 
-test("a lista tem as 12 áreas pessoais conhecidas", () => {
-  assert.equal(PRIVATE_ROUTES.length, 12);
+test("a lista tem as 13 áreas pessoais conhecidas (inclui a Watchlist)", () => {
+  assert.equal(PRIVATE_ROUTES.length, 13);
+  assert.ok(PRIVATE_ROUTES.includes("/watchlist"));
 });

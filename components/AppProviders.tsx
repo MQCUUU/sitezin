@@ -13,6 +13,7 @@ import {
 } from "@/components/SessionSync";
 import { UsernameGate } from "@/components/UsernameGate";
 import { ConfirmProvider } from "@/components/ConfirmProvider";
+import { PosterPreviewHost } from "@/components/media/ConnectedPosterActions";
 import { PopoverCollisionGuard } from "@/components/PopoverCollisionGuard";
 import { FollowRequestNotifier } from "@/components/FollowRequestNotifier";
 import { SeriesSeasonSync } from "@/components/SeriesSeasonSync";
@@ -39,7 +40,7 @@ export function AppProviders({
         <InsightsTracker />
         <PreferencesSync />
         <UsernameGate />
-        {children}
+        <PosterPreviewHost>{children}</PosterPreviewHost>
       </ConfirmProvider>
     </ToastProvider>
   );

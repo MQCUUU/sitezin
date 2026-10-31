@@ -1,0 +1,204 @@
+/*
+ * Watchlist automática (components/watchlist/WatchlistPage.tsx).
+ * Carregado só pela página /watchlist.
+ */
+
+.wl-page {
+    max-width: 980px;
+}
+.wl-head {
+    margin: 6px 0 18px;
+}
+.wl-head .eyebrow {
+    color: var(--accent);
+}
+.wl-head h1 {
+    margin: 6px 0 6px;
+    font-size: clamp(1.75rem, 3.4vw, 2.5rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+}
+.wl-head p {
+    margin: 0;
+    max-width: 680px;
+    font-size: var(--mc-fs-base);
+    line-height: 1.5;
+}
+.wl-count {
+    margin-top: 10px !important;
+    color: var(--muted);
+    font-size: var(--mc-fs-sm) !important;
+    font-weight: 700;
+}
+.wl-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+.wl-state {
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+    padding: 40px 16px;
+    border: 1px dashed var(--border);
+    border-radius: var(--mc-radius-lg);
+    color: var(--muted);
+    text-align: center;
+}
+.wl-state p {
+    margin: 0;
+}
+.wl-list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    transition: opacity 0.15s ease;
+}
+.wl-list.is-saving {
+    opacity: 0.85;
+}
+.wl-item {
+    display: grid;
+    grid-template-columns: 20px 34px 92px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--mc-radius-lg);
+    background: var(--panel);
+    transition: border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+}
+.wl-item.is-dragging {
+    opacity: 0.45;
+}
+.wl-item.is-over {
+    border-color: var(--accent);
+    transform: translateY(2px);
+}
+.wl-grip {
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    cursor: grab;
+}
+.wl-rank {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--mc-radius-pill);
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    color: var(--accent);
+    font-weight: 850;
+    font-size: var(--mc-fs-sm);
+}
+.wl-item:first-child .wl-rank {
+    background: var(--accent);
+    color: var(--on-accent, #fff);
+}
+.wl-poster {
+    width: 92px;
+    aspect-ratio: 2 / 3;
+    border-radius: var(--mc-radius-md);
+    overflow: hidden;
+    background: color-mix(in srgb, var(--text) 6%, var(--panel));
+}
+.wl-poster > a {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+/* No pôster pequeno os botões ficam menores para caber os três. */
+.wl-poster .mc-pa {
+    top: 4px;
+    right: 4px;
+    gap: 4px;
+}
+.wl-poster .mc-pa-btn {
+    width: 28px;
+    height: 28px;
+}
+.wl-info {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+.wl-title {
+    overflow: hidden;
+    color: var(--text);
+    font-size: var(--mc-fs-md);
+    font-weight: 750;
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.wl-title:hover {
+    color: var(--accent);
+}
+.wl-controls {
+    display: flex;
+    gap: 6px;
+}
+.wl-btn {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border);
+    border-radius: var(--mc-radius-sm);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+}
+.wl-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+.wl-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+.wl-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+.wl-more {
+    display: flex;
+    justify-content: center;
+    margin-top: 18px;
+}
+@media (max-width: 700px) {
+    .wl-item {
+        grid-template-columns: 30px 72px minmax(0, 1fr);
+        grid-template-areas:
+            "rank poster info"
+            "rank poster controls";
+        gap: 8px 12px;
+        padding: 10px;
+    }
+    .wl-grip {
+        display: none;
+    }
+    .wl-rank {
+        grid-area: rank;
+        width: 30px;
+        height: 30px;
+    }
+    .wl-poster {
+        grid-area: poster;
+        width: 72px;
+    }
+    .wl-info {
+        grid-area: info;
+        align-self: end;
+    }
+    .wl-controls {
+        grid-area: controls;
+        align-self: start;
+    }
+}

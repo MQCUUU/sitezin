@@ -6,7 +6,7 @@ import { apiFetch, errorMessage, isApiError } from "@/lib/api-client";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Globe, Link2, List as ListIcon, Lock, Pencil, Plus, Trash2 } from "lucide-react";
+import { Bookmark, ChevronRight, Globe, Link2, List as ListIcon, Lock, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { Search } from "@/components/Search";
 import { useConfirm } from "@/components/ConfirmProvider";
@@ -151,6 +151,16 @@ export function ListsPage() {
           </button>
         ) : null}
       </header>
+
+      {/* Watchlist automática: a fila "Quero assistir" com prioridade (fica fixa no topo das listas). */}
+      <Link href="/watchlist" className="lst-watchlist-card">
+        <Bookmark size={20} aria-hidden="true" />
+        <span>
+          <strong>Watchlist</strong>
+          <small>Automática: tudo que está como Quero assistir, na ordem que você escolher.</small>
+        </span>
+        <ChevronRight size={18} aria-hidden="true" />
+      </Link>
 
       {state === "loading" ? <Skeleton /> : null}
 

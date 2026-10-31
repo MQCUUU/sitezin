@@ -4,6 +4,7 @@ import { Star } from "lucide-react";
 
 import { CarouselRail } from "@/components/CarouselRail";
 import { Poster } from "@/components/Poster";
+import { ConnectedPosterActions } from "@/components/media/ConnectedPosterActions";
 import type { RelatedItem, TitleType } from "./types";
 
 export type TitleRelatedSectionProps = {
@@ -52,24 +53,27 @@ export function TitleRelatedSection({
 
         <CarouselRail className="title-recommendation-carousel">
           {recommendations.map((item) => (
-            <Link
+            <div
               key={`${item.media_type}-${item.id}`}
-              href={`/title/${item.media_type}/${item.id}`}
               className="panel title-recommendation-card"
-              style={{ overflow: "hidden", padding: 0, textDecoration: "none" }}
+              style={{ overflow: "hidden", padding: 0 }}
             >
-              <div className="mc-title-recommendation-media">
-                {/* Nome já é texto visível logo abaixo, dentro do mesmo
-                    link — a foto é decorativa para não duplicar o nome
-                    no accessible name do card (mesmo padrão do elenco). */}
-                <Poster
-                  path={item.poster_path}
-                  alt=""
-                  sizes="(max-width: 700px) 45vw, 210px"
+              <div className="mc-title-recommendation-media mc-pa-host">
+                {/* Pôster = atalho decorativo (fora do Tab); o link acessível é o
+                    nome logo abaixo. Os botões ficam FORA do link. */}
+                <Link href={`/title/${item.media_type}/${item.id}`} tabIndex={-1} aria-hidden="true">
+                  <Poster
+                    path={item.poster_path}
+                    alt=""
+                    sizes="(max-width: 700px) 45vw, 210px"
+                  />
+                </Link>
+                <ConnectedPosterActions
+                  media={{ tmdbId: item.id, mediaType: item.media_type, title: item.title, year: item.date?.slice(0, 4), posterPath: item.poster_path, backdropPath: item.backdrop_path, voteAverage: item.vote_average, releaseDate: item.date }}
                 />
               </div>
 
-              <div style={{ padding: "11px" }}>
+              <Link href={`/title/${item.media_type}/${item.id}`} style={{ display: "block", padding: "11px", color: "inherit", textDecoration: "none" }}>
                 <strong style={{ display: "block", fontSize: "14px" }}>
                   {item.title}
                 </strong>
@@ -90,8 +94,8 @@ export function TitleRelatedSection({
                     {item.vote_average.toFixed(1)}
                   </div>
                 ) : null}
-              </div>
-            </Link>
+              </Link>
+            </div>
           ))}
         </CarouselRail>
       </section>
