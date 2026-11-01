@@ -8,6 +8,7 @@ export type {
   RawWatchProviderItem,
   RawWatchProviderRegion,
   RawWatchProviders,
+  WatchProviderAccess,
   WatchProviderData,
   WatchProviderGroup,
   WatchProviderItem,

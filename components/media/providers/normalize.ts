@@ -5,15 +5,17 @@ import type {
   RawWatchProviders,
   WatchProviderData,
   WatchProviderGroup,
+  WatchProviderAccess,
   WatchProviderItem,
 } from "./types";
 
-function toItems(list: RawWatchProviderItem[] | undefined): WatchProviderItem[] {
+function toItems(list: RawWatchProviderItem[] | undefined, access?: WatchProviderAccess): WatchProviderItem[] {
   if (!Array.isArray(list)) return [];
   return list.map((provider) => ({
     id: provider.provider_id,
     name: provider.provider_name,
     logoPath: provider.logo_path ?? null,
+    ...(access ? { access } : {}),
   }));
 }
 
@@ -50,9 +52,9 @@ export function normalizeWatchProviders(
   // quando o serviço-base já está no grupo (lib/streaming/providers-br.ts).
   const streaming = collapseProviderVariants(
     dedupeById([
-      ...toItems(regionPayload.flatrate),
-      ...toItems(regionPayload.free),
-      ...toItems(regionPayload.ads),
+      ...toItems(regionPayload.flatrate, "subscription"),
+      ...toItems(regionPayload.free, "free"),
+      ...toItems(regionPayload.ads, "ads"),
     ])
   );
 

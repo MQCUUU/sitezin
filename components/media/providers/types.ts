@@ -27,7 +27,12 @@ export type WatchProviderItem = {
   id: number;
   name: string;
   logoPath?: string | null;
+  /** Só no grupo "streaming": de onde veio a oferta no TMDB (flatrate/free/ads). */
+  access?: WatchProviderAccess;
 };
+
+/** subscription = flatrate (assinatura); free = grátis; ads = grátis com anúncios. */
+export type WatchProviderAccess = "subscription" | "free" | "ads";
 
 /** `providers` is already deduped and ordered — see normalize.ts. */
 export type WatchProviderGroup = {

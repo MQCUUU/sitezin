@@ -2,6 +2,7 @@ import "@/styles/features/title-detail.css";
 import { Heart, Plus, RefreshCw, Star, Trash2, Film, Tv } from "lucide-react";
 
 import { Poster } from "@/components/Poster";
+import { TitleWhereToWatch } from "./TitleWhereToWatch";
 import { mediaStatusLabel } from "@/lib/media-status";
 import { languageName, runtimeLabel, workStatusLabel } from "@/lib/title-locale";
 import type { LibraryLookupState } from "@/lib/library/lookup";
@@ -237,6 +238,8 @@ export function TitleHero({
 
                 {favorite ? "Curtido" : "Curtir"}
               </button>
+
+              <TitleWhereToWatch key={`${type}-${details.id}`} type={type} details={details} />
             </div>
 
             {!libraryItem && libraryLookup === "error" && (

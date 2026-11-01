@@ -22,6 +22,7 @@ const assert = (await import("node:assert/strict")).default;
 const { workStatusLabel, languageName, countryNames, runtimeLabel, pickTrailer, pickOverviewFallback } = await import("../lib/title-locale.ts");
 const { collapseProviderVariants } = await import("../lib/streaming/providers-br.ts");
 const { normalizeWatchProviders } = await import("../components/media/providers/normalize.ts");
+const { safeWatchLink, whereToWatchRows } = await import("../lib/streaming/watch-link.ts");
 const { MEDIA_STATUS_OPTIONS } = await import("../lib/media-status.ts");
 const { attachSeriesProgress } = await import("../lib/library/attach-progress.ts");
 const { activeHero } = await import("../lib/home/home.ts");
@@ -103,6 +104,40 @@ test("streaming: região BR, mesma estrutura para filme e série (normalizador c
   assert.deepEqual(movie.groups.map((g) => [g.kind, g.providers.map((x) => x.name)]), [["streaming", ["Netflix"]], ["rent", ["Apple TV"]]]);
   assert.ok(!JSON.stringify(movie).includes("Hulu"), "nunca mistura outra região");
   assert.deepEqual(normalizeWatchProviders({ results: {} }, "BR"), { groups: [], attributionUrl: null });
+});
+
+test("onde assistir: separa assinatura, grátis, anúncios, aluguel e compra (filme e série)", () => {
+  const payload = { results: { BR: { link: "https://www.themoviedb.org/movie/27205-inception/watch?locale=BR",
+    flatrate: [{ provider_id: 8, provider_name: "Netflix", logo_path: "/n.png" }],
+    free: [{ provider_id: 300, provider_name: "Pluto TV" }],
+    ads: [{ provider_id: 8, provider_name: "Netflix" }, { provider_id: 1796, provider_name: "Netflix Standard with Ads" }, { provider_id: 400, provider_name: "Vix" }],
+    rent: [{ provider_id: 2, provider_name: "Apple TV" }],
+    buy: [{ provider_id: 2, provider_name: "Apple TV" }, { provider_id: 3, provider_name: "Google Play Filmes" }] } } };
+  const { rows, link } = whereToWatchRows(payload);
+  assert.deepEqual(rows.map((r) => `${r.offer}:${r.name}`), ["subscription:Netflix", "free:Pluto TV", "ads:Vix", "rent:Apple TV", "buy:Apple TV", "buy:Google Play Filmes"]);
+  assert.equal(link, "https://www.themoviedb.org/movie/27205-inception/watch?locale=BR");
+  assert.equal(rows[0].logoPath, "/n.png");
+  const tv = whereToWatchRows({ results: { BR: { link: "https://www.themoviedb.org/tv/1396-breaking-bad/watch?locale=BR", flatrate: [{ provider_id: 8, provider_name: "Netflix" }] } } });
+  assert.deepEqual(tv.rows.map((r) => r.offer), ["subscription"]);
+  assert.match(tv.link, /^https:\/\/www\.themoviedb\.org\/tv\/1396/);
+});
+
+test("onde assistir: sem opção no Brasil e falha da consulta não inventam nada", () => {
+  for (const raw of [null, undefined, {}, { results: {} }, { results: { US: { link: "https://www.themoviedb.org/x", flatrate: [{ provider_id: 15, provider_name: "Hulu" }] } } }]) {
+    assert.deepEqual(whereToWatchRows(raw), { rows: [], link: null });
+  }
+  // plataformas sem link: mostra as plataformas, sem botão
+  const noLink = whereToWatchRows({ results: { BR: { flatrate: [{ provider_id: 8, provider_name: "Netflix" }] } } });
+  assert.equal(noLink.rows.length, 1);
+  assert.equal(noLink.link, null);
+});
+
+test("onde assistir: só aceita link https do TMDB/JustWatch", () => {
+  assert.equal(safeWatchLink("https://www.themoviedb.org/movie/550-fight-club/watch?locale=BR"), "https://www.themoviedb.org/movie/550-fight-club/watch?locale=BR");
+  assert.equal(safeWatchLink("https://www.justwatch.com/br/filme/clube-da-luta"), "https://www.justwatch.com/br/filme/clube-da-luta");
+  for (const bad of ["http://www.themoviedb.org/movie/550", "javascript:alert(1)", "https://themoviedb.org.evil.com/x", "https://evil.com/?themoviedb.org", "", null, 42, "not a url"]) {
+    assert.equal(safeWatchLink(bad), null, String(bad));
+  }
 });
 
 /* ================================================================ STATUS */
