@@ -1579,3 +1579,108 @@ input {
 .uncensored-info-list strong {
     color: var(--text, #fff);
 }
+
+.uncensored-tools-section {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid color-mix(in srgb, var(--text) 10%, var(--line));
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.uncensored-tools-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    color: var(--accent);
+}
+.uncensored-tools-head strong {
+    display: block;
+    color: var(--text, #fff);
+    font-size: var(--mc-fs-base, 15px);
+    margin-bottom: 2px;
+}
+.uncensored-tools-head span {
+    font-size: var(--mc-fs-xs, 13px);
+    color: var(--muted, rgba(255, 255, 255, 0.65));
+    line-height: 1.45;
+}
+.uncensored-tools-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+@media (max-width: 860px) {
+    .uncensored-tools-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.uncensored-tool-card {
+    padding: 14px;
+    border-radius: var(--radius-md, 12px);
+    background: color-mix(in srgb, var(--panel2) 75%, transparent);
+    border: 1px solid color-mix(in srgb, var(--text) 8%, var(--line));
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.uncensored-tool-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: var(--mc-fs-xs, 11px);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--accent);
+}
+.uncensored-tool-card h4 {
+    margin: 0;
+    font-size: var(--mc-fs-sm, 14px);
+    font-weight: 700;
+    color: var(--text, #fff);
+}
+.uncensored-tool-card p {
+    margin: 0;
+    font-size: var(--mc-fs-xs, 12px);
+    color: var(--muted, rgba(255, 255, 255, 0.65));
+    line-height: 1.4;
+    flex-grow: 1;
+}
+.uncensored-tool-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+}
+.uncensored-tool-btn {
+    font-size: var(--mc-fs-xs, 12px);
+    min-height: 36px;
+    padding: 0 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: color-mix(in srgb, var(--text) 5%, var(--panel));
+    border-color: color-mix(in srgb, var(--text) 12%, var(--line));
+    color: var(--text, #fff);
+    text-decoration: none;
+    border-radius: var(--radius-sm, 8px);
+}
+.uncensored-tool-btn:hover {
+    background: color-mix(in srgb, var(--accent) 15%, var(--panel));
+    border-color: var(--accent);
+    color: #fff;
+}
+.uncensored-tool-card small {
+    font-size: 11px;
+    margin-top: 4px;
+    line-height: 1.35;
+}
+.uncensored-tool-card code {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 1px 4px;
+    border-radius: 4px;
+    color: var(--accent);
+    font-family: monospace;
+}

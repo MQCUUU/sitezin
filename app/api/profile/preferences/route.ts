@@ -51,7 +51,7 @@ export async function PUT(request: NextRequest) {
     await getDb()`
       INSERT INTO public.user_preferences (user_id, appearance, updated_at)
       VALUES (${userId}, ${JSON.stringify(appearance)}::jsonb, now())
-      ON CONFLICT (user_id) DO UPDATE SET appearance = EXCLUDED.appearance, updated_at = now()
+      ON CONFLICT (user_id) DO UPDATE SET appearance = public.user_preferences.appearance || EXCLUDED.appearance, updated_at = now()
     `;
 
     return NextResponse.json({ appearance }, { headers: PRIVATE });

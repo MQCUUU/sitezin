@@ -249,6 +249,42 @@
     .mc-discover-sort .mc-discover-shortcut {
         justify-content: center;
         padding-inline: var(--mc-space-6);
+        white-space: nowrap;
+    }
+}
+/*
+ * Abaixo de 400px três colunas iguais não comportam "Bem avaliados" com
+ * ícone (quebrava em duas linhas dentro da pílula). Cada opção passa a ter a
+ * largura do próprio rótulo; o estado ativo continua marcado pela cor/borda.
+ */
+@media (max-width: 400px) {
+    .mc-discover-sort .mc-discover-shortcuts {
+        display: flex;
+    }
+    .mc-discover-sort .mc-discover-shortcut {
+        flex: 1 1 auto;
+        padding-inline: var(--mc-space-8);
+    }
+    .mc-discover-sort .mc-discover-shortcut svg {
+        display: none;
+    }
+}
+/*
+ * `.mc-discover-tabs` (inline-flex) vem depois de `.discover-tabs` e anulava
+ * o grid de 3 colunas do celular: os botões não encolhiam e "Séries" passava
+ * da borda. Reafirma o grid aqui.
+ */
+@media (max-width: 520px) {
+    .discover-tabs.mc-discover-tabs {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        width: 100%;
+    }
+    .discover-tabs .mc-discover-tab {
+        min-width: 0;
+        justify-content: center;
+        padding-inline: var(--mc-space-8);
+        white-space: nowrap;
     }
 }
 /* V2.9 — grid anterior fica (esmaecido) enquanto a nova página carrega */

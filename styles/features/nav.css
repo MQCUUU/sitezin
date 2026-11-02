@@ -81,6 +81,22 @@ html[data-density="compact"] .nav a {
         padding: 2px
     }
 }
+/* Rótulo da barra inferior em uma linha só: "Para você" quebrava em 320px e desalinhava os ícones. */
+@media (max-width:760px) {
+    .mobile-nav>a>span,.mobile-nav>button>span {
+        max-width: 100%;
+        white-space: nowrap;
+        line-height: 1.2
+    }
+}
+@media (max-width:360px) {
+    .mobile-nav {
+        padding-inline: 4px
+    }
+    .mobile-nav>a,.mobile-nav>button {
+        font-size: 11px
+    }
+}
 @media (max-width:760px) {
     .mobile-more-backdrop {
         position: fixed;
