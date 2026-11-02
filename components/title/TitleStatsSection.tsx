@@ -33,23 +33,15 @@ export function TitleStatsSection({ details }: TitleStatsSectionProps) {
         <h2>Informações</h2>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "12px",
-        }}
-      >
+      <div className="title-stats-grid">
         {facts.map((fact) => (
-          <div key={fact.label} className="panel" style={{ padding: "18px" }}>
-            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-              {fact.icon}
+          <div key={fact.label} className="panel title-stat">
+            {fact.icon}
 
-              <div>
-                <span className="muted">{fact.label}</span>
+            <div>
+              <span className="muted">{fact.label}</span>
 
-                <strong style={{ display: "block", marginTop: "4px", fontSize: "16px" }}>{fact.value}</strong>
-              </div>
+              <strong>{fact.value}</strong>
             </div>
           </div>
         ))}

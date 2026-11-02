@@ -306,6 +306,37 @@
   opacity: 0.72;
 }
 
+/*
+ * Celular: a agenda empilhava dezenas de cartões com borda e degradê (76 no
+ * dia de hoje), o que deixava a tela pesada. Vira lista: linhas separadas por
+ * divisória. "É seu" continua marcado — texto próprio + contorno no pôster.
+ */
+@media (max-width: 760px) {
+  .cal-card {
+    padding: 10px 0;
+    border: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--text) 7%, transparent);
+    border-radius: 0;
+    background: none;
+  }
+
+  .cal-card:last-child {
+    border-bottom: 0;
+  }
+
+  .cal-card:hover {
+    border-color: color-mix(in srgb, var(--text) 7%, transparent);
+  }
+
+  .cal-card.is-personal {
+    box-shadow: none;
+  }
+
+  .cal-card.is-personal .cal-card-poster {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+}
+
 .cal-card-poster {
   position: relative;
   display: block;

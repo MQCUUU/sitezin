@@ -416,6 +416,32 @@
     position: relative;
     z-index: 40
 }
+/* Celular: o topo é o cabeçalho fixo do site (styles/brand.css) — aqui também. */
+@media (max-width:760px) {
+    .topbar.title-topbar {
+        position: sticky
+    }
+    /*
+     * Status sobre a capa: era uma faixa de largura inteira que quebrava em
+     * "Quero / assistir". Segue a escala das tags de pôster (styles/controls.css).
+     */
+    .title-poster-status {
+        right: auto;
+        bottom: 6px;
+        left: 6px;
+        gap: 5px;
+        min-height: 20px;
+        padding: 0 7px;
+        border-radius: var(--mc-radius-pill);
+        font-size: 11px;
+        white-space: nowrap
+    }
+    .title-actions .favorite-btn,
+    .title-actions .title-where-btn {
+        padding-inline: 12px;
+        white-space: nowrap
+    }
+}
 .title-hero {
     position: relative;
     min-height: 470px;
@@ -2560,6 +2586,69 @@ a.series-episode-row {
     display: flex;
     justify-content: center;
     margin-top: 16px;
+}
+
+/* ---------- Informações (TitleStatsSection) ---------- */
+.title-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px
+}
+.panel.title-stat {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px
+}
+.title-stat strong {
+    display: block;
+    margin-top: 4px;
+    font-size: 16px
+}
+
+/*
+ * Celular: a página do título era uma pilha de cartões soltos — 3 fatos,
+ * 6 plataformas e 3 informações, cada um com borda e fundo próprios. Listas
+ * viram linhas com divisória; os blocos de verdade (hero, trailer, status)
+ * continuam como cartões. Nada sai da tela, só a moldura.
+ */
+@media (max-width:760px) {
+    .title-facts,
+    .title-stats-grid {
+        gap: 0
+    }
+    .title-fact,
+    .panel.title-stat {
+        min-height: 0;
+        padding: 12px 0;
+        border: 0;
+        border-radius: 0;
+        background: none
+    }
+    .title-fact + .title-fact,
+    .title-stat + .title-stat {
+        border-top: 1px solid var(--line)
+    }
+    .title-watch-panel.panel {
+        padding: 0;
+        border: 0;
+        background: none;
+        box-shadow: none
+    }
+    .title-watch-providers {
+        grid-template-columns: 1fr;
+        gap: 0
+    }
+    .title-watch-provider {
+        min-height: 52px;
+        padding: 6px 0;
+        border: 0;
+        border-radius: 0;
+        background: none
+    }
+    .title-watch-provider + .title-watch-provider {
+        border-top: 1px solid var(--line)
+    }
 }
 
 /* ---------- Onde assistir (botão do topo + painel) ---------- */

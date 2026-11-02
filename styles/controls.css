@@ -112,3 +112,125 @@
 .library-search input {
   font-size: var(--mc-fs-lg);
 }
+
+/* ---------------------------------------------------------------------------
+ * Celular — escala única de selos, tags e botões sobre pôster.
+ *
+ * Medido em 390px antes: selos informativos com 21, 25, 27, 28, 29 e 31px
+ * de altura (cada recurso com a sua), e os botões do pôster com 36×44px
+ * porque a regra global `button { min-height: 44px }` (app/globals.css)
+ * também pegava neles — na Watchlist, 3 botões passavam da altura do pôster.
+ *
+ *   Tag sobre pôster (tipo, status) ...... 20px · 11px
+ *   Selo informativo (gênero, duração) .. 24px · 12px
+ *   Filtro clicável (chips acima) ....... 34px · 13px (sem mudança)
+ *   Botão sobre pôster .................. 30px visível, 40px de toque
+ *
+ * `.main` na frente: os CSS de recurso carregam depois deste arquivo.
+ * ------------------------------------------------------------------------- */
+@media (max-width: 760px) {
+  /* Selos informativos */
+  .main .title-quick-facts span,
+  .main .title-genres span,
+  .main .person-kicker,
+  .main .collection-kicker,
+  .main .search-no-ai-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 24px;
+    padding: 0 9px;
+    font-size: var(--mc-fs-xs);
+    line-height: 1.2;
+  }
+
+  .main .person-kicker svg,
+  .main .collection-kicker svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  /* Tags sobre pôster */
+  .main .mc-tag-slot--top {
+    top: 6px;
+  }
+
+  .main .mc-tag-slot {
+    left: 6px;
+  }
+
+  .main .mc-tag-slot--bottom {
+    bottom: 6px;
+  }
+
+  .main .mc-tag {
+    min-height: 20px;
+    gap: 4px;
+    padding: 0 7px;
+    font-size: 11px;
+  }
+
+  .main .mc-tag > svg {
+    width: 11px;
+    height: 11px;
+  }
+
+  .main .mc-tag.mc-tag--type {
+    width: 20px;
+    padding: 0;
+    font-size: 0;
+  }
+
+  /* Botões sobre pôster: menores à vista, mesma área de toque. */
+  .main .mc-pa:not(.mc-pa--inline) {
+    top: 6px;
+    right: 6px;
+    gap: 6px;
+  }
+
+  .main .mc-pa-btn {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    min-height: 0;
+    border-radius: 9px;
+  }
+
+  .main .mc-pa-btn::after {
+    content: "";
+    position: absolute;
+    inset: -5px;
+  }
+
+  .main .mc-pa-btn > svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .main .mc-pa-btn--status > svg + svg {
+    width: 10px;
+    height: 10px;
+  }
+
+  /* Pôster pequeno da Watchlist (92px): coluna proporcional ao pôster. */
+  .main .wl-poster .mc-pa {
+    top: 4px;
+    right: 4px;
+    gap: 4px;
+  }
+
+  .main .wl-poster .mc-pa-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+  }
+
+  .main .wl-poster .mc-pa-btn::after {
+    inset: -4px;
+  }
+
+  .main .wl-poster .mc-pa-btn > svg {
+    width: 13px;
+    height: 13px;
+  }
+}

@@ -270,6 +270,18 @@
     }
 }
 /*
+ * Celular: ~500px de controles antes do primeiro pôster. O contador ("Mais de
+ * 40.000 títulos") é informativo, não um controle, e a frase da ordenação
+ * repete a pílula ativa — o grupo de rádio continua descrito por ela
+ * (aria-describedby funciona com o elemento oculto).
+ */
+@media (max-width: 760px) {
+    .mc-discover-total,
+    .mc-discover-sort-hint {
+        display: none;
+    }
+}
+/*
  * `.mc-discover-tabs` (inline-flex) vem depois de `.discover-tabs` e anulava
  * o grid de 3 colunas do celular: os botões não encolhiam e "Séries" passava
  * da borda. Reafirma o grid aqui.

@@ -505,6 +505,21 @@
     letter-spacing: 0.05em;
     font-size: var(--mc-fs-xs);
 }
+/*
+ * Celular: a palavra "FILME"/"SÉRIE" repetida em cada pôster era o maior ruído
+ * das grades (60× em Para você). Fica só o ícone; o texto continua no DOM
+ * (font-size 0, não display:none), então leitores de tela seguem lendo o tipo.
+ */
+@media (max-width: 760px) {
+    .mc-tag--type {
+        width: 24px;
+        gap: 0;
+        padding: 0;
+        justify-content: center;
+        font-size: 0;
+        letter-spacing: 0;
+    }
+}
 .mc-tag--accent {
     --tag: var(--accent);
 }

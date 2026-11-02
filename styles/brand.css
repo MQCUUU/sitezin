@@ -93,3 +93,61 @@
     padding-left: 46px;
   }
 }
+
+/*
+ * Celular — cabeçalho de verdade. Antes o símbolo e as ações eram fixos e
+ * soltos: ao rolar, flutuavam por cima do conteúdo (o "M" sobre os títulos
+ * das seções). Agora a própria linha do topo (.topbar, com a busca) gruda no
+ * alto com fundo; símbolo e ações ficam centralizados nela e o conteúdo passa
+ * por baixo de uma barra, não de botões soltos.
+ *
+ * overflow-x: clip no lugar de hidden (app/globals.css): corta igual, mas não
+ * cria contêiner de rolagem — com hidden, .main virava scroller e nenhum
+ * position: sticky da página funcionava.
+ */
+@media (max-width: 760px) {
+  :root {
+    --mc-mobile-header-h: 60px;
+  }
+
+  html,
+  body,
+  .app,
+  .main {
+    overflow-x: clip;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: var(--mc-z-navbar);
+    min-height: var(--mc-mobile-header-h);
+    align-items: center;
+    margin: -18px calc(-1 * max(14px, env(safe-area-inset-right))) 16px calc(-1 * max(14px, env(safe-area-inset-left)));
+    padding: 8px calc(var(--mc-topbar-reserved-width) + 22px) 8px 62px;
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+  }
+
+  .topbar .search input {
+    padding-top: 11px;
+    padding-bottom: 11px;
+  }
+
+  .mobile-brand {
+    top: 12px;
+  }
+
+  .mc-topbar-actions {
+    top: 10px;
+  }
+
+  /* O que já grudava no topo passa a grudar logo abaixo do cabeçalho. */
+  /* .main na frente: os CSS de recurso carregam depois deste e venceriam o empate. */
+  .main .mc-title-tabs,
+  .main .ins-nav {
+    top: var(--mc-mobile-header-h);
+  }
+}

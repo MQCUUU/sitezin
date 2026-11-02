@@ -616,6 +616,17 @@
         grid-auto-columns: 42vw;
     }
 }
+/*
+ * Celular: cada prateleira já diz por que está ali (título + subtítulo). O
+ * ícone decorativo ao lado do título e a frase de motivo repetida embaixo de
+ * cada pôster ("Porque você gostou de X" ×10) só somavam ruído.
+ */
+@media (max-width: 760px) {
+    .fy-shelf-icon,
+    .fy-card-body > p {
+        display: none;
+    }
+}
 .fy-card-wrap {
     position: relative;
     min-width: 145px;
