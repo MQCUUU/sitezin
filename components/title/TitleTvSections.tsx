@@ -25,6 +25,7 @@ export function TitleTvSections({ details, libraryItem, onLibraryChange }: Title
       <section className="section mc-title-section">
         <EpisodeBrowser
           tvId={Number(details.id)}
+          showTitle={details.name}
           libraryItem={libraryItem}
           seasons={details.seasons}
           totalSeasons={Number(details.number_of_seasons || 1)}

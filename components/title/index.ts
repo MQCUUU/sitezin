@@ -8,6 +8,7 @@ export { TitleContentTabs } from "./TitleContentTabs";
 export { TitleCastSection } from "./TitleCastSection";
 export { TitleReviewsSection } from "./TitleReviewsSection";
 export { TitleRelatedSection } from "./TitleRelatedSection";
+export { WatchNowButton } from "./WatchNowButton";
 export {
   TitleLoadingState,
   TitleErrorState,

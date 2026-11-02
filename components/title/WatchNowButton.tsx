@@ -7,11 +7,14 @@ import { useUncensoredMode } from '@/lib/uncensored-mode';
 export interface WatchNowButtonProps {
   type: 'movie' | 'tv';
   id: number | string;
-  title: string;
+  title?: string;
   year?: string | number;
   releaseDate?: string;
+  season?: number | string;
+  episode?: number | string;
   className?: string;
   children?: React.ReactNode;
+  ariaLabel?: string;
 }
 
 export function WatchNowButton({
@@ -20,8 +23,11 @@ export function WatchNowButton({
   title,
   year,
   releaseDate,
+  season,
+  episode,
   className = 'btn primary title-main-btn',
   children,
+  ariaLabel,
 }: WatchNowButtonProps) {
   const [enabled, , mounted] = useUncensoredMode();
 
@@ -51,12 +57,26 @@ export function WatchNowButton({
     params.set('year', resolvedYear);
   }
 
+  if (season !== undefined && season !== null && String(season).trim() !== '') {
+    params.set('season', String(season).trim());
+  }
+
+  if (episode !== undefined && episode !== null && String(episode).trim() !== '') {
+    params.set('episode', String(episode).trim());
+  }
+
+  const defaultLabel =
+    season !== undefined && episode !== undefined
+      ? `Assistir episódio ${episode} da temporada ${season}`
+      : 'Assistir agora';
+
   return (
     <a
       className={className}
       href={`/api/resolve-link?${params.toString()}`}
       target="_blank"
       rel="noopener noreferrer"
+      aria-label={ariaLabel || defaultLabel}
     >
       <Play size={18} fill="currentColor" aria-hidden="true" />
       {children ?? 'Assistir agora'}

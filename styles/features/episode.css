@@ -59,6 +59,47 @@
 .episode-detail-copy small {
     color: var(--muted)
 }
+.episode-detail-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 18px 0 12px;
+    flex-wrap: wrap;
+}
+.episode-action-btn {
+    min-height: 44px;
+    padding: 0 20px;
+    font-size: var(--mc-fs-base, 15px);
+    font-weight: 750;
+    border-radius: var(--radius-md, 12px);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.episode-next-btn {
+    background: color-mix(in srgb, var(--panel2) 90%, transparent);
+    border: 1px solid var(--line);
+    color: var(--text, #fff);
+}
+.episode-next-btn:hover {
+    background: color-mix(in srgb, var(--panel2) 60%, var(--accent));
+    border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+    color: #fff;
+}
+@media (max-width: 600px) {
+    .episode-detail-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    .episode-action-btn {
+        width: 100%;
+    }
+}
 .episode-journal {
     margin-top: 18px;
     display: grid;

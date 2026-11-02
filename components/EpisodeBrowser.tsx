@@ -7,7 +7,7 @@ import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Check, ChevronRight, Clock, Eye, EyeOff, Loader2 } from "lucide-react";
+import { AlertTriangle, Check, ChevronRight, Clock, Eye, EyeOff, Loader2, Play } from "lucide-react";
 
 import { img } from "@/lib/tmdb";
 import {
@@ -16,6 +16,7 @@ import {
   type SeasonDetails,
   type SeasonSummary,
 } from "@/lib/title-seasons";
+import { useUncensoredMode } from "@/lib/uncensored-mode";
 import type { LibraryItem, LibraryItemUpdate } from "@/components/title";
 
 type EpisodeProgressRow = {
@@ -26,6 +27,7 @@ type EpisodeProgressRow = {
 
 export type EpisodeBrowserProps = {
   tvId: number;
+  showTitle?: string;
   libraryItem: LibraryItem | null;
   /** Resumo real de temporadas do detalhe (já normalizado) — única fonte do seletor. */
   seasons: SeasonSummary[];
@@ -77,6 +79,9 @@ function EpisodeRow({
   onToggleWatched,
   href,
   seasonNumber,
+  tvId,
+  showTitle,
+  uncensoredActive,
 }: {
   episode: EpisodeSummary;
   isWatched: boolean;
@@ -87,6 +92,9 @@ function EpisodeRow({
   onToggleWatched: () => void;
   href: string;
   seasonNumber: number;
+  tvId: number;
+  showTitle?: string;
+  uncensoredActive: boolean;
 }) {
   const status = getEpisodeReleaseStatus(episode.air_date);
   const isFuture = status === "future";
@@ -163,32 +171,51 @@ function EpisodeRow({
         </div>
       </Link>
 
-      {canToggle ? (
-        <button
-          type="button"
-          className={`episode-check ${isWatched ? "active" : ""}`}
-          disabled={saving || !!watchDisabledReason}
-          title={watchDisabledReason || undefined}
-          onClick={onToggleWatched}
-          aria-label={watchLabel}
-        >
-          <Check size={16} aria-hidden="true" />
-        </button>
-      ) : (
-        <ChevronRight size={16} aria-hidden="true" />
-      )}
+      <div className="episode-row-actions">
+        {uncensoredActive && (
+          <a
+            href={`/api/resolve-link?type=tv&id=${tvId}&title=${encodeURIComponent(showTitle || "")}&season=${seasonNumber}&episode=${episode.episode_number}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="episode-watch-action"
+            title={`Assistir ${which} no player externo`}
+            aria-label={`Assistir ${which}`}
+          >
+            <Play size={13} fill="currentColor" aria-hidden="true" />
+            <span className="episode-watch-text">Assistir</span>
+          </a>
+        )}
+
+        {canToggle ? (
+          <button
+            type="button"
+            className={`episode-check ${isWatched ? "active" : ""}`}
+            disabled={saving || !!watchDisabledReason}
+            title={watchDisabledReason || undefined}
+            onClick={onToggleWatched}
+            aria-label={watchLabel}
+          >
+            <Check size={16} aria-hidden="true" />
+          </button>
+        ) : (
+          <ChevronRight size={16} aria-hidden="true" />
+        )}
+      </div>
     </article>
   );
 }
 
 export function EpisodeBrowser({
   tvId,
+  showTitle,
   libraryItem,
   seasons,
   totalSeasons,
   onProgressChange,
   onLibraryChange,
 }: EpisodeBrowserProps) {
+  const [uncensoredMode, , uncensoredMounted] = useUncensoredMode();
+  const uncensoredActive = uncensoredMounted && uncensoredMode;
   const router = useRouter();
   const { handleError } = useLibraryAuth();
   const pathname = usePathname();
@@ -506,6 +533,9 @@ export function EpisodeBrowser({
               onToggleWatched={() => toggle(episode)}
               href={`/title/tv/${tvId}/season/${season}/episode/${episode.episode_number}`}
               seasonNumber={season}
+              tvId={tvId}
+              showTitle={showTitle}
+              uncensoredActive={uncensoredActive}
             />
           ))}
         </div>

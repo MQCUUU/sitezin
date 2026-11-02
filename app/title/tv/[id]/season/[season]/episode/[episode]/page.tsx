@@ -5,7 +5,7 @@ import "@/styles/features/episode.css";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Check, Clock, Eye, Loader2, RotateCcw, Save, Star } from "lucide-react";
+import { ArrowLeft, Check, Clock, Eye, Loader2, RotateCcw, Save, SkipForward, Star } from "lucide-react";
 
 import { Search } from "@/components/Search";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
@@ -13,6 +13,7 @@ import { apiFetch, errorMessage, isApiError } from "@/lib/api-client";
 import { img } from "@/lib/tmdb";
 import { getEpisodeReleaseStatus, type EpisodeSummary } from "@/lib/title-seasons";
 import { BRAZIL_TIME_ZONE, dateKeyInTimeZone } from "@/lib/date-only";
+import { WatchNowButton } from "@/components/title/WatchNowButton";
 import type { LibraryItem, LooseTitleDetails } from "@/components/title";
 
 type EpisodeProgressRow = {
@@ -60,6 +61,7 @@ export default function EpisodePage() {
   const [releasedCount, setReleasedCount] = useState(0);
   const [contentTab, setContentTab] = useState<"details" | "journal">("details");
   const [spoilerRevealed, setSpoilerRevealed] = useState(false);
+  const [nextEpisode, setNextEpisode] = useState<{ season: number; episode: number } | null>(null);
 
   useEffect(() => {
     if (!paramsValid) {
@@ -101,6 +103,21 @@ export default function EpisodePage() {
       setEpisode(found);
       setShow(showData);
       setLibrary(libraryData || null);
+
+      // Descobre o próximo episódio da série
+      let nextEp: { season: number; episode: number } | null = null;
+      const hasNextInSeason = episodesList.some((item) => item.episode_number === episodeNumber + 1);
+      if (hasNextInSeason) {
+        nextEp = { season: seasonNumber, episode: episodeNumber + 1 };
+      } else if (showData && Array.isArray(showData.seasons)) {
+        const nextSeasonExists = showData.seasons.some(
+          (s: { season_number: number }) => s.season_number === seasonNumber + 1
+        );
+        if (nextSeasonExists) {
+          nextEp = { season: seasonNumber + 1, episode: 1 };
+        }
+      }
+      setNextEpisode(nextEp);
 
       if (libraryData?.id) {
         const values = await apiFetch(`/api/episodes?library_id=${libraryData.id}&season=${seasonNumber}`, {
@@ -202,6 +219,30 @@ export default function EpisodePage() {
             {episode.runtime ? ` · ${episode.runtime} min` : ""}
             {episode.vote_average ? <span><Star size={14} /> {Number(episode.vote_average).toFixed(1)}</span> : null}
             {isFuture && <span className="episode-future-badge"><Clock size={12} aria-hidden="true" /> Futuro</span>}
+          </div>
+          <div className="episode-detail-actions">
+            <WatchNowButton
+              type="tv"
+              id={params.id}
+              title={show?.name || ""}
+              year={show?.first_air_date ? show.first_air_date.slice(0, 4) : undefined}
+              season={seasonNumber}
+              episode={episodeNumber}
+              className="btn primary episode-action-btn"
+            >
+              Assistir agora
+            </WatchNowButton>
+
+            {nextEpisode && (
+              <Link
+                href={`/title/tv/${params.id}/season/${nextEpisode.season}/episode/${nextEpisode.episode}`}
+                className="btn episode-action-btn episode-next-btn"
+                title={`Ir para o episódio ${nextEpisode.episode} da temporada ${nextEpisode.season}`}
+              >
+                <span>Próximo episódio</span>
+                <SkipForward size={16} aria-hidden="true" />
+              </Link>
+            )}
           </div>
           {hideOverview ? (
             <p className="episode-spoiler-hidden">
