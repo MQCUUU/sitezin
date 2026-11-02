@@ -212,7 +212,9 @@ function CalendarContent() {
 
   return (
     <>
-      <Search />
+      <div className="topbar">
+        <Search />
+      </div>
 
       <header className="cal-header">
         <div className="cal-title">

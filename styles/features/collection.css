@@ -441,20 +441,26 @@
         gap: 11px;
     }
 }
-@media (max-width: 390px) {
+/*
+ * Celular estreito: capa + texto lado a lado deixavam ~150px para o texto —
+ * a etiqueta e os botões quebravam em duas linhas e dois números da coleção
+ * eram escondidos. Em pilha (capa pequena em cima), tudo cabe e nada some.
+ */
+@media (max-width: 420px) {
     .collection-hero-content {
-        grid-template-columns: 92px minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr);
+        align-items: start;
+    }
+    .collection-poster-wrap {
+        width: 96px;
+    }
+    .collection-hero-actions > * {
+        flex: 1 1 auto;
     }
 }
 @media (max-width: 390px) {
     .collection-kicker {
         font-size: var(--mc-fs-xs);
-    }
-}
-@media (max-width: 390px) {
-    .collection-stats > div:nth-child(4),
-  .collection-stats > div:nth-child(5) {
-        display: none;
     }
 }
 /* RESPONSIVO */
@@ -464,4 +470,8 @@
     left: auto;
     right: 8px;
     bottom: 8px;
+}
+/* Aqui o canto inferior direito é da ordem (#n): o status não pode chegar até ele. */
+.collection-card-poster .mc-tag-slot--bottom {
+    max-width: calc(100% - 56px);
 }

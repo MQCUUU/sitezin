@@ -77,9 +77,19 @@
   white-space: nowrap;
 }
 
+/*
+ * Tablet/notebook estreito (601px até ~1000px com a barra lateral): as colunas
+ * 1fr encolhiam abaixo do texto e, sem quebra de linha, os rótulos vazavam por
+ * cima das abas vizinhas. Cada coluna nunca fica menor que o próprio texto;
+ * quando não cabe, o trilho rola (overflow-x: auto em .mc-title-tabs-track).
+ */
+.mc-title-tabs .title-content-tabs.mc-title-tabs-track {
+  grid-template-columns: none;
+  grid-auto-columns: minmax(max-content, 1fr);
+}
+
 @media (max-width: 600px) {
   .mc-title-tabs .title-content-tabs.mc-title-tabs-track {
-    grid-template-columns: none;
     grid-auto-columns: max-content;
   }
 }

@@ -717,6 +717,27 @@ a.dy-compact-title:hover {
   }
 }
 
+/*
+ * Celular estreito: o mês ("Outubro de 2026") era cortado no seletor —
+ * sobravam ~136px entre as setas e "Hoje". Fonte e respiros menores, sem
+ * esconder nenhum controle.
+ */
+@media (max-width: 400px) {
+  .dy-nav {
+    gap: 4px;
+  }
+
+  .dy-month select {
+    padding: 0 24px 0 10px;
+    background-position: right 8px center;
+    font-size: var(--mc-fs-sm);
+  }
+
+  .dy-today-btn {
+    padding: 0 10px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dy-feed {
     transition: none;

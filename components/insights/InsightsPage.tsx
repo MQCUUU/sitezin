@@ -227,7 +227,9 @@ function InsightsContent() {
 
   return (
     <>
-      <Search />
+      <div className="topbar">
+        <Search />
+      </div>
 
       <header className="ins-header">
         <div>

@@ -76,7 +76,9 @@ function RankingContent() {
 
   return (
     <>
-      <Search />
+      <div className="topbar">
+        <Search />
+      </div>
 
       <header className="ins-header ins-header--sub">
         <div>

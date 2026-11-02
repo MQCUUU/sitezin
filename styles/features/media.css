@@ -488,8 +488,15 @@
         min-height: 44px;
     }
 }
+/*
+ * O status fica no pé do pôster; a coluna de ações (.mc-pa, até 3 botões de
+ * 34px) mora no topo e termina bem antes. A reserva de 56px do .mc-tag-slot só
+ * vale para a tag de cima — embaixo ela cortava "Quero assistir" em pôsteres
+ * estreitos (grades com muitas colunas).
+ */
 .mc-tag-slot--bottom {
     bottom: 8px;
+    max-width: calc(100% - 16px);
 }
 .mc-tag--type {
     --tag: #94a3b8;

@@ -158,10 +158,10 @@ export default function EpisodePage() {
     }
   }
 
-  if (!paramsValid) return <><Search /><div className="empty">Episódio não encontrado.</div></>;
-  if (loading) return <><Search /><div className="empty"><Loader2 className="spin" /> Carregando episódio...</div></>;
-  if (loadError) return <><Search /><div className="empty" role="alert">{loadError}</div></>;
-  if (!episode) return <><Search /><div className="empty">Episódio não encontrado.</div></>;
+  if (!paramsValid) return <><div className="topbar"><Search /></div><div className="empty">Episódio não encontrado.</div></>;
+  if (loading) return <><div className="topbar"><Search /></div><div className="empty"><Loader2 className="spin" /> Carregando episódio...</div></>;
+  if (loadError) return <><div className="topbar"><Search /></div><div className="empty" role="alert">{loadError}</div></>;
+  if (!episode) return <><div className="topbar"><Search /></div><div className="empty">Episódio não encontrado.</div></>;
 
   const releaseStatus = getEpisodeReleaseStatus(episode.air_date);
   const isFuture = releaseStatus === "future";
@@ -181,7 +181,9 @@ export default function EpisodePage() {
     .join(", ");
 
   return <>
-    <Search />
+    <div className="topbar">
+      <Search />
+    </div>
     <div className="section episode-detail">
       <Link className="episode-back" href={`/title/tv/${params.id}`}><ArrowLeft size={16} /> Voltar para {show?.name || "a série"}</Link>
       <nav className="title-content-tabs episode-content-tabs" aria-label="Seções do episódio"><button className={contentTab === "details" ? "active" : ""} onClick={() => setContentTab("details")}>Sinopse e detalhes</button><button className={contentTab === "journal" ? "active" : ""} onClick={() => setContentTab("journal")}>Progresso e diário</button></nav>
