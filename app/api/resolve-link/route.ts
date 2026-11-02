@@ -20,18 +20,25 @@ let cachedEntries: CatalogEntry[] | null = null;
 
 const STOP_WORDS = new Set([
   'e', 'and', 'the', 'o', 'a', 'os', 'as', 'de', 'da', 'do', 'das', 'dos', 'of', 'in',
-  'dublado', 'legendado', 'nacional', 'original', 'completo', 'hd', 'fhd', '4k', '1080p', '720p'
+  'dublado', 'legendado', 'nacional', 'original', 'completo', 'hd', 'fhd', '4k', '1080p', '720p', 'filme'
 ]);
 
 const ROMAN_NUMERALS = ['ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x', '2', '3', '4', '5'];
+
+const DERIVATIVES = [
+  'toronto', 'intencao-criminal', 'criminal-intent',
+  'crimes-premeditados', 'organized-crime', 'crime-organizado',
+  'true-crime', 'uk', 'vitimas-especiais', 'unidade-de-vitimas-especiais', 'svu',
+  'trial-by-jury', 'los-angeles'
+];
 
 function normalizeText(text: string): string {
   return text
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
-    .replace(/c\.s\.i\./gi, 'csi') // Uniformiza C.S.I. para csi
-    .replace(/\bnova york\b/gi, 'ny') // Uniformiza Nova York para NY
+    .replace(/c\.s\.i\./gi, 'csi')
+    .replace(/\bnova york\b/gi, 'ny')
     .replace(/&amp;?/gi, ' ')
     .replace(/&/g, ' ')
     .replace(/[^a-z0-9]+/g, '-')
@@ -57,12 +64,16 @@ function getCatalogEntries(): CatalogEntry[] {
   }
 
   const publicDir = path.join(process.cwd(), 'public');
-  const filesToRead = ['mapafilmes.html', 'mapa.html'];
   const entries: CatalogEntry[] = [];
   const itemRegex = /<span[^>]*>([\s\S]*?)<\/span>\s*-\s*<a\s+href=["']([^"']+)["']/gi;
 
-  for (const fileName of filesToRead) {
-    const filePath = path.join(publicDir, fileName);
+  const filesConfig = [
+    { file: 'mapafilmes.html', isMovieFile: true },
+    { file: 'mapa.html', isMovieFile: false }
+  ];
+
+  for (const cfg of filesConfig) {
+    const filePath = path.join(publicDir, cfg.file);
     if (fs.existsSync(filePath)) {
       try {
         const content = fs.readFileSync(filePath, 'utf-8');
@@ -74,11 +85,13 @@ function getCatalogEntries(): CatalogEntry[] {
             ? rawHref
             : `${BASE_SITE_URL}/${rawHref.replace(/^\/+/, '')}`;
 
+          // Captura ano com precisão: dentro de parênteses "(2023)" ou entre traços "- 2023 -" ou no final
           const yearMatch = rawTitle.match(/\b(19\d\d|20\d\d)\b/) || rawHref.match(/-(19\d\d|20\d\d)-/);
           const foundYear = yearMatch ? yearMatch[1] : undefined;
-          const isMovie = fullUrl.includes('_') || fileName === 'mapafilmes.html';
 
-          // Checa se é dublado ou nacional
+          // Se veio de mapafilmes.html, é 100% filme
+          const isMovie = cfg.isMovieFile;
+
           const lowerCheck = (rawTitle + ' ' + fullUrl).toLowerCase();
           const isDubbed = lowerCheck.includes('dublado') || lowerCheck.includes('nacional');
 
@@ -97,7 +110,7 @@ function getCatalogEntries(): CatalogEntry[] {
           });
         }
       } catch (err) {
-        console.error(`[resolve-link] Erro ao ler ${fileName}:`, err);
+        console.error(`[resolve-link] Erro ao ler ${cfg.file}:`, err);
       }
     }
   }
@@ -109,22 +122,31 @@ function getCatalogEntries(): CatalogEntry[] {
   return entries;
 }
 
-async function getOriginalTitleFromTMDB(id: string, type: string): Promise<string | null> {
+async function getTMDBDetails(
+  id: string,
+  type: string
+): Promise<{ titlePt: string; titleEn: string; year?: string } | null> {
   if (!id || !TMDB_API_KEY) return null;
   try {
     const endpoint = type === 'tv' ? `tv/${id}` : `movie/${id}`;
-    const res = await fetch(`https://api.themoviedb.org/3/${endpoint}?api_key=${TMDB_API_KEY}&language=en-US`, {
-      next: { revalidate: 86400 },
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.original_name || data.original_title || data.name || data.title || null;
+    const resPt = await fetch(
+      `https://api.themoviedb.org/3/${endpoint}?api_key=${TMDB_API_KEY}&language=pt-BR`,
+      { next: { revalidate: 86400 } }
+    );
+    if (!resPt.ok) return null;
+    const dataPt = await resPt.json();
+
+    const titlePt = dataPt.name || dataPt.title || '';
+    const titleEn = dataPt.original_name || dataPt.original_title || titlePt;
+    const dateStr = dataPt.first_air_date || dataPt.release_date || '';
+    const year = dateStr ? dateStr.split('-')[0] : undefined;
+
+    return { titlePt, titleEn, year };
   } catch {
     return null;
   }
 }
 
-// Filtra para dar prioridade SEMPRE ao dublado
 function pickBestDubbed(matches: CatalogEntry[]): string {
   const dubbed = matches.find((e) => e.isDubbed);
   return (dubbed || matches[0]).url;
@@ -136,24 +158,66 @@ function findBestMatch(pool: CatalogEntry[], targetTitle: string, year?: string)
 
   if (targetTokens.length === 0) return null;
 
-  // 1. DESCARTE DE SEQUÊNCIAS (evita que "O Poderoso Chefão" caia no "Parte II" ou "Parte III")
+  // 1. Suporte específico para Law & Order
+  const isLO = (targetTokens.includes('lei') && targetTokens.includes('ordem')) ||
+               (targetTokens.includes('law') && targetTokens.includes('order'));
+
+  if (isLO) {
+    const targetSub = DERIVATIVES.find((sub) => normTarget.includes(sub));
+    if (targetSub) {
+      const derivMatches = pool.filter((e) => {
+        const hasCore = e.tokens.includes('lei') || e.tokens.includes('law');
+        return hasCore && e.pureName.includes(targetSub);
+      });
+      if (derivMatches.length > 0) return pickBestDubbed(derivMatches);
+    } else {
+      const classicMatches = pool.filter((e) => {
+        const hasCore = (e.tokens.includes('lei') && e.tokens.includes('ordem')) ||
+                        (e.tokens.includes('law') && e.tokens.includes('order'));
+        const hasNoDerivatives = !DERIVATIVES.some((sub) => e.pureName.includes(sub));
+        return hasCore && hasNoDerivatives;
+      });
+      if (classicMatches.length > 0) return pickBestDubbed(classicMatches);
+    }
+  }
+
+  // 2. Descarte de sequências (impede que sem numeral caia em Parte II, 2, etc.)
   const targetHasRoman = ROMAN_NUMERALS.some((r) => targetTokens.includes(r));
   const candidatePool = pool.filter((e) => {
     if (!targetHasRoman) {
-      // Se a busca NÃO tem Parte 2/II/III, descarta entradas que tenham
       const entryHasRoman = ROMAN_NUMERALS.some((r) => e.tokens.includes(r) || e.pureName.includes(`parte-${r}`));
       if (entryHasRoman) return false;
     }
     return true;
   });
 
-  // 2. PALAVRA ÚNICA ESTRITA (ex: "Arrow", "Dark", "Lost")
+  // 3. PRIORIDADE ABSOLUTA: ANO + CASAMENTO DE TOKENS (Resolve Flash 2023, Duna 2021, etc.)
+  if (year) {
+    const exactTokensAndYear = candidatePool.filter((e) =>
+      e.year === String(year) &&
+      e.tokens.length === targetTokens.length &&
+      targetTokens.every((t) => e.tokens.includes(t))
+    );
+    if (exactTokensAndYear.length > 0) return pickBestDubbed(exactTokensAndYear);
+
+    // Se tiver os mesmos tokens e o mesmo ano mesmo com títulos bilingues
+    const containsTokensAndYear = candidatePool.filter((e) =>
+      e.year === String(year) &&
+      targetTokens.every((t) => e.tokens.includes(t)) &&
+      (e.tokens.length - targetTokens.length <= 2)
+    );
+    if (containsTokensAndYear.length > 0) return pickBestDubbed(containsTokensAndYear);
+  }
+
+  // 4. PALAVRA ÚNICA FLEXÍVEL (Trata "The Flash" -> tokens ["flash"])
   if (targetTokens.length === 1) {
     const singleWord = targetTokens[0];
     const singleMatches = candidatePool.filter((e) => {
-      if (e.pureName === singleWord) return true;
-      if (e.subNames.some((sub) => sub === singleWord)) return true;
+      // Bate com tokens exatos: apenas ["flash"]
       if (e.tokens.length === 1 && e.tokens[0] === singleWord) return true;
+      // Bate se pureName terminar com a palavra (ex: "the-flash" termina com "flash")
+      if (e.pureName === singleWord || e.pureName === `the-${singleWord}` || e.pureName === `o-${singleWord}`) return true;
+      if (e.subNames.some((sub) => sub === singleWord || sub === `the-${singleWord}`)) return true;
       return false;
     });
 
@@ -164,26 +228,9 @@ function findBestMatch(pool: CatalogEntry[], targetTitle: string, year?: string)
       }
       return pickBestDubbed(singleMatches);
     }
-    return null;
   }
 
-  // 3. PRIORIDADE MÁXIMA PARA ANO E SUB-NAMES (ex: Vingadores Ultimato 2019 Dublado)
-  if (year) {
-    const matchesWithYear = candidatePool.filter((e) =>
-      e.year === String(year) &&
-      (e.subNames.some((sub) => sub === normTarget) ||
-       (e.tokens.length === targetTokens.length && targetTokens.every((t) => e.tokens.includes(t))))
-    );
-    if (matchesWithYear.length > 0) return pickBestDubbed(matchesWithYear);
-
-    // Mesmos tokens e mesmo ano com qualquer resolução
-    const tokensWithYear = candidatePool.filter((e) =>
-      e.year === String(year) && targetTokens.every((t) => e.tokens.includes(t))
-    );
-    if (tokensWithYear.length > 0) return pickBestDubbed(tokensWithYear);
-  }
-
-  // 4. CASO COMPOSTO / BARRA / DOIS-PONTOS
+  // 5. Comparação por sub-nomes divididos por "/" ou ":"
   const subNameMatches = candidatePool.filter((e) =>
     e.subNames.some((sub) => {
       if (sub === normTarget) return true;
@@ -192,9 +239,15 @@ function findBestMatch(pool: CatalogEntry[], targetTitle: string, year?: string)
       return strippedSub === strippedTarget;
     })
   );
-  if (subNameMatches.length > 0) return pickBestDubbed(subNameMatches);
+  if (subNameMatches.length > 0) {
+    if (year) {
+      const byYear = subNameMatches.filter((e) => e.year === String(year));
+      if (byYear.length > 0) return pickBestDubbed(byYear);
+    }
+    return pickBestDubbed(subNameMatches);
+  }
 
-  // 5. CORRESPONDÊNCIA EXATA DE TOKENS (com prioridade Dublado)
+  // 6. Correspondência exata dos tokens
   const exactTokensMatches = candidatePool.filter((e) => {
     for (const sub of e.subNames) {
       const subTokens = getTokens(sub);
@@ -216,7 +269,7 @@ function findBestMatch(pool: CatalogEntry[], targetTitle: string, year?: string)
     return pickBestDubbed(exactTokensMatches);
   }
 
-  // 6. PONTUAÇÃO GERAL
+  // 7. Sistema de pontuação geral
   let bestEntry: CatalogEntry | null = null;
   let highestScore = -999;
 
@@ -228,14 +281,13 @@ function findBestMatch(pool: CatalogEntry[], targetTitle: string, year?: string)
     const extraTokensCount = Math.abs(entry.tokens.length - targetTokens.length);
     score -= extraTokensCount * 25;
 
-    // Bonificação por dublado
     if (entry.isDubbed) score += 20;
 
     if (year && entry.year) {
       if (entry.year === String(year)) {
-        score += 45;
+        score += 60; // Bónus ainda maior se o ano bater
       } else {
-        score -= 40;
+        score -= 50; // Penalidade forte para outro ano
       }
     }
 
@@ -254,11 +306,22 @@ function findBestMatch(pool: CatalogEntry[], targetTitle: string, year?: string)
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const title = searchParams.get('title') || '';
-  const year = searchParams.get('year') || '';
+  let title = searchParams.get('title') || '';
+  let year = searchParams.get('year') || '';
   const type = searchParams.get('type') || 'movie';
-  const paramSlug = searchParams.get('slug') || '';
   const id = searchParams.get('id') || '';
+
+  let originalTitle: string | null = null;
+
+  // Auto-resolução completa via TMDB se faltar dados
+  if (id) {
+    const tmdbData = await getTMDBDetails(id, type);
+    if (tmdbData) {
+      if (!title) title = tmdbData.titlePt;
+      if (!year && tmdbData.year) year = tmdbData.year;
+      originalTitle = tmdbData.titleEn;
+    }
+  }
 
   if (!title) {
     return NextResponse.redirect(BASE_SITE_URL);
@@ -268,23 +331,21 @@ export async function GET(request: Request) {
     const entries = getCatalogEntries();
 
     if (entries.length > 0) {
+      // Isola estritamente filmes de séries
       const typeFiltered = entries.filter((e) => (type === 'tv' ? !e.isMovie : e.isMovie));
       const pool = typeFiltered.length > 0 ? typeFiltered : entries;
 
-      // 1. Tenta pelo título enviado em português
+      // 1. Título em português
       const matchedPt = findBestMatch(pool, title, year);
       if (matchedPt) return NextResponse.redirect(matchedPt);
 
-      // 2. Se falhar, consulta o título original no TMDB (ex: "The Godfather", "CSI: NY")
-      if (id) {
-        const originalTitle = await getOriginalTitleFromTMDB(id, type);
-        if (originalTitle && normalizeText(originalTitle) !== normalizeText(title)) {
-          const matchedEn = findBestMatch(pool, originalTitle, year);
-          if (matchedEn) return NextResponse.redirect(matchedEn);
-        }
+      // 2. Título original em inglês (via TMDB)
+      if (originalTitle && normalizeText(originalTitle) !== normalizeText(title)) {
+        const matchedEn = findBestMatch(pool, originalTitle, year);
+        if (matchedEn) return NextResponse.redirect(matchedEn);
       }
 
-      // 3. Se tiver dois-pontos ou hífen, tenta pela parte principal
+      // 3. Fallback pela parte principal se houver ":" ou "-"
       if (title.includes(':') || title.includes('-')) {
         const mainPart = title.split(/[:\-]/)[0].trim();
         const matchedMain = findBestMatch(pool, mainPart, year);

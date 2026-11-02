@@ -25,6 +25,7 @@ import { SocialSettings } from '@/components/SocialSettings';
 import { NotificationSettings } from '@/components/NotificationSettings';
 import { StreamingServicesSettings } from '@/components/StreamingServicesSettings';
 import { HiddenTitlesSettings } from '@/components/HiddenTitlesSettings';
+import { UncensoredModeSettings } from '@/components/settings/UncensoredModeSettings';
 
 import {
   ACCENT_OPTIONS,
@@ -48,7 +49,7 @@ type TabId = 'appearance' | 'streaming' | 'notifications' | 'account' | 'ratings
 
 const TABS: { id: TabId; label: string; hint: string; icon: LucideIcon }[] = [
   { id: 'appearance', label: 'Aparência', hint: 'Tema, cor e densidade', icon: Palette },
-  { id: 'streaming', label: 'Streaming', hint: 'Onde assiste e o que evitar', icon: Tv },
+  { id: 'streaming', label: 'Streaming', hint: 'Modo Sem Censura e onde assiste', icon: Tv },
   { id: 'notifications', label: 'Notificações', hint: 'Avisos do site', icon: Bell },
   { id: 'account', label: 'Conta e privacidade', hint: 'Perfil, @, visibilidade', icon: ShieldCheck },
   { id: 'ratings', label: 'Critérios de avaliação', hint: 'Categorias da sua nota', icon: Star },
@@ -482,6 +483,7 @@ function SettingsContent() {
             {active === 'appearance' && <AppearanceSection />}
             {active === 'streaming' && (
               <>
+                <UncensoredModeSettings />
                 <StreamingServicesSettings />
                 {/* V3.3: preferência de recomendação — saiu de "Conta e privacidade". */}
                 <HiddenTitlesSettings />

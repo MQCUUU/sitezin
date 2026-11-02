@@ -1,10 +1,10 @@
 import "@/styles/features/title-detail.css";
-import { Heart, Plus, Play, RefreshCw, Star, Trash2, Film, Tv } from "lucide-react";
+import { Heart, Plus, RefreshCw, Star, Trash2, Film, Tv } from "lucide-react";
 
 import { Poster } from "@/components/Poster";
 import { TitleWhereToWatch } from "./TitleWhereToWatch";
+import { WatchNowButton } from "./WatchNowButton";
 import { mediaStatusLabel } from "@/lib/media-status";
-import { watchNowHref } from "@/lib/streaming/watch-now";
 import { languageName, runtimeLabel, workStatusLabel } from "@/lib/title-locale";
 import type { LibraryLookupState } from "@/lib/library/lookup";
 import type { LibraryItem, LooseTitleDetails, TitleType } from "./types";
@@ -175,6 +175,14 @@ export function TitleHero({
             </div>
 
             <div className="title-actions mc-title-actions">
+              <WatchNowButton
+                type={type}
+                id={details.id}
+                title={title}
+                year={year}
+                releaseDate={details.release_date || details.first_air_date}
+              />
+
               {!libraryItem && libraryLookup === "error" ? (
                 <button
                   type="button"
@@ -239,11 +247,6 @@ export function TitleHero({
 
                 {favorite ? "Curtido" : "Curtir"}
               </button>
-
-              <a className="btn title-main-btn" href={watchNowHref({ type, id: details.id, title, year })}>
-                <Play size={17} fill="currentColor" />
-                Assistir agora
-              </a>
 
               <TitleWhereToWatch key={`${type}-${details.id}`} type={type} details={details} />
             </div>

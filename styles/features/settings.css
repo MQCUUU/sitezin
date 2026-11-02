@@ -1493,3 +1493,89 @@ input {
         transition: none;
     }
 }
+
+
+/* ---------- Modo Sem Censura ---------- */
+.uncensored-mode-card {
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+    background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+.uncensored-disclaimer {
+    margin: 16px 0;
+    padding: 16px;
+    border-radius: var(--radius-md, 12px);
+    background: color-mix(in srgb, var(--danger, #ff4d6d) 8%, var(--panel2));
+    border: 1px solid color-mix(in srgb, var(--danger, #ff4d6d) 25%, transparent);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.uncensored-disclaimer-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--danger, #ff4d6d);
+    font-weight: 700;
+    font-size: var(--mc-fs-sm, 14px);
+}
+.uncensored-disclaimer-text {
+    font-size: var(--mc-fs-xs, 13px);
+    line-height: 1.5;
+    color: var(--muted, rgba(255, 255, 255, 0.7));
+    margin: 0;
+}
+.uncensored-disclaimer-text strong {
+    color: var(--text, #fff);
+}
+.uncensored-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--mc-fs-xs, 12px);
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: var(--mc-radius-pill, 9999px);
+    margin-top: 8px;
+}
+.uncensored-status-badge.is-active {
+    background: color-mix(in srgb, #22c55e 15%, transparent);
+    color: #22c55e;
+    border: 1px solid color-mix(in srgb, #22c55e 35%, transparent);
+}
+.uncensored-status-badge.is-inactive {
+    background: color-mix(in srgb, var(--text) 8%, transparent);
+    color: var(--muted, rgba(255, 255, 255, 0.6));
+    border: 1px solid color-mix(in srgb, var(--line) 40%, transparent);
+}
+
+.uncensored-info-box {
+    margin: 16px 0 10px;
+    padding: 16px;
+    border-radius: var(--radius-md, 12px);
+    background: color-mix(in srgb, var(--accent) 8%, var(--panel2));
+    border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.uncensored-info-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--accent);
+    font-weight: 700;
+    font-size: var(--mc-fs-sm, 14px);
+}
+.uncensored-info-list {
+    margin: 0;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: var(--mc-fs-xs, 13px);
+    line-height: 1.5;
+    color: var(--muted, rgba(255, 255, 255, 0.75));
+}
+.uncensored-info-list strong {
+    color: var(--text, #fff);
+}
