@@ -131,6 +131,34 @@ function LibraryContent() {
   const [searchInput, setSearchInput] = useState(query.search);
   const lastSearchPushed = useRef(query.search);
   const tabsRef = useRef<HTMLDivElement>(null);
+  const [canScrollTabsLeft, setCanScrollTabsLeft] = useState(false);
+  const [canScrollTabsRight, setCanScrollTabsRight] = useState(false);
+
+  const updateTabsScroll = useCallback(() => {
+    const el = tabsRef.current;
+    if (!el) return;
+    setCanScrollTabsLeft(el.scrollLeft > 6);
+    setCanScrollTabsRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 6);
+  }, []);
+
+  useEffect(() => {
+    const el = tabsRef.current;
+    if (!el) return;
+    updateTabsScroll();
+    el.addEventListener("scroll", updateTabsScroll, { passive: true });
+    window.addEventListener("resize", updateTabsScroll);
+    return () => {
+      el.removeEventListener("scroll", updateTabsScroll);
+      window.removeEventListener("resize", updateTabsScroll);
+    };
+  }, [updateTabsScroll, query.status, result]);
+
+  const scrollTabs = (direction: "left" | "right") => {
+    const el = tabsRef.current;
+    if (!el) return;
+    const delta = direction === "left" ? -200 : 200;
+    el.scrollBy({ left: delta, behavior: "smooth" });
+  };
 
   // Preferências do navegador só depois do mount (sem divergência de hidratação).
   useEffect(() => {
@@ -299,6 +327,16 @@ function LibraryContent() {
 
       <div className="lib-toolbar">
         <div className="lib-tabs-wrap">
+          {canScrollTabsLeft && (
+            <button
+              type="button"
+              className="lib-tabs-arrow lib-tabs-arrow-left"
+              aria-label="Rolar abas para a esquerda"
+              onClick={() => scrollTabs("left")}
+            >
+              <ChevronLeft size={16} aria-hidden="true" />
+            </button>
+          )}
           <div className="lib-tabs" role="tablist" aria-label="Status na coleção" ref={tabsRef} onKeyDown={onTabKey}>
             {tabs.map(([value, label]) => {
               const selected = query.status === value;
@@ -320,6 +358,16 @@ function LibraryContent() {
               );
             })}
           </div>
+          {canScrollTabsRight && (
+            <button
+              type="button"
+              className="lib-tabs-arrow lib-tabs-arrow-right"
+              aria-label="Rolar abas para a direita"
+              onClick={() => scrollTabs("right")}
+            >
+              <ChevronRight size={16} aria-hidden="true" />
+            </button>
+          )}
         </div>
 
         <button

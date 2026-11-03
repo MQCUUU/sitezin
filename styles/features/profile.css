@@ -7,7 +7,10 @@
 
 .profile-showcase-editor {
     display: grid;
-    gap: 22px
+    gap: 22px;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 .profile-showcase-editor-head {
     display: flex;
@@ -50,15 +53,21 @@
     border: 1px solid var(--border);
     border-radius: 9px;
     overflow: hidden;
-    background: var(--bg)
+    background: var(--bg);
+    min-width: 0;
+    max-width: 100%;
 }
 .profile-username-input span {
     padding-left: 10px;
     color: var(--muted);
-    font-size: var(--mc-fs-xs)
+    font-size: var(--mc-fs-xs);
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 .profile-username-input input {
-    border: 0
+    border: 0;
+    min-width: 0;
+    flex: 1;
 }
 .profile-favorite-editor-grid {
     display: grid
@@ -131,7 +140,10 @@
     padding: 16px;
     border: 1px solid var(--border);
     border-radius: 15px;
-    background: color-mix(in srgb,var(--panel) 75%,transparent)
+    background: color-mix(in srgb,var(--panel) 75%,transparent);
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 .profile-poster-shelf-head {
     display: flex;
@@ -153,7 +165,9 @@
 .profile-poster-slots {
     display: grid;
     grid-template-columns: repeat(5,minmax(0,1fr));
-    gap: 11px
+    gap: 11px;
+    min-width: 0;
+    max-width: 100%;
 }
 .profile-poster-slot-wrap {
     position: relative;
@@ -311,6 +325,9 @@
 }
 .public-profile {
     width: min(980px,calc(100% - 28px));
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
     margin: 30px auto 60px
 }
 .public-profile-avatar {
@@ -323,9 +340,17 @@
     box-shadow: 0 10px 35px rgba(0,0,0,.35)
 }
 @media (max-width:700px) {
-    .profile-poster-slots,.profile-picker-grid {
-        grid-template-columns: repeat(5,minmax(90px,1fr));
-        overflow-x: auto
+    .profile-poster-slots {
+        grid-template-columns: repeat(5,minmax(72px,1fr));
+        overflow-x: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        min-width: 0;
+        max-width: 100%;
+        padding-bottom: 4px;
+    }
+    .profile-poster-slots::-webkit-scrollbar {
+        display: none;
     }
 }
 @media (max-width:700px) {
@@ -336,12 +361,16 @@
 }
 @media (max-width:700px) {
     .profile-save-showcase {
-        flex-direction: column
+        width: 100%;
+        justify-content: center;
     }
 }
 @media (max-width:700px) {
     .public-profile {
-        width: min(100% - 20px,980px);
+        width: calc(100% - 20px);
+        min-width: 0;
+        max-width: 100%;
+        box-sizing: border-box;
         margin-top: 18px
     }
 }
@@ -681,7 +710,14 @@
     grid-template-columns: 104px minmax(0,1fr);
     align-items: center;
     gap: 20px;
-    padding: 20px
+    padding: 20px;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+.avatar-upload-copy {
+    min-width: 0;
+    max-width: 100%;
 }
 .avatar-upload-preview {
     width: 104px;
@@ -729,24 +765,32 @@
 }
 @media (max-width:600px) {
     .avatar-upload {
-        grid-template-columns: 76px minmax(0,1fr);
-        gap: 14px
+        grid-template-columns: 1fr;
+        justify-items: center;
+        text-align: center;
+        gap: 14px;
+        padding: 16px;
     }
-}
-@media (max-width:600px) {
     .avatar-upload-preview {
-        width: 76px;
-        height: 76px
+        width: 80px;
+        height: 80px;
+        margin: 0 auto;
     }
-}
-@media (max-width:600px) {
+    .avatar-upload-copy {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
     .avatar-upload-copy>div {
-        flex-direction: column
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
     }
-}
-@media (max-width:600px) {
     .avatar-upload-copy .btn {
-        width: 100%
+        width: 100%;
+        justify-content: center;
     }
 }
 .profile-top5-fold {
@@ -954,13 +998,19 @@
     padding: 18px;
     border: 1px solid var(--border);
     border-radius: var(--mc-radius-lg);
-    background: color-mix(in srgb,var(--panel) 96%,var(--bg))
+    background: color-mix(in srgb,var(--panel) 96%,var(--bg));
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 .profile-inline-editor-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 18px
+    gap: 18px;
+    min-width: 0;
+    max-width: 100%;
 }
 .profile-inline-editor-head h2 {
     margin: 4px 0 6px
@@ -969,17 +1019,23 @@
     margin: 0
 }
 .profile-inline-editor>.panel {
-    margin: 0
+    margin: 0;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 @media (max-width:700px) {
+    .profile-inline-editor {
+        padding: 14px 12px;
+    }
     .profile-inline-editor-head {
         align-items: stretch;
-        flex-direction: column
+        flex-direction: column;
+        gap: 12px;
     }
-}
-@media (max-width:700px) {
     .profile-inline-editor-head .btn {
-        width: 100%
+        width: 100%;
+        justify-content: center;
     }
 }
 .profile-media-carousel {
@@ -1283,6 +1339,9 @@
     display: grid;
     gap: 14px;
     padding: 20px;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 .banner-upload-preview {
     display: grid;
@@ -1293,6 +1352,8 @@
     border-radius: var(--mc-radius-md);
     background: color-mix(in srgb, var(--text) 4%, var(--panel));
     color: var(--muted);
+    min-width: 0;
+    max-width: 100%;
 }
 .banner-upload-preview img {
     width: 100%;
@@ -1302,6 +1363,8 @@
 .banner-upload-copy {
     display: grid;
     gap: 6px;
+    min-width: 0;
+    max-width: 100%;
 }
 .banner-upload-copy p {
     margin: 0;
@@ -1312,6 +1375,19 @@
     flex-wrap: wrap;
     gap: 8px;
     margin-top: 4px;
+}
+@media (max-width: 600px) {
+    .banner-upload {
+        padding: 16px;
+    }
+    .banner-upload-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+    .banner-upload-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
 }
 .banner-upload-actions label input {
     position: absolute;

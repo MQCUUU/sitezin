@@ -99,7 +99,8 @@ export function libraryProgress(input: {
   }
 
   if (progress.state === "completed") {
-    return { ...base, state: "completed", card: "Série concluída", title: "Série concluída", detail: `${progress.watched} de ${plural(progress.total ?? progress.watched, "episódio", "episódios")}` };
+    // Série concluída: a tag do pôster já diz tudo ("Assistido"); card = null evita linha redundante e desalinhamento na grade
+    return { ...base, state: "completed", card: null, title: "Série concluída", detail: `${progress.watched} de ${plural(progress.total ?? progress.watched, "episódio", "episódios")}` };
   }
 
   // unknown: só o fato (quantos assistidos), sem afirmar "em dia".

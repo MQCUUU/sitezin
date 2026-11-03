@@ -51,7 +51,8 @@ test("temporada completa → próximo é o E01 da seguinte", () => {
 
 test("último episódio de série encerrada → 'Série concluída'", () => {
   const p = run({ r: ENDED, watched: eps([[1, 1, 10], [2, 1, 10]]), status: "watched" });
-  assert.equal(p.card, "Série concluída");
+  assert.equal(p.card, null);
+  assert.equal(p.title, "Série concluída");
   assert.equal(p.detail, "20 de 20 episódios");
 });
 
