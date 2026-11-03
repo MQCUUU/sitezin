@@ -9,6 +9,7 @@ import { todayIn } from "@/lib/calendar/dates";
 import { genreFilterLabels, genreKeyFromParam, GENRE_LABEL, idsForKey, type GenreKey } from "@/lib/for-you/genres";
 import { anchorOrder, anchorsPerPage, buildProfile, topGenres, type MediaType, type Profile, type TitleSignal, type WeightedTitle } from "@/lib/for-you/profile";
 import { anchorWord, assemble, balanceTypes, isEligible, typeCounts, scoreCandidate, sortScored, type Candidate, type Scored, type SortMode } from "@/lib/for-you/rank";
+import { SOCIAL_SQL, buildFriendRecommendations, type FriendCandidateRow } from "@/lib/for-you/social";
 
 /*
  * V2.8 — "Para você".
@@ -32,13 +33,13 @@ const MIN_GENERIC = 5;
 const MIN_ANCHOR = 4;
 const MAX_PAGES = 8;
 
-type ShelfKind = "because" | "genre" | "top_rated" | "gems" | "releases" | "popular";
+type ShelfKind = "because" | "genre" | "top_rated" | "gems" | "releases" | "popular" | "friends";
 type Shelf = {
   id: string;
   kind: ShelfKind;
   title: string;
   subtitle?: string;
-  icon: "sparkles" | "star" | "film" | "tv" | "gem" | "trending" | "calendar";
+  icon: "sparkles" | "star" | "film" | "tv" | "gem" | "trending" | "calendar" | "users";
   results: Record<string, unknown>[];
 };
 
@@ -162,16 +163,24 @@ export async function GET(req: NextRequest) {
   /* ---------- perfil (sessão) ---------- */
   let signals: (TitleSignal & { library_id: string | null })[] = [];
   let hiddenRows: { media_type: string; tmdb_id: number }[] = [];
+  let friendRows: FriendCandidateRow[] = [];
 
   try {
-    [signals, hiddenRows] = (await Promise.all([
+    [signals, hiddenRows, friendRows] = (await Promise.all([
       sql.query(SIGNALS_SQL, [userId]),
       sql.query(`SELECT media_type, tmdb_id FROM public.user_hidden_titles WHERE user_id = $1`, [userId]).catch((error: unknown) => {
         // Sem a lista de ocultos o Para você ainda funciona; só registra.
         console.warn("[for-you] ocultos indisponíveis:", error instanceof Error ? error.message : String(error));
         return [];
       }),
-    ])) as [typeof signals, typeof hiddenRows];
+      // Recomendações de amigos (só na página 1 do feed)
+      page === 1
+        ? (sql.query(SOCIAL_SQL, [userId]).catch((error: unknown) => {
+            console.warn("[for-you] recomendações sociais indisponíveis:", error instanceof Error ? error.message : String(error));
+            return [];
+          }) as Promise<FriendCandidateRow[]>)
+        : Promise.resolve([] as FriendCandidateRow[]),
+    ])) as [typeof signals, typeof hiddenRows, typeof friendRows];
   } catch (error) {
     return respostaDeErro(error, "GET /api/for-you");
   }
@@ -499,10 +508,48 @@ export async function GET(req: NextRequest) {
     reason: (c) => (!cold && c.bestGenre ? `Em alta e combina com seu gosto por ${label(c.bestGenre)}.` : "Em alta no catálogo agora."),
   });
 
+  /* ---------- Recomendações de amigos (Anti-"Várzea") ---------- */
+  let friendShelf: Shelf | null = null;
+  if (page === 1 && friendRows.length > 0) {
+    const candidateRows = type === "all" ? friendRows : friendRows.filter((r) => r.media_type === type);
+    const friendCards = buildFriendRecommendations(candidateRows, profile, {
+      sort,
+      hidden,
+      exclude,
+      limit: LIMIT,
+    });
+
+    if (friendCards && friendCards.length >= 2) {
+      for (const fc of friendCards) {
+        used.add(`${fc.media_type}-${fc.id}`);
+        exclude.add(`${fc.media_type}-${fc.id}`);
+      }
+
+      friendShelf = {
+        id: "friends-recommendations",
+        kind: "friends",
+        title: "Quem você segue recomenda",
+        subtitle: "Títulos bem avaliados pelas pessoas que você segue",
+        icon: "users",
+        results: friendCards as unknown as Record<string, unknown>[],
+      };
+    }
+  }
+
   /* ---------- Filmes × Séries no feed final (aba Tudo) ---------- */
   const afterWeak = built.flatMap((b) => b.picked);
   const balance = type === "all" ? balanceTypes(built, { used, sort }) : { swaps: 0, relaxed: null };
   const shelves: Shelf[] = built.map((b) => ({ ...b.shelf, results: b.picked.map((c) => card(c, b.reason(c))) }));
+
+  if (friendShelf) {
+    const firstAnchorIndex = shelves.findIndex((s) => s.kind === "because");
+    if (firstAnchorIndex !== -1) {
+      const insertAt = Math.min(shelves.filter((s) => s.kind === "because").length, 2);
+      shelves.splice(insertAt, 0, friendShelf);
+    } else {
+      shelves.unshift(friendShelf);
+    }
+  }
   const mixOf = (list: Scored[]) => {
     const unique = [...new Map(list.map((c) => [c.key, c])).values()];
 

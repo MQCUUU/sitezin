@@ -7,6 +7,7 @@ import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 import { apiFetch } from "@/lib/api-client";
 import { MediaPosterActions } from "@/components/media/MediaPosterActions";
 import { MediaPosterTags } from "@/components/media/MediaBadges";
+import { MediaCard, MediaCardImage } from "@/components/media";
 import { getLibraryVersion } from "@/lib/library-cache";
 import { authClient } from "@/lib/auth/client";
 import { Poster } from "@/components/Poster";
@@ -34,6 +35,7 @@ import {
   Trash2,
   TrendingUp,
   Tv,
+  Users,
   X,
 } from "lucide-react";
 import { CarouselRail } from "@/components/CarouselRail";
@@ -97,7 +99,8 @@ type Shelf = {
     | "tv"
     | "gem"
     | "trending"
-    | "calendar";
+    | "calendar"
+    | "users";
   results: any[];
 };
 
@@ -2210,13 +2213,14 @@ function MovieCard({
     processing ===
     key;
 
+  const endorsement = item.friend_endorsement;
 
   return (
-    <article className="fy-card-wrap">
-      <div className="fy-card-poster-wrap">
+    <MediaCard className="fy-card-wrap">
+      <MediaCardImage className="fy-card-poster-wrap">
         <Link
           href={`/title/${type}/${item.id}`}
-          className="fy-poster"
+          className="poster-link fy-poster-link"
         >
           {item.poster_path ? (
             <Poster
@@ -2238,9 +2242,9 @@ function MovieCard({
               )}
             </div>
           )}
-
-          <MediaPosterTags type={type} status={existing ? existing.status : null} />
         </Link>
+
+        <MediaPosterTags type={type} status={existing ? existing.status : null} />
 
         <MediaPosterActions
           title={title}
@@ -2254,10 +2258,10 @@ function MovieCard({
           onToggleFavorite={() => toggleFavorite(item)}
           onRemove={() => requestRemove(item)}
         />
-      </div>
+      </MediaCardImage>
       <Link
         href={`/title/${type}/${item.id}`}
-        className="fy-card-body"
+        className="card-title fy-card-body fy-card-title"
       >
         <strong>
           {
@@ -2265,7 +2269,7 @@ function MovieCard({
           }
         </strong>
 
-        <div className="fy-card-meta">
+        <div className="card-meta fy-card-meta">
           <span>
             {year ||
               "—"}
@@ -2276,7 +2280,7 @@ function MovieCard({
               0
           ) >
             0 && (
-            <span className="fy-rating">
+            <span className="rating fy-rating">
               <Star
                 size={12}
                 fill="currentColor"
@@ -2290,15 +2294,49 @@ function MovieCard({
           )}
         </div>
 
-        {item.reason && (
-          <p>
+        {endorsement ? (
+          <div className="fy-social-endorsement" title={endorsement.headline}>
+            <div className="fy-social-header">
+              {endorsement.top_friend.avatar_url ? (
+                <img
+                  src={endorsement.top_friend.avatar_url}
+                  alt={endorsement.top_friend.display_name || endorsement.top_friend.username}
+                  className="fy-social-avatar"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="fy-social-avatar-fallback">
+                  {(endorsement.top_friend.display_name || endorsement.top_friend.username || "?").slice(0, 1).toUpperCase()}
+                </div>
+              )}
+              <div className="fy-social-text">
+                <span className="fy-social-name">
+                  {endorsement.top_friend.display_name || endorsement.top_friend.username}
+                </span>
+                {endorsement.top_friend.rating !== null && endorsement.top_friend.rating !== undefined && (
+                  <span className="fy-social-rating">
+                    <Star size={10} fill="currentColor" />
+                    {Number(endorsement.top_friend.rating).toFixed(endorsement.top_friend.rating % 1 === 0 ? 0 : 1)}
+                  </span>
+                )}
+                {endorsement.other_friends_count > 0 && (
+                  <span className="fy-social-more">+{endorsement.other_friends_count}</span>
+                )}
+              </div>
+            </div>
+            {endorsement.review_snippet && (
+              <p className="fy-social-quote">{endorsement.review_snippet}</p>
+            )}
+          </div>
+        ) : item.reason ? (
+          <p className="fy-card-reason">
             {
               item.reason
             }
           </p>
-        )}
+        ) : null}
       </Link>
-    </article>
+    </MediaCard>
   );
 }
 
@@ -2314,6 +2352,7 @@ function IconForShelf({
   if (icon === "gem") return <Gem size={18} />;
   if (icon === "trending") return <TrendingUp size={18} />;
   if (icon === "calendar") return <CalendarDays size={18} />;
+  if (icon === "users") return <Users size={18} />;
   return <Sparkles size={18} />;
 }
 
