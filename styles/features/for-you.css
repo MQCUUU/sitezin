@@ -456,12 +456,6 @@
     opacity: 1;
     transform: translateY(0);
 }
-.fy-card-wrap:hover .fy-card-body > strong,
-.fy-card-body:hover > strong,
-.fy-card-body:focus-visible > strong {
-    color: var(--mc-color-accent, var(--accent));
-    transition: color var(--mc-duration-fast, 0.15s) var(--mc-ease-standard, ease);
-}
 @media (prefers-reduced-motion: reduce) {
     .fy-card-wrap:hover .mc-media-card-image,
     .fy-card-wrap:focus-within .mc-media-card-image {

@@ -2261,81 +2261,59 @@ function MovieCard({
       </MediaCardImage>
       <Link
         href={`/title/${type}/${item.id}`}
-        className="card-title fy-card-body fy-card-title"
+        className="card-title fy-card-title"
       >
-        <strong>
-          {
-            title
-          }
-        </strong>
+        {title}
+      </Link>
 
-        <div className="card-meta fy-card-meta">
-          <span>
-            {year ||
-              "—"}
+      <div className="card-meta fy-card-meta">
+        <span>
+          {year || "—"}
+        </span>
+
+        {Number(item.vote_average || 0) > 0 && (
+          <span className="rating fy-rating">
+            <Star size={12} fill="currentColor" />
+            {Number(item.vote_average).toFixed(1)}
           </span>
+        )}
+      </div>
 
-          {Number(
-            item.vote_average ||
-              0
-          ) >
-            0 && (
-            <span className="rating fy-rating">
-              <Star
-                size={12}
-                fill="currentColor"
+      {endorsement && (
+        <div className="fy-social-endorsement" title={endorsement.headline}>
+          <div className="fy-social-header">
+            {endorsement.top_friend.avatar_url ? (
+              <img
+                src={endorsement.top_friend.avatar_url}
+                alt={endorsement.top_friend.display_name || endorsement.top_friend.username}
+                className="fy-social-avatar"
+                loading="lazy"
               />
-              {Number(
-                item.vote_average
-              ).toFixed(
-                1
+            ) : (
+              <div className="fy-social-avatar-fallback">
+                {(endorsement.top_friend.display_name || endorsement.top_friend.username || "?").slice(0, 1).toUpperCase()}
+              </div>
+            )}
+            <div className="fy-social-text">
+              <span className="fy-social-name">
+                {endorsement.top_friend.display_name || endorsement.top_friend.username}
+              </span>
+              {endorsement.top_friend.rating !== null && endorsement.top_friend.rating !== undefined && (
+                <span className="fy-social-rating">
+                  <Star size={10} fill="currentColor" />
+                  {Number(endorsement.top_friend.rating).toFixed(endorsement.top_friend.rating % 1 === 0 ? 0 : 1)}
+                </span>
               )}
-            </span>
+              {endorsement.other_friends_count > 0 && (
+                <span className="fy-social-more">+{endorsement.other_friends_count}</span>
+              )}
+            </div>
+          </div>
+          {endorsement.review_snippet && (
+            <p className="fy-social-quote">{endorsement.review_snippet}</p>
           )}
         </div>
-
-        {endorsement ? (
-          <div className="fy-social-endorsement" title={endorsement.headline}>
-            <div className="fy-social-header">
-              {endorsement.top_friend.avatar_url ? (
-                <img
-                  src={endorsement.top_friend.avatar_url}
-                  alt={endorsement.top_friend.display_name || endorsement.top_friend.username}
-                  className="fy-social-avatar"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="fy-social-avatar-fallback">
-                  {(endorsement.top_friend.display_name || endorsement.top_friend.username || "?").slice(0, 1).toUpperCase()}
-                </div>
-              )}
-              <div className="fy-social-text">
-                <span className="fy-social-name">
-                  {endorsement.top_friend.display_name || endorsement.top_friend.username}
-                </span>
-                {endorsement.top_friend.rating !== null && endorsement.top_friend.rating !== undefined && (
-                  <span className="fy-social-rating">
-                    <Star size={10} fill="currentColor" />
-                    {Number(endorsement.top_friend.rating).toFixed(endorsement.top_friend.rating % 1 === 0 ? 0 : 1)}
-                  </span>
-                )}
-                {endorsement.other_friends_count > 0 && (
-                  <span className="fy-social-more">+{endorsement.other_friends_count}</span>
-                )}
-              </div>
-            </div>
-            {endorsement.review_snippet && (
-              <p className="fy-social-quote">{endorsement.review_snippet}</p>
-            )}
-          </div>
-        ) : item.reason ? (
-          <p className="fy-card-reason">
-            {
-              item.reason
-            }
-          </p>
-        ) : null}
-      </Link>
+      )}
     </MediaCard>
   );
 }
