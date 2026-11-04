@@ -14,7 +14,7 @@ const files = fs
   .sort()
   .map((name) => path.join("scripts", name));
 
-const result = spawnSync(process.execPath, ["--test", ...process.argv.slice(2), ...files], {
+const result = spawnSync(process.execPath, ["--experimental-strip-types", "--test", ...process.argv.slice(2), ...files], {
   cwd: path.resolve(dir, ".."),
   stdio: "inherit",
 });
