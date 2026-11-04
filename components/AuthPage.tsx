@@ -36,7 +36,7 @@ import { authClient } from "@/lib/auth/client";
 import {
   useToast,
 } from "@/components/ToastProvider";
-import { authErrorMessage, authFormPasswordError, PASSWORD_HINT } from "@/lib/auth-client";
+import { authErrorMessage, authFormPasswordError, PASSWORD_HINT, requiresEmailVerification } from "@/lib/auth-client";
 import { clearPendingSignup, clearPendingVerificationError, readPendingSignup, savePendingSignup, savePendingVerificationEmail, savePendingVerificationError } from "@/lib/auth/pending-signup";
 import { describeIntent, peekPendingAction, takePendingAction } from "@/lib/auth/pending-action";
 import { runLibraryAction } from "@/lib/library/actions";
@@ -370,8 +370,7 @@ export function AuthPage({
       });
 
       if (res.error) {
-        const errorCode = typeof res.error.code === "string" ? res.error.code.toUpperCase() : "";
-        if (errorCode === "EMAIL_NOT_VERIFIED" || errorCode === "EMAIL_NOT_CONFIRMED") {
+        if (requiresEmailVerification(res.error)) {
           await redirectToVerification(email.trim().toLowerCase());
           return;
         }

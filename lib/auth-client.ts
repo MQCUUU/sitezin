@@ -54,6 +54,17 @@ export function authErrorMessage(
   return AUTH_ERROR_MESSAGES[code] || fallback;
 }
 
+export function requiresEmailVerification(
+  error: { code?: string | null; message?: string | null; status?: number | null } | null | undefined
+): boolean {
+  const code = typeof error?.code === "string" ? error.code.toUpperCase() : "";
+  if (["EMAIL_NOT_VERIFIED", "EMAIL_NOT_CONFIRMED", "EMAIL_VERIFICATION_REQUIRED", "EMAIL_CONFIRMATION_REQUIRED"].includes(code)) return true;
+
+  const message = `${error?.message || ""} ${authErrorMessage(error, "")}`.toLowerCase();
+  return /(?:email|e-mail).{0,50}(?:not verified|not confirmed|unverified|unconfirmed|verification required|must be verified|needs? confirmation)/i.test(message)
+    || /(?:verify|confirm).{0,40}(?:email|e-mail)/i.test(message);
+}
+
 export function authRedirectOrigin(): string {
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
   if (configured) {
