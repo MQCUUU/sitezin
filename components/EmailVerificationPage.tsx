@@ -135,7 +135,10 @@ export function EmailVerificationPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ name: pendingSignup.name, username: pendingSignup.username }),
           });
-          if (profileResponse.ok) clearPendingSignup();
+          if (profileResponse.ok) {
+            clearPendingSignup(pendingSignup.email);
+            window.dispatchEvent(new Event("mycatalog:account-updated"));
+          }
         }
         window.setTimeout(() => {
           router.replace(pendingSignup?.next || nextPath);
@@ -261,7 +264,7 @@ export function EmailVerificationPage() {
             </fieldset>
             {error && <p className="verify-message is-error" role="alert">{error}</p>}
             {notice && <p className="verify-message is-notice" role="status">{notice}</p>}
-            <button className="auth-submit" type="submit" disabled={loading || digits.join("").length !== CODE_LENGTH}>
+            <button className="btn primary auth-submit" type="submit" disabled={loading || digits.join("").length !== CODE_LENGTH}>
               {loading ? <><Loader2 size={17} className="spin" /> Confirmando…</> : <><ShieldCheck size={17} /> Confirmar e-mail</>}
             </button>
           </form>

@@ -7,11 +7,14 @@ import { FormEvent, useEffect, useState } from "react";
 import { useModal } from "@/hooks/useModal";
 import { usePathname } from "next/navigation";
 import { AtSign, Loader2 } from "lucide-react";
+import { authClient } from "@/lib/auth/client";
+import { clearPendingSignup, readPendingSignup } from "@/lib/auth/pending-signup";
 
-const AUTH_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/auth/"];
+const AUTH_PATHS = ["/login", "/signup", "/verify-email", "/forgot-password", "/reset-password", "/auth/"];
 
 export function UsernameGate() {
   const pathname = usePathname();
+  const { data: session, isPending } = authClient.useSession();
   const [required, setRequired] = useState(false);
   const [username, setUsername] = useState("");
   const [saving, setSaving] = useState(false);
@@ -20,14 +23,34 @@ export function UsernameGate() {
   const gateRef = useModal(required, () => {}, true, "input");
 
   useEffect(() => {
-    if (AUTH_PATHS.some((path) => pathname.startsWith(path))) return;
+    if (AUTH_PATHS.some((path) => pathname.startsWith(path)) || isPending) {
+      setRequired(false);
+      return;
+    }
+    const userEmail = session?.user?.email;
+    if (!userEmail) {
+      setRequired(false);
+      return;
+    }
+
+    const pendingSignup = readPendingSignup(userEmail);
+    setUsername(pendingSignup?.username || "");
     let cancelled = false;
-    fetchProfileMe()
-      .then((data) => { if (!cancelled) setRequired(Boolean(data?.authenticated && !data?.username)); })
-      // Auxiliar: sem a leitura do perfil, o aviso de @ pendente só não aparece agora.
-      .catch((error) => console.warn("[UsernameGate]", error instanceof Error ? error.message : error));
-    return () => { cancelled = true; };
-  }, [pathname]);
+    let checkVersion = 0;
+    const checkProfile = () => {
+      const currentCheck = ++checkVersion;
+      fetchProfileMe()
+        .then((data) => { if (!cancelled && currentCheck === checkVersion) setRequired(Boolean(data?.authenticated && !data?.username)); })
+        // Auxiliar: sem a leitura do perfil, o aviso de @ pendente só não aparece agora.
+        .catch((error) => console.warn("[UsernameGate]", error instanceof Error ? error.message : error));
+    };
+    checkProfile();
+    window.addEventListener("mycatalog:account-updated", checkProfile);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("mycatalog:account-updated", checkProfile);
+    };
+  }, [pathname, isPending, session?.user?.email]);
 
   async function submit(event: FormEvent) {
     event.preventDefault(); setError("");
@@ -39,6 +62,7 @@ export function UsernameGate() {
     const response = await fetch("/api/profile/username", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username }) });
     const data = await response.json(); setSaving(false);
     if (!response.ok) return setError(data.error || "Não foi possível salvar.");
+    clearPendingSignup(session?.user?.email);
     setRequired(false); window.dispatchEvent(new Event("mycatalog:account-updated"));
   }
 

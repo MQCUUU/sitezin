@@ -19,9 +19,12 @@ const TTL_MS = 30_000;
 
 let inflight: Promise<ProfileMe | null> | null = null;
 let cached: { at: number; data: ProfileMe | null } | null = null;
+let cacheVersion = 0;
 
 export function invalidateProfileMe(): void {
+  cacheVersion += 1;
   cached = null;
+  inflight = null;
 }
 
 if (typeof window !== "undefined") {
@@ -33,18 +36,22 @@ export function fetchProfileMe(): Promise<ProfileMe | null> {
   if (cached && Date.now() - cached.at < TTL_MS) return Promise.resolve(cached.data);
   if (inflight) return inflight;
 
-  inflight = fetch("/api/profile/username", { cache: "no-store" })
+  const requestVersion = cacheVersion;
+  const request = fetch("/api/profile/username", { cache: "no-store" })
     .then(async (response) => {
       const data = response.ok ? ((await response.json()) as ProfileMe) : null;
       // Só guarda resposta autenticada: "não logado" nunca fica preso no cache
       // (o login acontece sem recarregar o módulo).
-      cached = data?.authenticated ? { at: Date.now(), data } : null;
+      if (requestVersion === cacheVersion) {
+        cached = data?.authenticated ? { at: Date.now(), data } : null;
+      }
       return data;
     })
     .catch(() => null)
     .finally(() => {
-      inflight = null;
+      if (inflight === request) inflight = null;
     });
 
-  return inflight;
+  inflight = request;
+  return request;
 }

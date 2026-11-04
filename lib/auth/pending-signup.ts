@@ -38,7 +38,9 @@ export function readPendingSignup(email?: string | null): PendingSignup | null {
   }
 }
 
-export function clearPendingSignup(): void {
+export function clearPendingSignup(email?: string | null): void {
+  if (typeof window === "undefined") return;
+  if (email && !readPendingSignup(email)) return;
   try { if (typeof window !== "undefined") window.localStorage.removeItem(STORAGE_KEY); } catch { /* Ignora armazenamento indisponível. */ }
 }
 

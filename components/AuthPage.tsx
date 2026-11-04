@@ -389,7 +389,10 @@ export function AuthPage({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: pendingSignup.name, username: pendingSignup.username }),
         });
-        if (profileRes.ok) clearPendingSignup();
+        if (profileRes.ok) {
+          clearPendingSignup(pendingSignup.email);
+          window.dispatchEvent(new Event("mycatalog:account-updated"));
+        }
       }
 
       toast.success(
@@ -410,6 +413,11 @@ export function AuthPage({
     } catch (
       error
     ) {
+      if (!isSignup && requiresEmailVerification(error as { code?: string; message?: string; status?: number })) {
+        await redirectToVerification(email.trim().toLowerCase());
+        return;
+      }
+
       // Fase 1 (P2-02): erro do provedor traduzido pelo código; mensagens nossas seguem como estão.
       const message =
         authErrorMessage(
