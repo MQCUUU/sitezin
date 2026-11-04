@@ -40,6 +40,7 @@ export function EmailVerificationPage() {
   const [notice, setNotice] = useState("");
   const [autoSendError, setAutoSendError] = useState("");
   const [verified, setVerified] = useState(false);
+  const [verifiedSignedIn, setVerifiedSignedIn] = useState(false);
   const refs = useRef<Array<HTMLInputElement | null>>([]);
   const resendLock = useRef(false);
 
@@ -125,7 +126,9 @@ export function EmailVerificationPage() {
       const pendingSignup = readPendingSignup(cleanEmail);
       const session = await authClient.getSession();
       const signedInUser = session.data?.user;
-      if (signedInUser?.emailVerified === true && signedInUser.email?.toLowerCase() === cleanEmail) {
+      const hasVerifiedSession = signedInUser?.emailVerified === true && signedInUser.email?.toLowerCase() === cleanEmail;
+      setVerifiedSignedIn(hasVerifiedSession);
+      if (hasVerifiedSession) {
         if (pendingSignup) {
           const profileResponse = await fetch("/api/auth/profile", {
             method: "POST",
@@ -139,7 +142,12 @@ export function EmailVerificationPage() {
           router.refresh();
         }, 1000);
       } else {
-        clearPendingSignup();
+        // Keep signup details until the user signs in. OTP verification may
+        // mark the address verified without creating a session.
+        window.setTimeout(() => {
+          router.replace(`/login?next=${encodeURIComponent(pendingSignup?.next || nextPath)}`);
+          router.refresh();
+        }, 1400);
       }
     } catch (cause) {
       setDigits(Array(CODE_LENGTH).fill(""));
@@ -186,9 +194,28 @@ export function EmailVerificationPage() {
   }
 
   return (
-    <main className="auth-page auth-centered-page">
+    <main className="auth-page verify-page">
       <Link href="/" className="auth-brand">My<span>Catalog</span></Link>
-      <section className="auth-card auth-small-card verify-card">
+      <div className="verify-layout">
+        <aside className="verify-story">
+          <span className="verify-story-badge"><ShieldCheck size={14} /> SUA CONTA, DO SEU JEITO</span>
+          <div className="verify-story-art" aria-hidden="true">
+            <div className="verify-story-orbit verify-story-orbit-one" />
+            <div className="verify-story-orbit verify-story-orbit-two" />
+            <div className="verify-story-envelope"><MailCheck size={39} /></div>
+            <span className="verify-story-check"><CheckCircle2 size={19} /></span>
+          </div>
+          <p className="verify-eyebrow">QUASE LÁ</p>
+          <h2>Seu próximo filme começa aqui.</h2>
+          <p className="verify-story-copy">Confirme seu e-mail para entrar no MyCatalog e levar seu catálogo com você.</p>
+          <div className="verify-story-steps">
+            <span className="is-current"><b>1</b> Receba seu código</span>
+            <i />
+            <span className={verified ? "is-complete" : ""}><b>{verified ? <CheckCircle2 size={14} /> : "2"}</b> Confirme e pronto</span>
+          </div>
+        </aside>
+
+      <section className="auth-card verify-card">
         <Link href="/signup" className="auth-back-link"><ArrowLeft size={15} /> Voltar ao cadastro</Link>
         <div className={`verify-icon${verified ? " is-verified" : ""}`} aria-hidden="true">
           {verified ? <CheckCircle2 size={27} /> : <MailCheck size={27} />}
@@ -197,7 +224,9 @@ export function EmailVerificationPage() {
         <h1>{verified ? "Tudo certo!" : "Confirme seu e-mail"}</h1>
         <p className="verify-copy">
           {verified
-            ? "Seu endereço foi confirmado com segurança. Sua conta está pronta."
+            ? verifiedSignedIn
+              ? "Seu endereço foi confirmado com segurança. Sua conta está pronta."
+              : "E-mail confirmado. Entre com seu e-mail e senha para continuar."
             : autoSendError
               ? "Use um código que já recebeu ou solicite outro quando o temporizador liberar."
               : "Enviamos um código de 6 dígitos para confirmar que este endereço é seu."}
@@ -259,6 +288,7 @@ export function EmailVerificationPage() {
           <div className="verify-footer"><Link href={`/login?next=${encodeURIComponent(nextPath)}`}>Entrar na minha conta</Link></div>
         )}
       </section>
+      </div>
     </main>
   );
 }
