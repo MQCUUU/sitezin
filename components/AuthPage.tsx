@@ -359,10 +359,8 @@ export function AuthPage({
 
         const pendingSignup = { email: email.trim(), name: name.trim(), username: username.trim(), next: returnTo };
         savePendingSignup(pendingSignup);
-        savePendingVerificationEmail(email);
+        await redirectToVerification(email.trim().toLowerCase());
         toast.success("Conta criada. Confira seu e-mail para buscar o código de confirmação.");
-        router.replace(`/verify-email?next=${encodeURIComponent(returnTo)}`);
-        router.refresh();
         return;
       }
 

@@ -521,17 +521,22 @@ export async function handleNeonAuthEmailWebhook(
 
     if (!isRecord(payload)) throw new NeonWebhookError(400, "Evento de autenticação inválido.");
     let event: MagicLinkEvent | OtpEvent;
-    let content: EmailContent;
+    let content: EmailContent | null;
     if (payload.event_type === "send.magic_link") {
       event = parseMagicLinkEvent(payload, authBaseUrl, now());
-      content = renderMagicLinkEmail(event.event_data.link_type, event.event_data.link_url);
+      // Email verification is handled with OTP in the app. Acknowledge Neon’s
+      // legacy verification-link event without sending it, avoiding duplicate
+      // or contradictory instructions. Sign-in and recovery links stay intact.
+      content = event.event_data.link_type === "email-verification"
+        ? null
+        : renderMagicLinkEmail(event.event_data.link_type, event.event_data.link_url);
     } else if (payload.event_type === "send.otp") {
       event = parseOtpEvent(payload, now());
       content = renderOtpEmail(event.event_data.otp_type, event.event_data.otp_code, event.event_data.expires_at);
     } else {
       throw new NeonWebhookError(400, "Evento de autenticação não suportado.");
     }
-    await sendWithResend(event, content, resendApiKey, fetchImpl);
+    if (content) await sendWithResend(event, content, resendApiKey, fetchImpl);
     return Response.json({ success: true }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof NeonWebhookError) return jsonResponse(error.status, error.publicMessage);

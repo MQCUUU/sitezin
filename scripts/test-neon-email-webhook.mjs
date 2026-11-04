@@ -112,6 +112,21 @@ test("all magic-link types select their own subject, CTA, and copy", () => {
   }
 });
 
+test("email-verification magic links are acknowledged without sending; other magic-link flows stay unchanged", async () => {
+  const event = makeEvent("email-verification", "evt_verification_link");
+  let called = false;
+  const response = await handleNeonAuthEmailWebhook(makeRequest(event), dependencies(async () => {
+    called = true;
+    return Response.json({ id: "should_not_send" });
+  }));
+  assert.equal(response.status, 200);
+  assert.equal(called, false);
+
+  const signInEvent = makeEvent("sign-in", "evt_sign_in_link");
+  const signInResponse = await handleNeonAuthEmailWebhook(makeRequest(signInEvent), dependencies(async () => Response.json({ id: "email_sign_in" })));
+  assert.equal(signInResponse.status, 200);
+});
+
 test("send.otp sends a distinct email for each supported purpose without logging or altering the code", async () => {
   for (const [type, subject] of [
     ["email-verification", "Seu código de confirmação do MyCatalog"],
