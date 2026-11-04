@@ -37,7 +37,7 @@ import {
   useToast,
 } from "@/components/ToastProvider";
 import { authErrorMessage, authFormPasswordError, PASSWORD_HINT } from "@/lib/auth-client";
-import { clearPendingSignup, readPendingSignup, savePendingSignup, savePendingVerificationEmail } from "@/lib/auth/pending-signup";
+import { clearPendingSignup, clearPendingVerificationError, readPendingSignup, savePendingSignup, savePendingVerificationEmail, savePendingVerificationError } from "@/lib/auth/pending-signup";
 import { describeIntent, peekPendingAction, takePendingAction } from "@/lib/auth/pending-action";
 import { runLibraryAction } from "@/lib/library/actions";
 import { mediaStatusLabel } from "@/lib/media-status";
@@ -256,6 +256,28 @@ export function AuthPage({
       ]
     );
 
+  async function redirectToVerification(cleanEmail: string) {
+    let sendFailed = false;
+    try {
+      const otp = await authClient.emailOtp.sendVerificationOtp({
+        email: cleanEmail,
+        type: "email-verification",
+      });
+      sendFailed = Boolean(otp.error);
+    } catch {
+      sendFailed = true;
+    }
+
+    savePendingVerificationEmail(cleanEmail);
+    if (sendFailed) {
+      savePendingVerificationError("Não conseguimos pedir um código novo agora. Se você já recebeu um código, tente usá-lo; caso contrário, aguarde o temporizador e toque em Reenviar código.");
+    } else {
+      clearPendingVerificationError();
+    }
+    router.replace(`/verify-email?next=${encodeURIComponent(returnTo)}`);
+    router.refresh();
+  }
+
   async function submit(
     event:
       FormEvent
@@ -352,16 +374,14 @@ export function AuthPage({
       if (res.error) {
         const errorCode = typeof res.error.code === "string" ? res.error.code.toUpperCase() : "";
         if (errorCode === "EMAIL_NOT_VERIFIED" || errorCode === "EMAIL_NOT_CONFIRMED") {
-          savePendingVerificationEmail(email);
-          router.replace(`/verify-email?next=${encodeURIComponent(returnTo)}`);
+          await redirectToVerification(email.trim().toLowerCase());
           return;
         }
         throw new Error(authErrorMessage(res.error, "E-mail ou senha incorretos."));
       }
 
       if (res.data?.user?.emailVerified !== true) {
-        savePendingVerificationEmail(email);
-        router.replace(`/verify-email?next=${encodeURIComponent(returnTo)}`);
+        await redirectToVerification(email.trim().toLowerCase());
         return;
       }
 

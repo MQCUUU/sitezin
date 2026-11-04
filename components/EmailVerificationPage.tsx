@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Loader2, MailCheck, RotateCw, ShieldCheck } from "lucide-react";
 import { authClient } from "@/lib/auth/client";
 import { authErrorMessage } from "@/lib/auth-client";
-import { clearPendingSignup, clearPendingVerificationEmail, readPendingSignup, readPendingVerificationEmail, savePendingVerificationEmail } from "@/lib/auth/pending-signup";
+import { clearPendingSignup, clearPendingVerificationEmail, clearPendingVerificationError, readPendingSignup, readPendingVerificationEmail, readPendingVerificationError, savePendingVerificationEmail } from "@/lib/auth/pending-signup";
 import { safeNextPath } from "@/lib/safe-next";
 
 const CODE_LENGTH = 6;
@@ -38,6 +38,7 @@ export function EmailVerificationPage() {
   const [resending, setResending] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [autoSendError, setAutoSendError] = useState("");
   const [verified, setVerified] = useState(false);
   const refs = useRef<Array<HTMLInputElement | null>>([]);
   const resendLock = useRef(false);
@@ -46,6 +47,8 @@ export function EmailVerificationPage() {
     const storedEmail = readPendingVerificationEmail() || readPendingSignup()?.email || "";
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Read client-only storage after hydration to keep SSR output deterministic.
     setEmail(storedEmail);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Restore the send status after a verified login redirects here.
+    setAutoSendError(readPendingVerificationError() || "");
     let resendAt = 0;
     try { resendAt = Number(window.sessionStorage.getItem(COOLDOWN_KEY) || 0); } catch { /* Keep the in-memory cooldown only. */ }
     const remaining = Math.ceil((resendAt - Date.now()) / 1000);
@@ -118,6 +121,7 @@ export function EmailVerificationPage() {
       if (result.error) throw result.error;
       setVerified(true);
       clearPendingVerificationEmail();
+      clearPendingVerificationError();
       const pendingSignup = readPendingSignup(cleanEmail);
       const session = await authClient.getSession();
       const signedInUser = session.data?.user;
@@ -161,6 +165,8 @@ export function EmailVerificationPage() {
       const result = await authClient.emailOtp.sendVerificationOtp({ email: cleanEmail, type: "email-verification" });
       if (result.error) throw result.error;
       savePendingVerificationEmail(cleanEmail);
+      clearPendingVerificationError();
+      setAutoSendError("");
       beginCooldown();
       setDigits(Array(CODE_LENGTH).fill(""));
       setNotice("Enviamos um novo código. O código anterior foi substituído; use o mais recente.");
@@ -192,11 +198,14 @@ export function EmailVerificationPage() {
         <p className="verify-copy">
           {verified
             ? "Seu endereço foi confirmado com segurança. Sua conta está pronta."
-            : "Enviamos um código de 6 dígitos para confirmar que este endereço é seu."}
+            : autoSendError
+              ? "Use um código que já recebeu ou solicite outro quando o temporizador liberar."
+              : "Enviamos um código de 6 dígitos para confirmar que este endereço é seu."}
         </p>
 
         {!verified && (
           <form className="auth-form verify-form" onSubmit={submit}>
+            {autoSendError && <p className="verify-message is-error" role="alert">{autoSendError}</p>}
             <label>
               <span>Seu endereço de e-mail</span>
               <div className="auth-input"><input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="voce@exemplo.com" required /></div>

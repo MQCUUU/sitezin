@@ -1,4 +1,5 @@
 const STORAGE_KEY = "mycatalog.pending-signup.v1";
+const VERIFICATION_ERROR_KEY = "mycatalog.pending-verification-error";
 
 export type PendingSignup = {
   email: string;
@@ -57,4 +58,16 @@ export function readPendingVerificationEmail(): string | null {
 
 export function clearPendingVerificationEmail(): void {
   try { if (typeof window !== "undefined") window.sessionStorage.removeItem("mycatalog.pending-verification-email"); } catch { /* Ignora armazenamento indisponível. */ }
+}
+
+export function savePendingVerificationError(message: string): void {
+  try { if (typeof window !== "undefined") window.sessionStorage.setItem(VERIFICATION_ERROR_KEY, message); } catch { /* A tela mantém as opções de reenvio. */ }
+}
+
+export function readPendingVerificationError(): string | null {
+  try { return typeof window !== "undefined" ? window.sessionStorage.getItem(VERIFICATION_ERROR_KEY) : null; } catch { return null; }
+}
+
+export function clearPendingVerificationError(): void {
+  try { if (typeof window !== "undefined") window.sessionStorage.removeItem(VERIFICATION_ERROR_KEY); } catch { /* Ignora armazenamento indisponível. */ }
 }
