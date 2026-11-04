@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db/neon";
 import { entradaInvalida, naoAutenticado, respostaDeErro } from "@/lib/api-error";
 import { followStatusFor } from "@/lib/social/visibility";
 import { normalizedTasteAffinity } from "@/lib/social/ratings";
+import { createSocialNotice } from "@/lib/notifications/social";
 
 const CONNECTION_TYPES = ["followers", "following", "friends", "incoming", "outgoing"] as const;
 type ConnectionType = (typeof CONNECTION_TYPES)[number];
@@ -248,10 +249,55 @@ export async function POST(request: NextRequest) {
       DO UPDATE SET
         status = CASE WHEN follows.status = 'accepted' THEN 'accepted' ELSE EXCLUDED.status END,
         updated_at = CASE WHEN follows.status = 'accepted' OR follows.status = EXCLUDED.status THEN follows.updated_at ELSE now() END
-      RETURNING status
+      RETURNING status, created_at, (xmax = 0) AS created
     `;
 
-    return NextResponse.json({ status: saved[0]?.status ?? status });
+    const relationship = saved[0];
+    if (relationship?.created) {
+      const actorRows = await sql`SELECT username FROM public.profiles WHERE id = ${user.id} LIMIT 1`;
+      const actorUsername = actorRows[0]?.username;
+      if (actorUsername && relationship.status === "pending") {
+        await createSocialNotice(sql, {
+          recipientId: target.id,
+          actorId: user.id,
+          actorUsername,
+          type: "follow_request",
+          eventKey: `follow-request:${user.id}:${target.id}:${new Date(relationship.created_at).getTime()}`,
+          href: `/u/${target.username}?tab=connections`,
+        });
+      } else if (actorUsername && relationship.status === "accepted") {
+        const transitionKey = new Date(relationship.created_at).getTime();
+        await createSocialNotice(sql, {
+          recipientId: target.id,
+          actorId: user.id,
+          actorUsername,
+          type: "new_follower",
+          eventKey: `new-follower:${user.id}:${target.id}:${transitionKey}`,
+          href: `/u/${actorUsername}`,
+        });
+
+        const mutual = await sql`
+          SELECT 1 FROM public.follows
+          WHERE follower_id = ${target.id} AND following_id = ${user.id} AND status = 'accepted'
+          LIMIT 1
+        `;
+        if (mutual.length) {
+          const recipients = [
+            { recipientId: user.id, actorId: target.id, actorUsername: target.username, href: `/u/${target.username}` },
+            { recipientId: target.id, actorId: user.id, actorUsername, href: `/u/${actorUsername}` },
+          ];
+          for (const recipient of recipients) {
+            await createSocialNotice(sql, {
+              ...recipient,
+              type: "new_friend",
+              eventKey: `new-friend:${[user.id, target.id].sort().join(":")}:${transitionKey}`,
+            });
+          }
+        }
+      }
+    }
+
+    return NextResponse.json({ status: relationship?.status ?? status });
   } catch (error) {
     return respostaDeErro(error, "POST /api/follows");
   }
@@ -296,13 +342,46 @@ export async function PATCH(request: NextRequest) {
         WHERE follower_id = ${followerId}
           AND following_id = ${user.id}
           AND status = 'pending'
-        RETURNING follower_id
+        RETURNING follower_id, updated_at
       `;
       if (upd.length === 0) {
         return NextResponse.json(
           { error: "Solicitação não encontrada ou sem permissão." },
           { status: 404 }
         );
+      }
+
+      const [actorRows, currentRows, mutual] = await Promise.all([
+        sql`SELECT username FROM public.profiles WHERE id = ${user.id} LIMIT 1`,
+        sql`SELECT username FROM public.profiles WHERE id = ${followerId} LIMIT 1`,
+        sql`SELECT 1 FROM public.follows WHERE follower_id = ${user.id} AND following_id = ${followerId} AND status = 'accepted' LIMIT 1`,
+      ]);
+      const currentUsername = currentRows[0]?.username;
+      const requesterUsername = actorRows[0]?.username;
+      const transitionKey = new Date(upd[0].updated_at).getTime();
+
+      if (requesterUsername) {
+        await createSocialNotice(sql, {
+          recipientId: followerId,
+          actorId: user.id,
+          actorUsername: requesterUsername,
+          type: "follow_accepted",
+          eventKey: `follow-accepted:${followerId}:${user.id}:${transitionKey}`,
+          href: currentUsername ? `/u/${currentUsername}` : "/",
+        });
+      }
+      if (mutual.length && currentUsername && requesterUsername) {
+        const recipients = [
+          { recipientId: user.id, actorId: followerId, actorUsername: requesterUsername, href: `/u/${requesterUsername}` },
+          { recipientId: followerId, actorId: user.id, actorUsername: currentUsername, href: `/u/${currentUsername}` },
+        ];
+        for (const recipient of recipients) {
+          await createSocialNotice(sql, {
+            ...recipient,
+            type: "new_friend",
+            eventKey: `new-friend:${[user.id, followerId].sort().join(":")}:${transitionKey}`,
+          });
+        }
       }
     }
 

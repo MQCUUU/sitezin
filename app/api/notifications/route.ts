@@ -26,7 +26,21 @@ export async function GET() {
           release_at,
           release_precision,
           read_at,
-          created_at
+          created_at,
+          metadata ->> 'actor_id' AS actor_id,
+          metadata ->> 'actor_username' AS actor_username,
+          CASE WHEN type IN ('follow_request', 'new_follower', 'new_friend') THEN (
+            SELECT f.status FROM public.follows f
+            WHERE f.follower_id = (public.notifications.metadata ->> 'actor_id')::uuid
+              AND f.following_id = ${userId}
+            LIMIT 1
+          ) END AS relationship_status,
+          CASE WHEN type IN ('follow_request', 'new_follower', 'new_friend') THEN (
+            SELECT f.status FROM public.follows f
+            WHERE f.follower_id = ${userId}
+              AND f.following_id = (public.notifications.metadata ->> 'actor_id')::uuid
+            LIMIT 1
+          ) END AS follow_back_status
         FROM public.notifications
         WHERE user_id = ${userId}
         ORDER BY created_at DESC

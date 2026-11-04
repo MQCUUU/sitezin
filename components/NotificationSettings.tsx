@@ -8,23 +8,19 @@ import { Bell, Loader2, Save } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
 
-/*
- * F1 — a tabela `public.notifications` só aceita `type IN
- * ('new_season','new_episode')` (CHECK constraint). O único produtor
- * de linhas (`app/api/library/sync-seasons/route.ts`, regras em
- * lib/notifications/series.ts) só escreve esses dois tipos, e só para
- * séries CURTIDAS. Preferências sem produtor real (follow por e-mail,
- * curtidas em review, e-mails) continuam fora da UI — as colunas ficam no
- * banco para quando as features existirem.
- *
- * V3.3: estado de carregamento/erro (antes, falha no GET mostrava tudo
- * desmarcado como se fosse a preferência salva), "alterações não salvas"
- * e feedback específico.
- */
+type Prefs = {
+  new_season_site: boolean;
+  new_episode_site: boolean;
+  new_follower_site: boolean;
+  follow_request_site: boolean;
+  new_follower_email: boolean;
+  follow_request_email: boolean;
+  review_like_site: boolean;
+  review_like_email: boolean;
+  product_updates_email: boolean;
+};
 
-type Prefs = { new_season_site: boolean; new_episode_site: boolean };
-
-const keyOf = (prefs: Prefs | null) => (prefs ? `${prefs.new_season_site}|${prefs.new_episode_site}` : "");
+const keyOf = (prefs: Prefs | null) => (prefs ? `${prefs.new_season_site}|${prefs.new_episode_site}|${prefs.new_follower_site}|${prefs.follow_request_site}` : "");
 
 export function NotificationSettings() {
   const toast = useToast();
@@ -38,7 +34,17 @@ export function NotificationSettings() {
 
     try {
       const data = await apiFetch("/api/profile/notifications", { cache: "no-store" });
-      const next = { new_season_site: data.new_season_site !== false, new_episode_site: data.new_episode_site !== false };
+      const next = {
+        new_season_site: data.new_season_site !== false,
+        new_episode_site: data.new_episode_site !== false,
+        new_follower_site: data.new_follower_site !== false,
+        follow_request_site: data.follow_request_site !== false,
+        new_follower_email: data.new_follower_email === true,
+        follow_request_email: data.follow_request_email === true,
+        review_like_site: data.review_like_site !== false,
+        review_like_email: data.review_like_email === true,
+        product_updates_email: data.product_updates_email === true,
+      };
 
       setPrefs(next);
       setSaved(keyOf(next));
@@ -81,7 +87,7 @@ export function NotificationSettings() {
         </div>
         <div>
           <h2 id="notification-settings-title">Notificações</h2>
-          <p className="muted">Avisos no sino do MyCatalog sobre as séries que você curtiu.</p>
+          <p className="muted">Avisos no sino sobre suas conexões e as séries que você curtiu.</p>
         </div>
       </div>
 
@@ -116,6 +122,20 @@ export function NotificationSettings() {
               </span>
             </label>
             <label className="notification-product">
+              <input type="checkbox" checked={prefs.follow_request_site} onChange={() => toggle("follow_request_site")} />
+              <span>
+                <strong>Solicitações para seguir</strong>
+                <small>Quando alguém pedir para seguir seu perfil.</small>
+              </span>
+            </label>
+            <label className="notification-product">
+              <input type="checkbox" checked={prefs.new_follower_site} onChange={() => toggle("new_follower_site")} />
+              <span>
+                <strong>Novos seguidores e amizades</strong>
+                <small>Quando alguém começar a seguir você, aceitar sua solicitação ou vocês se tornarem amigos.</small>
+              </span>
+            </label>
+            <label className="notification-product">
               <input
                 type="checkbox"
                 checked={prefs.new_episode_site}
@@ -128,10 +148,7 @@ export function NotificationSettings() {
             </label>
           </fieldset>
 
-          <p className="muted notification-settings-note">
-            Pedidos para seguir aparecem como aviso rápido enquanto o site está aberto. Notificações
-            de curtidas e por e-mail ainda não existem.
-          </p>
+          <p className="muted notification-settings-note">Notificações sociais aparecem no sino. Notificações por e-mail ainda não estão disponíveis.</p>
 
           <div className="set-save-row">
             <button type="button" className="btn primary" disabled={saving || !dirty} onClick={save}>

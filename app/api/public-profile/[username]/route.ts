@@ -57,7 +57,7 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
   const viewerId: string | null = session?.data?.user?.id ?? null;
   const isOwner = viewerId === profile.id;
 
-  const [viewerFollowRows, viewerProfileRows] = await Promise.all([
+  const [viewerFollowRows, viewerProfileRows, viewerFollowsProfileRows] = await Promise.all([
     viewerId && !isOwner
       ? sql`
           SELECT status
@@ -67,6 +67,9 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
         `
       : Promise.resolve([]),
     viewerId ? sql`SELECT username, followers_visibility, following_visibility FROM public.profiles WHERE id = ${viewerId} LIMIT 1` : Promise.resolve([]),
+    viewerId && !isOwner
+      ? sql`SELECT 1 FROM public.follows WHERE follower_id = ${profile.id} AND following_id = ${viewerId} AND status = 'accepted' LIMIT 1`
+      : Promise.resolve([]),
   ]);
   const viewerFollowStatus: string | null = (viewerFollowRows[0] as { status?: string } | undefined)?.status || null;
   const viewerUsername: string | null = (viewerProfileRows[0] as { username?: string } | undefined)?.username || null;
@@ -101,6 +104,7 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
           friends_count: null,
           mutual_friends_count: null,
           relationship: viewerFollowStatus || "none",
+          viewer_follows_you: viewerFollowsProfileRows.length > 0,
           can_follow: profile.follow_policy !== "nobody",
           viewer_username: viewerUsername,
           followers: null,
@@ -236,7 +240,11 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
             json_build_object(
               'username', p.username,
               'display_name', p.display_name,
-              'avatar_url', p.avatar_url
+              'avatar_url', p.avatar_url,
+              'follows_viewer', EXISTS (
+                SELECT 1 FROM public.follows vf
+                WHERE vf.follower_id = p.id AND vf.following_id = ${viewerId} AND vf.status = 'accepted'
+              )
             ) as profile
           FROM public.follows f
           JOIN public.profiles p ON p.id = f.follower_id
@@ -251,7 +259,11 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
             json_build_object(
               'username', p.username,
               'display_name', p.display_name,
-              'avatar_url', p.avatar_url
+              'avatar_url', p.avatar_url,
+              'follows_viewer', EXISTS (
+                SELECT 1 FROM public.follows vf
+                WHERE vf.follower_id = p.id AND vf.following_id = ${viewerId} AND vf.status = 'accepted'
+              )
             ) as profile
           FROM public.follows f
           JOIN public.profiles p ON p.id = f.following_id
@@ -372,6 +384,7 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
         friends_count: friendsVisible ? Number(friendsCountRes[0]?.count || 0) : null,
         mutual_friends_count: null,
         relationship: isOwner ? "self" : viewerFollowStatus || "none",
+        viewer_follows_you: viewerFollowsProfileRows.length > 0,
         can_follow: !isOwner && profile.follow_policy !== "nobody",
         viewer_username: viewerUsername,
         followers: followersVisible ? followers || [] : null,

@@ -40,7 +40,13 @@ button,input,textarea,select {
     font: inherit
 }
 button {
-    cursor: pointer
+    cursor: pointer;
+    transition: background-color var(--mc-duration-fast, 120ms) var(--mc-ease-standard, ease),
+        border-color var(--mc-duration-fast, 120ms) var(--mc-ease-standard, ease),
+        color var(--mc-duration-fast, 120ms) var(--mc-ease-standard, ease),
+        box-shadow var(--mc-duration-fast, 120ms) var(--mc-ease-standard, ease),
+        transform var(--mc-duration-fast, 120ms) var(--mc-ease-standard, ease),
+        opacity var(--mc-duration-fast, 120ms) var(--mc-ease-standard, ease)
 }
 .app {
     display: flex;

@@ -264,6 +264,37 @@
     background: var(--panel2);
     color: var(--accent)
 }
+.notification-actions {
+    grid-column: 2 / 4;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: -3px
+}
+.notification-action {
+    min-height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 10px;
+    border: 1px solid var(--control-border);
+    border-radius: var(--mc-radius-sm);
+    background: var(--panel2);
+    color: var(--text);
+    font-size: var(--mc-fs-xs);
+    font-weight: 750;
+    cursor: pointer
+}
+.notification-action.primary {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--on-accent, #fff)
+}
+.notification-action:disabled {
+    opacity: .72;
+    cursor: default
+}
 .notification-empty {
     display: grid;
     justify-items: center;
