@@ -1,3 +1,4 @@
+import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextResponse } from "next/server";
 
 import { naoAutenticado, respostaDeErro } from "@/lib/api-error";
@@ -16,7 +17,8 @@ export type DiaryRecentResponse = { today: string; moments: DiaryMoment[] };
 
 export async function GET() {
   try {
-    const session = await auth.getSession().catch(() => null);
+    const session = await getRouteSession();
+    if (session.unavailable) return sessionUnavailableResponse();
     const userId = session?.data?.user?.id;
 
     if (!userId) return naoAutenticado();

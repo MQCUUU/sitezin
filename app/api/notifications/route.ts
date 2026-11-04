@@ -1,3 +1,4 @@
+import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
@@ -5,7 +6,8 @@ import { naoAutenticado, respostaDeErro } from "@/lib/api-error";
 
 export async function GET() {
   try {
-    const session = await auth.getSession().catch(() => null);
+    const session = await getRouteSession();
+    if (session.unavailable) return sessionUnavailableResponse();
     const user = session?.data?.user;
 
     if (!user || !user.id) {
@@ -67,7 +69,8 @@ export async function GET() {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await auth.getSession().catch(() => null);
+    const session = await getRouteSession();
+    if (session.unavailable) return sessionUnavailableResponse();
     const user = session?.data?.user;
 
     if (!user || !user.id) {

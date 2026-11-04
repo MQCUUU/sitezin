@@ -1,10 +1,11 @@
+import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextResponse } from "next/server";
 import { del } from "@vercel/blob";
-import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 
 export async function DELETE() {
-  const session = await auth.getSession().catch(() => null);
+  const session = await getRouteSession();
+  if (session.unavailable) return sessionUnavailableResponse();
   const user = session?.data?.user;
 
   if (!user || !user.id) {

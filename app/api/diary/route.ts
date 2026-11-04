@@ -1,3 +1,4 @@
+import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextRequest, NextResponse } from "next/server";
 
 import { naoAutenticado, respostaDeErro } from "@/lib/api-error";
@@ -20,7 +21,8 @@ const FILTERS: DiaryFilter[] = ["all", "watched", "rewatch", "rated"];
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth.getSession().catch(() => null);
+    const session = await getRouteSession();
+    if (session.unavailable) return sessionUnavailableResponse();
     const userId = session?.data?.user?.id;
 
     if (!userId) return naoAutenticado();

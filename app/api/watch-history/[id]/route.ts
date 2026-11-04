@@ -1,3 +1,4 @@
+import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextRequest, NextResponse } from "next/server";
 import { entradaInvalida, respostaDeErro } from "@/lib/api-error";
 import { auth } from "@/lib/auth/server";
@@ -27,7 +28,8 @@ export async function PATCH(
   const { id } = await params;
 
   try {
-    const session = await auth.getSession().catch(() => null);
+    const session = await getRouteSession();
+    if (session.unavailable) return sessionUnavailableResponse();
     const user = session?.data?.user;
 
     if (!user || !user.id) {
@@ -169,7 +171,8 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    const session = await auth.getSession().catch(() => null);
+    const session = await getRouteSession();
+    if (session.unavailable) return sessionUnavailableResponse();
     const user = session?.data?.user;
 
     if (!user || !user.id) {

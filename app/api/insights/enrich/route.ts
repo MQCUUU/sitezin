@@ -1,3 +1,4 @@
+import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
@@ -30,7 +31,8 @@ type Row = { id: number; tmdb_id: number; media_type: "movie" | "tv" };
 
 export async function POST() {
   try {
-    const session = await auth.getSession().catch(() => null);
+    const session = await getRouteSession();
+    if (session.unavailable) return sessionUnavailableResponse();
     const userId = session?.data?.user?.id;
 
     if (!userId) return naoAutenticado();

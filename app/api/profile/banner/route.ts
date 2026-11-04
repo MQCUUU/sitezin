@@ -1,6 +1,6 @@
+import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextResponse } from "next/server";
 import { put, del } from "@vercel/blob";
-import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { naoAutenticado } from "@/lib/api-error";
 import { ALLOWED_IMAGE_TYPES, imageExtension, isValidImageBuffer, isVercelBlobUrl } from "@/lib/profile/image-upload";
@@ -19,8 +19,9 @@ const MAX_BANNER_BYTES = 8 * 1024 * 1024;
 const NO_STORE = { "Cache-Control": "no-store" };
 
 async function sessionProfile() {
-  const session = await auth.getSession().catch(() => null);
-  const userId = session?.data?.user?.id;
+  const session = await getRouteSession();
+  if (session.unavailable) return undefined;
+  const userId = session.data?.user?.id;
   if (!userId) return null;
   const rows = await getDb()`SELECT id, banner_url FROM public.profiles WHERE id = ${userId} LIMIT 1`;
   return rows[0] ? { id: String(rows[0].id), banner_url: (rows[0].banner_url as string | null) ?? null } : null;
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
 
   try {
     const profile = await sessionProfile();
+    if (profile === undefined) return sessionUnavailableResponse();
     if (!profile) return naoAutenticado();
 
     const form = await request.formData();
@@ -74,6 +76,7 @@ export async function POST(request: Request) {
 export async function DELETE() {
   try {
     const profile = await sessionProfile();
+    if (profile === undefined) return sessionUnavailableResponse();
     if (!profile) return naoAutenticado();
 
     await getDb()`UPDATE public.profiles SET banner_url = NULL WHERE id = ${profile.id}`;

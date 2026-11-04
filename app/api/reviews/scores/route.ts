@@ -1,3 +1,4 @@
+import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextResponse } from "next/server";
 import { entradaInvalida, naoAutenticado, respostaDeErro } from "@/lib/api-error";
 import { auth } from "@/lib/auth/server";
@@ -8,7 +9,8 @@ const UUID_PATTERN =
 
 export async function GET(req: Request) {
   try {
-    const session = await auth.getSession().catch(() => null);
+    const session = await getRouteSession();
+    if (session.unavailable) return sessionUnavailableResponse();
     const user = session?.data?.user;
     if (!user || !user.id) return naoAutenticado();
 
@@ -53,7 +55,8 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const session = await auth.getSession().catch(() => null);
+    const session = await getRouteSession();
+    if (session.unavailable) return sessionUnavailableResponse();
     const user = session?.data?.user;
     if (!user || !user.id) return naoAutenticado();
 
@@ -123,7 +126,8 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const session = await auth.getSession().catch(() => null);
+    const session = await getRouteSession();
+    if (session.unavailable) return sessionUnavailableResponse();
     const user = session?.data?.user;
     if (!user || !user.id) return naoAutenticado();
 

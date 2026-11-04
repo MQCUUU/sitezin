@@ -1,7 +1,7 @@
+import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextRequest, NextResponse } from "next/server";
 
 import { entradaInvalida, naoAutenticado, respostaDeErro } from "@/lib/api-error";
-import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { LISTS_PAGE, isUuid, normalizeDescription, normalizeName, parseMediaType, parsePage, parsePositiveInt } from "@/lib/lists/validate";
 
@@ -22,14 +22,16 @@ import { LISTS_PAGE, isUuid, normalizeDescription, normalizeName, parseMediaType
 const PRIVATE = { "Cache-Control": "private, no-store" };
 
 async function sessionUser() {
-  const session = await auth.getSession().catch(() => null);
+  const session = await getRouteSession();
+  if (session.unavailable) return undefined;
 
-  return session?.data?.user?.id ?? null;
+  return session.data?.user?.id ?? null;
 }
 
 export async function GET(request: NextRequest) {
   try {
     const userId = await sessionUser();
+    if (userId === undefined) return sessionUnavailableResponse();
 
     if (!userId) return naoAutenticado();
 
@@ -92,6 +94,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const userId = await sessionUser();
+    if (userId === undefined) return sessionUnavailableResponse();
 
     if (!userId) return naoAutenticado();
 
@@ -127,6 +130,7 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const userId = await sessionUser();
+    if (userId === undefined) return sessionUnavailableResponse();
 
     if (!userId) return naoAutenticado();
 
@@ -175,6 +179,7 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const userId = await sessionUser();
+    if (userId === undefined) return sessionUnavailableResponse();
 
     if (!userId) return naoAutenticado();
 

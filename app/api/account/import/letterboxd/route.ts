@@ -1,3 +1,4 @@
+import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextResponse } from "next/server";
 
 import { respostaDeErro } from "@/lib/api-error";
@@ -74,7 +75,8 @@ async function resolveMovie(row: LetterboxdRow): Promise<Movie | null> {
 }
 
 export async function POST(request: Request) {
-  const session = await auth.getSession().catch(() => null);
+  const session = await getRouteSession();
+  if (session.unavailable) return sessionUnavailableResponse();
   const user = session?.data?.user;
 
   if (!user || !user.id) {

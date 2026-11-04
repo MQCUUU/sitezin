@@ -1,5 +1,5 @@
+import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { naoAutenticado, respostaDeErro } from "@/lib/api-error";
 import { parseStreamingServices } from "@/lib/streaming-services";
@@ -15,13 +15,15 @@ import { parseStreamingServices } from "@/lib/streaming-services";
 const PRIVATE = { "Cache-Control": "private, no-store" };
 
 async function currentUserId() {
-  const session = await auth.getSession().catch(() => null);
-  return session?.data?.user?.id ?? null;
+  const session = await getRouteSession();
+  if (session.unavailable) return undefined;
+  return session.data?.user?.id ?? null;
 }
 
 export async function GET() {
   try {
     const userId = await currentUserId();
+    if (userId === undefined) return sessionUnavailableResponse();
     if (!userId) return naoAutenticado();
 
     const sql = getDb();
@@ -41,6 +43,7 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   try {
     const userId = await currentUserId();
+    if (userId === undefined) return sessionUnavailableResponse();
     if (!userId) return naoAutenticado();
 
     const body = await req.json().catch(() => null);

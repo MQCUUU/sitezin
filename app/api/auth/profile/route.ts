@@ -1,3 +1,4 @@
+import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
@@ -6,7 +7,8 @@ import { applyUsernameChange } from "@/lib/username-change";
 
 export async function POST(request: Request) {
   try {
-    const session = await auth.getSession().catch(() => null);
+    const session = await getRouteSession();
+    if (session.unavailable) return sessionUnavailableResponse();
     const user = session?.data?.user;
     if (!user || !user.id) {
       return NextResponse.json(
@@ -129,7 +131,8 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const session = await auth.getSession().catch(() => null);
+    const session = await getRouteSession();
+    if (session.unavailable) return sessionUnavailableResponse();
     const user = session?.data?.user;
     if (!user || !user.id) {
       return NextResponse.json(

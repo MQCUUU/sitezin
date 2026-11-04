@@ -1,3 +1,4 @@
+import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
@@ -7,7 +8,8 @@ import { buildSeriesNotices } from "@/lib/notifications/series";
 
 
 export async function POST() {
-  const session = await auth.getSession().catch(() => null);
+  const session = await getRouteSession();
+  if (session.unavailable) return sessionUnavailableResponse();
   const user = session?.data?.user;
   if (!user || !user.id) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 

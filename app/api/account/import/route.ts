@@ -1,3 +1,4 @@
+import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextRequest, NextResponse } from "next/server";
 
 import { respostaDeErro } from "@/lib/api-error";
@@ -34,7 +35,8 @@ const MAX_CATALOG_LOOKUPS = 400;
 const LOOKUP_CONCURRENCY = 6;
 
 export async function POST(req: NextRequest) {
-  const session = await auth.getSession().catch(() => null);
+  const session = await getRouteSession();
+  if (session.unavailable) return sessionUnavailableResponse();
   const user = session?.data?.user;
 
   if (!user || !user.id) {

@@ -1,3 +1,4 @@
+import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextResponse } from "next/server";
 import { respostaDeErro } from "@/lib/api-error";
 import { auth } from "@/lib/auth/server";
@@ -7,7 +8,8 @@ import { applyUsernameChange } from "@/lib/username-change";
 
 export async function GET() {
   try {
-    const session = await auth.getSession().catch(() => null);
+    const session = await getRouteSession();
+    if (session.unavailable) return sessionUnavailableResponse();
     const user = session?.data?.user;
     if (!user || !user.id) {
       return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
@@ -55,7 +57,8 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    const session = await auth.getSession().catch(() => null);
+    const session = await getRouteSession();
+    if (session.unavailable) return sessionUnavailableResponse();
     const user = session?.data?.user;
     if (!user || !user.id) {
       return NextResponse.json({ error: "Não autenticado." }, { status: 401 });

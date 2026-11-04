@@ -1,3 +1,4 @@
+import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { getUserProviderFilter, MY_SERVICES_SENTINEL } from "@/lib/streaming-services-server";
 import { relevantBrProviders } from "@/lib/streaming/providers-br";
 import { getDb } from "@/lib/db/neon";
@@ -128,7 +129,8 @@ export async function GET(req: NextRequest) {
 }
 
 async function getForYou(req: NextRequest) {
-  const session = await auth.getSession().catch(() => null);
+  const session = await getRouteSession();
+  if (session.unavailable) return sessionUnavailableResponse();
   const user = session?.data?.user;
 
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });

@@ -1,3 +1,4 @@
+import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextRequest, NextResponse } from "next/server";
 import { entradaInvalida, respostaDeErro } from "@/lib/api-error";
 import { auth } from "@/lib/auth/server";
@@ -36,7 +37,8 @@ function parsePrecision(value: unknown): "date" | "datetime" {
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth.getSession().catch(() => null);
+    const session = await getRouteSession();
+    if (session.unavailable) return sessionUnavailableResponse();
     const user = session?.data?.user;
     if (!user || !user.id) {
       return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
@@ -92,7 +94,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth.getSession().catch(() => null);
+    const session = await getRouteSession();
+    if (session.unavailable) return sessionUnavailableResponse();
     const user = session?.data?.user;
     if (!user || !user.id) {
       return NextResponse.json({ error: "Não autenticado" }, { status: 401 });

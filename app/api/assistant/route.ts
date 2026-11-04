@@ -1,3 +1,4 @@
+import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { takeToken } from "@/lib/rate-limit";
 import {
   createHash,
@@ -8,7 +9,6 @@ import {
   NextResponse,
 } from "next/server";
 
-import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 
 import {
@@ -626,7 +626,8 @@ async function cleanupExpiredCache(
 export async function POST(
   req: NextRequest
 ) {
-  const session = await auth.getSession().catch(() => null);
+  const session = await getRouteSession();
+  if (session.unavailable) return sessionUnavailableResponse();
   const user = session?.data?.user;
 
   if (!user || !user.id) {

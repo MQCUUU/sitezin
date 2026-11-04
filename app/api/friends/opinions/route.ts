@@ -1,3 +1,4 @@
+import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextRequest, NextResponse } from "next/server";
 
 import { entradaInvalida, naoAutenticado, respostaDeErro } from "@/lib/api-error";
@@ -40,7 +41,8 @@ export async function GET(request: NextRequest) {
   if (limited) return limited;
 
   try {
-    const session = await auth.getSession().catch(() => null);
+    const session = await getRouteSession();
+    if (session.unavailable) return sessionUnavailableResponse();
     const viewerId = session?.data?.user?.id;
     if (!viewerId) return naoAutenticado();
 

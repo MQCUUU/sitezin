@@ -52,9 +52,29 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await auth.getSession().catch(() => null);
+    /*
+     * Falha do provedor de auth (rede/502) NÃO é sessão expirada: antes, o
+     * `.catch(() => null)` transformava qualquer erro transitório em 401 e o
+     * usuário era mandado para o login sem motivo. Agora erro do provedor
+     * responde 503 (tentar de novo); 401 só quando não há sessão de fato.
+     */
+    let session: Awaited<ReturnType<typeof auth.getSession>> | null = null;
+    try {
+      session = await auth.getSession();
+    } catch {
+      return NextResponse.json(
+        { error: "Não foi possível confirmar sua sessão agora. Tente novamente em instantes." },
+        { status: 503, headers: { "X-Username-Backend": "neon-direct-v1", "Retry-After": "5" } }
+      );
+    }
     const user = session?.data?.user;
     if (!user || !user.id) {
+      if (session?.error) {
+        return NextResponse.json(
+          { error: "Não foi possível confirmar sua sessão agora. Tente novamente em instantes." },
+          { status: 503, headers: { "X-Username-Backend": "neon-direct-v1", "Retry-After": "5" } }
+        );
+      }
       return NextResponse.json(
         { error: "Sessão expirada. Faça login novamente." },
         { status: 401, headers: { "X-Username-Backend": "neon-direct-v1" } }

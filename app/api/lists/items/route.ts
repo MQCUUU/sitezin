@@ -1,7 +1,7 @@
+import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextRequest, NextResponse } from "next/server";
 
 import { entradaInvalida, naoAutenticado, respostaDeErro } from "@/lib/api-error";
-import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { ensureMedia } from "@/lib/lists/media";
 import { ITEMS_PAGE, isUuid, normalizeDescription, parseIndex, parseMediaType, parsePage, parsePositiveInt } from "@/lib/lists/validate";
@@ -25,9 +25,10 @@ const PRIVATE = { "Cache-Control": "private, no-store" };
 const notFound = () => NextResponse.json({ error: "Lista não encontrada." }, { status: 404, headers: PRIVATE });
 
 async function sessionUser() {
-  const session = await auth.getSession().catch(() => null);
+  const session = await getRouteSession();
+  if (session.unavailable) return undefined;
 
-  return session?.data?.user?.id ?? null;
+  return session.data?.user?.id ?? null;
 }
 
 export async function GET(request: NextRequest) {
@@ -136,6 +137,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const userId = await sessionUser();
+    if (userId === undefined) return sessionUnavailableResponse();
 
     if (!userId) return naoAutenticado();
 
@@ -189,6 +191,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const userId = await sessionUser();
+    if (userId === undefined) return sessionUnavailableResponse();
 
     if (!userId) return naoAutenticado();
 
@@ -232,6 +235,7 @@ export async function DELETE(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const userId = await sessionUser();
+    if (userId === undefined) return sessionUnavailableResponse();
 
     if (!userId) return naoAutenticado();
 

@@ -1,15 +1,16 @@
+import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextResponse } from "next/server";
 import { put, del } from "@vercel/blob";
-import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { ALLOWED_IMAGE_TYPES as ALLOWED_MIME_TYPES, imageExtension as getExtension, isValidImageBuffer, isVercelBlobUrl } from "@/lib/profile/image-upload";
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5 MB
 
 async function authenticatedProfile() {
-  const session = await auth.getSession().catch(() => null);
-  const user = session?.data?.user;
-  if (!user || !user.id) return { user: null, profile: null };
+  const session = await getRouteSession();
+  if (session.unavailable) return { unavailable: true as const, user: null, profile: null };
+  const user = session.data?.user;
+  if (!user || !user.id) return { unavailable: false as const, user: null, profile: null };
 
   const sql = getDb();
   const rows = await sql`
@@ -19,13 +20,14 @@ async function authenticatedProfile() {
     LIMIT 1
   `;
   const profile = rows[0] || null;
-  return { user, profile };
+  return { unavailable: false as const, user, profile };
 }
 
 export async function POST(request: Request) {
   let uploadedBlobUrl: string | null = null;
   try {
-    const { user, profile } = await authenticatedProfile();
+    const { unavailable, user, profile } = await authenticatedProfile();
+    if (unavailable) return sessionUnavailableResponse();
     if (!user || !user.id) {
       return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
     }
@@ -110,7 +112,8 @@ export async function POST(request: Request) {
 
 export async function DELETE() {
   try {
-    const { user, profile } = await authenticatedProfile();
+    const { unavailable, user, profile } = await authenticatedProfile();
+    if (unavailable) return sessionUnavailableResponse();
     if (!user || !user.id) {
       return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
     }

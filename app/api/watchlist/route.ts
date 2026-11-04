@@ -1,6 +1,6 @@
+import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextRequest, NextResponse } from "next/server";
 import { entradaInvalida, naoAutenticado, respostaDeErro } from "@/lib/api-error";
-import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { isUuid } from "@/lib/lists/validate";
 import { listWatchlist, moveWatchlistItem } from "@/lib/watchlist";
@@ -15,13 +15,15 @@ import { listWatchlist, moveWatchlistItem } from "@/lib/watchlist";
 const PRIVATE = { "Cache-Control": "private, no-store" };
 
 async function sessionUser() {
-  const session = await auth.getSession().catch(() => null);
-  return session?.data?.user?.id ?? null;
+  const session = await getRouteSession();
+  if (session.unavailable) return undefined;
+  return session.data?.user?.id ?? null;
 }
 
 export async function GET(request: NextRequest) {
   try {
     const userId = await sessionUser();
+    if (userId === undefined) return sessionUnavailableResponse();
     if (!userId) return naoAutenticado();
 
     const params = request.nextUrl.searchParams;
@@ -39,6 +41,7 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const userId = await sessionUser();
+    if (userId === undefined) return sessionUnavailableResponse();
     if (!userId) return naoAutenticado();
 
     const body = await request.json().catch(() => null);

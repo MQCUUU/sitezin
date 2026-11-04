@@ -1,3 +1,4 @@
+import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth/server";
@@ -15,7 +16,8 @@ const PRIVATE = { "Cache-Control": "private, no-store" };
 
 export async function GET() {
   try {
-    const session = await auth.getSession().catch(() => null);
+    const session = await getRouteSession();
+    if (session.unavailable) return sessionUnavailableResponse();
     const userId = session?.data?.user?.id;
 
     if (!userId) return naoAutenticado();
@@ -35,7 +37,8 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
-    const session = await auth.getSession().catch(() => null);
+    const session = await getRouteSession();
+    if (session.unavailable) return sessionUnavailableResponse();
     const userId = session?.data?.user?.id;
 
     if (!userId) return naoAutenticado();
