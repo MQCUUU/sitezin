@@ -25,6 +25,7 @@ export const PUBLIC_LIMITS = {
   username: { limit: 30, windowMs: 60_000 },
   publicProfile: { limit: 90, windowMs: 60_000 },
   communityReviews: { limit: 90, windowMs: 60_000 },
+  tmdbDetails: { limit: 120, windowMs: 60_000 },
 } as const;
 
 /** 429 pronto (mesmo formato de erro das outras rotas) ou null se pode seguir. */

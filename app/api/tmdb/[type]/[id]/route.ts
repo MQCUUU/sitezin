@@ -4,6 +4,7 @@ import {
 } from "next/server";
 
 import { detailsTMDB } from "@/lib/tmdb";
+import { limitPublicRequest } from "@/lib/rate-limit";
 import {
   getTitleWatchProviders,
   sanitizeTitleDetails,
@@ -31,7 +32,7 @@ type MediaDetails = {
 };
 
 export async function GET(
-  _request: Request,
+  request: Request,
   {
     params,
   }: {
@@ -41,6 +42,10 @@ export async function GET(
     }>;
   },
 ) {
+  // Rota pública que consome a cota do TMDB: limite por IP (lib/rate-limit.ts).
+  const limited = limitPublicRequest(request, "tmdbDetails");
+  if (limited) return limited;
+
   const { type, id } = await params;
 
   if (
