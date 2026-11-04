@@ -7,7 +7,6 @@ const MAX_BODY_BYTES = 64 * 1024;
 const FROM = "MyCatalog <noreply@catalogmy.pro>";
 
 type NeonJwk = JsonWebKey & { kid?: string; alg?: string; use?: string };
-type NeonJwks = { keys: NeonJwk[] };
 type LinkType = "forget-password" | "sign-in" | "email-verification";
 
 type MagicLinkEvent = {
@@ -18,6 +17,21 @@ type MagicLinkEvent = {
   event_data: {
     link_type: LinkType;
     link_url: string;
+    expires_at: string;
+  };
+};
+
+type OtpType = "email-verification" | "forget-password" | "sign-in";
+
+type OtpEvent = {
+  event_id: string;
+  event_type: "send.otp";
+  timestamp: string;
+  user: { email: string };
+  event_data: {
+    otp_code: string;
+    otp_type: OtpType;
+    delivery_preference?: "email" | "sms";
     expires_at: string;
   };
 };
@@ -225,6 +239,37 @@ function parseMagicLinkEvent(payload: unknown, baseUrl: string, now: number): Ma
   return payload as unknown as MagicLinkEvent;
 }
 
+function parseOtpEvent(payload: unknown, now: number): OtpEvent {
+  if (!isRecord(payload) || payload.event_type !== "send.otp") {
+    throw new NeonWebhookError(400, "Evento de autenticação não suportado.");
+  }
+  if (typeof payload.event_id !== "string" || !payload.event_id || payload.event_id.length > 200 || /[\r\n\0]/.test(payload.event_id)) {
+    throw new NeonWebhookError(400, "Evento de autenticação inválido.");
+  }
+  const eventTime = typeof payload.timestamp === "string" ? Date.parse(payload.timestamp) : Number.NaN;
+  if (!Number.isFinite(eventTime) || Math.abs(now - eventTime) > WEBHOOK_MAX_AGE_MS) {
+    throw new NeonWebhookError(400, "Evento de autenticação expirado.");
+  }
+  if (!isRecord(payload.user) || !isEmail(payload.user.email) || !isRecord(payload.event_data)) {
+    throw new NeonWebhookError(400, "Evento de autenticação inválido.");
+  }
+
+  const data = payload.event_data;
+  if (data.otp_type !== "email-verification" && data.otp_type !== "forget-password" && data.otp_type !== "sign-in") {
+    throw new NeonWebhookError(400, "Finalidade do código não suportada.");
+  }
+  if (data.delivery_preference !== undefined && data.delivery_preference !== "email") {
+    throw new NeonWebhookError(400, "Canal de envio não suportado.");
+  }
+  if (typeof data.otp_code !== "string" || !/^\d{6}$/.test(data.otp_code)) {
+    throw new NeonWebhookError(400, "Código de autenticação inválido.");
+  }
+  if (typeof data.expires_at !== "string" || !Number.isFinite(Date.parse(data.expires_at)) || Date.parse(data.expires_at) <= now) {
+    throw new NeonWebhookError(400, "Código de autenticação expirado.");
+  }
+  return payload as unknown as OtpEvent;
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => ({
     "&": "&amp;",
@@ -307,6 +352,58 @@ export function renderMagicLinkEmail(linkType: LinkType, linkUrl: string): Email
   return { subject: content.subject, html, text };
 }
 
+export function renderOtpEmail(otpType: OtpType, otpCode: string, expiresAt: string): EmailContent {
+  const copy: Record<OtpType, { subject: string; eyebrow: string; title: string; intro: string; safety: string }> = {
+    "email-verification": {
+      subject: "Seu código de confirmação do MyCatalog",
+      eyebrow: "CONFIRMAÇÃO DE E-MAIL",
+      title: "Confirme seu endereço",
+      intro: "Digite este código na página de verificação para concluir a criação da sua conta.",
+      safety: "Se você não criou uma conta no MyCatalog, ignore esta mensagem.",
+    },
+    "forget-password": {
+      subject: "Seu código para redefinir a senha do MyCatalog",
+      eyebrow: "RECUPERAÇÃO DE ACESSO",
+      title: "Redefina sua senha",
+      intro: "Use este código na página de recuperação de senha para continuar.",
+      safety: "Se você não pediu para redefinir sua senha, ignore esta mensagem. Sua senha continuará a mesma.",
+    },
+    "sign-in": {
+      subject: "Seu código de acesso ao MyCatalog",
+      eyebrow: "ACESSO À CONTA",
+      title: "Entre no MyCatalog",
+      intro: "Digite este código na página de acesso para continuar.",
+      safety: "Se você não pediu este código, ignore esta mensagem e proteja sua conta.",
+    },
+  };
+  const content = copy[otpType];
+  const expiryMinutes = Math.max(1, Math.ceil((Date.parse(expiresAt) - Date.now()) / 60_000));
+  const codeHtml = escapeHtml(otpCode);
+  const html = `<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"></head>
+<body style="margin:0;padding:0;background:#090b10;color:#f6f7fb;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#090b10"><tr><td align="center" style="padding:36px 16px">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px">
+      <tr><td style="padding:0 0 18px 2px;color:#f6f7fb;font-size:19px;font-weight:750">▌ MyCatalog</td></tr>
+      <tr><td style="padding:34px 32px 30px;border:1px solid #252a35;border-radius:16px;background:#11151d">
+        <p style="margin:0 0 12px;color:#a78bfa;font-size:11px;font-weight:700;letter-spacing:1.2px">${content.eyebrow}</p>
+        <h1 style="margin:0 0 14px;font-size:26px;line-height:1.2">${content.title}</h1>
+        <p style="margin:0 0 24px;color:#c1c5d0;font-size:15px;line-height:1.65">${content.intro}</p>
+        <p style="margin:0 0 22px;padding:18px;border:1px solid #343044;border-radius:12px;background:#171522;color:#c4b5fd;text-align:center;font-size:34px;font-weight:800;letter-spacing:10px;font-variant-numeric:tabular-nums">${codeHtml}</p>
+        <p style="margin:0 0 18px;color:#a7adba;font-size:12px;line-height:1.6">Este código expira em aproximadamente ${expiryMinutes} minuto(s). Não compartilhe com ninguém.</p>
+        <p style="margin:0;padding-top:18px;border-top:1px solid #292e39;color:#a7adba;font-size:12px;line-height:1.6">${content.safety}</p>
+      </td></tr>
+      <tr><td align="center" style="padding:20px 12px 0;color:#777e8c;font-size:12px">MyCatalog · <a href="https://www.catalogmy.pro" style="color:#8f96a4;text-decoration:none">catalogmy.pro</a></td></tr>
+    </table>
+  </td></tr></table>
+</body></html>`;
+  return {
+    subject: content.subject,
+    html,
+    text: `${content.title}\n\n${content.intro}\n\nCódigo: ${otpCode}\n\nO código expira em aproximadamente ${expiryMinutes} minuto(s). Não compartilhe com ninguém.\n${content.safety}\n\nMyCatalog · https://www.catalogmy.pro`,
+  };
+}
+
 async function readBody(request: Request): Promise<Buffer> {
   const declaredLength = Number(request.headers.get("content-length"));
   if (Number.isFinite(declaredLength) && declaredLength > MAX_BODY_BYTES) {
@@ -331,7 +428,7 @@ async function readBody(request: Request): Promise<Buffer> {
 }
 
 async function sendWithResend(
-  event: MagicLinkEvent,
+  event: MagicLinkEvent | OtpEvent,
   content: EmailContent,
   apiKey: string,
   fetchImpl: typeof fetch
@@ -422,8 +519,18 @@ export async function handleNeonAuthEmailWebhook(
       throw new NeonWebhookError(400, "Cabeçalhos e evento não correspondem.");
     }
 
-    const event = parseMagicLinkEvent(payload, authBaseUrl, now());
-    const content = renderMagicLinkEmail(event.event_data.link_type, event.event_data.link_url);
+    if (!isRecord(payload)) throw new NeonWebhookError(400, "Evento de autenticação inválido.");
+    let event: MagicLinkEvent | OtpEvent;
+    let content: EmailContent;
+    if (payload.event_type === "send.magic_link") {
+      event = parseMagicLinkEvent(payload, authBaseUrl, now());
+      content = renderMagicLinkEmail(event.event_data.link_type, event.event_data.link_url);
+    } else if (payload.event_type === "send.otp") {
+      event = parseOtpEvent(payload, now());
+      content = renderOtpEmail(event.event_data.otp_type, event.event_data.otp_code, event.event_data.expires_at);
+    } else {
+      throw new NeonWebhookError(400, "Evento de autenticação não suportado.");
+    }
     await sendWithResend(event, content, resendApiKey, fetchImpl);
     return Response.json({ success: true }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {

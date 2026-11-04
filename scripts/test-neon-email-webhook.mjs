@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   handleNeonAuthEmailWebhook,
   renderMagicLinkEmail,
+  renderOtpEmail,
 } from "../lib/auth/neon-email-webhook.ts";
 
 const NOW = Date.parse("2026-11-04T12:00:00.000Z");
@@ -21,6 +22,21 @@ function makeEvent(linkType = "forget-password", eventId = "evt_123") {
       link_type: linkType,
       link_url: `${AUTH_BASE}/magic-link?token=secret-token&callbackURL=https%3A%2F%2Fwww.catalogmy.pro%2Freset-password`,
       expires_at: new Date(NOW + 15 * 60_000).toISOString(),
+    },
+  };
+}
+
+function makeOtpEvent(otpType = "email-verification", eventId = "evt_otp_123") {
+  return {
+    event_id: eventId,
+    event_type: "send.otp",
+    timestamp: new Date(NOW).toISOString(),
+    user: { email: "person@example.com" },
+    event_data: {
+      otp_code: "123456",
+      otp_type: otpType,
+      delivery_preference: "email",
+      expires_at: new Date(NOW + 5 * 60_000).toISOString(),
     },
   };
 }
@@ -96,6 +112,36 @@ test("all magic-link types select their own subject, CTA, and copy", () => {
   }
 });
 
+test("send.otp sends a distinct email for each supported purpose without logging or altering the code", async () => {
+  for (const [type, subject] of [
+    ["email-verification", "Seu código de confirmação do MyCatalog"],
+    ["forget-password", "Seu código para redefinir a senha do MyCatalog"],
+    ["sign-in", "Seu código de acesso ao MyCatalog"],
+  ]) {
+    const event = makeOtpEvent(type, `evt_${type}`);
+    let sent;
+    const response = await handleNeonAuthEmailWebhook(makeRequest(event), dependencies(async (_url, init) => {
+      sent = { body: JSON.parse(init.body), idempotencyKey: init.headers["Idempotency-Key"] };
+      return Response.json({ id: "email_otp" }, { status: 200 });
+    }));
+    assert.equal(response.status, 200);
+    assert.equal(sent.body.subject, subject);
+    assert.equal(sent.body.to[0], event.user.email);
+    assert.match(sent.body.html, /123456/);
+    assert.match(sent.body.text, /Código: 123456/);
+    assert.equal(sent.body.html.includes("/magic-link"), false);
+    assert.equal(sent.idempotencyKey, `neon-auth/${event.event_id}`);
+  }
+});
+
+test("OTP rendering uses a purpose-specific template", () => {
+  const rendered = renderOtpEmail("email-verification", "654321", new Date(NOW + 5 * 60_000).toISOString());
+  assert.equal(rendered.subject, "Seu código de confirmação do MyCatalog");
+  assert.match(rendered.html, /CONFIRMAÇÃO DE E-MAIL/);
+  assert.match(rendered.text, /654321/);
+  assert.doesNotMatch(rendered.html, /\/magic-link/);
+});
+
 test("rejects an invalid signature without sending email", async () => {
   const event = makeEvent();
   const request = makeRequest(event);
@@ -129,8 +175,8 @@ test("rejects unsupported events and unsafe or expired Neon links without sendin
     called = true;
     return Response.json({});
   };
-  const otp = { ...makeEvent(), event_type: "send.otp" };
-  assert.equal((await handleNeonAuthEmailWebhook(makeRequest(otp), dependencies(send))).status, 400);
+  const unsupported = { ...makeEvent(), event_type: "send.other" };
+  assert.equal((await handleNeonAuthEmailWebhook(makeRequest(unsupported), dependencies(send))).status, 400);
 
   for (const change of [
     (event) => { event.event_data.link_url = "https://attacker.example/reset?token=x"; },
@@ -141,6 +187,22 @@ test("rejects unsupported events and unsafe or expired Neon links without sendin
     assert.equal((await handleNeonAuthEmailWebhook(makeRequest(event), dependencies(send))).status, 400);
   }
   assert.equal(called, false);
+});
+
+test("rejects OTP purposes, channels, codes, and expirations outside the supported contract", async () => {
+  const send = async () => Response.json({});
+  const mutations = [
+    (event) => { event.event_data.otp_type = "change-email"; },
+    (event) => { event.event_data.delivery_preference = "sms"; },
+    (event) => { event.event_data.delivery_preference = "push"; },
+    (event) => { event.event_data.otp_code = "12345"; },
+    (event) => { event.event_data.expires_at = new Date(NOW - 1).toISOString(); },
+  ];
+  for (const mutate of mutations) {
+    const event = makeOtpEvent();
+    mutate(event);
+    assert.equal((await handleNeonAuthEmailWebhook(makeRequest(event), dependencies(send))).status, 400);
+  }
 });
 
 test("maps transient Resend failures to retryable 503 and does not expose provider details", async () => {

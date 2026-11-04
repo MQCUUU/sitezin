@@ -293,6 +293,177 @@
     color: var(--accent);
     background: color-mix(in srgb, var(--accent) 6%, transparent);
 }
+
+.verify-card {
+    position: relative;
+    overflow: hidden;
+}
+.verify-card::before {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 15%, transparent));
+    content: "";
+}
+.verify-icon {
+    width: 54px;
+    height: 54px;
+    margin: 7px 0 17px;
+    display: grid;
+    place-items: center;
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+    color: var(--accent);
+}
+.verify-icon.is-verified {
+    border-color: color-mix(in srgb, #43d99b 35%, var(--border));
+    background: color-mix(in srgb, #43d99b 12%, var(--panel));
+    color: #43d99b;
+}
+.verify-eyebrow {
+    margin: 0 0 5px;
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .12em;
+}
+.verify-copy {
+    margin: 0;
+    color: var(--muted);
+    font-size: var(--mc-fs-sm);
+    line-height: 1.6;
+}
+.verify-code-fieldset {
+    min-width: 0;
+    margin: 3px 0 0;
+    padding: 0;
+    border: 0;
+}
+.verify-code-fieldset legend {
+    margin-bottom: 8px;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+    font-weight: 800;
+}
+.verify-code-inputs {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: clamp(6px, 2vw, 10px);
+}
+.verify-code-inputs input {
+    width: 100%;
+    min-width: 0;
+    height: clamp(47px, 11vw, 58px);
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    outline: 0;
+    background: var(--bg);
+    color: var(--text);
+    text-align: center;
+    font-family: inherit;
+    font-size: clamp(20px, 6vw, 25px);
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+    transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.verify-code-inputs input:focus {
+    border-color: color-mix(in srgb, var(--accent) 75%, var(--border));
+    background: color-mix(in srgb, var(--accent) 5%, var(--bg));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.verify-code-inputs input:disabled {
+    opacity: .65;
+}
+.verify-message {
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 9px;
+    font-size: var(--mc-fs-xs);
+    line-height: 1.5;
+}
+.verify-message.is-error {
+    border: 1px solid color-mix(in srgb, #ff6868 30%, transparent);
+    background: color-mix(in srgb, #ff6868 8%, transparent);
+    color: #ff9b9b;
+}
+.verify-message.is-notice {
+    border: 1px solid color-mix(in srgb, #43d99b 30%, transparent);
+    background: color-mix(in srgb, #43d99b 8%, transparent);
+    color: #85e5bc;
+}
+.verify-resend {
+    margin-top: 20px;
+    padding-top: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 9px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+}
+.verify-resend button {
+    min-height: 34px;
+    padding: 0 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+}
+.verify-resend button:disabled {
+    color: var(--muted);
+    cursor: not-allowed;
+    opacity: .72;
+}
+.verify-success {
+    margin-top: 20px;
+    padding: 13px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid color-mix(in srgb, #43d99b 30%, transparent);
+    border-radius: 11px;
+    background: color-mix(in srgb, #43d99b 8%, transparent);
+    color: #85e5bc;
+    font-size: var(--mc-fs-xs);
+    line-height: 1.5;
+}
+.verify-success strong {
+    color: var(--text);
+    overflow-wrap: anywhere;
+}
+.verify-footer {
+    margin-top: 20px;
+    text-align: center;
+}
+.verify-footer a {
+    color: var(--accent);
+    font-size: var(--mc-fs-sm);
+    font-weight: 850;
+    text-decoration: none;
+}
+@media (max-width: 520px) {
+    .verify-card {
+        padding: 24px 18px;
+    }
+    .verify-resend {
+        align-items: stretch;
+        flex-direction: column;
+    }
+    .verify-resend button {
+        width: 100%;
+    }
+}
 .auth-success-message strong {
     color: var(--text);
     font-size: var(--mc-fs-xs);

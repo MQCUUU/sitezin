@@ -37,6 +37,7 @@ import {
   useToast,
 } from "@/components/ToastProvider";
 import { authErrorMessage, authFormPasswordError, PASSWORD_HINT } from "@/lib/auth-client";
+import { clearPendingSignup, readPendingSignup, savePendingSignup, savePendingVerificationEmail } from "@/lib/auth/pending-signup";
 import { describeIntent, peekPendingAction, takePendingAction } from "@/lib/auth/pending-action";
 import { runLibraryAction } from "@/lib/library/actions";
 import { mediaStatusLabel } from "@/lib/media-status";
@@ -214,13 +215,6 @@ export function AuthPage({
 
   const [username, setUsername] = useState("");
 
-  /*
-   * Fase 0 — cadastro em dois passos (conta no Auth, depois perfil no banco).
-   * Se o perfil falhar, a conta JÁ existe e a sessão já foi aberta: o próximo
-   * envio só tenta o perfil de novo (idempotente), nunca recria a conta.
-   */
-  const [accountCreated, setAccountCreated] = useState(false);
-
   const [
     password,
     setPassword,
@@ -325,57 +319,28 @@ export function AuthPage({
       if (
         isSignup
       ) {
-        if (!accountCreated) {
-          const usernameResponse = await fetch(`/api/auth/username?username=${encodeURIComponent(username)}`, { cache: "no-store" });
-          const usernameData = await usernameResponse.json();
-          if (!usernameResponse.ok || !usernameData.available) {
-            throw new Error(usernameData.error || "Este @ de usuário já está em uso.");
-          }
-
-          const res = await authClient.signUp.email({
-            email: email.trim(),
-            password,
-            name: name.trim(),
-          });
-
-          if (res.error) {
-            throw new Error(authErrorMessage(res.error, "Erro ao criar conta."));
-          }
-
-          setAccountCreated(true);
+        const usernameResponse = await fetch(`/api/auth/username?username=${encodeURIComponent(username)}`, { cache: "no-store" });
+        const usernameData = await usernameResponse.json();
+        if (!usernameResponse.ok || !usernameData.available) {
+          throw new Error(usernameData.error || "Este @ de usuário já está em uso.");
         }
 
-        const profileRes = await fetch("/api/auth/profile", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: name.trim(),
-            username,
-          }),
+        const res = await authClient.signUp.email({
+          email: email.trim(),
+          password,
+          name: name.trim(),
         });
 
-        const profileData = await profileRes.json().catch(() => ({}));
-        if (!profileRes.ok) {
-          // A conta existe: a mensagem diz isso e como concluir (sem recriar a conta).
-          throw new Error(
-            profileRes.status === 401
-              ? "Sua conta foi criada, mas a sessão não foi confirmada. Entre com seu e-mail e senha para concluir o perfil."
-              : `Sua conta foi criada, mas não conseguimos salvar seu perfil${profileData.error ? ` (${profileData.error})` : ""}. Clique em "Concluir cadastro" para tentar de novo.`
-          );
+        if (res.error) {
+          throw new Error(authErrorMessage(res.error, "Erro ao criar conta."));
         }
 
-        toast.success(
-          "Conta criada com sucesso"
-        );
-
-        await completePendingAction();
-
-        router.replace(
-          returnTo
-        );
-
+        const pendingSignup = { email: email.trim(), name: name.trim(), username: username.trim(), next: returnTo };
+        savePendingSignup(pendingSignup);
+        savePendingVerificationEmail(email);
+        toast.success("Conta criada. Confira seu e-mail para buscar o código de confirmação.");
+        router.replace(`/verify-email?next=${encodeURIComponent(returnTo)}`);
         router.refresh();
-
         return;
       }
 
@@ -385,7 +350,29 @@ export function AuthPage({
       });
 
       if (res.error) {
+        const errorCode = typeof res.error.code === "string" ? res.error.code.toUpperCase() : "";
+        if (errorCode === "EMAIL_NOT_VERIFIED" || errorCode === "EMAIL_NOT_CONFIRMED") {
+          savePendingVerificationEmail(email);
+          router.replace(`/verify-email?next=${encodeURIComponent(returnTo)}`);
+          return;
+        }
         throw new Error(authErrorMessage(res.error, "E-mail ou senha incorretos."));
+      }
+
+      if (res.data?.user?.emailVerified !== true) {
+        savePendingVerificationEmail(email);
+        router.replace(`/verify-email?next=${encodeURIComponent(returnTo)}`);
+        return;
+      }
+
+      const pendingSignup = readPendingSignup(email);
+      if (pendingSignup) {
+        const profileRes = await fetch("/api/auth/profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: pendingSignup.name, username: pendingSignup.username }),
+        });
+        if (profileRes.ok) clearPendingSignup();
       }
 
       toast.success(
@@ -832,11 +819,7 @@ export function AuthPage({
                 />
               )}
 
-              {isSignup
-                ? accountCreated
-                  ? "Concluir cadastro"
-                  : "Criar minha conta"
-                : "Entrar"}
+              {isSignup ? "Criar minha conta" : "Entrar"}
             </button>
           </form>
 

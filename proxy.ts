@@ -87,14 +87,26 @@ const baseUrl = (
  * resposta definitiva; na dúvida a página abre e as APIs (que sempre exigem
  * sessão) respondem 401 normalmente.
  */
-type SessionCheck = "authenticated" | "guest" | "unknown";
+type SessionCheck = "authenticated" | "unverified" | "guest" | "unknown";
 
 async function checkSession(request: NextRequest): Promise<SessionCheck> {
+  const cookie = request.cookies.get("__Secure-neon-auth.local.session_data")?.value || request.cookies.get("neon-auth.local.session_data")?.value;
+  if (cookie) {
+    try {
+      const result = await validateSessionData(cookie, secret);
+      if (result.valid && result.payload?.session) {
+        const user = result.payload.user as { emailVerified?: boolean } | undefined;
+        if (user?.emailVerified === false) return "unverified";
+        if (user?.emailVerified === true) return "authenticated";
+        return "unverified";
+      }
+    } catch { /* Fall through to the upstream session check. */ }
+  }
   const authenticated = await isSessionAuthenticated(request);
-  return authenticated === null ? "unknown" : authenticated ? "authenticated" : "guest";
+  return authenticated === null ? "unknown" : authenticated === "unverified" ? "unverified" : authenticated ? "authenticated" : "guest";
 }
 
-async function isSessionAuthenticated(request: NextRequest): Promise<boolean | null> {
+async function isSessionAuthenticated(request: NextRequest): Promise<boolean | null | "unverified"> {
   // 1. Fast Path: Assinatura criptográfica HMAC do session_data
   const sessionDataCookie =
     request.cookies.get("__Secure-neon-auth.local.session_data")?.value ||
@@ -133,7 +145,8 @@ async function isSessionAuthenticated(request: NextRequest): Promise<boolean | n
     if (!res.ok) return null; // 429/5xx: não sabemos
     const data = await res.json().catch(() => undefined);
     if (data === undefined) return null;
-    return Boolean(data && data.session && data.user);
+    if (!data?.session || !data?.user) return false;
+    return data.user.emailVerified === true ? true : "unverified";
   } catch {
     return null; // timeout/rede: não sabemos
   }
@@ -276,6 +289,22 @@ export async function proxy(request: NextRequest) {
 
   const session = await checkSession(request);
   const authenticated = session === "authenticated";
+
+  if (session === "unverified" && (isPrivate || isGuestOnly)) {
+    const verificationUrl = request.nextUrl.clone();
+    verificationUrl.pathname = "/verify-email";
+    verificationUrl.search = "";
+    const sessionData = request.cookies.get("__Secure-neon-auth.local.session_data")?.value || request.cookies.get("neon-auth.local.session_data")?.value;
+    if (sessionData) {
+      try {
+        const result = await validateSessionData(sessionData, secret);
+        const email = result.valid ? (result.payload?.user as { email?: string } | undefined)?.email : undefined;
+        if (email) verificationUrl.searchParams.set("email", email);
+      } catch { /* A tela permite informar o endereço manualmente. */ }
+    }
+    if (isPrivate) verificationUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
+    return NextResponse.redirect(verificationUrl);
+  }
 
   /*
    * PÁGINA PRIVADA SEM SESSÃO (só com resposta definitiva — ver checkSession)

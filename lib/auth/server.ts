@@ -41,13 +41,22 @@ const providerGetSession = auth.getSession;
 
 export async function sessionStillValid(sessionId: string | undefined, userId: string): Promise<boolean> {
   const sql = getDb();
-  const rows = sessionId
-    ? await sql`
-        SELECT 1 FROM neon_auth.session
-        WHERE id = ${sessionId} AND "userId" = ${userId} AND "expiresAt" > now()
-        LIMIT 1
-      `
-    : await sql`SELECT 1 FROM neon_auth."user" WHERE id = ${userId} LIMIT 1`;
+  const rows = await sql`
+    SELECT 1
+    FROM neon_auth."user" AS auth_user
+    WHERE auth_user.id = ${userId}
+      AND auth_user."emailVerified" IS TRUE
+      AND (
+        ${sessionId ?? null}::text IS NULL
+        OR EXISTS (
+          SELECT 1 FROM neon_auth.session
+          WHERE id = ${sessionId ?? null}
+            AND "userId" = ${userId}
+            AND "expiresAt" > now()
+        )
+      )
+    LIMIT 1
+  `;
 
   return rows.length > 0;
 }
