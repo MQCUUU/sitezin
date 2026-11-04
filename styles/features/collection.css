@@ -471,7 +471,7 @@
     right: 8px;
     bottom: 8px;
 }
-/* Aqui o canto inferior direito é da ordem (#n): o status não pode chegar até ele. */
+/* Reserva só a largura do selo de ordem e um pequeno intervalo, sem cortar o status. */
 .collection-card-poster .mc-tag-slot--bottom {
-    max-width: calc(100% - 56px);
+    max-width: calc(100% - 40px);
 }

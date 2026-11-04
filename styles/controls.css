@@ -161,8 +161,10 @@
     left: 6px;
   }
 
-  .main .mc-tag-slot--bottom {
-    bottom: 6px;
+  .main .mc-tag-slot.mc-tag-slot--bottom {
+    bottom: 0;
+    left: 0;
+    max-width: 100%;
   }
 
   .main .mc-tag {

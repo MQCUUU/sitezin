@@ -37,6 +37,7 @@ import {
   useToast,
 } from "@/components/ToastProvider";
 import { authErrorMessage, authFormPasswordError, PASSWORD_HINT, requiresEmailVerification } from "@/lib/auth-client";
+import { isLocalDevelopmentHost } from "@/lib/auth/local-development";
 import { clearPendingSignup, clearPendingVerificationError, readPendingSignup, savePendingSignup, savePendingVerificationEmail, savePendingVerificationError } from "@/lib/auth/pending-signup";
 import { describeIntent, peekPendingAction, takePendingAction } from "@/lib/auth/pending-action";
 import { runLibraryAction } from "@/lib/library/actions";
@@ -257,6 +258,12 @@ export function AuthPage({
     );
 
   async function redirectToVerification(cleanEmail: string) {
+    if (isLocalDevelopmentHost(window.location.hostname)) {
+      router.replace(returnTo);
+      router.refresh();
+      return;
+    }
+
     let sendFailed = false;
     try {
       const otp = await authClient.emailOtp.sendVerificationOtp({
@@ -359,6 +366,27 @@ export function AuthPage({
 
         const pendingSignup = { email: email.trim(), name: name.trim(), username: username.trim(), next: returnTo };
         savePendingSignup(pendingSignup);
+
+        if (isLocalDevelopmentHost(window.location.hostname)) {
+          try {
+            const profileRes = await fetch("/api/auth/profile", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: pendingSignup.name, username: pendingSignup.username }),
+            });
+            if (profileRes.ok) {
+              clearPendingSignup(pendingSignup.email);
+              window.dispatchEvent(new Event("mycatalog:account-updated"));
+            }
+          } catch {
+            // Mantém o cadastro pendente para concluir o perfil no próximo login local.
+          }
+          toast.success("Conta criada. A confirmação de e-mail fica desativada no localhost.");
+          router.replace(returnTo);
+          router.refresh();
+          return;
+        }
+
         await redirectToVerification(email.trim().toLowerCase());
         toast.success("Conta criada. Confira seu e-mail para buscar o código de confirmação.");
         return;
@@ -371,13 +399,17 @@ export function AuthPage({
 
       if (res.error) {
         if (requiresEmailVerification(res.error)) {
+          if (isLocalDevelopmentHost(window.location.hostname)) {
+            setError("O Neon Auth recusou esta conta ainda não verificada. No localhost a tela de código não abre; use uma conta confirmada para entrar.");
+            return;
+          }
           await redirectToVerification(email.trim().toLowerCase());
           return;
         }
         throw new Error(authErrorMessage(res.error, "E-mail ou senha incorretos."));
       }
 
-      if (res.data?.user?.emailVerified !== true) {
+      if (res.data?.user?.emailVerified !== true && !isLocalDevelopmentHost(window.location.hostname)) {
         await redirectToVerification(email.trim().toLowerCase());
         return;
       }
@@ -414,6 +446,10 @@ export function AuthPage({
       error
     ) {
       if (!isSignup && requiresEmailVerification(error as { code?: string; message?: string; status?: number })) {
+        if (isLocalDevelopmentHost(window.location.hostname)) {
+          setError("O Neon Auth recusou esta conta ainda não verificada. No localhost a tela de código não abre; use uma conta confirmada para entrar.");
+          return;
+        }
         await redirectToVerification(email.trim().toLowerCase());
         return;
       }

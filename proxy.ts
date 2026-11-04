@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { validateSessionData } from "@neondatabase/auth/server";
 
 import { getAuthCookieSecret } from "@/lib/auth/cookie-secret";
+import { isLocalDevelopmentHost } from "@/lib/auth/local-development";
 import { episodeExists, listAccess, personExists, profileExists, titleExists } from "@/lib/resource-exists";
 import { allowedOriginsFromEnv, checkApiMutation } from "@/lib/api-guard";
 import { isPrivatePath, pathMatches } from "@/lib/private-routes";
@@ -278,6 +279,7 @@ export async function proxy(request: NextRequest) {
 
   const isPrivate = isPrivatePage(pathname);
   const isGuestOnly = isGuestOnlyPage(pathname);
+  const localDevelopment = isLocalDevelopmentHost(request.nextUrl.hostname);
 
   // Páginas públicas comuns não precisam de verificação de autenticação no middleware
   if (!isPrivate && !isGuestOnly) {
@@ -288,9 +290,9 @@ export async function proxy(request: NextRequest) {
   }
 
   const session = await checkSession(request);
-  const authenticated = session === "authenticated";
+  const authenticated = session === "authenticated" || (localDevelopment && session === "unverified");
 
-  if (session === "unverified" && (isPrivate || isGuestOnly)) {
+  if (!localDevelopment && session === "unverified" && (isPrivate || isGuestOnly)) {
     const verificationUrl = request.nextUrl.clone();
     verificationUrl.pathname = "/verify-email";
     verificationUrl.search = "";

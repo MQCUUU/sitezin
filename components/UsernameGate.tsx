@@ -2,8 +2,8 @@
 
 
 import "@/styles/features/username-gate.css";
-import { fetchProfileMe } from "@/lib/profile-me";
-import { FormEvent, useEffect, useState } from "react";
+import { fetchProfileMe, invalidateProfileMe } from "@/lib/profile-me";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useModal } from "@/hooks/useModal";
 import { usePathname } from "next/navigation";
 import { AtSign, Loader2 } from "lucide-react";
@@ -15,6 +15,8 @@ const AUTH_PATHS = ["/login", "/signup", "/verify-email", "/forgot-password", "/
 export function UsernameGate() {
   const pathname = usePathname();
   const { data: session, isPending } = authClient.useSession();
+  const profileUserId = session?.user?.id ?? null;
+  const previousProfileUserId = useRef<string | null>(null);
   const [required, setRequired] = useState(false);
   const [username, setUsername] = useState("");
   const [saving, setSaving] = useState(false);
@@ -23,6 +25,12 @@ export function UsernameGate() {
   const gateRef = useModal(required, () => {}, true, "input");
 
   useEffect(() => {
+    if (previousProfileUserId.current !== profileUserId) {
+      previousProfileUserId.current = profileUserId;
+      invalidateProfileMe();
+      setRequired(false);
+    }
+
     if (AUTH_PATHS.some((path) => pathname.startsWith(path)) || isPending) {
       setRequired(false);
       return;
@@ -35,6 +43,7 @@ export function UsernameGate() {
 
     const pendingSignup = readPendingSignup(userEmail);
     setUsername(pendingSignup?.username || "");
+    if (pendingSignup?.username) setRequired(false);
     let cancelled = false;
     let checkVersion = 0;
     const checkProfile = () => {
@@ -44,26 +53,59 @@ export function UsernameGate() {
         // Auxiliar: sem a leitura do perfil, o aviso de @ pendente só não aparece agora.
         .catch((error) => console.warn("[UsernameGate]", error instanceof Error ? error.message : error));
     };
-    checkProfile();
+
+    const restorePendingProfile = async () => {
+      if (pendingSignup?.username) {
+        try {
+          const response = await fetch("/api/auth/profile", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: pendingSignup.name, username: pendingSignup.username }),
+          });
+          if (response.ok) {
+            clearPendingSignup(pendingSignup.email);
+            if (!cancelled) setRequired(false);
+            window.dispatchEvent(new Event("mycatalog:account-updated"));
+            return;
+          }
+        } catch {
+          // Se a sessão ainda estiver sincronizando, o gate continua com o @ já escolhido.
+        }
+      }
+      checkProfile();
+    };
+
+    void restorePendingProfile();
     window.addEventListener("mycatalog:account-updated", checkProfile);
     return () => {
       cancelled = true;
       window.removeEventListener("mycatalog:account-updated", checkProfile);
     };
-  }, [pathname, isPending, session?.user?.email]);
+  }, [pathname, isPending, profileUserId, session?.user?.email]);
 
   async function submit(event: FormEvent) {
     event.preventDefault(); setError("");
     if (!/^[a-z0-9_]{3,24}$/.test(username)) return setError("Use de 3 a 24 letras, números ou _.");
     setSaving(true);
-    const availability = await fetch(`/api/auth/username?username=${encodeURIComponent(username)}`, { cache: "no-store" });
-    const available = await availability.json();
-    if (!availability.ok || !available.available) { setSaving(false); return setError(available.error || "Esse @ já está em uso."); }
-    const response = await fetch("/api/profile/username", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username }) });
-    const data = await response.json(); setSaving(false);
-    if (!response.ok) return setError(data.error || "Não foi possível salvar.");
-    clearPendingSignup(session?.user?.email);
-    setRequired(false); window.dispatchEvent(new Event("mycatalog:account-updated"));
+    try {
+      const response = await fetch("/api/profile/username", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(data.error || "Não foi possível salvar.");
+        return;
+      }
+      clearPendingSignup(session?.user?.email);
+      setRequired(false);
+      window.dispatchEvent(new Event("mycatalog:account-updated"));
+    } catch {
+      setError("Não foi possível salvar agora. Confira sua conexão e tente novamente.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (!required) return null;

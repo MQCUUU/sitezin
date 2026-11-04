@@ -1,6 +1,8 @@
 import { createNeonAuth } from "@neondatabase/auth/next/server";
+import { headers } from "next/headers";
 
 import { getAuthCookieSecret } from "@/lib/auth/cookie-secret";
+import { hostnameFromHeader, isLocalDevelopmentHost } from "@/lib/auth/local-development";
 import { getDb } from "@/lib/db/neon";
 
 const baseUrl =
@@ -39,13 +41,25 @@ type ProviderSession = {
 
 const providerGetSession = auth.getSession;
 
+async function isLocalDevelopmentRequest(): Promise<boolean> {
+  if (process.env.NODE_ENV === "production") return false;
+  try {
+    const requestHeaders = await headers();
+    const host = requestHeaders.get("host") || requestHeaders.get("x-forwarded-host");
+    return isLocalDevelopmentHost(hostnameFromHeader(host));
+  } catch {
+    return false;
+  }
+}
+
 export async function sessionStillValid(sessionId: string | undefined, userId: string): Promise<boolean> {
   const sql = getDb();
+  const allowUnverifiedLocal = await isLocalDevelopmentRequest();
   const rows = await sql`
     SELECT 1
     FROM neon_auth."user" AS auth_user
     WHERE auth_user.id = ${userId}
-      AND auth_user."emailVerified" IS TRUE
+      AND (auth_user."emailVerified" IS TRUE OR ${allowUnverifiedLocal})
       AND (
         ${sessionId ?? null}::text IS NULL
         OR EXISTS (

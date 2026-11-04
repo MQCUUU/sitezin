@@ -17,6 +17,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import { createPortal } from "react-dom";
 
 import { MEDIA_STATUS_OPTIONS, mediaStatusLabel } from "@/lib/media-status";
+import { MediaStatusIcon } from "@/components/media/MediaBadges";
 
 /*
  * Ações rápidas do pôster: prévia, marcar como assistido, status/adicionar e
@@ -340,8 +341,13 @@ export function MediaPosterActions({
                     if (!selected) onChangeStatus?.(option.value);
                   }}
                 >
-                  <span className={`mc-pa-dot mc-pa-dot--${option.tone}`} aria-hidden="true" />
-                  <span>{option.label}</span>
+                  <span className={`mc-status-menu-icon mc-status-level--${option.group}`} aria-hidden="true">
+                    <MediaStatusIcon status={option.value} size={14} />
+                  </span>
+                  <span className="mc-pa-menu-copy">
+                    <span>{option.label}</span>
+                    <small>{option.groupLabel}</small>
+                  </span>
                   {selected && <Check size={14} aria-hidden="true" />}
                 </button>
               );

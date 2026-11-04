@@ -1,8 +1,7 @@
 import "@/styles/features/media.css";
-import { Check, CircleMinus, Clock, Pause, Play, Repeat, RotateCcw, Film, Tv } from "lucide-react";
-import type { ReactNode } from "react";
+import { Bookmark, Check, CheckCheck, Film, Pause, Play, Repeat, Tv, X as XIcon } from "lucide-react";
 
-import { mediaStatusLabel, mediaStatusTone } from "@/lib/media-status";
+import { mediaStatusGroup, mediaStatusLabel } from "@/lib/media-status";
 
 /*
  * V2.3 — tags de pôster PADRÃO do site (tipo + status). Substitui `.badge`,
@@ -11,15 +10,19 @@ import { mediaStatusLabel, mediaStatusTone } from "@/lib/media-status";
  * Busca, Coleção e Home.
  */
 
-const STATUS_ICON: Record<string, ReactNode> = {
-  want: <Clock size={12} aria-hidden="true" />,
-  watching: <Play size={12} fill="currentColor" aria-hidden="true" />,
-  watched: <Check size={12} aria-hidden="true" />,
-  rewatching: <RotateCcw size={12} aria-hidden="true" />,
-  rewatched: <Repeat size={12} aria-hidden="true" />,
-  paused: <Pause size={12} fill="currentColor" aria-hidden="true" />,
-  dropped: <CircleMinus size={12} aria-hidden="true" />,
-};
+export function MediaStatusIcon({ status, size = 14 }: { status?: string | null; size?: number }) {
+  const props = { size, "aria-hidden": true as const };
+  switch (status) {
+    case "want": return <Bookmark {...props} />;
+    case "watching": return <Play {...props} fill="currentColor" />;
+    case "rewatching": return <Repeat {...props} />;
+    case "paused": return <Pause {...props} fill="currentColor" />;
+    case "watched": return <Check {...props} />;
+    case "rewatched": return <CheckCheck {...props} />;
+    case "dropped": return <XIcon {...props} />;
+    default: return <Check {...props} />;
+  }
+}
 
 export function MediaTypeTag({ type }: { type: "movie" | "tv" | string }) {
   const isTv = type === "tv";
@@ -41,9 +44,24 @@ export function MediaStatusTag({ status }: { status?: string | null }) {
   if (!status) return null;
 
   return (
-    <span className={`mc-tag mc-tag--status mc-tag--${mediaStatusTone(status)}`}>
-      {STATUS_ICON[status] ?? <Check size={12} aria-hidden="true" />}
-      {mediaStatusLabel(status)}
+    <span className={`mc-tag mc-tag--status mc-status-level--${mediaStatusGroup(status)}`}>
+      <MediaStatusIcon status={status} size={13} />
+      <span>{mediaStatusLabel(status)}</span>
+    </span>
+  );
+}
+
+function MediaPosterStatusChip({ status }: { status: string }) {
+  const label = mediaStatusLabel(status);
+  return (
+    <span
+      className={`mc-status-chip mc-status-level--${mediaStatusGroup(status)}`}
+      role="img"
+      aria-label={label}
+      title={label}
+    >
+      <MediaStatusIcon status={status} size={14} />
+      <span className="mc-status-chip-label" aria-hidden="true">{label}</span>
     </span>
   );
 }
@@ -63,7 +81,7 @@ export function MediaPosterTags({
       </span>
       {status ? (
         <span className="mc-tag-slot mc-tag-slot--bottom">
-          <MediaStatusTag status={status} />
+          <MediaPosterStatusChip status={status} />
         </span>
       ) : null}
     </>

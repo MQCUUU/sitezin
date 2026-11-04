@@ -49,6 +49,135 @@
   color: color-mix(in srgb, var(--tag) 70%, #fff);
 }
 
+/* Status colors follow the user's accent and neutral surfaces only. */
+.mc-tag--status {
+  gap: 6px;
+  font-weight: 600;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.mc-tag--status > svg {
+  color: inherit;
+}
+.mc-status-level--progress {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent, #fff);
+}
+.mc-status-level--waiting {
+  border: 1.5px solid var(--accent);
+  background: rgba(0, 0, 0, 0.78);
+  color: var(--accent);
+}
+.mc-status-level--completed {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+}
+.mc-status-level--ended {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.mc-status-chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: max-content;
+  min-width: 22px;
+  max-width: 22px;
+  height: 22px;
+  min-height: 22px;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 0 8px 0 0;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  transition: max-width 180ms ease, gap 180ms ease, padding 180ms ease;
+}
+.mc-status-chip > svg {
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  margin-left: 2.5px;
+}
+.mc-status-chip-label {
+  display: inline-block;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-width 180ms ease, opacity 180ms ease;
+}
+.mc-status-menu-icon {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: 0 0 24px;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+.card:hover .mc-status-chip,
+.card:focus-within .mc-status-chip,
+.mc-pa-host:hover .mc-status-chip,
+.mc-pa-host:focus-within .mc-status-chip,
+.collection-card:hover .mc-status-chip,
+.collection-card:focus-within .mc-status-chip {
+  width: max-content;
+  max-width: 100%;
+  gap: 4px;
+  padding: 0 7px 0 0;
+}
+.card:hover .mc-status-chip-label,
+.card:focus-within .mc-status-chip-label,
+.mc-pa-host:hover .mc-status-chip-label,
+.mc-pa-host:focus-within .mc-status-chip-label,
+.collection-card:hover .mc-status-chip-label,
+.collection-card:focus-within .mc-status-chip-label {
+  max-width: 80px;
+  opacity: 1;
+}
+@media (hover: none) {
+  .mc-status-chip,
+  .mc-status-chip-label {
+    transition: none;
+  }
+  .mc-status-chip {
+    width: max-content;
+    max-width: 22px;
+    gap: 0;
+    padding: 0;
+  }
+  .mc-status-chip-label {
+    max-width: 0;
+    opacity: 0;
+  }
+}
+.mc-status-chip.mc-status-level--progress,
+.mc-status-menu-icon.mc-status-level--progress {
+  border-color: var(--accent);
+}
+.mc-status-chip.mc-status-level--waiting,
+.mc-status-menu-icon.mc-status-level--waiting {
+  border: 1.5px solid var(--accent);
+}
+.mc-status-chip.mc-status-level--completed,
+.mc-status-menu-icon.mc-status-level--completed {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+.mc-status-chip.mc-status-level--ended,
+.mc-status-menu-icon.mc-status-level--ended {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
 .mc-tag--info {
   --tag: var(--mc-color-info, #4ea8de);
 }
