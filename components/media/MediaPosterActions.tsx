@@ -7,6 +7,7 @@ import {
   ChevronDown,
   Eye,
   Heart,
+  Info,
   ListPlus,
   Loader2,
   Plus,
@@ -18,8 +19,8 @@ import { createPortal } from "react-dom";
 import { MEDIA_STATUS_OPTIONS, mediaStatusLabel } from "@/lib/media-status";
 
 /*
- * V2.3 — ações rápidas do pôster PADRÃO do site: Ver rápido (olhinho),
- * Status/Adicionar (seta) e Curtir (coração). Uma única implementação para
+ * Ações rápidas do pôster: prévia, marcar como assistido, status/adicionar e
+ * curtir. Uma única implementação para
  * Biblioteca, Home, Descobrir, Para você, Busca e Coleção.
  *
  * O menu de status é renderizado em um PORTAL no <body> com posição `fixed`:
@@ -42,6 +43,8 @@ export type MediaPosterActionsProps = {
   favorite?: boolean;
   busy?: boolean;
   onPreview?: () => void;
+  /** Marcação rápida como assistido, independente de já estar na biblioteca. */
+  onMarkWatched?: () => void;
   /** Título fora da biblioteca: botão "+" (entra como Quero assistir). */
   onAdd?: () => void;
   onChangeStatus?: (status: string) => void;
@@ -66,6 +69,7 @@ export function MediaPosterActions({
   favorite = false,
   busy = false,
   onPreview,
+  onMarkWatched,
   onAdd,
   onChangeStatus,
   onToggleFavorite,
@@ -198,15 +202,31 @@ export function MediaPosterActions({
           <button
             type="button"
             className="mc-pa-btn"
-            title="Ver rápido"
-            aria-label={`Ver rápido: ${title}`}
+            title="Ver prévia"
+            aria-label={`Ver prévia: ${title}`}
             onClick={(event) => {
               stop(event);
               onPreview();
             }}
           >
-            <Eye size={16} aria-hidden="true" />
+            <Info size={16} aria-hidden="true" />
           </button>
+        )}
+
+        {onMarkWatched && !inLibrary && (
+            <button
+              type="button"
+              className="mc-pa-btn mc-pa-btn--watched"
+              title="Marcar como assistido"
+              aria-label={`Marcar ${title} como assistido`}
+              disabled={busy}
+              onClick={(event) => {
+                stop(event);
+                onMarkWatched();
+              }}
+            >
+              {busy ? <Loader2 size={16} className="spin" aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
+            </button>
         )}
 
         {inLibrary ? (

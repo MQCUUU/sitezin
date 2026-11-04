@@ -124,12 +124,16 @@ test("PUT parcial de privacidade não apaga as outras regras", () => {
     followers_visibility: "private",
     following_visibility: "followers",
     activity_visibility: "private",
+    ratings_visibility: "followers",
+    reviews_visibility: "private",
+    watched_titles_visibility: "followers",
     diary_visibility: "private",
     lists_visibility: "followers",
     likes_visibility: "private",
   };
   assert.deepEqual(mergeSocialSettings(current, { visibility: "public" }), { ...current, visibility: "public" });
   assert.deepEqual(mergeSocialSettings(current, { diary_visibility: "hack", follow_policy: "everyone" }), current, "inválido mantém o salvo");
+  assert.deepEqual(mergeSocialSettings(current, { ratings_visibility: "private" }), { ...current, ratings_visibility: "private" });
 });
 
 test("follow: automático só em perfil público com política padrão", () => {

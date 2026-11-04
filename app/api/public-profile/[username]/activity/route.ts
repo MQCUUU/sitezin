@@ -30,7 +30,7 @@ export async function GET(
   const sql = getDb();
 
   const profileRows = await sql`
-    SELECT id, visibility, is_public, activity_visibility
+    SELECT id, visibility, is_public, activity_visibility, watched_titles_visibility
     FROM public.profiles
     WHERE lower(username) = lower(${username})
     LIMIT 1
@@ -40,7 +40,7 @@ export async function GET(
     return NextResponse.json({ error: "Perfil não encontrado." }, { status: 404 });
   }
 
-  const profile = profileRows[0] as { id: string; visibility: string; is_public: boolean; activity_visibility: string };
+  const profile = profileRows[0] as { id: string; visibility: string; is_public: boolean; activity_visibility: string; watched_titles_visibility: string };
 
   const session = await auth.getSession().catch(() => null);
   const viewerId: string | null = session?.data?.user?.id || null;
@@ -62,6 +62,10 @@ export async function GET(
     isOwner,
     isAcceptedFollower: isFollower,
   });
+  const watchedTitlesVisible = canViewSection(profile, profile.watched_titles_visibility, {
+    isOwner,
+    isAcceptedFollower: isFollower,
+  });
 
   if (!visible) {
     return NextResponse.json(
@@ -79,7 +83,13 @@ export async function GET(
   const offset = (page - 1) * limit;
 
   const [totalRows, items] = await Promise.all([
-    sql`SELECT count(*)::int as total FROM public.activity_events WHERE user_id = ${profile.id} AND event_type <> 'library_removed'`,
+    sql`SELECT count(*)::int as total FROM public.activity_events
+      WHERE user_id = ${profile.id} AND event_type <> 'library_removed'
+        AND (${watchedTitlesVisible} OR NOT (
+          event_type IN ('watch_logged', 'season_completed', 'series_completed', 'rewatch_started')
+          OR (event_type = 'status_changed' AND metadata->>'to' IN ('watched', 'rewatched', 'rewatching'))
+          OR (event_type = 'library_added' AND metadata->>'status' IN ('watched', 'rewatched', 'rewatching'))
+        ))`,
     sql`
       SELECT
         ae.id,
@@ -93,6 +103,11 @@ export async function GET(
       WHERE ae.user_id = ${profile.id}
         -- Remoções da Biblioteca são organização privada, não atividade pública.
         AND ae.event_type <> 'library_removed'
+        AND (${watchedTitlesVisible} OR NOT (
+          ae.event_type IN ('watch_logged', 'season_completed', 'series_completed', 'rewatch_started')
+          OR (ae.event_type = 'status_changed' AND ae.metadata->>'to' IN ('watched', 'rewatched', 'rewatching'))
+          OR (ae.event_type = 'library_added' AND ae.metadata->>'status' IN ('watched', 'rewatched', 'rewatching'))
+        ))
       ORDER BY ae.occurred_at DESC
       LIMIT ${limit} OFFSET ${offset}
     `,

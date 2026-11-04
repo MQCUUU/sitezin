@@ -1,7 +1,7 @@
 /*
  * Recomendações sociais para o "Para você" (V2.9).
  *
- * Filtra e ranqueia títulos avaliados por perfis que o usuário segue.
+ * Filtra e ranqueia títulos avaliados por amigos (follow mútuo).
  * Proteção anti-"várzea" (mesmo se o usuário seguir 100 perfis):
  *   1. Ponto de corte rigoroso: nota pessoal >= 7.0 ou curtido. Notas baixas (<=6) são descartadas.
  *   2. Não recomenda o que o usuário já tem na Biblioteca, já assistiu ou ocultou.
@@ -16,6 +16,7 @@
 import type { Profile } from "./profile";
 import type { SortMode } from "./rank";
 import { keysFromNames } from "./genres";
+import { normalizedTasteAffinity, socialRatingBucket } from "../social/ratings";
 
 export type FriendRawData = {
   user_id: string;
@@ -27,6 +28,8 @@ export type FriendRawData = {
   favorite: boolean;
   status: string | null;
   updated_at: string;
+  average_rating_difference?: number | null;
+  shared_ratings?: number;
 };
 
 export type FriendCandidateRow = {
@@ -45,11 +48,14 @@ export type FriendCandidateRow = {
   vote_count: number;
   popularity: number;
   friends_data: FriendRawData[];
+  rating_friend_count: number;
   friend_count: number;
 };
 
 export type FriendEndorsement = {
   total_friends: number;
+  friends: Array<Pick<FriendRawData, "user_id" | "username" | "display_name" | "avatar_url" | "rating">>;
+  distribution: Record<"love" | "like_much" | "like" | "regular" | "dislike", number>;
   top_friend: {
     user_id: string;
     username: string;
@@ -96,12 +102,27 @@ WITH friends AS (
          p.username,
          p.display_name,
          p.avatar_url,
-         p.activity_visibility
+         p.ratings_visibility,
+         p.reviews_visibility,
+         p.likes_visibility
   FROM public.follows f
   JOIN public.profiles p ON p.id = f.following_id
+  JOIN public.follows mutual
+    ON mutual.follower_id = f.following_id
+   AND mutual.following_id = f.follower_id
+   AND mutual.status = 'accepted'
   WHERE f.follower_id = $1::uuid
     AND f.status = 'accepted'
-    AND coalesce(p.activity_visibility, 'profile') <> 'private'
+),
+friend_affinity AS (
+  SELECT fr.user_id,
+    count(*)::int AS shared_ratings,
+    avg(abs(theirs.personal_rating::float - mine.personal_rating::float))::float AS average_rating_difference
+  FROM friends fr
+  JOIN public.library_items theirs ON theirs.user_id = fr.user_id AND theirs.personal_rating IS NOT NULL
+  JOIN public.library_items mine ON mine.user_id = $1::uuid AND mine.media_id = theirs.media_id AND mine.personal_rating IS NOT NULL
+  WHERE coalesce(fr.ratings_visibility, 'profile') <> 'private'
+  GROUP BY fr.user_id
 ),
 friend_ratings AS (
   SELECT
@@ -110,17 +131,18 @@ friend_ratings AS (
     fr.display_name,
     fr.avatar_url,
     li.media_id,
-    li.personal_rating::float AS rating,
-    li.review,
-    li.favorite,
+    CASE WHEN coalesce(fr.ratings_visibility, 'profile') <> 'private' THEN li.personal_rating::float ELSE NULL END AS rating,
+    CASE WHEN coalesce(fr.reviews_visibility, 'profile') <> 'private' THEN li.review ELSE NULL END AS review,
+    CASE WHEN coalesce(fr.likes_visibility, 'profile') <> 'private' THEN li.favorite ELSE false END AS favorite,
     li.status,
-    coalesce(li.updated_at, li.added_at) AS updated_at
+    coalesce(li.updated_at, li.added_at) AS updated_at,
+    fa.average_rating_difference,
+    fa.shared_ratings
   FROM friends fr
   JOIN public.library_items li ON li.user_id = fr.user_id
-  WHERE (
-    (li.personal_rating IS NOT NULL AND li.personal_rating >= 7.0)
-    OR (li.favorite = true AND (li.personal_rating IS NULL OR li.personal_rating >= 7.0))
-  )
+  LEFT JOIN friend_affinity fa ON fa.user_id = fr.user_id
+  WHERE (coalesce(fr.ratings_visibility, 'profile') <> 'private' AND li.personal_rating IS NOT NULL)
+     OR (coalesce(fr.likes_visibility, 'profile') <> 'private' AND li.favorite = true)
 ),
 candidates AS (
   SELECT
@@ -133,8 +155,8 @@ candidates AS (
     m.backdrop_path,
     m.overview,
     m.genres,
-    m.release_date,
-    m.first_air_date,
+    m.release_date::text AS release_date,
+    m.first_air_date::text AS first_air_date,
     m.tmdb_rating::float AS vote_average,
     m.tmdb_vote_count::int AS vote_count,
     m.popularity::float AS popularity,
@@ -148,13 +170,17 @@ candidates AS (
         'review', fr.review,
         'favorite', fr.favorite,
         'status', fr.status,
-        'updated_at', fr.updated_at
+        'updated_at', fr.updated_at,
+        'average_rating_difference', fr.average_rating_difference,
+        'shared_ratings', fr.shared_ratings
       ) ORDER BY
         CASE WHEN fr.review IS NOT NULL AND trim(fr.review) <> '' THEN 1 ELSE 0 END DESC,
         coalesce(fr.rating, 8.5) DESC,
         fr.updated_at DESC
     ) AS friends_data,
-    count(*)::int AS friend_count
+    count(*) FILTER (WHERE fr.rating IS NOT NULL)::int AS rating_friend_count,
+    count(*) FILTER (WHERE fr.rating >= 7.0 OR (fr.favorite = true AND (fr.rating IS NULL OR fr.rating >= 7.0)))::int AS friend_count,
+    avg(fr.rating) FILTER (WHERE fr.rating >= 7.0)::float AS positive_average_rating
   FROM friend_ratings fr
   JOIN public.media m ON m.id = fr.media_id
   LEFT JOIN public.library_items my_li ON my_li.media_id = m.id AND my_li.user_id = $1::uuid
@@ -163,9 +189,50 @@ candidates AS (
     AND m.poster_path IS NOT NULL
   GROUP BY m.id, m.tmdb_id, m.media_type, m.title, m.original_title, m.poster_path, m.backdrop_path,
            m.overview, m.genres, m.release_date, m.first_air_date, m.tmdb_rating, m.tmdb_vote_count, m.popularity
+  HAVING count(*) FILTER (WHERE fr.rating >= 7.0 OR (fr.favorite = true AND (fr.rating IS NULL OR fr.rating >= 7.0))) > 0
 )
 SELECT * FROM candidates
+ORDER BY positive_average_rating DESC NULLS LAST, friend_count DESC, popularity DESC NULLS LAST
 LIMIT 120;
+`;
+
+/** Resumo social em lote para todos os cards do Para Você, sem uma consulta por título. */
+export const FRIEND_OPINIONS_SUMMARY_SQL = `
+WITH targets AS (
+  SELECT DISTINCT t.media_type, t.tmdb_id
+  FROM jsonb_to_recordset($2::jsonb) AS t(media_type text, tmdb_id bigint)
+), friends AS (
+  SELECT f.following_id AS user_id
+  FROM public.follows f
+  JOIN public.follows mutual ON mutual.follower_id = f.following_id
+    AND mutual.following_id = f.follower_id AND mutual.status = 'accepted'
+  WHERE f.follower_id = $1::uuid AND f.status = 'accepted'
+), rated AS (
+  SELECT m.media_type, m.tmdb_id, p.username, p.display_name, p.avatar_url,
+         li.personal_rating::float AS rating, coalesce(li.updated_at, li.added_at) AS updated_at
+  FROM targets t
+  JOIN public.media m ON m.media_type = t.media_type AND m.tmdb_id = t.tmdb_id
+  JOIN public.library_items li ON li.media_id = m.id AND li.personal_rating IS NOT NULL
+  JOIN public.profiles p ON p.id = li.user_id
+  JOIN friends f ON f.user_id = p.id
+  WHERE coalesce(p.ratings_visibility, p.activity_visibility, 'profile') <> 'private'
+), ranked AS (
+  SELECT rated.*, row_number() OVER (PARTITION BY media_type, tmdb_id ORDER BY rating DESC, updated_at DESC, username) AS rn
+  FROM rated
+), summary AS (
+  SELECT media_type, tmdb_id, count(*)::int AS total_friends,
+    count(*) FILTER (WHERE rating >= 9)::int AS love,
+    count(*) FILTER (WHERE rating >= 7.6 AND rating < 9)::int AS like_much,
+    count(*) FILTER (WHERE rating >= 6 AND rating < 7.6)::int AS like,
+    count(*) FILTER (WHERE rating >= 5 AND rating < 6)::int AS regular,
+    count(*) FILTER (WHERE rating < 5)::int AS dislike,
+    round(avg(rating)::numeric, 1)::float AS average
+  FROM rated GROUP BY media_type, tmdb_id
+)
+SELECT s.*, COALESCE((SELECT json_agg(json_build_object(
+    'username', r.username, 'display_name', r.display_name, 'avatar_url', r.avatar_url, 'rating', r.rating
+  ) ORDER BY r.rn) FROM ranked r WHERE r.media_type = s.media_type AND r.tmdb_id = s.tmdb_id AND r.rn <= 4), '[]'::json) AS friends
+FROM summary s;
 `;
 
 /** Formata o texto de chamada para exibição no card do Para você. */
@@ -248,7 +315,9 @@ export function scoreSocialCandidate(
   profile?: Profile,
   nowMs: number = Date.now()
 ): { score: number; topFriend: FriendRawData } {
-  const friends = Array.isArray(row.friends_data) ? row.friends_data : [];
+  const friends = (Array.isArray(row.friends_data) ? row.friends_data : []).filter(
+    (friend) => (friend.rating !== null && friend.rating >= 7) || friend.favorite
+  );
   if (!friends.length) return { score: 0, topFriend: {} as FriendRawData };
 
   // Escolhe o top friend: prioriza quem escreveu resenha com maior nota; depois maior nota; depois mais recente
@@ -283,6 +352,14 @@ export function scoreSocialCandidate(
 
   // 4. Bônus de favorito
   const favoriteScore = friends.some((f) => f.favorite) ? 15 : 0;
+  // Afinidade suavizada por cinco avaliações neutras. Só recompensa
+  // semelhança confiável; gostos diferentes não eliminam um amigo do feed.
+  const affinityRows = friends
+    .map((f) => normalizedTasteAffinity(Number(f.shared_ratings || 0), Number(f.average_rating_difference)))
+    .filter((score): score is number => score !== null);
+  const socialAffinityScore = affinityRows.length
+    ? Math.round(Math.max(0, (affinityRows.reduce((sum, score) => sum + score, 0) / affinityRows.length - 50) / 50) * 12)
+    : 0;
 
   // 5. Bônus de recência (últimos 14 dias: +15, 30 dias: +10, 60 dias: +5)
   let recencyScore = 0;
@@ -309,7 +386,7 @@ export function scoreSocialCandidate(
   // 7. Sanidade TMDB (filmes reconhecidos com boas avaliações ganham pequeno empurrão)
   const tmdbScore = (row.vote_average || 0) >= 7.0 && (row.vote_count || 0) >= 100 ? 10 : 0;
 
-  const totalScore = friendCountScore + ratingScore + reviewScore + favoriteScore + recencyScore + affinityScore + tmdbScore;
+  const totalScore = friendCountScore + ratingScore + reviewScore + favoriteScore + recencyScore + affinityScore + socialAffinityScore + tmdbScore;
 
   return { score: totalScore, topFriend };
 }
@@ -318,6 +395,12 @@ export function scoreSocialCandidate(
  * Ranqueia e monta a lista de cards recomendados pelos amigos.
  * Retorna null se não houver candidatos suficientes (mínimo de 2 títulos de qualidade).
  */
+function normalizeDate(value: unknown): string | undefined {
+  if (value instanceof Date && Number.isFinite(value.getTime())) return value.toISOString().slice(0, 10);
+  if (typeof value === "string" && value) return value.slice(0, 10);
+  return undefined;
+}
+
 export function buildFriendRecommendations(
   rows: FriendCandidateRow[],
   profile?: Profile,
@@ -343,10 +426,21 @@ export function buildFriendRecommendations(
     const { score, topFriend } = scoreSocialCandidate(row, profile, nowMs);
     if (!topFriend.user_id) continue;
 
-    const totalFriends = row.friend_count || (Array.isArray(row.friends_data) ? row.friends_data.length : 1);
-    const { headline, reviewSnippet } = buildFriendHeadline(topFriend, totalFriends);
+    const supporters = row.friend_count || 1;
+    const ratedFriends = (Array.isArray(row.friends_data) ? row.friends_data : [])
+      .filter((friend) => friend.rating !== null)
+      .sort((a, b) => Number(b.rating) - Number(a.rating) || Date.parse(b.updated_at || "") - Date.parse(a.updated_at || ""));
+    const totalFriends = row.rating_friend_count ?? ratedFriends.length;
+    const { headline, reviewSnippet } = buildFriendHeadline(topFriend, supporters);
+    const distribution = { love: 0, like_much: 0, like: 0, regular: 0, dislike: 0 };
+    for (const friend of ratedFriends) {
+      const bucket = socialRatingBucket(friend.rating);
+      if (bucket) distribution[bucket] += 1;
+    }
 
-    const year = (row.release_date || row.first_air_date || "").slice(0, 4);
+    const releaseDate = normalizeDate(row.release_date);
+    const firstAirDate = normalizeDate(row.first_air_date);
+    const year = (releaseDate || firstAirDate || "").slice(0, 4);
     const typeLabel = row.media_type === "tv" ? "série" : "filme";
 
     scoredCards.push({
@@ -359,8 +453,8 @@ export function buildFriendRecommendations(
       overview: row.overview,
       poster_path: row.poster_path,
       backdrop_path: row.backdrop_path,
-      release_date: row.release_date || undefined,
-      first_air_date: row.first_air_date || undefined,
+      release_date: releaseDate,
+      first_air_date: firstAirDate,
       vote_average: Number(row.vote_average || 0),
       vote_count: Number(row.vote_count || 0),
       popularity: Number(row.popularity || 0),
@@ -372,6 +466,8 @@ export function buildFriendRecommendations(
       reason: headline,
       friend_endorsement: {
         total_friends: totalFriends,
+        friends: ratedFriends.slice(0, 4).map(({ user_id, username, display_name, avatar_url, rating }) => ({ user_id, username, display_name, avatar_url, rating })),
+        distribution,
         top_friend: {
           user_id: topFriend.user_id,
           username: topFriend.username,
@@ -381,7 +477,7 @@ export function buildFriendRecommendations(
           review: topFriend.review,
           favorite: Boolean(topFriend.favorite),
         },
-        other_friends_count: Math.max(0, totalFriends - 1),
+        other_friends_count: Math.max(0, totalFriends - Math.min(4, ratedFriends.length)),
         headline,
         review_snippet: reviewSnippet,
       },
@@ -389,19 +485,22 @@ export function buildFriendRecommendations(
     });
   }
 
-  // Ordenação: se modo sort for específico (ex: rating, newest), respeita; senão ordena pelo social_score
+  // Seleciona primeiro os candidatos mais relevantes para o usuário: nota e
+  // consenso dos amigos, afinidade com o perfil e qualidade geral.
+  scoredCards.sort((a, b) => b.social_score - a.social_score);
+  const selectedCards = scoredCards.slice(0, limit);
+
+  // Dentro da seleção, mantém a ordenação que o usuário escolheu na página.
   if (options?.sort === "rating") {
-    scoredCards.sort((a, b) => b.vote_average - a.vote_average || b.social_score - a.social_score);
+    selectedCards.sort((a, b) => b.vote_average - a.vote_average || b.social_score - a.social_score);
   } else if (options?.sort === "newest") {
-    scoredCards.sort((a, b) => {
+    selectedCards.sort((a, b) => {
       const aDate = a.release_date || a.first_air_date || "";
       const bDate = b.release_date || b.first_air_date || "";
       return bDate.localeCompare(aDate) || b.social_score - a.social_score;
     });
   } else if (options?.sort === "popular") {
-    scoredCards.sort((a, b) => (b.popularity || 0) - (a.popularity || 0) || b.social_score - a.social_score);
-  } else {
-    scoredCards.sort((a, b) => b.social_score - a.social_score);
+    selectedCards.sort((a, b) => (b.popularity || 0) - (a.popularity || 0) || b.social_score - a.social_score);
   }
 
   // Mínimo de 2 títulos para formar uma prateleira sólida e relevante (evita prateleira com 1 item solitário)
@@ -409,5 +508,5 @@ export function buildFriendRecommendations(
     return null;
   }
 
-  return scoredCards.slice(0, limit);
+  return selectedCards;
 }

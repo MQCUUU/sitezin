@@ -6,7 +6,7 @@ import { removeFromLibrary } from "@/lib/library/actions";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 import { apiFetch } from "@/lib/api-client";
 import { MediaPosterActions } from "@/components/media/MediaPosterActions";
-import { MediaPosterTags } from "@/components/media/MediaBadges";
+import { MediaPosterTags, mediaTypeLabel } from "@/components/media/MediaBadges";
 import { MediaCard, MediaCardImage } from "@/components/media";
 import { getLibraryVersion } from "@/lib/library-cache";
 import { authClient } from "@/lib/auth/client";
@@ -53,13 +53,16 @@ import { MediaPreviewDialog } from "@/components/media/preview/MediaPreviewDialo
 import { WatchProviderList } from "@/components/media/preview/WatchProviderList";
 import { fromLooseMediaItem } from "@/components/media/preview/adapters";
 import { normalizeWatchProviders } from "@/components/media/providers";
+import { FriendOpinions } from "@/components/for-you/FriendOpinions";
 
 /*
- * Cache do Para você (sessionStorage). `v2`: a v1 foi gravada por versões
+ * Cache do Para você (sessionStorage). `v3`: a v2 não tinha a lista de amigos
+ * avaliadores necessária para o indicador social compacto.
+ * A v1 foi gravada por versões
  * anteriores; qualquer entrada v1 é ignorada e removida (AccountMenu limpa
  * tudo que começa com `mycatalog:foryou:` fora do prefixo atual).
  */
-const FOR_YOU_CACHE_PREFIX = "mycatalog:foryou:v2:";
+const FOR_YOU_CACHE_PREFIX = "mycatalog:foryou:v3:";
 
 /*
  * Nunca reaproveita um cache cujo formato não seja exatamente o que a tela
@@ -904,7 +907,8 @@ export default function ForYouPage() {
 
   async function addToLibrary(
     item:
-      any
+      any,
+    status = "want"
   ) {
     const key =
       `${item.media_type}-${item.id}`;
@@ -957,8 +961,7 @@ export default function ForYouPage() {
                     media.genres ||
                     [],
                 },
-                status:
-                  "want",
+                status,
                 favorite:
                   false,
               } });
@@ -997,7 +1000,7 @@ export default function ForYouPage() {
               ),
             status:
               data.status ||
-              "want",
+              status,
             personal_rating:
               data.personal_rating ??
               null,
@@ -1028,6 +1031,7 @@ export default function ForYouPage() {
     if (
       !existing
     ) {
+      await addToLibrary(item, status);
       return;
     }
 
@@ -2213,7 +2217,7 @@ function MovieCard({
     processing ===
     key;
 
-  const endorsement = item.friend_endorsement;
+  const endorsement = item.friend_endorsement || item.friend_opinion_summary;
 
   return (
     <MediaCard className="fy-card-wrap">
@@ -2253,6 +2257,7 @@ function MovieCard({
           favorite={Boolean(existing?.favorite)}
           busy={busy}
           onPreview={() => setPreviewItem(item)}
+          onMarkWatched={() => updateStatus(item, "watched")}
           onAdd={() => addToLibrary(item)}
           onChangeStatus={(status: string) => updateStatus(item, status)}
           onToggleFavorite={() => toggleFavorite(item)}
@@ -2267,9 +2272,7 @@ function MovieCard({
       </Link>
 
       <div className="card-meta fy-card-meta">
-        <span>
-          {year || "—"}
-        </span>
+        <span className="mc-media-type-year">{mediaTypeLabel(type)} · {year || "—"}</span>
 
         {Number(item.vote_average || 0) > 0 && (
           <span className="rating fy-rating">
@@ -2279,41 +2282,7 @@ function MovieCard({
         )}
       </div>
 
-      {endorsement && (
-        <div className="fy-social-endorsement" title={endorsement.headline}>
-          <div className="fy-social-header">
-            {endorsement.top_friend.avatar_url ? (
-              <img
-                src={endorsement.top_friend.avatar_url}
-                alt={endorsement.top_friend.display_name || endorsement.top_friend.username}
-                className="fy-social-avatar"
-                loading="lazy"
-              />
-            ) : (
-              <div className="fy-social-avatar-fallback">
-                {(endorsement.top_friend.display_name || endorsement.top_friend.username || "?").slice(0, 1).toUpperCase()}
-              </div>
-            )}
-            <div className="fy-social-text">
-              <span className="fy-social-name">
-                {endorsement.top_friend.display_name || endorsement.top_friend.username}
-              </span>
-              {endorsement.top_friend.rating !== null && endorsement.top_friend.rating !== undefined && (
-                <span className="fy-social-rating">
-                  <Star size={10} fill="currentColor" />
-                  {Number(endorsement.top_friend.rating).toFixed(endorsement.top_friend.rating % 1 === 0 ? 0 : 1)}
-                </span>
-              )}
-              {endorsement.other_friends_count > 0 && (
-                <span className="fy-social-more">+{endorsement.other_friends_count}</span>
-              )}
-            </div>
-          </div>
-          {endorsement.review_snippet && (
-            <p className="fy-social-quote">{endorsement.review_snippet}</p>
-          )}
-        </div>
-      )}
+      {endorsement && <FriendOpinions item={item} />}
     </MediaCard>
   );
 }

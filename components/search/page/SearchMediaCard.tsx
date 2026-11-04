@@ -1,6 +1,6 @@
 import "@/styles/features/search-page.css";
 import { MediaPosterActions } from "@/components/media/MediaPosterActions";
-import { MediaPosterTags } from "@/components/media/MediaBadges";
+import { MediaPosterTags, mediaTypeLabel } from "@/components/media/MediaBadges";
 import Link from "next/link";
 import {
   Star,
@@ -71,19 +71,19 @@ export function SearchMediaCard({
           favorite={Boolean(libraryItem?.favorite)}
           busy={isProcessing}
           onPreview={() => onPreview(item)}
+          onMarkWatched={() => onUpdateStatus(item, "watched")}
           onAdd={() => onAdd(item)}
           onChangeStatus={(status: string) => onUpdateStatus(item, status)}
           onToggleFavorite={() => onToggleFavorite(item)}
           onRemove={() => onRequestRemove(item)}
         />
       </MediaCardImage>
-
       <Link href={`/title/${item.media_type}/${item.id}`} className="card-title">
         {title}
       </Link>
 
       <MediaCardMeta>
-        <span>{year || "—"}</span>
+        <span className="mc-media-type-year">{mediaTypeLabel(item.media_type)} · {year || "—"}</span>
 
         {Number(item.vote_average || 0) > 0 && (
           <span className="rating" title="Média TMDB (não é a sua nota)">

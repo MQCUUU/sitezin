@@ -1,4 +1,4 @@
-// Avaliações da comunidade: privacidade (mesma regra do perfil) e ordem (quem você segue primeiro).
+// Avaliações da comunidade: privacidade e prioridade de amigos, seguindo e demais.
 // node scripts/test-community-reviews.mjs (ou npm test).
 import { register } from "node:module";
 import { pathToFileURL } from "node:url";
@@ -23,7 +23,7 @@ let n = 0;
 const row = (over) => ({
   user_id: `u${++n}`, username: `pessoa${n}`, display_name: null, avatar_url: null,
   visibility: "public", is_public: true, activity_visibility: "profile",
-  followed: false, rating: 8, review: "Bom filme", updated_at: `2026-10-${String(10 + n).padStart(2, "0")}T12:00:00Z`, ...over,
+  followed: false, friend: false, rating: 8, review: "Bom filme", updated_at: `2026-10-${String(10 + n).padStart(2, "0")}T12:00:00Z`, ...over,
 });
 
 test("perfil público com atividade visível aparece para qualquer pessoa (inclusive visitante)", () => {
@@ -46,19 +46,23 @@ test("atividade 'seguidores' esconde de quem não segue; 'privada' esconde de to
   assert.equal(visibleCommunityReviews([hidden], "leitor").length, 0);
 });
 
-test("quem você segue vem primeiro; depois resenhas com texto; depois as mais recentes", () => {
+test("amigos vêm primeiro, seguindo depois e demais por último", () => {
   const out = visibleCommunityReviews(
     [
       row({ username: "outroRecente", updated_at: "2026-10-29T10:00:00Z" }),
       row({ username: "outroSoNota", review: null, updated_at: "2026-10-30T10:00:00Z" }),
-      row({ username: "amigoAntigo", followed: true, updated_at: "2026-01-01T10:00:00Z" }),
-      row({ username: "amigoRecente", followed: true, updated_at: "2026-10-28T10:00:00Z" }),
+      row({ username: "amigoAntigo", followed: true, friend: true, updated_at: "2026-01-01T10:00:00Z" }),
+      row({ username: "amigoRecente", followed: true, friend: true, updated_at: "2026-10-28T10:00:00Z" }),
+      row({ username: "seguido", followed: true, updated_at: "2026-10-30T10:00:00Z" }),
     ],
     "leitor"
   );
-  assert.deepEqual(out.map((r) => r.username), ["amigoRecente", "amigoAntigo", "outroRecente", "outroSoNota"]);
+  assert.deepEqual(out.map((r) => r.username), ["amigoRecente", "amigoAntigo", "seguido", "outroRecente", "outroSoNota"]);
   assert.equal(out[0].followed, true);
-  assert.equal(out[2].followed, false);
+  assert.equal(out[0].friend, true);
+  assert.equal(out[2].friend, false);
+  assert.equal(out[2].followed, true);
+  assert.equal(out[3].followed, false);
 });
 
 test("o próprio leitor não aparece (a avaliação dele já está acima) e item vazio não entra", () => {
@@ -69,4 +73,26 @@ test("o próprio leitor não aparece (a avaliação dele já está acima) e item
 test("visitante nunca é tratado como seguidor", () => {
   const out = visibleCommunityReviews([row({ username: "x", followed: true })], null);
   assert.equal(out[0].followed, false);
+});
+
+test("um seguidor unilateral nunca vira amigo na ordenação", () => {
+  const out = visibleCommunityReviews([row({ username: "meSegue", followed: false, friend: true })], "leitor");
+  assert.equal(out[0].followed, false);
+  assert.equal(out[0].friend, false);
+});
+
+test("privacidade independente: nota e resenha são filtradas separadamente", () => {
+  const ratingPrivate = visibleCommunityReviews([
+    row({ username: "resenha-publica", ratings_visibility: "private", reviews_visibility: "profile", rating: 9, review: "Texto compartilhado" }),
+  ], "leitor");
+  assert.equal(ratingPrivate.length, 1);
+  assert.equal(ratingPrivate[0].rating, null);
+  assert.equal(ratingPrivate[0].review, "Texto compartilhado");
+
+  const reviewPrivate = visibleCommunityReviews([
+    row({ username: "nota-publica", ratings_visibility: "profile", reviews_visibility: "private", rating: 8, review: "Texto privado" }),
+  ], "leitor");
+  assert.equal(reviewPrivate.length, 1);
+  assert.equal(reviewPrivate[0].rating, 8);
+  assert.equal(reviewPrivate[0].review, null);
 });

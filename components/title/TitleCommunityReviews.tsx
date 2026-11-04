@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Star, UserCheck } from "lucide-react";
+import { Star, UserCheck, Users } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { apiFetch } from "@/lib/api-client";
@@ -9,11 +9,11 @@ import type { CommunityReview } from "@/lib/reviews/community";
 
 /*
  * "Da comunidade" — notas e resenhas de outras pessoas para este título
- * (lib/reviews/community.ts). Quem você segue aparece primeiro; o resto vem
- * depois. Respeita a privacidade de cada perfil.
+ * (lib/reviews/community.ts). Amigos aparecem primeiro, depois pessoas seguidas
+ * sem follow mútuo e, por fim, os demais. Respeita a privacidade de cada perfil.
  */
 
-type Data = { items: CommunityReview[]; total: number; followedTotal: number; average: number | null; ratingsCount: number };
+type Data = { items: CommunityReview[]; total: number; followedTotal: number; friendTotal: number; followingTotal: number; average: number | null; ratingsCount: number };
 
 const PAGE = 10;
 
@@ -60,7 +60,8 @@ export function TitleCommunityReviews({ type, tmdbId }: { type: "movie" | "tv"; 
   }
 
   const items = data?.items ?? [];
-  const followed = items.filter((r) => r.followed);
+  const friends = items.filter((r) => r.friend);
+  const following = items.filter((r) => r.followed && !r.friend);
   const others = items.filter((r) => !r.followed);
 
   return (
@@ -90,19 +91,27 @@ export function TitleCommunityReviews({ type, tmdbId }: { type: "movie" | "tv"; 
               </>
             ) : null}
             {data.total} {data.total === 1 ? "avaliação" : "avaliações"}
-            {data.followedTotal ? ` · ${data.followedTotal} de quem você segue` : ""}
+            {data.friendTotal ? ` · ${data.friendTotal} ${data.friendTotal === 1 ? "amigo" : "amigos"}` : ""}
+            {data.followingTotal ? ` · ${data.followingTotal} pessoas que você segue` : ""}
           </p>
 
-          {followed.length ? (
+          {friends.length ? (
+            <>
+              <h3 className="title-community-group">Amigos</h3>
+              <ul className="title-community-list">{friends.map((r) => <ReviewCard key={r.username} review={r} />)}</ul>
+            </>
+          ) : null}
+
+          {following.length ? (
             <>
               <h3 className="title-community-group">Pessoas que você segue</h3>
-              <ul className="title-community-list">{followed.map((r) => <ReviewCard key={r.username} review={r} />)}</ul>
+              <ul className="title-community-list">{following.map((r) => <ReviewCard key={r.username} review={r} />)}</ul>
             </>
           ) : null}
 
           {others.length ? (
             <>
-              {followed.length ? <h3 className="title-community-group">Outras pessoas</h3> : null}
+              <h3 className="title-community-group">Outras pessoas</h3>
               <ul className="title-community-list">{others.map((r) => <ReviewCard key={r.username} review={r} />)}</ul>
             </>
           ) : null}
@@ -142,7 +151,11 @@ function ReviewCard({ review }: { review: CommunityReview }) {
             <small>@{review.username}</small>
           </span>
         </Link>
-        {review.followed ? (
+        {review.friend ? (
+          <span className="title-community-badge">
+            <Users size={13} aria-hidden="true" /> Amigo
+          </span>
+        ) : review.followed ? (
           <span className="title-community-badge">
             <UserCheck size={13} aria-hidden="true" /> Você segue
           </span>

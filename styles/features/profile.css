@@ -437,6 +437,16 @@
 .profile-v2-counts strong {
     color: var(--text)
 }
+.profile-mutual-friends {
+    align-self: flex-end;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin: 0 0 4px;
+    color: var(--accent);
+    font-size: var(--mc-fs-xs);
+    font-weight: 700;
+}
 .profile-v2-action {
     flex: 0 0 auto
 }

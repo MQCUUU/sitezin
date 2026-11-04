@@ -498,27 +498,86 @@
     bottom: 8px;
     max-width: calc(100% - 16px);
 }
-.mc-tag--type {
-    --tag: #94a3b8;
-    font-weight: 650;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-size: var(--mc-fs-xs);
+.mc-type-chip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    box-sizing: border-box;
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    max-width: 22px;
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 1.5px solid var(--accent);
+    border-radius: 0 0 8px 0;
+    color: var(--accent);
+    transition: width 180ms ease, max-width 180ms ease, gap 180ms ease, padding 180ms ease;
 }
-/*
- * Celular: a palavra "FILME"/"SÉRIE" repetida em cada pôster era o maior ruído
- * das grades (60× em Para você). Fica só o ícone; o texto continua no DOM
- * (font-size 0, não display:none), então leitores de tela seguem lendo o tipo.
- */
-@media (max-width: 760px) {
-    .mc-tag--type {
-        width: 24px;
-        gap: 0;
-        padding: 0;
-        justify-content: center;
-        font-size: 0;
-        letter-spacing: 0;
+.mc-type-chip--movie {
+    background: rgba(0, 0, 0, 0.7);
+}
+.mc-type-chip--tv {
+    background: var(--accent);
+    color: var(--on-accent, #fff);
+}
+.mc-type-chip > svg {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+    margin-left: 2.5px;
+}
+.mc-type-chip-label {
+    display: inline-block;
+    max-width: 0;
+    overflow: hidden;
+    opacity: 0;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    transition: max-width 180ms ease, opacity 120ms ease;
+}
+.card:hover .mc-type-chip,
+.card:focus-within .mc-type-chip,
+.mc-pa-host:hover .mc-type-chip,
+.mc-pa-host:focus-within .mc-type-chip,
+.collection-card:hover .mc-type-chip,
+.collection-card:focus-within .mc-type-chip {
+    width: 72px;
+    max-width: 72px;
+    gap: 4px;
+    padding: 0 6px 0 0;
+}
+.card:hover .mc-type-chip-label,
+.card:focus-within .mc-type-chip-label,
+.mc-pa-host:hover .mc-type-chip-label,
+.mc-pa-host:focus-within .mc-type-chip-label,
+.collection-card:hover .mc-type-chip-label,
+.collection-card:focus-within .mc-type-chip-label {
+    max-width: 40px;
+    opacity: 1;
+}
+@media (hover: none) {
+    .mc-type-chip,
+    .mc-type-chip-label {
+        transition: none;
     }
+}
+.mc-media-card-meta > .mc-media-type-year,
+.fy-card-meta > .mc-media-type-year,
+.person-work-meta > .mc-media-type-year,
+.collection-card-meta > .mc-media-type-year {
+    min-width: 0;
+    color: var(--muted);
+    font-size: max(11px, var(--mc-fs-xs));
+}
+.mc-media-card-meta > .rating,
+.fy-card-meta > .rating,
+.collection-card-meta > .rating {
+    margin-left: auto;
 }
 .mc-tag--accent {
     --tag: var(--accent);

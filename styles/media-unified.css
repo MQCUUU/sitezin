@@ -15,7 +15,10 @@
 }
 
 .mc-tag-slot--top {
-  top: 8px;
+  top: 0;
+  left: 0;
+  max-width: none;
+  overflow: visible;
 }
 
 .mc-tag {

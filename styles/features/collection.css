@@ -274,7 +274,7 @@
 }
 .collection-order {
     position: absolute;
-    top: 8px;
+    top: 30px;
     left: 8px;
     z-index: 6;
     width: 28px;

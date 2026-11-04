@@ -23,13 +23,18 @@ const STATUS_ICON: Record<string, ReactNode> = {
 
 export function MediaTypeTag({ type }: { type: "movie" | "tv" | string }) {
   const isTv = type === "tv";
+  const label = isTv ? "Série" : "Filme";
 
   return (
-    <span className="mc-tag mc-tag--type">
-      {isTv ? <Tv size={12} aria-hidden="true" /> : <Film size={12} aria-hidden="true" />}
-      {isTv ? "Série" : "Filme"}
+    <span className={`mc-type-chip mc-type-chip--${isTv ? "tv" : "movie"}`} role="img" aria-label={label}>
+      {isTv ? <Tv size={14} aria-hidden="true" /> : <Film size={14} aria-hidden="true" />}
+      <span className="mc-type-chip-label" aria-hidden="true">{label}</span>
     </span>
   );
+}
+
+export function mediaTypeLabel(type: "movie" | "tv" | string) {
+  return type === "tv" ? "Série" : "Filme";
 }
 
 export function MediaStatusTag({ status }: { status?: string | null }) {

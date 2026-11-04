@@ -636,10 +636,11 @@ function SearchPageContent() {
    * ADICIONAR
    * ==========================================
    */
-  async function addToLibrary(item: SearchItem) {
+  async function addToLibrary(item: SearchItem, status = "want") {
     const key = `${item.media_type}-${item.id}`;
 
-    if (!libraryAuth.requireUser(intentForMedia(item, "add"))) return;
+    const intent = status === "want" ? intentForMedia(item, "add") : intentForMedia(item, "status", status);
+    if (!libraryAuth.requireUser(intent)) return;
 
     try {
       setProcessing(key);
@@ -672,7 +673,7 @@ function SearchPageContent() {
             original_title: media.original_title || media.original_name || getTitle(item),
             genres: media.genres || [],
           },
-          status: "want",
+          status,
           favorite: false,
         }),
       });
@@ -692,7 +693,7 @@ function SearchPageContent() {
       ]);
     } catch (error) {
       console.error(error);
-      libraryAuth.handleError(error, intentForMedia(item, "add"), "Erro ao adicionar");
+      libraryAuth.handleError(error, intent, "Erro ao adicionar");
     } finally {
       setProcessing(null);
     }
@@ -705,7 +706,10 @@ function SearchPageContent() {
    */
   async function updateStatus(item: SearchItem, nextStatus: string) {
     const existing = getLibraryItem(item);
-    if (!existing) return;
+    if (!existing) {
+      await addToLibrary(item, nextStatus);
+      return;
+    }
 
     const key = `${item.media_type}-${item.id}`;
 

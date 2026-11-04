@@ -18,14 +18,19 @@ import { useConfirm } from "@/components/ConfirmProvider";
 import { ProfileShowcaseEditor } from "@/components/ProfileShowcaseEditor";
 import { AvatarSettings } from "@/components/AvatarSettings";
 import { BannerSettings } from "@/components/BannerSettings";
+import { tasteAffinityLabel } from "@/lib/social/ratings";
 
 type Tab = "activity" | "reviews" | "likes" | "lists" | "connections";
-type PersonRow = { follower_id?: string; following_id?: string; profile: { id?: string; username: string; display_name: string; avatar_url?: string } };
-type ConnectionType = "followers" | "following" | "incoming" | "outgoing";
+const isTab = (value: string | null): value is Tab =>
+  value === "activity" || value === "reviews" || value === "likes" || value === "lists" || value === "connections";
+type PersonRow = { follower_id?: string; following_id?: string; affinity_score?: number | null; profile: { id?: string; username: string; display_name: string; avatar_url?: string } };
+type ConnectionType = "followers" | "following" | "friends" | "incoming" | "outgoing";
 type ConnectionList = { items: PersonRow[]; page: number; total: number; hasMore: boolean; loading: boolean; loaded: boolean };
 const CONNECTION_PAGE_SIZE = 24;
 const emptyConnectionList: ConnectionList = { items: [], page: 0, total: 0, hasMore: false, loading: false, loaded: false };
-type ConnectionCounts = { followers: number; following: number; incoming: number; outgoing: number };
+const isConnectionType = (value: string | null): value is ConnectionType =>
+  value === "followers" || value === "following" || value === "friends" || value === "incoming" || value === "outgoing";
+type ConnectionCounts = { followers: number; following: number; friends: number; incoming: number; outgoing: number };
 const mediaOf = (row: any) => Array.isArray(row?.media) ? row.media[0] : row?.media;
 const normalizePerson = (row: any): PersonRow | null => {
   const profile = Array.isArray(row?.profile) ? row.profile[0] : row?.profile;
@@ -149,19 +154,27 @@ export default function PublicProfilePage() {
   const [loading, setLoading] = useState(true);
   // Fase 6: falha ao carregar ≠ "perfil não existe".
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("activity");
-  const [connectionModal, setConnectionModal] = useState<"followers" | "following" | null>(null);
+  const [tab, setTab] = useState<Tab>(() => {
+    const requested = searchParams.get("tab");
+    return isTab(requested) ? requested : "activity";
+  });
+  const [connectionModal, setConnectionModal] = useState<"followers" | "following" | "friends" | null>(null);
   const [connectionSearch, setConnectionSearch] = useState("");
   const [busy, setBusy] = useState(false);
   const [listName, setListName] = useState("");
   const [connectionCounts, setConnectionCounts] = useState<ConnectionCounts | null>(null);
-  const [connectionSubTab, setConnectionSubTab] = useState<ConnectionType>("followers");
+  const [connectionSubTab, setConnectionSubTab] = useState<ConnectionType>(() => {
+    const requested = searchParams.get("connection");
+    return isConnectionType(requested) ? requested : "followers";
+  });
   const [connectionLists, setConnectionLists] = useState<Record<ConnectionType, ConnectionList>>({
     followers: emptyConnectionList,
     following: emptyConnectionList,
+    friends: emptyConnectionList,
     incoming: emptyConnectionList,
     outgoing: emptyConnectionList,
   });
+  const connectionLoadsRef = useRef(new Map<ConnectionType, Promise<void>>());
   const [editingProfile, setEditingProfile] = useState(false);
   const [activityFeed, setActivityFeed] = useState<{ items: any[]; page: number; hasMore: boolean; loading: boolean; loaded: boolean }>({
     items: [],
@@ -187,6 +200,26 @@ export default function PublicProfilePage() {
    */
   const activityPageRef = useRef(0);
   const activityLoadedRef = useRef(false);
+
+  function syncProfileTabs(tabValue: Tab, connectionValue = connectionSubTab) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (tabValue === "activity") params.delete("tab");
+    else params.set("tab", tabValue);
+    if (tabValue === "connections") params.set("connection", connectionValue);
+    else params.delete("connection");
+    const query = params.toString();
+    router.replace(`/u/${encodeURIComponent(username)}${query ? `?${query}` : ""}`, { scroll: false });
+  }
+
+  function selectProfileTab(nextTab: Tab) {
+    setTab(nextTab);
+    syncProfileTabs(nextTab);
+  }
+
+  function selectConnectionTab(nextTab: ConnectionType) {
+    setConnectionSubTab(nextTab);
+    syncProfileTabs("connections", nextTab);
+  }
 
   async function loadActivity(options: { append?: boolean } = {}) {
     setActivityFeed((current) => ({ ...current, loading: true }));
@@ -271,12 +304,15 @@ export default function PublicProfilePage() {
   }, [data?.social?.relationship]);
 
   async function loadConnectionList(type: ConnectionType, options: { append?: boolean } = {}) {
+    const pending = connectionLoadsRef.current.get(type);
+    if (pending) return pending;
+
+    const nextPage = options.append ? connectionLists[type].page + 1 : 1;
+    const request = (async () => {
     setConnectionLists((current) => ({
       ...current,
       [type]: { ...current[type], loading: true },
     }));
-
-    const nextPage = options.append ? connectionLists[type].page + 1 : 1;
 
     try {
       const result = await apiFetch(`/api/follows?type=${type}&page=${nextPage}&limit=${CONNECTION_PAGE_SIZE}`, {
@@ -287,7 +323,10 @@ export default function PublicProfilePage() {
       setConnectionLists((current) => ({
         ...current,
         [type]: {
-          items: options.append ? [...current[type].items, ...items] : items,
+          items: [...new Map<string, PersonRow>(
+            (options.append ? [...current[type].items, ...items] : items)
+                .map((item, index) => [String(item.profile.id || item.profile.username?.trim().toLowerCase() || item.follower_id || item.following_id || index), item] as const)
+          ).values()],
           page: nextPage,
           total: Number(result.total || 0),
           hasMore: Boolean(result.has_more),
@@ -301,7 +340,17 @@ export default function PublicProfilePage() {
         [type]: { ...current[type], loading: false },
       }));
       toast.error("Não foi possível carregar essa lista.", { description: errorMessage(error) });
+    } finally {
+      connectionLoadsRef.current.delete(type);
     }
+    })();
+    connectionLoadsRef.current.set(type, request);
+    return request;
+  }
+
+  function openConnectionModal(type: "followers" | "following" | "friends") {
+    setConnectionModal(type);
+    if ((relationship === "self" || (type === "friends" && data?.social?.friends !== null)) && !connectionLists[type].loaded) void loadConnectionList(type);
   }
 
   function refreshConnectionCounts() {
@@ -323,7 +372,9 @@ export default function PublicProfilePage() {
     return () => window.removeEventListener("mycatalog:follows-updated", refreshFollows);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [username, data?.social?.relationship, connectionSubTab]);
-  useEffect(() => { const requested = searchParams.get("tab"); if (["activity","reviews","likes","lists","connections"].includes(requested || "")) setTab(requested as Tab); }, [searchParams]);
+  useEffect(() => {
+    if (data && data.social?.relationship !== "self" && tab === "connections") setTab("activity");
+  }, [data?.social?.relationship, tab]);
 
   useEffect(() => {
     if (tab !== "connections" || data?.social?.relationship !== "self") return;
@@ -393,14 +444,35 @@ export default function PublicProfilePage() {
       return;
     }
     const followed = data.social.viewer_following_usernames.includes(person.profile.username);
+    const pending = (data.social.viewer_pending_usernames || []).includes(person.profile.username);
+    let nextStatus: "accepted" | "pending" | "none" = "none";
     try {
-      await apiFetch("/api/follows", followed
-        ? { method: "DELETE", json: { username: person.profile.username, mode: "unfollow" } }
-        : { method: "POST", json: { username: person.profile.username } });
+      if (followed || pending) {
+        await apiFetch("/api/follows", { method: "DELETE", json: { username: person.profile.username, mode: pending ? "cancel" : "unfollow" } });
+      } else {
+        const result = await apiFetch("/api/follows", { method: "POST", json: { username: person.profile.username } });
+        nextStatus = result?.status === "pending" ? "pending" : "accepted";
+      }
     } catch (error) {
       return toast.error("Não foi possível atualizar a conexão.", { description: errorMessage(error) });
     }
-    setData((current: any) => ({ ...current, social: { ...current.social, viewer_following_usernames: followed ? current.social.viewer_following_usernames.filter((name: string) => name !== person.profile.username) : [...current.social.viewer_following_usernames, person.profile.username] } }));
+    setData((current: any) => {
+      const followingNames: string[] = current.social.viewer_following_usernames || [];
+      const pendingNames: string[] = current.social.viewer_pending_usernames || [];
+      return {
+        ...current,
+        social: {
+          ...current.social,
+          viewer_following_usernames: nextStatus === "accepted"
+            ? [...new Set([...followingNames, person.profile.username])]
+            : followingNames.filter((name) => name !== person.profile.username),
+          viewer_pending_usernames: nextStatus === "pending"
+            ? [...new Set([...pendingNames, person.profile.username])]
+            : pendingNames.filter((name) => name !== person.profile.username),
+        },
+      };
+    });
+    toast.success(followed ? "Você deixou de seguir" : pending ? "Solicitação cancelada" : nextStatus === "pending" ? "Solicitação enviada" : "Agora você está seguindo");
   }
 
   async function manageConnection(row: PersonRow, action: "accept" | "reject" | "unfollow" | "remove_follower" | "cancel") {
@@ -433,7 +505,7 @@ export default function PublicProfilePage() {
   async function createList() { if (!listName.trim()) return; let result; try { result = await apiFetch("/api/lists", { method: "POST", json: { name: listName } }); } catch (error) { return toast.error("Não foi possível criar a lista", { description: errorMessage(error) }); }setData((current:any)=>({...current,lists:[{...result,items:[{count:0}]},...(current.lists||[])]}));setListName("");toast.success("Lista criada"); }
 
   const modalRows: PersonRow[] = connectionModal
-    ? ((data?.social?.[connectionModal]) || []).map(normalizePerson).filter(Boolean) as PersonRow[]
+    ? ((data?.social?.relationship === "self" || connectionModal === "friends") ? connectionLists[connectionModal].items : (data?.social?.[connectionModal]) || []).map(normalizePerson).filter(Boolean) as PersonRow[]
     : [];
   const filteredRows = useMemo(() => modalRows.filter((row) => `${row.profile.display_name || ""} ${row.profile.username || ""}`.toLowerCase().includes(connectionSearch.trim().toLowerCase())), [modalRows, connectionSearch]);
   if (loading) return <><Search /><div className="empty"><Loader2 className="spin" /> Carregando perfil...</div></>;
@@ -454,7 +526,7 @@ export default function PublicProfilePage() {
     ) : null}
     <header className="profile-v2-hero panel">
       {data.profile.avatar_url ? <img src={data.profile.avatar_url} alt={data.profile.display_name} /> : <div className="public-profile-avatar">{data.profile.display_name?.slice(0, 2).toUpperCase()}</div>}
-      <div className="profile-v2-copy"><span>@{data.profile.username}</span><h1>{data.profile.display_name}</h1>{data.profile.bio && <p>{data.profile.bio}</p>}<div className="profile-v2-counts"><button disabled={relationship !== "self" && data.social.followers == null} onClick={() => setConnectionModal("followers")}><strong>{data.social.followers_count}</strong> seguidores</button><button disabled={relationship !== "self" && data.social.following == null} onClick={() => setConnectionModal("following")}><strong>{data.social.following_count}</strong> seguindo</button></div></div>
+      <div className="profile-v2-copy"><span>@{data.profile.username}</span><h1>{data.profile.display_name}</h1>{data.profile.bio && <p>{data.profile.bio}</p>}<div className="profile-v2-counts"><button disabled={relationship !== "self" && data.social.followers == null} onClick={() => openConnectionModal("followers")}><strong>{data.social.followers_count}</strong> seguidores</button><button disabled={relationship !== "self" && data.social.following == null} onClick={() => openConnectionModal("following")}><strong>{data.social.following_count}</strong> seguindo</button>{relationship === "self" && <button onClick={() => openConnectionModal("friends")}><strong>{data.social.friends_count || 0}</strong> amigos</button>}</div></div>
       {relationship === "self" ? <button className={`btn profile-v2-action ${editingProfile ? "" : "primary"}`} onClick={() => setEditingProfile((value) => !value)}>{editingProfile ? <X size={16}/> : <Pencil size={16} />}{editingProfile ? "Fechar edição" : "Editar perfil"}</button> : data.social.can_follow && <button className={`btn profile-v2-action ${relationship === "none" ? "primary" : ""}`} disabled={busy} onClick={toggleFollow}>{busy ? <Loader2 className="spin" size={16} /> : relationship === "accepted" ? <UserCheck size={16} /> : <UserPlus size={16} />}{relationship === "accepted" ? "Seguindo" : relationship === "pending" ? "Solicitação enviada" : "Seguir"}</button>}
     </header>
     </div>
@@ -463,19 +535,20 @@ export default function PublicProfilePage() {
 
     {/* V3.3: Top 5 vazio não vira duas linhas em branco — some para quem visita; o dono vê onde configurar. */}{!data.locked && (favoriteMovies.length > 0 || favoriteSeries.length > 0) && <section className="panel profile-top5-fold">{favoriteMovies.length > 0 && <div><span className="eyebrow">TOP 5 FILMES</span><div className="profile-top5-row">{favoriteMovies.map((item:any)=><div className="profile-poster-cell mc-pa-host" key={`movie-${item.position}`}><Link href={`/title/movie/${item.media.tmdb_id}`}>{item.media.poster_path?<img loading="lazy" src={img(item.media.poster_path,"w342")} alt={item.media.title}/>:<Film/>}<small>{item.media.title}</small></Link><ConnectedPosterActions media={{ tmdbId: Number(item.media.tmdb_id), mediaType: "movie", title: item.media.title, posterPath: item.media.poster_path ?? null }} /></div>)}</div></div>}{favoriteSeries.length > 0 && <div><span className="eyebrow">TOP 5 SÉRIES</span><div className="profile-top5-row">{favoriteSeries.map((item:any)=><div className="profile-poster-cell mc-pa-host" key={`tv-${item.position}`}><Link href={`/title/tv/${item.media.tmdb_id}`}>{item.media.poster_path?<img loading="lazy" src={img(item.media.poster_path,"w342")} alt={item.media.title}/>:<Film/>}<small>{item.media.title}</small></Link><ConnectedPosterActions media={{ tmdbId: Number(item.media.tmdb_id), mediaType: "tv", title: item.media.title, posterPath: item.media.poster_path ?? null }} /></div>)}</div></div>}</section>}{!data.locked && relationship === "self" && favoriteMovies.length === 0 && favoriteSeries.length === 0 && <section className="panel profile-top5-fold profile-top5-empty"><p className="muted">Seu Top 5 de filmes e séries aparece aqui. Escolha em <strong>Editar perfil</strong>, entre os títulos que você já assistiu.</p></section>}
 
-    <nav className="profile-tabs" role="tablist" aria-label="Conteúdo do perfil">{([['activity','Atividade',BookOpen],['reviews','Reviews',MessageSquareText],['likes','Curtidos',Heart],['lists','Listas',List],['connections',relationship === "self" && connectionCounts?.incoming ? `Solicitações (${connectionCounts.incoming})` : 'Seguidores / Seguindo',Users]] as const).map(([value,label,Icon]) => <button key={value} type="button" role="tab" aria-selected={tab === value} className={tab === value ? "active" : ""} onClick={() => setTab(value)}><Icon size={16} />{label}</button>)}</nav>
+    <nav className="profile-tabs" role="tablist" aria-label="Conteúdo do perfil">{([['activity','Atividade',BookOpen],['reviews','Reviews',MessageSquareText],['likes','Curtidos',Heart],['lists','Listas',List],['connections',connectionCounts?.incoming ? `Solicitações (${connectionCounts.incoming})` : 'Seguidores / Seguindo',Users]] as const).filter(([value]) => value !== "connections" || relationship === "self").map(([value,label,Icon]) => <button key={value} type="button" role="tab" aria-selected={tab === value} className={tab === value ? "active" : ""} onClick={() => selectProfileTab(value)}><Icon size={16} />{label}</button>)}</nav>
     <section className="panel profile-tab-content">
       {tab === "activity" && <><div className="profile-tab-heading"><div><span className="eyebrow">ATIVIDADE</span><h2>O que aconteceu recentemente</h2></div></div>{data.section_visibility?.activity ? <ActivityFeed items={activityFeed.items} hasMore={activityFeed.hasMore} loading={activityFeed.loading} onLoadMore={() => loadActivity({ append: true })} /> : <div className="profile-tab-empty">Esta atividade é privada.</div>}{data.recent_reviews?.length > 0 && <div className="profile-reviews"><h3>Avaliações recentes</h3>{data.recent_reviews.slice(0, 4).map((row: any) => { const media = mediaOf(row); return <Link href={`/title/${media.media_type}/${media.tmdb_id}`} key={row.id}><strong>{media.title}</strong><span>{row.personal_rating != null ? `★ ${Number(row.personal_rating).toFixed(1)}` : "Resenha"}</span>{row.review && <p>{row.review}</p>}</Link>; })}</div>}{data.diary?.length > 0 && <div className="profile-diary"><h3>Diário recente</h3>{data.diary.slice(0, 5).map((entry: any) => { const library = Array.isArray(entry.library) ? entry.library[0] : entry.library; const media = mediaOf(library); return media && <div key={entry.id}><span>{new Date(entry.watched_at).toLocaleDateString("pt-BR")}</span><Link href={`/title/${media.media_type}/${media.tmdb_id}`}>{media.title}</Link>{entry.rating != null && <b>★ {Number(entry.rating).toFixed(1)}</b>}</div>; })}</div>}</>}
       {tab === "reviews" && <><div className="profile-tab-heading"><div><span className="eyebrow">REVIEWS</span><h2>Todas as reviews</h2></div><span className="profile-tab-total">{data.reviews?.length || 0}</span></div><ReviewList items={data.reviews || []} /></>}
       {tab === "lists" && <><div className="profile-tab-heading"><div><span className="eyebrow">COLEÇÕES</span><h2>Listas criadas</h2></div></div>{relationship === "self" && <div className="profile-list-create"><input value={listName} maxLength={80} onChange={event=>setListName(event.target.value)} onKeyDown={event=>event.key==="Enter"&&createList()} placeholder="Nome da nova lista"/><button className="btn primary" onClick={createList}><List size={16}/> Criar lista</button></div>}<div className="profile-list-grid">{data.lists?.map((list: any) => <Link href={`/lists/${list.id}`} key={list.id} className="profile-list-card lst-profile-card"><article><ListCover posters={list.covers || []} size="sm" /><div><strong>{list.name}</strong>{list.description ? <p>{list.description}</p> : null}<small>{list.items?.[0]?.count || 0} {(list.items?.[0]?.count || 0) === 1 ? "título" : "títulos"}{relationship === "self" ? (list.is_public ? " · Pública" : " · Privada") : ""}</small></div></article></Link>)}</div>{!data.lists?.length && <div className="profile-tab-empty">Nenhuma lista criada ainda.</div>}</>}
       {tab === "likes" && <><div className="profile-tab-heading"><div><span className="eyebrow">CURTIDAS</span><h2>Títulos curtidos</h2></div></div><PosterRow items={data.liked_titles || []} empty="Nenhum título curtido ainda." /></>}
-      {tab === "connections" && <><div className="profile-tab-heading"><div><span className="eyebrow">CONEXÕES</span><h2>Seguidores, seguindo e solicitações</h2></div></div>{relationship === "self" ? (() => {
+      {tab === "connections" && relationship === "self" && <><div className="profile-tab-heading"><div><span className="eyebrow">CONEXÕES</span><h2>Seguidores, seguindo e solicitações</h2></div></div>{(() => {
         const currentList = connectionLists[connectionSubTab];
         const subTabs: { type: ConnectionType; label: string }[] = [
           { type: "incoming", label: "Solicitações" },
           { type: "outgoing", label: "Enviadas" },
           { type: "followers", label: "Seguidores" },
           { type: "following", label: "Seguindo" },
+          { type: "friends", label: "Amigos" },
         ];
         const rowAction: Record<ConnectionType, { label: string; icon: typeof Check; danger?: boolean; onClick: (row: PersonRow) => void }[]> = {
           incoming: [
@@ -484,13 +557,15 @@ export default function PublicProfilePage() {
           ],
           outgoing: [{ label: "Cancelar", icon: Ban, onClick: (row) => manageConnection(row, "cancel") }],
           following: [{ label: "Deixar de seguir", icon: UserMinus, onClick: (row) => manageConnection(row, "unfollow") }],
-          followers: [{ label: "Remover", icon: UserMinus, onClick: (row) => manageConnection(row, "remove_follower") }],
+          friends: [{ label: "Deixar de seguir", icon: UserMinus, onClick: (row) => manageConnection(row, "unfollow") }],
+          followers: [{ label: "Remover", icon: UserMinus, danger: true, onClick: (row) => manageConnection(row, "remove_follower") }],
         };
         const emptyLabel: Record<ConnectionType, string> = {
           incoming: "Nenhuma solicitação pendente.",
           outgoing: "Nenhuma solicitação enviada.",
           followers: "Você ainda não tem seguidores.",
           following: "Você ainda não segue ninguém.",
+          friends: "As amizades aparecem quando vocês se seguem mutuamente.",
         };
         return (
           <div className="profile-own-connections">
@@ -502,7 +577,7 @@ export default function PublicProfilePage() {
                   role="tab"
                   aria-selected={connectionSubTab === type}
                   className={connectionSubTab === type ? "active" : ""}
-                  onClick={() => setConnectionSubTab(type)}
+                  onClick={() => selectConnectionTab(type)}
                 >
                   {label}
                   {connectionCounts?.[type] ? <span>{connectionCounts[type]}</span> : null}
@@ -510,24 +585,37 @@ export default function PublicProfilePage() {
               ))}
             </div>
             <div className="profile-own-connections-list" role="tabpanel">
-              {currentList.loading && !currentList.items.length ? (
+              {(currentList.loading || !currentList.loaded) && !currentList.items.length ? (
                 <p className="muted"><Loader2 className="spin" size={16} /> Carregando...</p>
               ) : !currentList.items.length ? (
                 <p className="muted">{emptyLabel[connectionSubTab]}</p>
               ) : (
                 currentList.items.map((row) => {
-                  const key = row.follower_id || row.following_id || row.profile.id || row.profile.username;
+                  const key = row.profile.id || row.profile.username?.trim().toLowerCase() || row.follower_id || row.following_id;
+                  const isFollowing = data.social.viewer_following_usernames.includes(row.profile.username);
+                  const isPending = (data.social.viewer_pending_usernames || []).includes(row.profile.username);
+                  const actions = connectionSubTab === "followers"
+                    ? [
+                        ...rowAction.followers.map((action) => ({ ...action, quiet: true })),
+                        {
+                          label: isPending ? "Solicitação enviada" : isFollowing ? "Seguindo" : "Seguir de volta",
+                          icon: isPending ? Check : isFollowing ? UserCheck : UserPlus,
+                          quiet: isFollowing || isPending,
+                          onClick: (person: PersonRow) => quickFollow(person),
+                        },
+                      ]
+                    : rowAction[connectionSubTab].map((action) => ({ ...action, quiet: Boolean(action.danger) }));
                   return (
                     <div className="profile-own-connection" key={key}>
                       <Link href={`/u/${row.profile.username}`}>
                         <span className="profile-own-avatar">
                           {row.profile.avatar_url ? <img src={row.profile.avatar_url} alt="" /> : row.profile.display_name?.slice(0, 2).toUpperCase()}
                         </span>
-                        <div><strong>{row.profile.display_name}</strong><small>@{row.profile.username}</small></div>
+                        <div><strong>{row.profile.display_name}</strong><small>@{row.profile.username}</small>{row.affinity_score != null && <small className="profile-affinity-label">{tasteAffinityLabel(row.affinity_score)} · {row.affinity_score}%</small>}</div>
                       </Link>
                       <div>
-                        {rowAction[connectionSubTab].map(({ label, icon: Icon, danger, onClick }) => (
-                          <button key={label} type="button" className={danger ? "btn" : "btn primary"} onClick={() => onClick(row)}>
+                        {actions.map(({ label, icon: Icon, quiet, onClick }) => (
+                          <button key={label} type="button" className={quiet ? "btn" : "btn primary"} onClick={() => onClick(row)}>
                             <Icon size={14} />{label}
                           </button>
                         ))}
@@ -549,10 +637,10 @@ export default function PublicProfilePage() {
             </div>
           </div>
         );
-      })() : <div className="profile-connection-actions"><button className="btn" disabled={!data.social.followers} onClick={()=>setConnectionModal("followers")}><Users size={16}/>{data.social.followers_count} seguidores</button><button className="btn" disabled={!data.social.following} onClick={()=>setConnectionModal("following")}><UserCheck size={16}/>{data.social.following_count} seguindo</button></div>}</>}
+      })()}</>}
     </section>
   </div>
 
-  {connectionModal && <div className="profile-connections-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setConnectionModal(null)}><section ref={connectionModalRef as React.RefObject<HTMLElement>} className="profile-connections-modal panel" role="dialog" aria-modal="true" aria-label={connectionModal === "followers" ? "Seguidores" : "Seguindo"}><header><div><h2>{connectionModal === "followers" ? "Seguidores" : "Seguindo"}</h2><span>{modalRows.length} {modalRows.length === 1 ? "pessoa" : "pessoas"}</span></div><button type="button" title="Fechar" aria-label="Fechar" onClick={() => setConnectionModal(null)}><X /></button></header><label><SearchIcon size={16} /><input aria-label="Pesquisar nesta lista" value={connectionSearch} onChange={(e) => setConnectionSearch(e.target.value)} placeholder="Pesquisar nesta lista" /></label><div className="profile-connections-list">{filteredRows.map((row) => { const followed = data.social.viewer_following_usernames.includes(row.profile.username); return <div key={row.profile.username}><Link href={`/u/${row.profile.username}`} onClick={() => setConnectionModal(null)}>{row.profile.avatar_url ? <img src={row.profile.avatar_url} alt="" /> : <span>{row.profile.display_name?.slice(0,2).toUpperCase()}</span>}<div><strong>{row.profile.display_name}</strong><small>@{row.profile.username}</small></div></Link>{relationship === "self" ? <button className="btn" onClick={() => manageConnection(row, connectionModal === "followers" ? "remove_follower" : "unfollow")}><UserMinus size={14}/>{connectionModal === "followers" ? "Remover" : "Deixar de seguir"}</button> : row.profile.username !== data.social.viewer_username && row.profile.username !== data.profile.username ? <button className={`btn ${followed ? "" : "primary"}`} onClick={() => quickFollow(row)}>{followed ? <><Check size={14} /> Seguindo</> : <><UserPlus size={14} /> Seguir</>}</button> : null}</div>; })}{!filteredRows.length && <div className="profile-tab-empty">Nenhum usuário encontrado.</div>}</div></section></div>}
+  {connectionModal && <div className="profile-connections-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setConnectionModal(null)}><section ref={connectionModalRef as React.RefObject<HTMLElement>} className="profile-connections-modal panel" role="dialog" aria-modal="true" aria-label={connectionModal === "followers" ? "Seguidores" : connectionModal === "friends" ? "Amigos" : "Seguindo"}><header><div><h2>{connectionModal === "followers" ? "Seguidores" : connectionModal === "friends" ? "Amigos" : "Seguindo"}</h2><span>{connectionModal === "friends" ? (relationship === "self" ? connectionCounts?.friends : data.social.friends_count) : modalRows.length} {connectionModal === "friends" ? "pessoas" : modalRows.length === 1 ? "pessoa" : "pessoas"}</span></div><button type="button" title="Fechar" aria-label="Fechar" onClick={() => setConnectionModal(null)}><X /></button></header><label><SearchIcon size={16} /><input aria-label="Pesquisar nesta lista" value={connectionSearch} onChange={(e) => setConnectionSearch(e.target.value)} placeholder="Pesquisar nesta lista" /></label><div className="profile-connections-list">{filteredRows.map((row) => { const followed = data.social.viewer_following_usernames.includes(row.profile.username); return <div key={row.profile.username}><Link href={`/u/${row.profile.username}`} onClick={() => setConnectionModal(null)}>{row.profile.avatar_url ? <img src={row.profile.avatar_url} alt="" /> : <span>{row.profile.display_name?.slice(0,2).toUpperCase()}</span>}<div><strong>{row.profile.display_name}</strong><small>@{row.profile.username}</small>{row.affinity_score != null && <small className="profile-affinity-label">{tasteAffinityLabel(row.affinity_score)} · {row.affinity_score}%</small>}</div></Link>{relationship === "self" ? <button className="btn" onClick={() => manageConnection(row, connectionModal === "followers" ? "remove_follower" : "unfollow")}><UserMinus size={14}/>{connectionModal === "followers" ? "Remover" : "Deixar de seguir"}</button> : row.profile.username !== data.social.viewer_username && row.profile.username !== data.profile.username ? <button className={`btn ${followed ? "" : "primary"}`} onClick={() => quickFollow(row)}>{followed ? <><Check size={14} /> Seguindo</> : <><UserPlus size={14} /> Seguir</>}</button> : null}</div>; })}{!filteredRows.length && <div className="profile-tab-empty">Nenhum usuário encontrado.</div>}</div>{connectionModal === "friends" && connectionLists.friends.hasMore && <button className="btn profile-own-connections-more" disabled={connectionLists.friends.loading} onClick={() => loadConnectionList("friends", { append: true })}>Carregar mais amigos</button>}</section></div>}
   </>;
 }

@@ -1,5 +1,5 @@
 import { MediaPosterActions } from "@/components/media/MediaPosterActions";
-import { MediaPosterTags } from "@/components/media/MediaBadges";
+import { MediaPosterTags, mediaTypeLabel } from "@/components/media/MediaBadges";
 import Link from "next/link";
 import {
   Star,
@@ -66,19 +66,19 @@ export function DiscoverCard({
           favorite={Boolean(item.favorite)}
           busy={isProcessing}
           onPreview={() => onPreview(item)}
+          onMarkWatched={() => onUpdateStatus(item, "watched")}
           onAdd={() => onAdd(item)}
           onChangeStatus={(status) => onUpdateStatus(item, status)}
           onToggleFavorite={() => onToggleFavorite(item)}
           onRemove={() => onRequestRemove(item)}
         />
       </MediaCardImage>
-
       <Link href={`/title/${item.media_type}/${item.id}`} className="card-title">
         {title}
       </Link>
 
       <MediaCardMeta>
-        <span>{itemYear || "—"}</span>
+        <span className="mc-media-type-year">{mediaTypeLabel(item.media_type)} · {itemYear || "—"}</span>
 
         {item.vote_average > 0 && (
           <span className="rating">

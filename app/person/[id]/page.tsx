@@ -2,7 +2,7 @@
 
 
 import "@/styles/features/person.css";
-import { MediaPosterTags } from "@/components/media/MediaBadges";
+import { MediaPosterTags, mediaTypeLabel } from "@/components/media/MediaBadges";
 import {
   useEffect,
   useMemo,
@@ -1170,7 +1170,6 @@ function PersonCreditCard({
           media={{ tmdbId: Number(item.id), mediaType: item.media_type === "tv" ? "tv" : "movie", title, year, posterPath: item.poster_path ?? null, voteAverage: Number(item.vote_average || 0) || null }}
         />
       </div>
-
       <Link href={href} className="person-work-body">
         <strong>
           {
@@ -1179,9 +1178,8 @@ function PersonCreditCard({
         </strong>
 
         <div className="person-work-meta">
-          <span>
-            {year ||
-              "—"}
+          <span className="mc-media-type-year">
+            {mediaTypeLabel(item.media_type)} · {year || "—"}
           </span>
 
           {Number(

@@ -20,6 +20,9 @@ export async function GET() {
         followers_visibility,
         following_visibility,
         activity_visibility,
+        ratings_visibility,
+        reviews_visibility,
+        watched_titles_visibility,
         diary_visibility,
         lists_visibility,
         likes_visibility
@@ -52,7 +55,8 @@ export async function PUT(request: NextRequest) {
     const currentRows = await sql`
       SELECT
         visibility, follow_policy, followers_visibility, following_visibility,
-        activity_visibility, diary_visibility, lists_visibility, likes_visibility
+        activity_visibility, ratings_visibility, reviews_visibility, watched_titles_visibility,
+        diary_visibility, lists_visibility, likes_visibility
       FROM public.profiles
       WHERE id = ${user.id}
       LIMIT 1
@@ -75,6 +79,9 @@ export async function PUT(request: NextRequest) {
         followers_visibility = ${next.followers_visibility},
         following_visibility = ${next.following_visibility},
         activity_visibility = ${next.activity_visibility},
+        ratings_visibility = ${next.ratings_visibility},
+        reviews_visibility = ${next.reviews_visibility},
+        watched_titles_visibility = ${next.watched_titles_visibility},
         diary_visibility = ${next.diary_visibility},
         lists_visibility = ${next.lists_visibility},
         likes_visibility = ${next.likes_visibility}

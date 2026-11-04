@@ -27,6 +27,9 @@ type Settings = {
   followers_visibility: string;
   following_visibility: string;
   activity_visibility: string;
+  ratings_visibility: string;
+  reviews_visibility: string;
+  watched_titles_visibility: string;
   diary_visibility: string;
   lists_visibility: string;
   likes_visibility: string;
@@ -35,7 +38,10 @@ type Settings = {
 const SECTIONS: { key: keyof Settings; label: string }[] = [
   { key: "followers_visibility", label: "Quem vê seus seguidores?" },
   { key: "following_visibility", label: "Quem vê quem você segue?" },
-  { key: "activity_visibility", label: "Quem vê sua atividade e reviews?" },
+  { key: "ratings_visibility", label: "Quem pode ver suas notas e usar suas avaliações sociais?" },
+  { key: "reviews_visibility", label: "Quem pode ler seus comentários e resenhas?" },
+  { key: "watched_titles_visibility", label: "Quem pode ver os títulos que você assistiu?" },
+  { key: "activity_visibility", label: "Quem pode ver sua atividade recente?" },
   { key: "diary_visibility", label: "Quem vê seu diário?" },
   { key: "lists_visibility", label: "Quem vê suas listas públicas?" },
   { key: "likes_visibility", label: "Quem vê seus curtidos?" },

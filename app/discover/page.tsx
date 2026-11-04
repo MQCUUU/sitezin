@@ -401,10 +401,11 @@ function DiscoverContent() {
     setRetryTick((tick) => tick + 1);
   }
 
-  async function addToLibrary(item: DiscoverItem) {
+  async function addToLibrary(item: DiscoverItem, status = "want") {
     const key = `${item.media_type}-${item.id}`;
 
-    if (!libraryAuth.requireUser(intentForMedia(item, "add"))) return;
+    const intent = status === "want" ? intentForMedia(item, "add") : intentForMedia(item, "status", status);
+    if (!libraryAuth.requireUser(intent)) return;
 
     try {
       setProcessing(key);
@@ -420,7 +421,7 @@ function DiscoverContent() {
             original_title: item.original_title || item.original_name,
             genres: [],
           },
-          status: "want",
+          status,
           favorite: false,
         }),
       });
@@ -462,7 +463,10 @@ function DiscoverContent() {
   }
 
   async function updateLibraryStatus(item: DiscoverItem, nextStatus: string) {
-    if (!item.library_id) return;
+    if (!item.library_id) {
+      await addToLibrary(item, nextStatus);
+      return;
+    }
 
     const key = `${item.media_type}-${item.id}`;
 

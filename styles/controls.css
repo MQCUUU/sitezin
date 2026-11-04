@@ -151,8 +151,10 @@
   }
 
   /* Tags sobre pôster */
-  .main .mc-tag-slot--top {
-    top: 6px;
+  .main .mc-tag-slot.mc-tag-slot--top {
+    top: 0;
+    left: 0;
+    max-width: none;
   }
 
   .main .mc-tag-slot {
@@ -173,12 +175,6 @@
   .main .mc-tag > svg {
     width: 11px;
     height: 11px;
-  }
-
-  .main .mc-tag.mc-tag--type {
-    width: 20px;
-    padding: 0;
-    font-size: 0;
   }
 
   /* Botões sobre pôster: menores à vista, mesma área de toque. */

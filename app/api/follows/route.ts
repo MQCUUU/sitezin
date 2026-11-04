@@ -3,8 +3,9 @@ import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { entradaInvalida, naoAutenticado, respostaDeErro } from "@/lib/api-error";
 import { followStatusFor } from "@/lib/social/visibility";
+import { normalizedTasteAffinity } from "@/lib/social/ratings";
 
-const CONNECTION_TYPES = ["followers", "following", "incoming", "outgoing"] as const;
+const CONNECTION_TYPES = ["followers", "following", "friends", "incoming", "outgoing"] as const;
 type ConnectionType = (typeof CONNECTION_TYPES)[number];
 const DEFAULT_PAGE_SIZE = 24;
 const MAX_PAGE_SIZE = 50;
@@ -17,7 +18,7 @@ const MAX_PAGE_SIZE = 50;
  * — o único formato que o polling de 30s do FollowRequestNotifier
  * precisa, sem nunca baixar o grafo inteiro.
  */
-function directionFilter(type: ConnectionType): { column: "follower_id" | "following_id"; status: "accepted" | "pending" } {
+function directionFilter(type: Exclude<ConnectionType, "friends">): { column: "follower_id" | "following_id"; status: "accepted" | "pending" } {
   switch (type) {
     case "followers":
       return { column: "following_id", status: "accepted" };
@@ -53,7 +54,11 @@ export async function GET(request: NextRequest) {
           count(*) FILTER (WHERE following_id = ${user.id} AND status = 'accepted')::int AS followers,
           count(*) FILTER (WHERE follower_id = ${user.id} AND status = 'accepted')::int AS following,
           count(*) FILTER (WHERE following_id = ${user.id} AND status = 'pending')::int AS incoming,
-          count(*) FILTER (WHERE follower_id = ${user.id} AND status = 'pending')::int AS outgoing
+          count(*) FILTER (WHERE follower_id = ${user.id} AND status = 'pending')::int AS outgoing,
+          count(*) FILTER (WHERE follower_id = ${user.id} AND status = 'accepted'
+            AND EXISTS (SELECT 1 FROM public.follows back
+              WHERE back.follower_id = public.follows.following_id
+                AND back.following_id = ${user.id} AND back.status = 'accepted'))::int AS friends
         FROM public.follows
         WHERE follower_id = ${user.id} OR following_id = ${user.id}
       `;
@@ -89,7 +94,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (!CONNECTION_TYPES.includes(type as ConnectionType)) {
-      return entradaInvalida("type deve ser followers, following, incoming ou outgoing.");
+      return entradaInvalida("type deve ser followers, following, friends, incoming ou outgoing.");
     }
 
     const requestedPage = Number(request.nextUrl.searchParams.get("page") || 1);
@@ -100,7 +105,46 @@ export async function GET(request: NextRequest) {
       : DEFAULT_PAGE_SIZE;
     const offset = (page - 1) * limit;
 
-    const { column, status } = directionFilter(type as ConnectionType);
+    if (type === "friends") {
+      const totalRows = await sql.query(
+        `SELECT count(*)::int AS total
+         FROM public.follows f
+         JOIN public.follows back ON back.follower_id = f.following_id
+           AND back.following_id = f.follower_id AND back.status = 'accepted'
+         WHERE f.follower_id = $1 AND f.status = 'accepted'`,
+        [user.id]
+      );
+      const total = Number((totalRows[0] as { total: number } | undefined)?.total || 0);
+      const rows = await sql.query(
+        `SELECT f.follower_id, f.following_id, f.created_at, f.updated_at,
+          json_build_object('id', p.id, 'username', p.username, 'display_name', p.display_name,
+            'avatar_url', p.avatar_url, 'visibility', p.visibility) AS profile,
+          affinity.shared_ratings, affinity.average_difference
+         FROM public.follows f
+         JOIN public.follows back ON back.follower_id = f.following_id
+           AND back.following_id = f.follower_id AND back.status = 'accepted'
+         JOIN public.profiles p ON p.id = f.following_id
+         LEFT JOIN LATERAL (
+           SELECT count(*)::int AS shared_ratings,
+             avg(abs(theirs.personal_rating::float - mine.personal_rating::float))::float AS average_difference
+           FROM public.library_items theirs
+           JOIN public.library_items mine ON mine.user_id = $1 AND mine.media_id = theirs.media_id AND mine.personal_rating IS NOT NULL
+           WHERE theirs.user_id = f.following_id AND theirs.personal_rating IS NOT NULL
+         ) affinity ON true
+         WHERE f.follower_id = $1 AND f.status = 'accepted'
+         ORDER BY f.updated_at DESC
+         LIMIT $2 OFFSET $3`,
+        [user.id, limit, offset]
+      );
+      const items = (rows as any[]).map((row) => ({
+        ...row,
+        direction: "friend",
+        affinity_score: normalizedTasteAffinity(Number(row.shared_ratings || 0), Number(row.average_difference)),
+      }));
+      return NextResponse.json({ items, page, per_page: limit, total, has_more: offset + items.length < total }, { headers: { "Cache-Control": "private, no-store" } });
+    }
+
+    const { column, status } = directionFilter(type as Exclude<ConnectionType, "friends">);
     const otherColumn = column === "follower_id" ? "following_id" : "follower_id";
 
     const totalRows = await sql.query(

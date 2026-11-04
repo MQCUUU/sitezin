@@ -41,7 +41,7 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
     SELECT
       id, display_name, username, bio, avatar_url, banner_url, is_public, visibility,
       follow_policy, followers_visibility, following_visibility,
-      activity_visibility, diary_visibility, lists_visibility,
+      activity_visibility, ratings_visibility, reviews_visibility, watched_titles_visibility, diary_visibility, lists_visibility,
       likes_visibility, created_at
     FROM public.profiles
     WHERE lower(username) = lower(${username})
@@ -66,7 +66,7 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
           LIMIT 1
         `
       : Promise.resolve([]),
-    viewerId ? sql`SELECT username FROM public.profiles WHERE id = ${viewerId} LIMIT 1` : Promise.resolve([]),
+    viewerId ? sql`SELECT username, followers_visibility, following_visibility FROM public.profiles WHERE id = ${viewerId} LIMIT 1` : Promise.resolve([]),
   ]);
   const viewerFollowStatus: string | null = (viewerFollowRows[0] as { status?: string } | undefined)?.status || null;
   const viewerUsername: string | null = (viewerProfileRows[0] as { username?: string } | undefined)?.username || null;
@@ -75,9 +75,13 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
 
   const followersCountPromise = sql`SELECT count(*)::int as count FROM public.follows WHERE following_id = ${profile.id} AND status = 'accepted'`;
   const followingCountPromise = sql`SELECT count(*)::int as count FROM public.follows WHERE follower_id = ${profile.id} AND status = 'accepted'`;
+  const friendsCountPromise = sql`SELECT count(*)::int AS count
+    FROM public.follows f JOIN public.follows back ON back.follower_id = f.following_id
+      AND back.following_id = f.follower_id AND back.status = 'accepted'
+    WHERE f.follower_id = ${profile.id} AND f.status = 'accepted'`;
 
   if (!canView) {
-    const [followersCountRes, followingCountRes] = await Promise.all([followersCountPromise, followingCountPromise]);
+    const [followersCountRes, followingCountRes, friendsCountRes] = await Promise.all([followersCountPromise, followingCountPromise, friendsCountPromise]);
 
     return NextResponse.json(
       {
@@ -94,12 +98,15 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
         social: {
           followers_count: Number(followersCountRes[0]?.count || 0),
           following_count: Number(followingCountRes[0]?.count || 0),
+          friends_count: null,
+          mutual_friends_count: null,
           relationship: viewerFollowStatus || "none",
           can_follow: profile.follow_policy !== "nobody",
           viewer_username: viewerUsername,
           followers: null,
           following: null,
           viewer_following_usernames: [],
+          viewer_pending_usernames: [],
         },
       },
       { headers: NO_STORE }
@@ -108,11 +115,16 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
 
   const visible = (setting: unknown) => canViewSection(profile, setting, relation);
   const activityVisible = visible(profile.activity_visibility);
+  const ratingsVisible = visible(profile.ratings_visibility);
+  const reviewsVisible = visible(profile.reviews_visibility);
+  const watchedTitlesVisible = visible(profile.watched_titles_visibility);
   const diaryVisible = visible(profile.diary_visibility);
   const listsVisible = visible(profile.lists_visibility);
   const likesVisible = visible(profile.likes_visibility);
   const followersVisible = visible(profile.followers_visibility);
   const followingVisible = visible(profile.following_visibility);
+  // Amizades são privadas: só o dono do perfil pode consultar a lista e a contagem.
+  const friendsVisible = isOwner;
   const none = Promise.resolve([] as Record<string, any>[]);
 
   /*
@@ -131,8 +143,10 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
     lists,
     diary,
     viewerFollowingRows,
+    viewerPendingRows,
     followersCountRes,
     followingCountRes,
+    friendsCountRes,
   ] = await Promise.all([
     sql`
       SELECT
@@ -154,27 +168,13 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
       LEFT JOIN public.media m ON m.id = li.media_id
       WHERE li.user_id = ${profile.id}
     `,
-    activityVisible
+    (ratingsVisible || reviewsVisible)
       ? sql`
           SELECT
-            li.id, li.personal_rating, li.review, li.watched_at, li.added_at, li.updated_at,
-            json_build_object(
-              'tmdb_id', m.tmdb_id,
-              'media_type', m.media_type,
-              'title', m.title,
-              'poster_path', m.poster_path
-            ) as media
-          FROM public.library_items li
-          LEFT JOIN public.media m ON m.id = li.media_id
-          WHERE li.user_id = ${profile.id} AND li.review IS NOT NULL AND trim(li.review) <> ''
-          ORDER BY coalesce(li.updated_at, li.watched_at, li.added_at) DESC
-          LIMIT 200
-        `
-      : none,
-    activityVisible
-      ? sql`
-          SELECT
-            li.id, li.personal_rating, li.review, li.watched_at, li.added_at, li.updated_at,
+            li.id,
+            CASE WHEN ${ratingsVisible} THEN li.personal_rating ELSE NULL END AS personal_rating,
+            CASE WHEN ${reviewsVisible} THEN li.review ELSE NULL END AS review,
+            li.watched_at, li.added_at, li.updated_at,
             json_build_object(
               'tmdb_id', m.tmdb_id,
               'media_type', m.media_type,
@@ -184,7 +184,30 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
           FROM public.library_items li
           LEFT JOIN public.media m ON m.id = li.media_id
           WHERE li.user_id = ${profile.id}
-            AND ((li.review IS NOT NULL AND trim(li.review) <> '') OR li.personal_rating IS NOT NULL)
+            AND ((${ratingsVisible} AND li.personal_rating IS NOT NULL)
+              OR (${reviewsVisible} AND li.review IS NOT NULL AND trim(li.review) <> ''))
+          ORDER BY coalesce(li.updated_at, li.watched_at, li.added_at) DESC
+          LIMIT 200
+        `
+      : none,
+    activityVisible && (ratingsVisible || reviewsVisible)
+      ? sql`
+          SELECT
+            li.id,
+            CASE WHEN ${ratingsVisible} THEN li.personal_rating ELSE NULL END AS personal_rating,
+            CASE WHEN ${reviewsVisible} THEN li.review ELSE NULL END AS review,
+            li.watched_at, li.added_at, li.updated_at,
+            json_build_object(
+              'tmdb_id', m.tmdb_id,
+              'media_type', m.media_type,
+              'title', m.title,
+              'poster_path', m.poster_path
+            ) as media
+          FROM public.library_items li
+          LEFT JOIN public.media m ON m.id = li.media_id
+          WHERE li.user_id = ${profile.id}
+            AND ((${ratingsVisible} AND li.personal_rating IS NOT NULL)
+              OR (${reviewsVisible} AND li.review IS NOT NULL AND trim(li.review) <> ''))
           ORDER BY coalesce(li.updated_at, li.watched_at, li.added_at) DESC
           LIMIT 8
         `
@@ -299,8 +322,17 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
           WHERE f.follower_id = ${viewerId} AND f.status = 'accepted' AND p.username IS NOT NULL
         `
       : none,
+    viewerId
+      ? sql`
+          SELECT p.username
+          FROM public.follows f
+          JOIN public.profiles p ON p.id = f.following_id
+          WHERE f.follower_id = ${viewerId} AND f.status = 'pending' AND p.username IS NOT NULL
+        `
+      : none,
     followersCountPromise,
     followingCountPromise,
+    friendsCountPromise,
   ]);
 
   const statsRow = (statsRows[0] as { total: number; watched: number; movies: number; series: number } | undefined) || {
@@ -327,6 +359,9 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
       diary: diary || [],
       section_visibility: {
         activity: activityVisible,
+        ratings: ratingsVisible,
+        reviews: reviewsVisible,
+        watched_titles: watchedTitlesVisible,
         diary: diaryVisible,
         lists: listsVisible,
         likes: likesVisible,
@@ -334,12 +369,16 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
       social: {
         followers_count: Number(followersCountRes[0]?.count || 0),
         following_count: Number(followingCountRes[0]?.count || 0),
+        friends_count: friendsVisible ? Number(friendsCountRes[0]?.count || 0) : null,
+        mutual_friends_count: null,
         relationship: isOwner ? "self" : viewerFollowStatus || "none",
         can_follow: !isOwner && profile.follow_policy !== "nobody",
         viewer_username: viewerUsername,
         followers: followersVisible ? followers || [] : null,
         following: followingVisible ? following || [] : null,
+        friends: friendsVisible ? [] : null,
         viewer_following_usernames: (viewerFollowingRows || []).map((row: Record<string, any>) => row.username),
+        viewer_pending_usernames: (viewerPendingRows || []).map((row: Record<string, any>) => row.username),
       },
     },
     { headers: NO_STORE }

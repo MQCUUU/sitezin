@@ -9,7 +9,7 @@ import { todayIn } from "@/lib/calendar/dates";
 import { genreFilterLabels, genreKeyFromParam, GENRE_LABEL, idsForKey, type GenreKey } from "@/lib/for-you/genres";
 import { anchorOrder, anchorsPerPage, buildProfile, topGenres, type MediaType, type Profile, type TitleSignal, type WeightedTitle } from "@/lib/for-you/profile";
 import { anchorWord, assemble, balanceTypes, isEligible, typeCounts, scoreCandidate, sortScored, type Candidate, type Scored, type SortMode } from "@/lib/for-you/rank";
-import { SOCIAL_SQL, buildFriendRecommendations, type FriendCandidateRow } from "@/lib/for-you/social";
+import { FRIEND_OPINIONS_SUMMARY_SQL, SOCIAL_SQL, buildFriendRecommendations, type FriendCandidateRow } from "@/lib/for-you/social";
 
 /*
  * V2.8 — "Para você".
@@ -120,6 +120,14 @@ const SIGNALS_SQL = `
 `;
 
 export async function GET(req: NextRequest) {
+  try {
+    return await getForYou(req);
+  } catch (error) {
+    return respostaDeErro(error, "GET /api/for-you");
+  }
+}
+
+async function getForYou(req: NextRequest) {
   const session = await auth.getSession().catch(() => null);
   const user = session?.data?.user;
 
@@ -206,7 +214,15 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const providerFilter = provider === MY_SERVICES_SENTINEL ? await getUserProviderFilter(userId) : provider;
+  let providerFilter = provider;
+  if (provider === MY_SERVICES_SENTINEL) {
+    try {
+      providerFilter = await getUserProviderFilter(userId);
+    } catch (error) {
+      console.warn("[for-you] serviços de streaming indisponíveis:", error instanceof Error ? error.message : String(error));
+      providerFilter = "";
+    }
+  }
   const needsStreamingSetup = provider === MY_SERVICES_SENTINEL && providerFilter === "";
   const types: MediaType[] = type === "all" ? ["movie", "tv"] : [type];
 
@@ -515,7 +531,7 @@ export async function GET(req: NextRequest) {
     const friendCards = buildFriendRecommendations(candidateRows, profile, {
       sort,
       hidden,
-      exclude,
+      exclude: new Set([...exclude, ...profile.watched]),
       limit: LIMIT,
     });
 
@@ -528,8 +544,8 @@ export async function GET(req: NextRequest) {
       friendShelf = {
         id: "friends-recommendations",
         kind: "friends",
-        title: "Quem você segue recomenda",
-        subtitle: "Títulos bem avaliados pelas pessoas que você segue",
+        title: "Seus amigos estão curtindo",
+        subtitle: "Os títulos mais bem avaliados pelos seus amigos, no seu estilo",
         icon: "users",
         results: friendCards as unknown as Record<string, unknown>[],
       };
@@ -542,12 +558,34 @@ export async function GET(req: NextRequest) {
   const shelves: Shelf[] = built.map((b) => ({ ...b.shelf, results: b.picked.map((c) => card(c, b.reason(c))) }));
 
   if (friendShelf) {
-    const firstAnchorIndex = shelves.findIndex((s) => s.kind === "because");
-    if (firstAnchorIndex !== -1) {
-      const insertAt = Math.min(shelves.filter((s) => s.kind === "because").length, 2);
-      shelves.splice(insertAt, 0, friendShelf);
-    } else {
-      shelves.unshift(friendShelf);
+    const anchorShelfCount = shelves.filter((s) => s.kind === "because").length;
+    const insertAt = Math.min(shelves.length, Math.max(3, anchorShelfCount + 2));
+    shelves.splice(insertAt, 0, friendShelf);
+  }
+
+  // One batched lookup enriches every visible title card; social metadata never
+  // adds one database query per card and includes only mutually following friends.
+  const opinionTargets = [...new Map(shelves.flatMap((shelf) => shelf.results)
+    .filter((item: any) => (item.media_type === "movie" || item.media_type === "tv") && Number(item.id) > 0)
+    .map((item: any) => [`${item.media_type}-${item.id}`, { media_type: item.media_type, tmdb_id: Number(item.id) }])).values()];
+  if (opinionTargets.length) {
+    try {
+      const summaries = await sql.query(FRIEND_OPINIONS_SUMMARY_SQL, [userId, JSON.stringify(opinionTargets)]) as any[];
+      const summaryByKey = new Map(summaries.map((row) => [`${row.media_type}-${row.tmdb_id}`, {
+        total_friends: Number(row.total_friends || 0),
+        average: row.average == null ? null : Number(row.average),
+        distribution: {
+          love: Number(row.love || 0), like_much: Number(row.like_much || 0), like: Number(row.like || 0),
+          regular: Number(row.regular || 0), dislike: Number(row.dislike || 0),
+        },
+        friends: Array.isArray(row.friends) ? row.friends : [],
+      }]));
+      for (const shelf of shelves) for (const item of shelf.results as any[]) {
+        const summary = summaryByKey.get(`${item.media_type}-${item.id}`);
+        if (summary) item.friend_opinion_summary = summary;
+      }
+    } catch (error) {
+      console.warn("[for-you] resumo social indisponível:", error instanceof Error ? error.message : String(error));
     }
   }
   const mixOf = (list: Scored[]) => {

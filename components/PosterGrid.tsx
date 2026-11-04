@@ -4,7 +4,7 @@
 import "@/styles/features/library-page.css";
 import { removeFromLibrary } from "@/lib/library/actions";
 import { MediaPosterActions } from "@/components/media/MediaPosterActions";
-import { MediaPosterTags, MediaStatusTag } from "@/components/media/MediaBadges";
+import { MediaPosterTags, MediaStatusTag, mediaTypeLabel } from "@/components/media/MediaBadges";
 import { TvNextEpisode } from "@/components/TvNextEpisode";
 import { SeriesProgressLine, SeriesProgressPanel } from "@/components/library/SeriesProgress";
 import Link from "next/link";
@@ -1032,6 +1032,7 @@ function ActionButtons({
       favorite={Boolean(item.favorite)}
       busy={processing === item.library_id}
       onPreview={() => onPreview(item)}
+      onMarkWatched={() => onChangeStatus(item, "watched")}
       onToggleFavorite={() => onToggleFavorite(item)}
       onChangeStatus={(status) => onChangeStatus(item, status)}
       onRemove={() => onRequestRemove(item)}
@@ -1054,12 +1055,12 @@ function Card({ item, position, ...actionProps }: CardActionProps & { item: Libr
         <MediaPosterTags type={item.media_type} status={item.status} />
         <ActionButtons item={item} {...actionProps} />
       </MediaCardImage>
-
       <Link href={`/title/${item.media_type}/${item.tmdb_id}`} className="card-title">
         {item.title}
       </Link>
 
       <MediaCardMeta>
+        <span className="mc-media-type-year">{mediaTypeLabel(item.media_type)} · {year ?? "—"}</span>
         {item.personal_rating !== null && item.personal_rating !== undefined ? (
           <span className="rating">
             <Star size={12} fill="currentColor" />
@@ -1068,8 +1069,6 @@ function Card({ item, position, ...actionProps }: CardActionProps & { item: Libr
         ) : (
           <span className="no-rating">Sem nota</span>
         )}
-
-        {year && <span className="muted">{year}</span>}
 
         {item.favorite && (
           <span className="favorite-label">

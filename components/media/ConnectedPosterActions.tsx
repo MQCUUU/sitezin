@@ -1,8 +1,8 @@
 "use client";
 
 /*
- * Botões do pôster (olhinho = ver rápido, seta = status/adicionar, coração =
- * curtir) em QUALQUER pôster do site, sem a página precisar ligar nada.
+ * Botões de prévia, assistido, status/adicionar e curtir em qualquer pôster
+ * do site, sem a página precisar ligar as mutações da biblioteca.
  *
  * - Estado do título: lib/library/entry-store (uma consulta em lote por tela).
  * - Ações: as mesmas funções protegidas da Biblioteca (lib/library/actions): o
@@ -176,6 +176,7 @@ export function ConnectedPosterActions({ media, tags = false, inline = false }: 
         busy={busy || entry === undefined}
         inline={inline}
         onPreview={preview ? () => preview.open(media) : undefined}
+        onMarkWatched={() => run(intentForMedia(asItem, "status", "watched"), "Não foi possível marcar como assistido")}
         onAdd={() => run(intentForMedia(asItem, "add"), "Não foi possível adicionar")}
         onChangeStatus={(status) => run(intentForMedia(asItem, "status", status), "Não foi possível mudar o status")}
         onToggleFavorite={toggleFavorite}

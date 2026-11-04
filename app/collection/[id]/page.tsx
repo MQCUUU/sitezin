@@ -6,7 +6,7 @@ import "@/styles/features/collection.css";
 import { removeFromLibrary } from "@/lib/library/actions";
 import { apiFetch } from "@/lib/api-client";
 import { MediaPosterActions } from "@/components/media/MediaPosterActions";
-import { MediaPosterTags } from "@/components/media/MediaBadges";
+import { MediaPosterTags, mediaTypeLabel } from "@/components/media/MediaBadges";
 import { Poster } from "@/components/Poster";
 import { chunkLibraryStateIds } from "@/lib/library-state-batches";
 import { ApiError } from "@/lib/api-client";
@@ -1984,6 +1984,7 @@ function CollectionCard({
           favorite={Boolean(libraryItem?.favorite)}
           busy={busy}
           onPreview={() => setPreviewItem(movie)}
+          onMarkWatched={() => updateStatus(movie, "watched")}
           onAdd={() => addToLibrary(movie, "want")}
           onChangeStatus={(status: string) => updateStatus(movie, status)}
           onToggleFavorite={() => toggleFavorite(movie)}
@@ -2001,9 +2002,8 @@ function CollectionCard({
         </strong>
 
         <div className="collection-card-meta">
-          <span>
-            {year ||
-              "Sem data"}
+          <span className="mc-media-type-year">
+            {mediaTypeLabel("movie")} · {year || "Sem data"}
           </span>
 
           {Number(
