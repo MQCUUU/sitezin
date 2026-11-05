@@ -48,6 +48,7 @@ export function TitleHero({
   onToggleFavorite,
 }: TitleHeroProps) {
   const title = details.title || details.name;
+  const heroBackdropPath = details.backdrop_path || details.poster_path;
 
   // Fase 0: sem item e sem estado confirmado, nada pode ser criado nem curtido.
   const lookupPending = !libraryItem && libraryLookup !== "ready";
@@ -71,7 +72,7 @@ export function TitleHero({
       <div className="title-hero mc-title-hero-frame">
         <div className="title-hero-backdrop mc-title-hero-backdrop">
           <Poster
-            path={details.backdrop_path}
+            path={heroBackdropPath}
             alt=""
             sizes="100vw"
             tmdbSize="w1280"

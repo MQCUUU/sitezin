@@ -115,7 +115,8 @@ export function Poster({
       priority={priority}
       loading={priority ? undefined : loading}
       fetchPriority={priority ? undefined : fetchPriority}
-      unoptimized={usePlaceholder}
+      // O TMDB já fornece tamanhos adequados; evita o limite da otimização da Vercel.
+      unoptimized
       onLoad={() => setLoaded(true)}
       onError={() => setFailed(true)}
       // Fase 4: o candidato a LCP não espera o fade (opacidade 0 adiaria a pintura).
