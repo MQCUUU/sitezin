@@ -1,6 +1,7 @@
 "use client";
 
 
+import { useConfirm } from "@/components/ConfirmProvider";
 import "@/styles/features/library-page.css";
 import { removeFromLibrary } from "@/lib/library/actions";
 import { MediaPosterActions } from "@/components/media/MediaPosterActions";
@@ -10,8 +11,6 @@ import { SeriesProgressLine, SeriesProgressPanel } from "@/components/library/Se
 import Link from "next/link";
 import {
   Heart,
-  Trash2,
-  Loader2,
   Grid3X3,
   LayoutGrid,
   List,
@@ -40,7 +39,6 @@ import { WatchProviderList } from "@/components/media/preview/WatchProviderList"
 import { fromLibraryItem } from "@/components/media/preview/adapters";
 import { normalizeWatchProviders } from "@/components/media/providers";
 import { LIBRARY_ACTION_COPY } from "@/lib/library/remove";
-import { useModal } from "@/hooks/useModal";
 
 type ViewMode =
   | "grid"
@@ -93,39 +91,7 @@ export function PosterGrid({
   const [localItems, setLocalItems] =
     useState<LibraryItem[]>(items);
 
-  const [removeTarget, setRemoveTarget] =
-    useState<LibraryItem | null>(null);
-
-/*
- * Escape/scroll-lock for previewItem now come from MediaPreviewDialog's
- * underlying Dialog (C2.4). Fase 7: a confirmação de remoção usa useModal
- * (Escape, laço do Tab, foco inicial em "Cancelar"/devolução, trava de rolagem).
- */
-const removeDialogRef = useModal(Boolean(removeTarget), () => setRemoveTarget(null), false, ".mycatalog-confirm-actions .btn:not(.danger)");
-
-  const [
-  skipRemoveConfirm,
-  setSkipRemoveConfirm
-] =
-  useState(() => {
-    if (
-      typeof window ===
-      "undefined"
-    ) {
-      return false;
-    }
-
-    try {
-      return (
-        window.localStorage
-          .getItem(
-            "mycatalog_skip_remove_confirm"
-          ) === "1"
-      );
-    } catch {
-      return false;
-    }
-  });
+  const confirm = useConfirm();
 
   useEffect(() => {
     setLocalItems(items);
@@ -577,10 +543,6 @@ const removeDialogRef = useModal(Boolean(removeTarget), () => setRemoveTarget(nu
         null
       );
 
-      setRemoveTarget(
-        null
-      );
-
       toast.success(
         `${item.title} removido da biblioteca`,
         {
@@ -672,40 +634,27 @@ const removeDialogRef = useModal(Boolean(removeTarget), () => setRemoveTarget(nu
     }
   }
 
-  function requestRemove(
+  async function requestRemove(
     item: LibraryItem
   ) {
-    if (
-      skipRemoveConfirm
-    ) {
-      performRemove(
-        item
-      );
-
-      return;
-    }
-
-    setRemoveTarget(
-      item
-    );
-
     setOpenStatusMenu(
       null
     );
-  }
 
-  function confirmRemove() {
-    if (
-      !removeTarget
-    ) {
-      return;
-    }
+    const ok = await confirm({
+      title: `Remover “${item.title}”?`,
+      description: "O título sai da sua Biblioteca. Seu histórico de visualizações continua no Diário.",
+      confirmLabel: "Remover",
+      danger: true,
+      skipKey: "mycatalog_skip_remove_confirm",
+    });
+
+    if (!ok) return;
 
     performRemove(
-      removeTarget
+      item
     );
   }
-
 
 
   function toggleStatusMenuWithoutScroll(
@@ -880,119 +829,6 @@ const removeDialogRef = useModal(Boolean(removeTarget), () => setRemoveTarget(nu
         }
       />
 
-      {removeTarget && (
-        <div
-          className="mycatalog-confirm-backdrop"
-          onClick={() =>
-            setRemoveTarget(
-              null
-            )
-          }
-        >
-          <div
-  ref={removeDialogRef as React.RefObject<HTMLDivElement>}
-  className="mycatalog-confirm-modal"
-  role="alertdialog"
-  aria-modal="true"
-  aria-labelledby="library-remove-title"
-  onClick={(event) =>
-              event.stopPropagation()
-            }
-          >
-            <div className="mycatalog-confirm-icon danger">
-              <Trash2
-                size={20}
-              />
-            </div>
-
-            <div>
-              <div className="eyebrow">
-                Remover da biblioteca
-              </div>
-
-              <h3 id="library-remove-title">
-                Remover “{removeTarget.title}”?
-              </h3>
-
-              <p className="muted">
-                O título sai da sua Biblioteca. Seu histórico de visualizações continua no Diário.
-              </p>
-            </div>
-
-            <label className="mycatalog-confirm-option">
-              <input
-                type="checkbox"
-                checked={
-                  skipRemoveConfirm
-                }
-                onChange={(event) => {
-                  const checked =
-                    event.target.checked;
-
-                  setSkipRemoveConfirm(
-                    checked
-                  );
-
-                  try {
-                    localStorage.setItem(
-                      "mycatalog_skip_remove_confirm",
-                      checked
-                        ? "1"
-                        : "0"
-                    );
-                  } catch {
-                    // localStorage indisponível
-                  }
-                }}
-              />
-
-              <span>
-                Não mostrar novamente
-              </span>
-            </label>
-
-            <div className="mycatalog-confirm-actions">
-              <button
-                type="button"
-                className="btn"
-                onClick={() =>
-                  setRemoveTarget(
-                    null
-                  )
-                }
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="button"
-                className="btn danger"
-                disabled={
-                  processing ===
-                  removeTarget.library_id
-                }
-                onClick={
-                  confirmRemove
-                }
-              >
-                {processing ===
-                removeTarget.library_id ? (
-                  <Loader2
-                    size={16}
-                    className="spin"
-                  />
-                ) : (
-                  <Trash2
-                    size={16}
-                  />
-                )}
-
-                Remover
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
