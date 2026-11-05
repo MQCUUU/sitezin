@@ -3,6 +3,7 @@
 
 import "@/styles/features/settings.css";
 import { apiFetch, errorMessage } from "@/lib/api-client";
+import { fetchProfileMe } from "@/lib/profile-me";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Check, Loader2, Users } from "lucide-react";
@@ -62,7 +63,7 @@ export function SocialSettings() {
       // As regras salvas são obrigatórias (sem elas o editor não abre); o @ é só complemento.
       const [data, usernameData] = await Promise.all([
         apiFetch<Settings>("/api/profile/social-settings", { cache: "no-store" }),
-        apiFetch<{ username?: string }>("/api/profile/username", { cache: "no-store" }).catch(() => null),
+        fetchProfileMe(),
       ]);
 
       setSettings(data);
