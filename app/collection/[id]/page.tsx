@@ -2,6 +2,7 @@
 
 
 
+import { useConfirm } from "@/components/ConfirmProvider";
 import "@/styles/features/collection.css";
 import { removeFromLibrary } from "@/lib/library/actions";
 import { apiFetch } from "@/lib/api-client";
@@ -278,33 +279,7 @@ export default function CollectionPage() {
   ] =
     useState(false);
 
-  const [
-    removeTarget,
-    setRemoveTarget,
-  ] =
-    useState<
-      CollectionMovie |
-      null
-    >(null);
-
-  const [
-    skipRemoveConfirm,
-    setSkipRemoveConfirm,
-  ] =
-    useState(false);
-
-  useEffect(() => {
-    try {
-      setSkipRemoveConfirm(
-        localStorage.getItem(
-          "mycatalog_skip_remove_confirm"
-        ) ===
-          "1"
-      );
-    } catch {
-      // Intencional: armazenamento local indisponível (modo privado/cheio) — só perde a preferência.
-    }
-  }, []);
+  const confirm = useConfirm();
 
   /*
    * Menu de status fecha clicando fora.
@@ -597,6 +572,13 @@ export default function CollectionPage() {
     });
   }
 
+  // useCallback: as listas memorizadas abaixo dependem dele (e, por ele, de `library`).
+  // Declarado antes de qualquer função que o use — o React Compiler exige essa ordem.
+  const getLibraryItem = useCallback(
+    (movie: CollectionMovie) => library.find((item) => item.tmdb_id === Number(movie.id)),
+    [library]
+  );
+
   const asMedia = (movie: CollectionMovie) => ({ ...movie, media_type: "movie" });
 
   function guardedAdd(movie: CollectionMovie, status = "want") {
@@ -619,12 +601,6 @@ export default function CollectionPage() {
   function guardedBulk(run: () => Promise<unknown>) {
     runGuarded(undefined, "Não foi possível atualizar a coleção", run);
   }
-
-  // useCallback: as listas memorizadas abaixo dependem dele (e, por ele, de `library`).
-  const getLibraryItem = useCallback(
-    (movie: CollectionMovie) => library.find((item) => item.tmdb_id === Number(movie.id)),
-    [library]
-  );
 
   function patchLibrary(
     movie:
@@ -1170,27 +1146,22 @@ export default function CollectionPage() {
     }
   }
 
-  function requestRemove(
-    movie:
-      CollectionMovie
+  async function requestRemove(
+    movie: CollectionMovie
   ) {
-    if (
-      skipRemoveConfirm
-    ) {
-      removeMovie(
-        movie
-      );
+    setOpenMenu(null);
 
-      return;
-    }
+    const ok = await confirm({
+      title: `Remover “${movie.title}”?`,
+      description: "O filme sairá da sua biblioteca, mas continuará aparecendo nesta franquia.",
+      confirmLabel: "Remover",
+      danger: true,
+      skipKey: "mycatalog_skip_remove_confirm",
+    });
 
-    setRemoveTarget(
-      movie
-    );
+    if (!ok) return;
 
-    setOpenMenu(
-      null
-    );
+    await removeMovie(movie);
   }
 
   async function removeMovie(
@@ -1231,9 +1202,6 @@ export default function CollectionPage() {
           )
       );
 
-      setRemoveTarget(
-        null
-      );
     } finally {
       setProcessing(
         null
@@ -1806,120 +1774,6 @@ export default function CollectionPage() {
         providers={<WatchProviderList data={normalizeWatchProviders(previewDetails?.watch_providers, "BR")} loading={previewLoading} />}
       />
 
-      {/* CONFIRMAÇÃO REMOVER */}
-
-      {removeTarget && (
-        <div
-          className="mycatalog-confirm-backdrop"
-          onMouseDown={(
-            event
-          ) => {
-            if (
-              event.target ===
-              event.currentTarget
-            ) {
-              setRemoveTarget(
-                null
-              );
-            }
-          }}
-        >
-          <div
-            className="mycatalog-confirm-modal"
-            onMouseDown={(
-              event
-            ) =>
-              event.stopPropagation()
-            }
-          >
-            <div className="mycatalog-confirm-icon danger">
-              <Trash2
-                size={20}
-              />
-            </div>
-
-            <div>
-              <div className="eyebrow">
-                REMOVER DA BIBLIOTECA
-              </div>
-
-              <h3>
-                Remover “{
-                  removeTarget.title
-                }”?
-              </h3>
-
-              <p className="muted">
-                O filme sairá da sua biblioteca, mas continuará aparecendo nesta franquia.
-              </p>
-            </div>
-
-            <label className="mycatalog-confirm-option">
-              <input
-                type="checkbox"
-                checked={
-                  skipRemoveConfirm
-                }
-                onChange={(
-                  event
-                ) => {
-                  const checked =
-                    event.target
-                      .checked;
-
-                  setSkipRemoveConfirm(
-                    checked
-                  );
-
-                  try {
-                    localStorage.setItem(
-                      "mycatalog_skip_remove_confirm",
-                      checked
-                        ? "1"
-                        : "0"
-                    );
-                  } catch {
-                    // Intencional: armazenamento local indisponível (modo privado/cheio) — só perde a preferência.
-                  }
-                }}
-              />
-
-              <span>
-                Não mostrar novamente
-              </span>
-            </label>
-
-            <div className="mycatalog-confirm-actions">
-              <button
-                type="button"
-                className="btn"
-                onClick={() =>
-                  setRemoveTarget(
-                    null
-                  )
-                }
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="button"
-                className="btn danger"
-                onClick={() =>
-                  removeMovie(
-                    removeTarget
-                  )
-                }
-              >
-                <Trash2
-                  size={16}
-                />
-                Remover
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

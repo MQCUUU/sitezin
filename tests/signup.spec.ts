@@ -128,7 +128,8 @@ test(
 
 /*
  * Fase 0 — cadastro parcial: a conta foi criada no Auth, mas o perfil falhou.
- * O próximo envio só tenta o perfil de novo (nunca recria a conta) e conclui.
+ * No localhost a pessoa entra mesmo assim e o UsernameGate grava o perfil
+ * pendente na sequência (nunca recria a conta).
  */
 test("cadastro parcial: falha no perfil é recuperada sem recriar a conta", async ({ page }) => {
   const stamp = Date.now();
@@ -140,7 +141,9 @@ test("cadastro parcial: falha no perfil é recuperada sem recriar a conta", asyn
   });
 
   let failures = 1;
+  let profileAttempts = 0;
   await page.route("**/api/auth/profile", async (route) => {
+    if (route.request().method() === "POST") profileAttempts += 1;
     if (route.request().method() === "POST" && failures > 0) {
       failures -= 1;
       await route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "falha simulada" }) });
@@ -152,23 +155,38 @@ test("cadastro parcial: falha no perfil é recuperada sem recriar a conta", asyn
   await page.goto("/signup");
   await page.getByLabel("Nome").fill("MyCatalog E2E");
   await page.getByLabel(/usuário/i).first().fill(username);
-  await page.getByLabel("E-mail").fill(`mycatalog-e2e-r${stamp}@${domain}`);
+  const email = `mycatalog-e2e-r${stamp}@${domain}`;
+  await page.getByLabel("E-mail").fill(email);
   const passwords = page.locator('input[autocomplete="new-password"]');
   await passwords.nth(0).fill("MyCatalog#E2E2026");
   await passwords.nth(1).fill("MyCatalog#E2E2026");
   await page.getByRole("button", { name: /Criar minha conta/i }).click();
 
-  await expect(page.locator(".auth-error")).toContainText("Sua conta foi criada");
-  const finish = page.getByRole("button", { name: /Concluir cadastro/i });
-  await expect(finish).toBeVisible();
+  /*
+   * Fluxo do localhost (desde 656cc5a): a falha do perfil não trava o cadastro.
+   * A pessoa entra direto no app e o perfil fica pendente até o próximo login.
+   */
+  try {
+    await expect.poll(async () => new URL(page.url()).pathname, { timeout: 20_000 }).toBe("/");
+    expect(signUps, "a conta é criada uma única vez").toHaveLength(1);
 
-  await finish.click();
-  await expect.poll(async () => new URL(page.url()).pathname).toBe("/");
-  expect(signUps, "a conta é criada uma única vez").toHaveLength(1);
-
-  const me = await (await page.request.get("/api/profile/username")).json();
-  expect(me).toMatchObject({ authenticated: true, username });
-
-  const removed = await page.request.delete("/api/account/delete");
-  expect(removed.status()).toBe(200);
+    // O UsernameGate encontra o perfil pendente e o grava de novo, sem recriar a conta.
+    await expect
+      .poll(async () => (await (await page.request.get("/api/profile/username")).json()).username, { timeout: 20_000 })
+      .toBe(username);
+    expect(profileAttempts, "houve a falha simulada e uma nova tentativa").toBeGreaterThanOrEqual(2);
+    expect(signUps, "a recuperação não recria a conta").toHaveLength(1);
+  } finally {
+    // Limpa a conta descartável mesmo se uma asserção falhar no meio (sem sessão, entra antes).
+    let removed = await page.request.delete("/api/account/delete");
+    if (removed.status() === 401) {
+      const origin = new URL(page.url()).origin;
+      const signedIn = await page.request.post("/api/auth/sign-in/email", {
+        headers: { Origin: origin },
+        data: { email, password: "MyCatalog#E2E2026" },
+      });
+      if (signedIn.ok()) removed = await page.request.delete("/api/account/delete");
+    }
+    expect([200, 401], "conta descartável removida (401 = nunca chegou a existir)").toContain(removed.status());
+  }
 });

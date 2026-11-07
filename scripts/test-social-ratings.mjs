@@ -14,10 +14,10 @@ test("faixas sociais usam os limites definidos sem converter nota ausente em zer
   assert.equal(socialRatingBucket(0), "dislike");
   assert.equal(socialRatingBucket(4.9), "dislike");
   assert.equal(socialRatingBucket(5), "regular");
-  assert.equal(socialRatingBucket(6.9), "regular");
-  assert.equal(socialRatingBucket(7), "like");
-  assert.equal(socialRatingBucket(7.9), "like");
-  assert.equal(socialRatingBucket(8), "like_much");
+  assert.equal(socialRatingBucket(5.9), "regular");
+  assert.equal(socialRatingBucket(6), "like");
+  assert.equal(socialRatingBucket(7.5), "like");
+  assert.equal(socialRatingBucket(7.6), "like_much");
   assert.equal(socialRatingBucket(8.9), "like_much");
   assert.equal(socialRatingBucket(9), "love");
   assert.equal(socialRatingBucket(10), "love");

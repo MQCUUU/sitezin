@@ -1,6 +1,7 @@
 "use client";
 
 
+import { useConfirm } from "@/components/ConfirmProvider";
 import "@/styles/features/discover.css";
 import { removeFromLibrary } from "@/lib/library/actions";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
@@ -29,7 +30,6 @@ import {
   DiscoverGridSkeleton,
   DiscoverHeader,
   DiscoverPagination,
-  DiscoverRemoveDialog,
   DiscoverToolbar,
   type DiscoverItem,
   type DiscoverResponse,
@@ -96,18 +96,8 @@ function DiscoverContent() {
   const [processing, setProcessing] = useState<string | null>(null);
   const [openLibraryMenu, setOpenLibraryMenu] = useState<string | null>(null);
 
-  const [removeTarget, setRemoveTarget] = useState<DiscoverItem | null>(null);
-  const [skipRemoveConfirm, setSkipRemoveConfirm] = useState(false);
+  const confirm = useConfirm();
 
-  useEffect(() => {
-    try {
-      setSkipRemoveConfirm(
-        localStorage.getItem("mycatalog_skip_remove_confirm") === "1"
-      );
-    } catch {
-      // localStorage indisponível
-    }
-  }, []);
 
   useEffect(() => {
     if (openLibraryMenu === null) return;
@@ -139,8 +129,8 @@ function DiscoverContent() {
   const [previewDetailsLoading, setPreviewDetailsLoading] = useState(false);
 
   /*
-   * Escape/scroll lock: Quick Peek via `MediaPreviewDialog` (Dialog) e a
-   * confirmação de remoção via `useModal` dentro de `DiscoverRemoveDialog` (Fase 7).
+   * Escape/scroll lock: Quick Peek via `MediaPreviewDialog` (Dialog). A confirmação
+   * de remoção usa o `ConfirmProvider` (com a preferência "Não mostrar novamente").
    */
 
   useEffect(() => {
@@ -537,7 +527,6 @@ function DiscoverContent() {
       });
 
       setOpenLibraryMenu(null);
-      setRemoveTarget(null);
     } catch (error) {
       console.error(error);
       libraryAuth.handleError(error, undefined, "Erro ao remover");
@@ -546,14 +535,20 @@ function DiscoverContent() {
     }
   }
 
-  function requestRemoveFromLibrary(item: DiscoverItem) {
-    if (skipRemoveConfirm) {
-      performRemoveFromLibrary(item);
-      return;
-    }
-
-    setRemoveTarget(item);
+  async function requestRemoveFromLibrary(item: DiscoverItem) {
     setOpenLibraryMenu(null);
+
+    const ok = await confirm({
+      title: `Remover “${item.title}”?`,
+      description: "O título será removido da sua biblioteca. Você poderá adicioná-lo novamente depois.",
+      confirmLabel: "Remover",
+      danger: true,
+      skipKey: "mycatalog_skip_remove_confirm",
+    });
+
+    if (!ok) return;
+
+    performRemoveFromLibrary(item);
   }
 
   async function updatePersonalRating(item: DiscoverItem, rating: number | null) {
@@ -796,27 +791,6 @@ function DiscoverContent() {
         providers={<WatchProviderList data={normalizeWatchProviders(previewDetails?.watch_providers, "BR")} loading={previewDetailsLoading} />}
       />
 
-      {removeTarget && (
-        <DiscoverRemoveDialog
-          item={removeTarget}
-          skipConfirm={skipRemoveConfirm}
-          isProcessing={processing === `${removeTarget.media_type}-${removeTarget.id}`}
-          onSkipConfirmChange={(checked) => {
-            setSkipRemoveConfirm(checked);
-
-            try {
-              localStorage.setItem(
-                "mycatalog_skip_remove_confirm",
-                checked ? "1" : "0"
-              );
-            } catch {
-              // localStorage indisponível
-            }
-          }}
-          onCancel={() => setRemoveTarget(null)}
-          onConfirm={performRemoveFromLibrary}
-        />
-      )}
     </>
   );
 }

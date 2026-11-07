@@ -1,6 +1,7 @@
 "use client";
 
 
+import { useConfirm } from "@/components/ConfirmProvider";
 import "@/styles/features/search-page.css";
 import { removeFromLibrary } from "@/lib/library/actions";
 import { Suspense, useEffect, useRef, useState } from "react";
@@ -23,7 +24,6 @@ import {
   SearchPageHeader,
   SearchPageIdleState,
   SearchPersonPanel,
-  SearchRemoveDialog,
   SearchResultsSkeleton,
   SearchUserSection,
   getTitle,
@@ -234,16 +234,8 @@ function SearchPageContent() {
     progress: LibraryProgress | null;
   } | null>(null);
 
-  const [removeTarget, setRemoveTarget] = useState<SearchItem | null>(null);
-  const [skipRemoveConfirm, setSkipRemoveConfirm] = useState(false);
+  const confirm = useConfirm();
 
-  useEffect(() => {
-    try {
-      setSkipRemoveConfirm(localStorage.getItem("mycatalog_skip_remove_confirm") === "1");
-    } catch {
-      // localStorage indisponível
-    }
-  }, []);
 
   /*
    * Fecha menu de status clicando
@@ -271,8 +263,8 @@ function SearchPageContent() {
   }, [openLibraryMenu]);
 
   /*
-   * Escape/scroll lock: Quick Peek via `MediaPreviewDialog` (Dialog) e a
-   * confirmação de remoção via `useModal` dentro de `SearchRemoveDialog` (Fase 7).
+   * Escape/scroll lock: Quick Peek via `MediaPreviewDialog` (Dialog). A confirmação
+   * de remoção usa o `ConfirmProvider` (com a preferência "Não mostrar novamente").
    */
 
   /*
@@ -796,14 +788,20 @@ function SearchPageContent() {
    * REMOVER + MODAL PADRÃO
    * ==========================================
    */
-  function requestRemove(item: SearchItem) {
-    if (skipRemoveConfirm) {
-      performRemove(item);
-      return;
-    }
-
-    setRemoveTarget(item);
+  async function requestRemove(item: SearchItem) {
     setOpenLibraryMenu(null);
+
+    const ok = await confirm({
+      title: `Remover “${getTitle(item)}”?`,
+      description: "O título será removido da sua biblioteca. Você poderá adicioná-lo novamente depois.",
+      confirmLabel: "Remover",
+      danger: true,
+      skipKey: "mycatalog_skip_remove_confirm",
+    });
+
+    if (!ok) return;
+
+    await performRemove(item);
   }
 
   async function performRemove(item: SearchItem) {
@@ -818,7 +816,6 @@ function SearchPageContent() {
       await removeFromLibrary(existing.library_id);
 
       setLibrary((current) => current.filter((entry) => entry.library_id !== existing.library_id));
-      setRemoveTarget(null);
       setOpenLibraryMenu(null);
     } catch (error) {
       console.error(error);
@@ -987,24 +984,6 @@ function SearchPageContent() {
         providers={<WatchProviderList data={normalizeWatchProviders(previewDetails?.watch_providers, "BR")} loading={previewDetailsLoading} />}
       />
 
-      {removeTarget && (
-        <SearchRemoveDialog
-          item={removeTarget}
-          skipConfirm={skipRemoveConfirm}
-          isProcessing={processing === `${removeTarget.media_type}-${removeTarget.id}`}
-          onSkipConfirmChange={(checked) => {
-            setSkipRemoveConfirm(checked);
-
-            try {
-              localStorage.setItem("mycatalog_skip_remove_confirm", checked ? "1" : "0");
-            } catch {
-              // localStorage indisponível
-            }
-          }}
-          onCancel={() => setRemoveTarget(null)}
-          onConfirm={performRemove}
-        />
-      )}
     </>
   );
 }

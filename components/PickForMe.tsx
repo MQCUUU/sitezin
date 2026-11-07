@@ -1,6 +1,7 @@
 "use client";
 
 
+import { useConfirm } from "@/components/ConfirmProvider";
 import "@/styles/features/pick-for-me.css";
 import { removeFromLibrary } from "@/lib/library/actions";
 import { apiFetch } from "@/lib/api-client";
@@ -513,20 +514,11 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
   ] =
     useState(false);
 
-  const [
-    removeConfirm,
-    setRemoveConfirm,
-  ] =
-    useState(false);
+  const confirm = useConfirm();
 
   const [inheritedSummary, setInheritedSummary] = useState<string[]>([]);
   const inheritAppliedRef = useRef(false);
 
-  const [
-    skipRemoveConfirm,
-    setSkipRemoveConfirm,
-  ] =
-    useState(false);
 
   const refSorteio =
     useRef<HTMLElement | null>(
@@ -559,12 +551,6 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
         }
       }
 
-      setSkipRemoveConfirm(
-        localStorage.getItem(
-          "mycatalog_skip_remove_confirm"
-        ) ===
-          "1"
-      );
     } catch {
       // Intencional: armazenamento local indisponível (modo privado/cheio) — só perde a preferência.
     }
@@ -1895,9 +1881,6 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
             : current
       );
 
-      setRemoveConfirm(
-        false
-      );
     } finally {
       setProcessing(
         false
@@ -1905,18 +1888,18 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
     }
   }
 
-  function requestRemove() {
-    if (
-      skipRemoveConfirm
-    ) {
-      remove();
+  async function requestRemove() {
+    const ok = await confirm({
+      title: `Remover “${titleOf(winner)}”?`,
+      description: "Você poderá adicionar o título novamente depois.",
+      confirmLabel: "Remover",
+      danger: true,
+      skipKey: "mycatalog_skip_remove_confirm",
+    });
 
-      return;
-    }
+    if (!ok) return;
 
-    setRemoveConfirm(
-      true
-    );
+    await remove();
   }
 
   const current =
@@ -3148,121 +3131,6 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
         </div>
       )}
 
-      {removeConfirm && (
-        <div
-          className="mycatalog-confirm-backdrop"
-          onMouseDown={(
-            event
-          ) => {
-            if (
-              event.target ===
-              event.currentTarget
-            ) {
-              setRemoveConfirm(
-                false
-              );
-            }
-          }}
-        >
-          <div
-            className="mycatalog-confirm-modal"
-            onMouseDown={(
-              event
-            ) =>
-              event.stopPropagation()
-            }
-          >
-            <div className="mycatalog-confirm-icon danger">
-              <Trash2
-                size={20}
-              />
-            </div>
-
-            <div>
-              <div className="eyebrow">
-                REMOVER DA BIBLIOTECA
-              </div>
-
-              <h3>
-                Remover “{
-                  titleOf(
-                    winner
-                  )
-                }”?
-              </h3>
-
-              <p className="muted">
-                Você poderá adicionar o título novamente depois.
-              </p>
-            </div>
-
-            <label className="mycatalog-confirm-option">
-              <input
-                type="checkbox"
-                checked={
-                  skipRemoveConfirm
-                }
-                onChange={(
-                  event
-                ) => {
-                  const checked =
-                    event.target
-                      .checked;
-
-                  setSkipRemoveConfirm(
-                    checked
-                  );
-
-                  try {
-                    localStorage.setItem(
-                      "mycatalog_skip_remove_confirm",
-                      checked
-                        ? "1"
-                        : "0"
-                    );
-                  } catch {
-                    // Intencional: armazenamento local indisponível (modo privado/cheio) — só perde a preferência.
-                  }
-                }}
-              />
-
-              <span>
-                Não mostrar novamente
-              </span>
-            </label>
-
-            <div className="mycatalog-confirm-actions">
-              <button
-                type="button"
-                className="btn"
-                onClick={() =>
-                  setRemoveConfirm(
-                    false
-                  )
-                }
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="button"
-                className="btn danger"
-                disabled={
-                  processing
-                }
-                onClick={
-                  remove
-                }
-              >
-                <Trash2
-                  size={16}
-                />
-                Remover
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 
+import { useConfirm } from "@/components/ConfirmProvider";
 import "@/styles/features/for-you.css";
 import { removeFromLibrary } from "@/lib/library/actions";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
@@ -349,32 +350,7 @@ export default function ForYouPage() {
       null
     >(null);
 
-  const [
-    removeTarget,
-    setRemoveTarget,
-  ] =
-    useState<any>(
-      null
-    );
-
-  const [
-    skipRemoveConfirm,
-    setSkipRemoveConfirm,
-  ] =
-    useState(false);
-
-  useEffect(() => {
-    try {
-      setSkipRemoveConfirm(
-        localStorage.getItem(
-          "mycatalog_skip_remove_confirm"
-        ) ===
-          "1"
-      );
-    } catch {
-      // Intencional: armazenamento local indisponível (modo privado/cheio) — só perde a preferência.
-    }
-  }, []);
+  const confirm = useConfirm();
 
   useEffect(() => {
     if (
@@ -1166,27 +1142,20 @@ export default function ForYouPage() {
     }
   }
 
-  function requestRemove(
-    item:
-      any
-  ) {
-    if (
-      skipRemoveConfirm
-    ) {
-      removeItem(
-        item
-      );
+  async function requestRemove(item: any) {
+    setOpenMenu(null);
 
-      return;
-    }
+    const ok = await confirm({
+      title: `Remover “${item.title || item.name}”?`,
+      description: "Você poderá adicionar este título novamente depois.",
+      confirmLabel: "Remover",
+      danger: true,
+      skipKey: "mycatalog_skip_remove_confirm",
+    });
 
-    setRemoveTarget(
-      item
-    );
+    if (!ok) return;
 
-    setOpenMenu(
-      null
-    );
+    await removeItem(item);
   }
 
   async function removeItem(
@@ -1227,9 +1196,6 @@ export default function ForYouPage() {
           )
       );
 
-      setRemoveTarget(
-        null
-      );
     } catch (error) {
       // Fase 6: antes não havia catch — o erro sumia (rejeição solta) sem aviso.
       libraryAuth.handleError(error, undefined, "Erro ao remover");
@@ -1962,119 +1928,6 @@ export default function ForYouPage() {
         providers={<WatchProviderList data={normalizeWatchProviders(previewDetails?.watch_providers, "BR")} loading={previewLoading} />}
       />
 
-      {removeTarget && (
-        <div
-          className="mycatalog-confirm-backdrop"
-          onMouseDown={(
-            event
-          ) => {
-            if (
-              event.target ===
-              event.currentTarget
-            ) {
-              setRemoveTarget(
-                null
-              );
-            }
-          }}
-        >
-          <div
-            className="mycatalog-confirm-modal"
-            onMouseDown={(
-              event
-            ) =>
-              event.stopPropagation()
-            }
-          >
-            <div className="mycatalog-confirm-icon danger">
-              <Trash2
-                size={20}
-              />
-            </div>
-
-            <div>
-              <div className="eyebrow">
-                Remover da biblioteca
-              </div>
-
-              <h3>
-                Remover “{
-                  removeTarget.title ||
-                  removeTarget.name
-                }”?
-              </h3>
-
-              <p className="muted">
-                Você poderá adicionar este título novamente depois.
-              </p>
-            </div>
-
-            <label className="mycatalog-confirm-option">
-              <input
-                type="checkbox"
-                checked={
-                  skipRemoveConfirm
-                }
-                onChange={(
-                  event
-                ) => {
-                  const checked =
-                    event.target
-                      .checked;
-
-                  setSkipRemoveConfirm(
-                    checked
-                  );
-
-                  try {
-                    localStorage.setItem(
-                      "mycatalog_skip_remove_confirm",
-                      checked
-                        ? "1"
-                        : "0"
-                    );
-                  } catch {
-                    // Intencional: armazenamento local indisponível (modo privado/cheio) — só perde a preferência.
-                  }
-                }}
-              />
-
-              <span>
-                Não mostrar novamente
-              </span>
-            </label>
-
-            <div className="mycatalog-confirm-actions">
-              <button
-                type="button"
-                className="btn"
-                onClick={() =>
-                  setRemoveTarget(
-                    null
-                  )
-                }
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="button"
-                className="btn danger"
-                onClick={() =>
-                  removeItem(
-                    removeTarget
-                  )
-                }
-              >
-                <Trash2
-                  size={16}
-                />
-                Remover
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

@@ -21,6 +21,14 @@ function countRequests(page: Page, match: (url: string) => boolean) {
 }
 
 test.describe("temporada sem busca duplicada", () => {
+  /*
+   * Só vale na build de produção: no `next dev` o React StrictMode roda cada
+   * efeito duas vezes (temporada buscada 2×) e o "networkidle" não chega.
+   * Para rodar: `npm run build && npx next start` e
+   * `E2E_PROD_BUILD=1 npx playwright test tests/performance.spec.ts`.
+   */
+  test.skip(!process.env.E2E_PROD_BUILD, "contagem de requisições só é confiável na build de produção");
+
   let createdId: string | null = null;
 
   test.beforeAll(async ({ request }) => {

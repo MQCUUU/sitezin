@@ -7,6 +7,5 @@ export { SearchResultsSkeleton } from "./SearchResultsSkeleton";
 export { SearchUserSection } from "./SearchUserSection";
 export { SearchMediaSection } from "./SearchMediaSection";
 export { SearchMediaCard } from "./SearchMediaCard";
-export { SearchRemoveDialog } from "./SearchRemoveDialog";
 
 export * from "./types";
