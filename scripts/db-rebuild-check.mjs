@@ -71,7 +71,7 @@ async function smoke(url) {
     await client.query(`INSERT INTO public.watch_entries(user_id, media_id, library_item_id) VALUES ($1, $2, $3)`, [user, media, item]);
     await client.query(`DELETE FROM public.library_items WHERE id = $1`, [item]);
     const kept = (await client.query(`SELECT count(*)::int AS n, count(library_item_id)::int AS linked FROM public.watch_entries WHERE user_id = $1`, [user])).rows[0];
-    check("remover da biblioteca preserva o histórico (FK SET NULL)", kept.n === 1 && kept.linked === 0);
+    check("schema: apagar library_items direto não apaga watch_entries (FK SET NULL; a remoção do app limpa o histórico em lib/library/remove.ts)", kept.n === 1 && kept.linked === 0);
 
     await client.query(`DELETE FROM neon_auth."user" WHERE id = $1`, [user]);
     const left = (await client.query(

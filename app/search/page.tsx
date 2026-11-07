@@ -4,6 +4,7 @@
 import { useConfirm } from "@/components/ConfirmProvider";
 import "@/styles/features/search-page.css";
 import { removeFromLibrary } from "@/lib/library/actions";
+import { removalConfirmOptions } from "@/lib/library/remove";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -791,13 +792,7 @@ function SearchPageContent() {
   async function requestRemove(item: SearchItem) {
     setOpenLibraryMenu(null);
 
-    const ok = await confirm({
-      title: `Remover “${getTitle(item)}”?`,
-      description: "O título será removido da sua biblioteca. Você poderá adicioná-lo novamente depois.",
-      confirmLabel: "Remover",
-      danger: true,
-      skipKey: "mycatalog_skip_remove_confirm",
-    });
+    const ok = await confirm(removalConfirmOptions(getTitle(item)));
 
     if (!ok) return;
 

@@ -5,6 +5,7 @@
 import { useConfirm } from "@/components/ConfirmProvider";
 import "@/styles/features/collection.css";
 import { removeFromLibrary } from "@/lib/library/actions";
+import { removalConfirmOptions } from "@/lib/library/remove";
 import { apiFetch } from "@/lib/api-client";
 import { MediaPosterActions } from "@/components/media/MediaPosterActions";
 import { MediaPosterTags, mediaTypeLabel } from "@/components/media/MediaBadges";
@@ -1151,13 +1152,7 @@ export default function CollectionPage() {
   ) {
     setOpenMenu(null);
 
-    const ok = await confirm({
-      title: `Remover “${movie.title}”?`,
-      description: "O filme sairá da sua biblioteca, mas continuará aparecendo nesta franquia.",
-      confirmLabel: "Remover",
-      danger: true,
-      skipKey: "mycatalog_skip_remove_confirm",
-    });
+    const ok = await confirm(removalConfirmOptions(movie.title));
 
     if (!ok) return;
 

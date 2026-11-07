@@ -215,7 +215,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
     }
 
-    // Remove o estado da Biblioteca; o histórico (Diário, Insights) fica — ver lib/library/remove.ts.
+    // Remove o item E o histórico dele (visualizações, episódios, Diário) — ver lib/library/remove.ts.
     const { removed } = await removeLibraryItem(getDb(), user.id, id);
 
     // Fase 6 (P3-07): nada removido = 404, como nos outros DELETE (listas, notas, histórico).

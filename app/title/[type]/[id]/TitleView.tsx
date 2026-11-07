@@ -12,7 +12,8 @@ import type { TitleDetails, TitleType } from "@/lib/title-details";
 import { groupEditorialCrew } from "@/lib/title-credits";
 import type { Status } from "@/lib/types";
 import { useToast } from "@/components/ToastProvider";
-import { LIBRARY_ACTION_COPY } from "@/lib/library/remove";
+import { useConfirm } from "@/components/ConfirmProvider";
+import { LIBRARY_ACTION_COPY, removalConfirmOptions } from "@/lib/library/remove";
 import { fetchLibraryState, type LibraryLookupState } from "@/lib/library/lookup";
 import { createMutationQueue, runLibraryAction } from "@/lib/library/actions";
 import { apiFetch } from "@/lib/api-client";
@@ -59,6 +60,7 @@ export default function TitlePage({
 }: TitleViewProps) {
   const toast =
     useToast();
+  const confirm = useConfirm();
 
   const [details, setDetails] = useState<any>(initialDetails);
   const [libraryItem, setLibraryItem] =
@@ -435,7 +437,7 @@ export default function TitlePage({
           description:
             `Entrou como ${mediaStatusLabel(result.status)}.`,
 
-          // V3.1: a ação REMOVE (o Diário registra a remoção) — não é "desfazer".
+          // A ação REMOVE (e apaga o histórico do título, que acabou de ser criado) — não é "desfazer".
           actionLabel:
             LIBRARY_ACTION_COPY.addedRemoveLabel,
 
@@ -485,6 +487,13 @@ export default function TitlePage({
       details.name ||
       "Título";
 
+    // Fase 1: remover apaga o histórico do título — confirma como as outras telas.
+    const ok = await confirm(removalConfirmOptions(mediaTitle));
+
+    if (!ok) {
+      return;
+    }
+
     try {
       setSaving(
         true
@@ -499,7 +508,7 @@ export default function TitlePage({
       toast.success(
         `${mediaTitle} removido da biblioteca`,
         {
-          // V3.1: readicionar é uma NOVA entrada (tags e notas por categoria não voltam) — não é "desfazer".
+          // Readicionar é uma NOVA entrada (tags, notas por categoria e histórico não voltam) — não é "desfazer".
           description:
             LIBRARY_ACTION_COPY.removedDescription,
 

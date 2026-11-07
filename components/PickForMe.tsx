@@ -4,6 +4,7 @@
 import { useConfirm } from "@/components/ConfirmProvider";
 import "@/styles/features/pick-for-me.css";
 import { removeFromLibrary } from "@/lib/library/actions";
+import { removalConfirmOptions } from "@/lib/library/remove";
 import { apiFetch } from "@/lib/api-client";
 import {
   useEffect,
@@ -1889,13 +1890,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
   }
 
   async function requestRemove() {
-    const ok = await confirm({
-      title: `Remover “${titleOf(winner)}”?`,
-      description: "Você poderá adicionar o título novamente depois.",
-      confirmLabel: "Remover",
-      danger: true,
-      skipKey: "mycatalog_skip_remove_confirm",
-    });
+    const ok = await confirm(removalConfirmOptions(titleOf(winner)));
 
     if (!ok) return;
 

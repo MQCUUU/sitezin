@@ -4,6 +4,7 @@
 import { useConfirm } from "@/components/ConfirmProvider";
 import "@/styles/features/for-you.css";
 import { removeFromLibrary } from "@/lib/library/actions";
+import { removalConfirmOptions } from "@/lib/library/remove";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 import { apiFetch } from "@/lib/api-client";
 import { MediaPosterActions } from "@/components/media/MediaPosterActions";
@@ -1145,13 +1146,7 @@ export default function ForYouPage() {
   async function requestRemove(item: any) {
     setOpenMenu(null);
 
-    const ok = await confirm({
-      title: `Remover “${item.title || item.name}”?`,
-      description: "Você poderá adicionar este título novamente depois.",
-      confirmLabel: "Remover",
-      danger: true,
-      skipKey: "mycatalog_skip_remove_confirm",
-    });
+    const ok = await confirm(removalConfirmOptions(item.title || item.name));
 
     if (!ok) return;
 

@@ -28,6 +28,7 @@ import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 import { apiFetch } from "@/lib/api-client";
 import { intentForMedia, type LibraryIntent } from "@/lib/auth/pending-action";
 import { removeFromLibrary, runLibraryAction } from "@/lib/library/actions";
+import { removalConfirmOptions } from "@/lib/library/remove";
 import { setLibraryEntry, setLibraryGuest, useLibraryEntry, type MediaType } from "@/lib/library/entry-store";
 
 export type PosterMedia = {
@@ -150,7 +151,7 @@ export function ConnectedPosterActions({ media, tags = false, inline = false }: 
 
   async function remove() {
     if (!entry || busy) return;
-    const ok = await confirm({ title: `Remover “${media.title}”?`, description: "O título sai da sua Biblioteca. Seu histórico de visualizações continua no Diário.", confirmLabel: "Remover" });
+    const ok = await confirm(removalConfirmOptions(media.title));
     if (!ok) return;
     setBusy(true);
     try {

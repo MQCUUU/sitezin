@@ -292,7 +292,7 @@ test("episódio individual: 'Assistiu T1:E03'", () => {
 
 const { deriveSeriesStatus, deriveSeasonFields } = await import("../lib/library/episode-status.ts");
 const { planSeriesUpdate } = await import("../lib/library/episode-write.ts");
-const { REMOVAL_EFFECTS, LIBRARY_ACTION_COPY } = await import("../lib/library/remove.ts");
+const { REMOVAL_EFFECTS, LIBRARY_ACTION_COPY, REMOVAL_SKIP_KEY, removalConfirmOptions } = await import("../lib/library/remove.ts");
 const { tvStructureFromRaw } = await import("../lib/tv-progress.ts");
 
 const series = (status, seasons, last, showStatus, counts = {}) => ({
@@ -397,14 +397,27 @@ test("campos legados derivados dos mesmos fatos (temporadas completas consecutiv
 
 /* ================================================================ REMOÇÃO / AÇÕES PÓS-AÇÃO */
 
-test("remoção: o que fica, o que sai, o que volta ao readicionar — e copy verdadeira", () => {
-  const preserved = REMOVAL_EFFECTS.preserved.join(" ");
-  for (const fact of ["Diário", "visualizações", "episódios", "listas"]) assert.match(preserved, new RegExp(fact));
-  assert.ok(REMOVAL_EFFECTS.deleted.some((d) => /tags/.test(d)) && REMOVAL_EFFECTS.deleted.some((d) => /categoria/.test(d)));
+test("remoção: apaga o histórico junto, listas ficam — e copy verdadeira", () => {
+  const deleted = REMOVAL_EFFECTS.deleted.join(" ");
+  for (const fact of ["Diário", "visualizações", "episódios", "tags", "categoria"]) assert.match(deleted, new RegExp(fact));
+  assert.deepEqual([...REMOVAL_EFFECTS.preserved], ["listas (custom_list_items)"]);
   assert.ok(REMOVAL_EFFECTS.restoredOnReadd.every((f) => REMOVAL_EFFECTS.deleted.includes(f)));
-  assert.deepEqual([...REMOVAL_EFFECTS.notRestored], ["tags", "notas por categoria"]);
+  assert.deepEqual([...REMOVAL_EFFECTS.notRestored], ["tags", "notas por categoria", "histórico"]);
   assert.equal(LIBRARY_ACTION_COPY.readdLabel, "Adicionar novamente");
   assert.equal(LIBRARY_ACTION_COPY.addedRemoveLabel, "Remover");
   assert.ok(!Object.values(LIBRARY_ACTION_COPY).some((text) => /desfa/i.test(text)), "nada promete 'desfazer'");
-  assert.match(LIBRARY_ACTION_COPY.readdedDescription, /tags e notas por categoria não/);
+  assert.match(LIBRARY_ACTION_COPY.confirmDescription, /histórico/);
+  assert.match(LIBRARY_ACTION_COPY.confirmDescription, /não pode ser desfeito/);
+  assert.match(LIBRARY_ACTION_COPY.readdedDescription, /histórico não/);
+  assert.ok(!/continua(m)? (salvo|no Diário)/.test(Object.values(LIBRARY_ACTION_COPY).join(" ")), "nenhum texto diz que o histórico fica");
+});
+
+test("remoção: a confirmação é a mesma em todas as telas e usa a chave nova", () => {
+  const options = removalConfirmOptions("Duna");
+  assert.equal(options.title, "Remover “Duna”?");
+  assert.equal(options.description, LIBRARY_ACTION_COPY.confirmDescription);
+  assert.equal(options.danger, true);
+  assert.equal(options.skipKey, REMOVAL_SKIP_KEY);
+  assert.notEqual(REMOVAL_SKIP_KEY, "mycatalog_skip_remove_confirm", "quem pulava o aviso antigo precisa ver o novo");
+  assert.equal(removalConfirmOptions(null).title, "Remover “este título”?");
 });

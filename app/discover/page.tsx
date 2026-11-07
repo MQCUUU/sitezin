@@ -4,6 +4,7 @@
 import { useConfirm } from "@/components/ConfirmProvider";
 import "@/styles/features/discover.css";
 import { removeFromLibrary } from "@/lib/library/actions";
+import { removalConfirmOptions } from "@/lib/library/remove";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 
@@ -538,13 +539,7 @@ function DiscoverContent() {
   async function requestRemoveFromLibrary(item: DiscoverItem) {
     setOpenLibraryMenu(null);
 
-    const ok = await confirm({
-      title: `Remover “${item.title}”?`,
-      description: "O título será removido da sua biblioteca. Você poderá adicioná-lo novamente depois.",
-      confirmLabel: "Remover",
-      danger: true,
-      skipKey: "mycatalog_skip_remove_confirm",
-    });
+    const ok = await confirm(removalConfirmOptions(item.title));
 
     if (!ok) return;
 

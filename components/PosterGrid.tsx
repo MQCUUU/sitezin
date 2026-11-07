@@ -38,7 +38,7 @@ import { MediaPreviewDialog } from "@/components/media/preview/MediaPreviewDialo
 import { WatchProviderList } from "@/components/media/preview/WatchProviderList";
 import { fromLibraryItem } from "@/components/media/preview/adapters";
 import { normalizeWatchProviders } from "@/components/media/providers";
-import { LIBRARY_ACTION_COPY } from "@/lib/library/remove";
+import { LIBRARY_ACTION_COPY, removalConfirmOptions } from "@/lib/library/remove";
 
 type ViewMode =
   | "grid"
@@ -546,7 +546,7 @@ export function PosterGrid({
       toast.success(
         `${item.title} removido da biblioteca`,
         {
-          // V3.1: readicionar é uma NOVA entrada (tags e notas por categoria não voltam) — não é "desfazer".
+          // Readicionar é uma NOVA entrada (tags, notas por categoria e histórico não voltam) — não é "desfazer".
           description:
             LIBRARY_ACTION_COPY.removedDescription,
 
@@ -641,13 +641,7 @@ export function PosterGrid({
       null
     );
 
-    const ok = await confirm({
-      title: `Remover “${item.title}”?`,
-      description: "O título sai da sua Biblioteca. Seu histórico de visualizações continua no Diário.",
-      confirmLabel: "Remover",
-      danger: true,
-      skipKey: "mycatalog_skip_remove_confirm",
-    });
+    const ok = await confirm(removalConfirmOptions(item.title));
 
     if (!ok) return;
 
