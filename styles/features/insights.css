@@ -16,6 +16,6 @@
     width: min(360px, 100%);
     height: auto;
     aspect-ratio: 1080 / 1350;
-    border-radius: 16px;
+    border-radius: var(--mc-radius-lg);
     border: 1px solid rgba(255,255,255,.12);
 }

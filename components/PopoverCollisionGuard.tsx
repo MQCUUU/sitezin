@@ -60,7 +60,8 @@ function positionMenu(menu: HTMLElement) {
   menu.style.setProperty("width", `${width}px`, "important");
   menu.style.setProperty("max-height", `${window.innerHeight - margin * 2}px`, "important");
   menu.style.setProperty("overflow-y", "auto", "important");
-  menu.style.setProperty("z-index", "10060", "important");
+  // Fase 2 (reforma): camada de menus da escala única (styles/tokens.css), acima de fundos de modal.
+  menu.style.setProperty("z-index", "var(--mc-z-menu)", "important");
 }
 
 export function PopoverCollisionGuard() {

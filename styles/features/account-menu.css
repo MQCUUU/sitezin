@@ -74,7 +74,7 @@
     align-items: center;
     gap: 8px;
     border: 0;
-    border-radius: 9px;
+    border-radius: var(--mc-radius-sm);
     background: transparent;
     color: var(--muted);
     text-decoration: none;
@@ -107,7 +107,7 @@
 .account-dropdown {
     width: 230px;
     padding: 8px;
-    border-radius: 14px;
+    border-radius: var(--mc-radius-lg);
     box-shadow: var(--shadow-popover)
 }
 .account-dropdown-user {
@@ -124,7 +124,7 @@
 .account-dropdown>a,.account-signout {
     min-height: 40px;
     padding: 0 10px;
-    border-radius: 9px;
+    border-radius: var(--mc-radius-sm);
     font-size: var(--mc-fs-xs);
     font-weight: 750
 }
@@ -222,7 +222,7 @@
     height: 34px;
     display: grid;
     place-items: center;
-    border-radius: 10px;
+    border-radius: var(--mc-radius-md);
     background: color-mix(in srgb,var(--accent) 13%,transparent);
     color: var(--accent)
 }
@@ -250,7 +250,7 @@
     width: 32px;
     height: 32px;
     border: 0;
-    border-radius: 9px;
+    border-radius: var(--mc-radius-sm);
     background: transparent;
     color: var(--muted);
     position: relative

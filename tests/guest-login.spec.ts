@@ -10,6 +10,13 @@ import { expect, test, type Browser, type Page } from "@playwright/test";
  * Usa o título 603 (Matrix) da conta E2E, limpo antes e depois de cada teste.
  */
 
+/*
+ * Cada teste faz dois logins pela interface (preparo + fluxo), e o login espera a
+ * hidratação (ver fillLogin). No `next dev` isso encosta nos 30s padrão e o tempo
+ * acabava em passos aleatórios — o arquivo inteiro ganha 90s.
+ */
+test.describe.configure({ timeout: 90_000 });
+
 const TITLE_URL = "/title/movie/603";
 const LOOKUP = "/api/library?tmdb_id=603&type=movie";
 
@@ -22,8 +29,22 @@ function credentials() {
 
 async function fillLogin(page: Page) {
   const { email, password } = credentials();
-  await page.getByLabel("E-mail").fill(email);
-  await page.locator('input[autocomplete="current-password"]').fill(password);
+  const emailInput = page.getByLabel("E-mail");
+  const passwordInput = page.locator('input[autocomplete="current-password"]');
+  /*
+   * Preencher antes da hidratação é perdido: o React reaplica o estado vazio
+   * do input controlado (o e-mail sumia e a senha ficava). Repete até os dois
+   * valores sobreviverem. O problema de produto (digitação perdida antes da
+   * hidratação) está anotado para a Fase 3 da reforma (telas de login).
+   */
+  await expect(async () => {
+    await emailInput.fill(email);
+    await passwordInput.fill(password);
+    await page.waitForTimeout(300);
+    // Compara sem imprimir os valores: uma falha não pode vazar e-mail/senha no relatório.
+    expect((await emailInput.inputValue()) === email, "e-mail preenchido").toBe(true);
+    expect((await passwordInput.inputValue()) === password, "senha preenchida").toBe(true);
+  }).toPass({ timeout: 20_000 });
   await page.getByRole("button", { name: /^Entrar$/ }).click();
 }
 

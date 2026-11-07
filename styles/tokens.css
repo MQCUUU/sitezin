@@ -176,9 +176,23 @@
   /* ---------------------------------------------------------------- */
   /* Radius                                                             */
   /* ---------------------------------------------------------------- */
+  /*
+   * Fase 2 (reforma) — escala ÚNICA de raios. Todo border-radius do produto usa
+   * um destes degraus (nada de px solto). A preferência "Cantos" (data-radius,
+   * Configurações → Aparência) troca a escala inteira — antes só mudava painéis
+   * e pôsteres; botões, chips, cartões e diálogos ignoravam a escolha.
+   *   xs 4  selos, marcadores, barras finas
+   *   sm 8  chips quadrados, miniaturas, itens de menu
+   *   md 12 botões, inputs, cartões
+   *   lg 16 painéis, diálogos, pôsteres grandes
+   *   xl 22 blocos de destaque (hero, cards grandes)
+   *   pill  chips/pílulas — fica pílula em qualquer preferência
+   */
+  --mc-radius-xs: 4px;
   --mc-radius-sm: 8px;
   --mc-radius-md: 12px;
-  --mc-radius-lg: 18px;
+  --mc-radius-lg: 16px;
+  --mc-radius-xl: 22px;
   --mc-radius-panel: var(--radius-panel, 16px);
   --mc-radius-pill: 999px;
 
@@ -236,14 +250,25 @@
   /* all of that legacy content, since a Dialog/Popover must always win */
   /* against a page-level menu. Legacy values are left untouched.       */
   /* ---------------------------------------------------------------- */
+  /*
+   * Fase 2 (reforma) — camadas GLOBAIS (o que flutua sobre a página inteira).
+   * Ordem garantida: página < barra do topo < painéis do topo < fundo de modal
+   * < Dialog < menus < toasts < link "pular". Antes, fundos de modal ficavam em
+   * 70–1000 e a barra do topo (9000) aparecia POR CIMA de qualquer modal; toasts
+   * (10000) sumiam atrás de folhas em 10020. z-index LOCAL (dentro de um
+   * componente: 1–40) continua numérico.
+   */
   --mc-z-content: 1;
   --mc-z-sticky: 10;
   --mc-z-navbar: 20;
   --mc-z-dropdown: 9000;
+  --mc-z-topbar: 9200;
   --mc-z-popover: 9500;
   --mc-z-overlay: 10100;
   --mc-z-modal: 10200;
+  --mc-z-menu: 10250;
   --mc-z-toast: 10300;
+  --mc-z-skip: 10400;
 
   /* ---------------------------------------------------------------- */
   /* Containers / layout                                               */
@@ -291,6 +316,23 @@
   --mc-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.6);
   --mc-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.6);
   --mc-shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.65);
+}
+
+/* Preferência "Cantos": a escala inteira acompanha (ver --mc-radius-* acima). */
+[data-radius="soft"] {
+  --mc-radius-xs: 3px;
+  --mc-radius-sm: 6px;
+  --mc-radius-md: 8px;
+  --mc-radius-lg: 10px;
+  --mc-radius-xl: 12px;
+}
+
+[data-radius="square"] {
+  --mc-radius-xs: 2px;
+  --mc-radius-sm: 2px;
+  --mc-radius-md: 3px;
+  --mc-radius-lg: 3px;
+  --mc-radius-xl: 3px;
 }
 
 /*

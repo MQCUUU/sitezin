@@ -21,7 +21,7 @@
     flex-direction: column;
     gap: 10px;
     border: 1px solid var(--border);
-    border-radius: 17px;
+    border-radius: var(--mc-radius-lg);
     background: color-mix(in srgb, var(--panel) 97%, transparent);
     text-align: center;
 }
@@ -34,7 +34,7 @@
     height: 46px;
     display: grid;
     place-items: center;
-    border-radius: 13px;
+    border-radius: var(--mc-radius-md);
     color: #f59e0b;
     background: color-mix(in srgb, #f59e0b 9%, transparent);
 }
@@ -88,7 +88,7 @@
 .mc-skeleton-hero {
     height: 205px;
     margin-top: 24px;
-    border-radius: 16px;
+    border-radius: var(--mc-radius-lg);
 }
 .mc-skeleton-section-title {
     width: 190px;
@@ -127,7 +127,7 @@
 }
 .mc-detail-skeleton-poster {
     aspect-ratio: 2 / 3;
-    border-radius: 14px;
+    border-radius: var(--mc-radius-lg);
 }
 .mc-detail-skeleton-copy {
     padding-top: 20px;

@@ -27,7 +27,7 @@
     height: 64px;
     flex: 0 0 64px;
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: var(--mc-radius-lg);
     overflow: hidden;
     background: color-mix(in srgb, var(--text) 4%, var(--panel));
     color: var(--muted);
@@ -133,7 +133,7 @@
     display: block;
     overflow: hidden;
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: var(--mc-radius-md);
     background: var(--bg);
 }
 .search-advanced-thumb img {

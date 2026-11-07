@@ -49,7 +49,7 @@
   display: inline-flex;
   gap: 2px;
   padding: 4px;
-  border-radius: 14px;
+  border-radius: var(--mc-radius-lg);
   background: color-mix(in srgb, var(--text) 7%, var(--panel));
   border: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
 }
@@ -58,7 +58,7 @@
   min-height: 36px;
   padding: 0 14px;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--mc-radius-md);
   background: transparent;
   color: color-mix(in srgb, var(--text) 80%, transparent);
   font-size: var(--mc-fs-md);
@@ -96,7 +96,7 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: 10px;
+  border-radius: var(--mc-radius-md);
   border: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
   background: transparent;
   color: var(--text);
@@ -110,7 +110,7 @@
 .cal-today-btn {
   min-height: 36px;
   padding: 0 14px;
-  border-radius: 10px;
+  border-radius: var(--mc-radius-md);
   border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
   background: transparent;
   color: var(--text);
@@ -156,7 +156,7 @@
 .cal-summary {
   margin: 0;
   padding: 12px 16px;
-  border-radius: 14px;
+  border-radius: var(--mc-radius-lg);
   font-size: var(--mc-fs-md);
   color: color-mix(in srgb, var(--text) 85%, transparent);
   background: color-mix(in srgb, var(--text) 5%, transparent);
@@ -171,7 +171,7 @@
   position: relative;
   display: block;
   min-height: 250px;
-  border-radius: 24px;
+  border-radius: var(--mc-radius-xl);
   overflow: hidden;
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 28%, var(--panel)), var(--panel));
   border: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
@@ -288,7 +288,7 @@
   align-items: center;
   gap: 14px;
   padding: 10px 12px;
-  border-radius: 16px;
+  border-radius: var(--mc-radius-lg);
   border: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
   background: linear-gradient(180deg, color-mix(in srgb, var(--text) 3%, var(--panel)), var(--panel));
   transition: background-color 0.15s ease, border-color 0.15s ease;
@@ -342,7 +342,7 @@
   display: block;
   width: 56px;
   aspect-ratio: 2 / 3;
-  border-radius: 9px;
+  border-radius: var(--mc-radius-sm);
   overflow: hidden;
   background: color-mix(in srgb, var(--text) 6%, var(--panel));
 }
@@ -401,12 +401,12 @@
   grid-template-columns: 34px minmax(0, 1fr);
   gap: 8px;
   padding: 6px;
-  border-radius: 10px;
+  border-radius: var(--mc-radius-md);
 }
 
 .cal-card.is-compact .cal-card-poster {
   width: 34px;
-  border-radius: 6px;
+  border-radius: var(--mc-radius-sm);
 }
 
 .cal-card.is-compact .cal-card-title {
@@ -478,7 +478,7 @@
   gap: 8px;
   min-height: 220px;
   padding: 10px;
-  border-radius: 16px;
+  border-radius: var(--mc-radius-lg);
   border: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
   background: color-mix(in srgb, var(--text) 2%, var(--panel));
 }
@@ -580,7 +580,7 @@
   gap: 6px;
   min-height: 112px;
   padding: 8px;
-  border-radius: 14px;
+  border-radius: var(--mc-radius-lg);
   border: 1px solid color-mix(in srgb, var(--text) 7%, transparent);
   background: color-mix(in srgb, var(--text) 2%, var(--panel));
   color: var(--text);
@@ -634,7 +634,7 @@
   width: 30%;
   max-width: 34px;
   aspect-ratio: 2 / 3;
-  border-radius: 5px;
+  border-radius: var(--mc-radius-xs);
   overflow: hidden;
   background: color-mix(in srgb, var(--text) 6%, var(--panel));
 }
@@ -658,7 +658,7 @@
 .cal-sheet-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 10020; /* mesmo nível dos outros modais (notificações = 9001) */
+  z-index: var(--mc-z-overlay); /* mesmo nível dos outros modais (notificações = 9001) */
   display: flex;
   justify-content: flex-end;
   background: rgba(0, 0, 0, 0.55);
@@ -706,7 +706,7 @@
 
 .cal-skel-hero {
   height: 250px;
-  border-radius: 24px;
+  border-radius: var(--mc-radius-xl);
 }
 
 .cal-skel-day {
@@ -722,7 +722,7 @@
 
 .cal-skel-card {
   height: 98px;
-  border-radius: 16px;
+  border-radius: var(--mc-radius-lg);
 }
 
 /* ---------- responsivo ---------- */
@@ -773,7 +773,7 @@
 
   .cal-hero {
     min-height: 220px;
-    border-radius: 20px;
+    border-radius: var(--mc-radius-xl);
   }
 
   .cal-hero-content {
@@ -834,7 +834,7 @@
   .cal-cell {
     min-height: 54px;
     padding: 5px;
-    border-radius: 9px;
+    border-radius: var(--mc-radius-sm);
     justify-items: center;
   }
 

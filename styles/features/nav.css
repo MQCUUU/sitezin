@@ -19,7 +19,7 @@
 }
 .nav a {
     padding: 11px 12px;
-    border-radius: 10px;
+    border-radius: var(--mc-radius-md);
     color: var(--muted);
     display: flex;
     gap: 11px;
@@ -94,14 +94,14 @@ html[data-density="compact"] .nav a {
         padding-inline: 4px
     }
     .mobile-nav>a,.mobile-nav>button {
-        font-size: 11px
+        font-size: var(--mc-fs-xs)
     }
 }
 @media (max-width:760px) {
     .mobile-more-backdrop {
         position: fixed;
         inset: 0;
-        z-index: 70;
+        z-index: var(--mc-z-overlay);
         display: flex;
         align-items: flex-end;
         background: #0009;
@@ -153,7 +153,7 @@ html[data-density="compact"] .nav a {
         gap: 10px;
         padding: 12px;
         border: 1px solid var(--line);
-        border-radius: 13px;
+        border-radius: var(--mc-radius-md);
         background: var(--bg)
     }
 }

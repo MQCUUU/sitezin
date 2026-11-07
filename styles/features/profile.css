@@ -38,7 +38,7 @@
 .profile-public-fields textarea,.profile-public-fields input {
     width: 100%;
     border: 1px solid var(--border);
-    border-radius: 9px;
+    border-radius: var(--mc-radius-sm);
     background: var(--bg);
     color: var(--text);
     padding: 10px
@@ -51,7 +51,7 @@
     display: flex;
     align-items: center;
     border: 1px solid var(--border);
-    border-radius: 9px;
+    border-radius: var(--mc-radius-sm);
     overflow: hidden;
     background: var(--bg);
     min-width: 0;
@@ -113,7 +113,7 @@
     flex-direction: row;
     padding: 12px;
     border: 1px solid var(--border);
-    border-radius: 11px
+    border-radius: var(--mc-radius-md)
 }
 .profile-visibility-choice input {
     width: auto
@@ -139,7 +139,7 @@
 .profile-poster-shelf {
     padding: 16px;
     border: 1px solid var(--border);
-    border-radius: 15px;
+    border-radius: var(--mc-radius-lg);
     background: color-mix(in srgb,var(--panel) 75%,transparent);
     min-width: 0;
     max-width: 100%;
@@ -180,7 +180,7 @@
     padding: 0;
     overflow: hidden;
     border: 1px dashed var(--border);
-    border-radius: 11px;
+    border-radius: var(--mc-radius-md);
     background: var(--bg);
     color: var(--muted);
     cursor: pointer
@@ -242,7 +242,7 @@
 }
 .profile-picker-backdrop {
     position: fixed;
-    z-index: 10020;
+    z-index: var(--mc-z-overlay);
     inset: 0;
     display: grid;
     place-items: center;
@@ -275,7 +275,7 @@
     gap: 9px;
     padding: 0 12px;
     border: 1px solid var(--border);
-    border-radius: 11px;
+    border-radius: var(--mc-radius-md);
     background: var(--bg);
     color: var(--muted)
 }
@@ -307,7 +307,7 @@
     aspect-ratio: 2/3;
     overflow: hidden;
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: var(--mc-radius-md);
     background: var(--bg)
 }
 .profile-picker-grid img {
@@ -459,7 +459,7 @@
     flex: 1;
     padding: 11px;
     border: 0;
-    border-radius: 9px;
+    border-radius: var(--mc-radius-sm);
     background: transparent;
     color: var(--muted);
     font-weight: 800;
@@ -488,7 +488,7 @@
     place-items: center;
     overflow: hidden;
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: var(--mc-radius-md);
     background: var(--bg)
 }
 .profile-media-row img {
@@ -524,7 +524,7 @@
     gap: 5px;
     padding: 11px;
     border: 1px solid var(--border);
-    border-radius: 10px
+    border-radius: var(--mc-radius-md)
 }
 .profile-reviews>a>span {
     color: var(--accent)
@@ -567,7 +567,7 @@
     gap: 12px;
     padding: 15px;
     border: 1px solid var(--border);
-    border-radius: 11px;
+    border-radius: var(--mc-radius-md);
     transition: border-color .15s ease
 }
 .profile-list-card:hover article,.profile-list-card:focus-visible article {
@@ -586,7 +586,7 @@
 }
 .profile-connections-backdrop {
     position: fixed;
-    z-index: 10020;
+    z-index: var(--mc-z-overlay);
     inset: 0;
     display: grid;
     place-items: center;
@@ -625,7 +625,7 @@
     gap: 8px;
     padding: 0 11px;
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: var(--mc-radius-md);
     background: var(--bg)
 }
 .profile-connections-modal input {
@@ -648,7 +648,7 @@
     gap: 10px;
     padding: 9px;
     border: 1px solid var(--border);
-    border-radius: 10px
+    border-radius: var(--mc-radius-md)
 }
 .profile-connections-list>div>a {
     min-width: 0;
@@ -839,7 +839,7 @@
     flex: 1;
     padding: 11px;
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: var(--mc-radius-md);
     background: var(--bg);
     color: var(--text)
 }
@@ -871,7 +871,7 @@
 }
 .profile-top5-row img,.profile-top5-row a>svg {
     width: 100%;
-    border-radius: 10px
+    border-radius: var(--mc-radius-md)
 }
 .profile-top5-row small {
     margin-top: 7px;
@@ -911,7 +911,7 @@
     min-width: 0;
     padding: 15px;
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: var(--mc-radius-lg);
     background: color-mix(in srgb,var(--panel) 94%,var(--bg))
 }
 .profile-own-connections h3 {
@@ -1086,7 +1086,7 @@
     gap: 14px;
     padding: 12px;
     border: 1px solid var(--border);
-    border-radius: 13px;
+    border-radius: var(--mc-radius-md);
     background: color-mix(in srgb,var(--panel) 97%,transparent);
     transition: transform .16s ease,border-color .16s ease,background .16s ease
 }
@@ -1102,7 +1102,7 @@
     place-items: center;
     overflow: hidden;
     border: 1px solid var(--border);
-    border-radius: 9px;
+    border-radius: var(--mc-radius-sm);
     background: var(--bg);
     color: var(--muted)
 }
@@ -1209,7 +1209,7 @@
     gap: 6px;
     padding: 8px 12px;
     border: 0;
-    border-radius: 9px;
+    border-radius: var(--mc-radius-sm);
     background: transparent;
     color: var(--muted);
     font-size: var(--mc-fs-xs);
@@ -1239,7 +1239,7 @@
     margin-top: 14px;
     padding: 15px;
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: var(--mc-radius-lg);
     background: color-mix(in srgb,var(--panel) 94%,var(--bg))
 }
 .profile-own-connections-more {

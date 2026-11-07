@@ -129,7 +129,7 @@
 }
 .episode-journal-locked {
     padding: 10px 12px;
-    border-radius: 10px;
+    border-radius: var(--mc-radius-md);
     background: color-mix(in srgb,var(--muted) 12%,var(--panel));
     color: var(--muted);
     font-size: var(--mc-fs-xs)

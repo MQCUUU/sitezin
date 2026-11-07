@@ -14,7 +14,8 @@
   --mc-btn-height: 40px;
   --mc-btn-padding-x: var(--mc-space-16);
   --mc-btn-gap: var(--mc-space-8);
-  --mc-btn-font-size: var(--mc-text-body-size);
+  /* Fase 2 (reforma): mesmo rótulo do .btn (styles/controls.css) — um botão só. */
+  --mc-btn-font-size: var(--mc-fs-md);
 
   display: inline-flex;
   align-items: center;

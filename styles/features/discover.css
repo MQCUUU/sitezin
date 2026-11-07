@@ -77,7 +77,7 @@
     grid-template-columns: repeat(3,minmax(105px,1fr));
     gap: 5px;
     padding: 5px;
-    border-radius: 14px
+    border-radius: var(--mc-radius-lg)
 }
 @media (max-width: 520px) {
     .discover-tabs {

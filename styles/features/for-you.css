@@ -21,7 +21,7 @@
     gap: 28px;
     overflow: hidden;
     border: 1px solid var(--border);
-    border-radius: 20px;
+    border-radius: var(--mc-radius-xl);
     background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, var(--panel)), var(--panel) 48%, color-mix(in srgb, var(--accent) 3%, var(--panel)));
 }
 .fy-hero-glow {
@@ -77,7 +77,7 @@
     align-items: center;
     gap: 11px;
     border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
-    border-radius: 14px;
+    border-radius: var(--mc-radius-lg);
     background: color-mix(in srgb, var(--bg) 74%, transparent);
     backdrop-filter: blur(14px);
 }
@@ -162,7 +162,7 @@
     justify-content: center;
     gap: 6px;
     border: 0;
-    border-radius: 9px;
+    border-radius: var(--mc-radius-sm);
     background: transparent;
     color: var(--muted);
     font: inherit;
@@ -201,7 +201,7 @@
     margin-bottom: 24px;
     padding: 18px;
     border: 1px solid var(--border);
-    border-radius: 16px;
+    border-radius: var(--mc-radius-lg);
     background: var(--panel);
 }
 .fy-filter-title {
@@ -230,7 +230,7 @@
     align-items: center;
     justify-content: center;
     border: 1px solid var(--border);
-    border-radius: 9px;
+    border-radius: var(--mc-radius-sm);
     background: transparent;
     color: var(--muted);
     cursor: pointer;
@@ -257,7 +257,7 @@
     height: 40px;
     padding: 0 10px;
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: var(--mc-radius-md);
     outline: none;
     background: var(--bg);
     color: var(--text);
@@ -282,7 +282,7 @@
     align-items: center;
     gap: 10px;
     border: 1px solid var(--border);
-    border-radius: 11px;
+    border-radius: var(--mc-radius-md);
     background: var(--bg);
     color: var(--text);
     text-align: left;
@@ -331,7 +331,7 @@
     align-items: center;
     gap: 6px;
     border: 1px solid var(--border);
-    border-radius: 9px;
+    border-radius: var(--mc-radius-sm);
     background: transparent;
     color: var(--muted);
     font: inherit;
@@ -369,7 +369,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 11px;
+    border-radius: var(--mc-radius-md);
     color: var(--accent);
     background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
@@ -501,19 +501,19 @@
     gap: 2px;
     color: var(--mc-color-rating, #f59e0b);
     font-weight: 700;
-    font-size: 11px;
+    font-size: var(--mc-fs-xs);
 }
 .fy-social-more {
-    font-size: 10px;
+    font-size: var(--mc-fs-xs);
     font-weight: 600;
     padding: 1px 4px;
-    border-radius: 999px;
+    border-radius: var(--mc-radius-pill);
     background: color-mix(in srgb, var(--text) 12%, transparent);
     color: var(--muted);
 }
 .fy-social-quote {
     margin: 4px 0 0;
-    font-size: 11px;
+    font-size: var(--mc-fs-xs);
     line-height: 14px;
     font-style: italic;
     color: var(--text-secondary, var(--muted));
@@ -532,7 +532,7 @@
     justify-content: space-between;
     gap: 18px;
     border: 1px solid var(--border);
-    border-radius: 15px;
+    border-radius: var(--mc-radius-lg);
     background: color-mix(in srgb, var(--accent) 4%, var(--panel));
 }
 .fy-load-more > div {
@@ -565,7 +565,7 @@
     flex-direction: column;
     gap: 8px;
     border: 1px dashed var(--border);
-    border-radius: 16px;
+    border-radius: var(--mc-radius-lg);
     color: var(--muted);
     text-align: center;
 }
@@ -595,7 +595,7 @@
 .fy-skeleton-card > div {
     width: 100%;
     aspect-ratio: 2 / 3;
-    border-radius: 13px;
+    border-radius: var(--mc-radius-md);
     background: color-mix(in srgb, var(--text) 7%, transparent);
     animation: fyPulse 1.3s ease-in-out infinite;
 }
@@ -603,7 +603,7 @@
 .fy-skeleton-card > small {
     display: block;
     margin-top: 7px;
-    border-radius: 5px;
+    border-radius: var(--mc-radius-xs);
     background: color-mix(in srgb, var(--text) 7%, transparent);
     animation: fyPulse 1.3s ease-in-out infinite;
 }
@@ -813,30 +813,30 @@
     .fy-social-trigger:hover,.fy-social-trigger:focus-visible,.fy-social-trigger:active { transform: none; }
 }
 .fy-opinions-backdrop { position: fixed; inset: 0; z-index: var(--mc-z-modal, 10200); display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.72); backdrop-filter: blur(5px); }
-.fy-opinions-panel { width: min(760px, 100%); max-height: min(88dvh, 900px); padding: 24px; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--accent) 75%, var(--border)) color-mix(in srgb, var(--bg) 85%, var(--panel)); border: 1px solid var(--border); border-radius: 20px; outline: none; background: var(--panel); box-shadow: var(--mc-shadow-modal, 0 32px 90px rgba(0,0,0,.55)); }
+.fy-opinions-panel { width: min(760px, 100%); max-height: min(88dvh, 900px); padding: 24px; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--accent) 75%, var(--border)) color-mix(in srgb, var(--bg) 85%, var(--panel)); border: 1px solid var(--border); border-radius: var(--mc-radius-xl); outline: none; background: var(--panel); box-shadow: var(--mc-shadow-modal, 0 32px 90px rgba(0,0,0,.55)); }
 .fy-opinions-panel::-webkit-scrollbar { width: 9px; }
-.fy-opinions-panel::-webkit-scrollbar-track { margin: 12px 0; border-radius: 99px; background: color-mix(in srgb, var(--bg) 82%, var(--panel)); }
-.fy-opinions-panel::-webkit-scrollbar-thumb { min-height: 42px; border: 2px solid var(--panel); border-radius: 99px; background: color-mix(in srgb, var(--accent) 72%, var(--border)); }
+.fy-opinions-panel::-webkit-scrollbar-track { margin: 12px 0; border-radius: var(--mc-radius-pill); background: color-mix(in srgb, var(--bg) 82%, var(--panel)); }
+.fy-opinions-panel::-webkit-scrollbar-thumb { min-height: 42px; border: 2px solid var(--panel); border-radius: var(--mc-radius-pill); background: color-mix(in srgb, var(--accent) 72%, var(--border)); }
 .fy-opinions-panel::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 .fy-opinions-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .fy-opinions-head h2 { margin: 4px 0; font-size: var(--mc-fs-2xl, 24px); }
 .fy-opinions-head p { margin: 0; color: var(--muted); font-size: var(--mc-fs-xs); }
-.fy-opinions-head > button { width: 38px; height: 38px; flex: 0 0 auto; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 11px; background: transparent; color: var(--text); cursor: pointer; }
+.fy-opinions-head > button { width: 38px; height: 38px; flex: 0 0 auto; display: grid; place-items: center; border: 1px solid var(--border); border-radius: var(--mc-radius-md); background: transparent; color: var(--text); cursor: pointer; }
 .fy-opinions-summary { margin-top: 20px; display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 8px; }
-.fy-opinions-summary > div { min-width: 0; padding: 11px 8px; display: grid; justify-items: center; gap: 3px; border: 1px solid var(--border); border-radius: 13px; background: color-mix(in srgb, var(--bg) 58%, var(--panel)); }
+.fy-opinions-summary > div { min-width: 0; padding: 11px 8px; display: grid; justify-items: center; gap: 3px; border: 1px solid var(--border); border-radius: var(--mc-radius-md); background: color-mix(in srgb, var(--bg) 58%, var(--panel)); }
 .fy-opinions-summary > div > svg { margin-bottom: 1px; }
 .fy-opinions-summary strong { font-size: var(--mc-fs-lg, 18px); }
-.fy-opinions-summary small { color: var(--muted); font-size: 10px; line-height: 1.2; text-align: center; }
+.fy-opinions-summary small { color: var(--muted); font-size: var(--mc-fs-xs); line-height: 1.2; text-align: center; }
 .fy-opinions-summary .fy-opinions-range { font-weight: 700; white-space: nowrap; }
-.fy-opinions-bar { height: 10px; margin-top: 12px; display: flex; overflow: hidden; border-radius: 99px; background: var(--bg); }
+.fy-opinions-bar { height: 10px; margin-top: 12px; display: flex; overflow: hidden; border-radius: var(--mc-radius-pill); background: var(--bg); }
 .fy-opinions-average { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: var(--mc-fs-xs); }
 .fy-opinions-average svg,.fy-opinions-rating svg { color: var(--mc-color-rating, #f6c65b); }
 .fy-opinions-controls { margin: 18px 0 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .fy-opinions-filters { display: flex; flex-wrap: wrap; gap: 6px; }
-.fy-opinions-filters button { min-height: 32px; padding: 0 10px; border: 1px solid var(--border); border-radius: 99px; background: transparent; color: var(--muted); font: inherit; font-size: var(--mc-fs-xs); cursor: pointer; }
+.fy-opinions-filters button { min-height: 32px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--mc-radius-pill); background: transparent; color: var(--muted); font: inherit; font-size: var(--mc-fs-xs); cursor: pointer; }
 .fy-opinions-filters button.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--panel)); color: var(--accent); }
 .fy-opinions-controls label { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: var(--mc-fs-xs); }
-.fy-opinions-controls select { height: 34px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); }
+.fy-opinions-controls select { height: 34px; border: 1px solid var(--border); border-radius: var(--mc-radius-sm); background: var(--bg); color: var(--text); }
 .fy-opinions-list { margin: 0; padding: 0; list-style: none; }
 .fy-opinions-list li { padding: 13px 2px; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 5px 12px; border-top: 1px solid var(--border); }
 .fy-opinions-person { min-width: 0; display: flex; align-items: center; gap: 9px; color: var(--text); text-decoration: none; }
@@ -845,7 +845,7 @@
 .fy-opinions-person strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fy-opinions-rating { display: inline-flex; align-items: center; gap: 4px; font-weight: 750; }
 .fy-opinions-list li > p { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: var(--mc-fs-xs); line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
-.fy-opinions-list li > time { grid-column: 1 / -1; color: var(--muted); font-size: 10px; }
+.fy-opinions-list li > time { grid-column: 1 / -1; color: var(--muted); font-size: var(--mc-fs-xs); }
 .fy-opinions-state { padding: 18px 0; color: var(--muted); text-align: center; }
 .fy-opinions-more { width: 100%; justify-content: center; }
 @media (max-width: 600px) {
@@ -853,7 +853,7 @@
     .fy-opinions-panel { width: 100%; max-height: 92dvh; padding: 18px 16px max(20px,env(safe-area-inset-bottom)); border-radius: 20px 20px 0 0; }
     .fy-opinions-summary { gap: 5px; }
     .fy-opinions-summary > div { padding: 9px 3px; }
-    .fy-opinions-summary small { font-size: 9px; }
+    .fy-opinions-summary small { font-size: var(--mc-fs-xs); }
     .fy-opinions-controls { align-items: stretch; flex-direction: column; }
     .fy-opinions-controls label { justify-content: flex-end; }
 }

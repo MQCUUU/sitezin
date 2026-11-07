@@ -37,7 +37,7 @@
     margin-top: 18px;
     padding: 13px;
     border: 1px solid var(--border);
-    border-radius: 13px;
+    border-radius: var(--mc-radius-md);
     background: color-mix(in srgb,var(--panel) 96%,transparent)
 }
 .preview-watch-head {
@@ -71,7 +71,7 @@
     width: 34px;
     height: 34px;
     border: 1px solid var(--border);
-    border-radius: 9px;
+    border-radius: var(--mc-radius-sm);
     overflow: hidden;
     background: var(--panel);
     display: flex;
@@ -163,7 +163,7 @@
         display: grid;
         width: 34px;
         height: 52px;
-        border-radius: 10px
+        border-radius: var(--mc-radius-md)
     }
 }
 @media (max-width:700px) {
@@ -535,7 +535,7 @@
     max-width: 0;
     overflow: hidden;
     opacity: 0;
-    font-size: 11px;
+    font-size: var(--mc-fs-xs);
     font-weight: 500;
     line-height: 1;
     white-space: nowrap;
@@ -601,7 +601,7 @@
     width: 34px;
     height: 34px;
     padding: 0;
-    border-radius: 11px;
+    border-radius: var(--mc-radius-md);
     border: 1px solid rgba(255, 255, 255, 0.16);
     background: rgba(6, 9, 16, 0.72);
     color: #fff;
@@ -654,14 +654,14 @@
 }
 .mc-pa-menu {
     position: fixed;
-    z-index: 10080;
+    z-index: var(--mc-z-menu);
     display: flex;
     flex-direction: column;
     gap: 2px;
     padding: 8px;
     overflow-y: auto;
     overscroll-behavior: contain;
-    border-radius: 14px;
+    border-radius: var(--mc-radius-lg);
     border: 1px solid color-mix(in srgb, var(--text) 14%, var(--line));
     background: color-mix(in srgb, var(--panel) 96%, #000);
     box-shadow: 0 24px 60px -16px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.05);
@@ -692,7 +692,7 @@
     min-height: 36px;
     padding: 0 10px;
     border: 0;
-    border-radius: 9px;
+    border-radius: var(--mc-radius-sm);
     background: transparent;
     color: inherit;
     font: inherit;
@@ -740,7 +740,7 @@
 }
 .mc-pa-menu-copy > small {
     color: var(--muted);
-    font-size: 11px;
+    font-size: var(--mc-fs-xs);
     font-weight: 500;
     line-height: 1.1;
 }

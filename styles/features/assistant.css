@@ -18,7 +18,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 16px;
+    border-radius: var(--mc-radius-lg);
     color: var(--accent);
     background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
@@ -37,7 +37,7 @@
     resize: vertical;
     padding: 15px;
     border: 1px solid var(--border);
-    border-radius: 13px;
+    border-radius: var(--mc-radius-md);
     outline: none;
     background: var(--bg);
     color: var(--text);
