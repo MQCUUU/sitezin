@@ -1,6 +1,7 @@
 "use client";
 
 
+import { Poster } from "@/components/Poster";
 import "@/styles/features/settings.css";
 import { apiFetch, errorMessage } from "@/lib/api-client";
 import { useState } from "react";
@@ -133,7 +134,7 @@ export function HiddenTitlesSettings() {
                   <article key={item.id} className="account-hidden-item">
                     <div className="account-hidden-poster">
                       {item.poster_path ? (
-                        <img src={`https://image.tmdb.org/t/p/w154${item.poster_path}`} alt="" loading="lazy" />
+                        <Poster path={item.poster_path} alt="" sizes="39px" tmdbSize="w92" />
                       ) : (
                         <div aria-hidden="true">{item.media_type === "tv" ? "S" : "F"}</div>
                       )}

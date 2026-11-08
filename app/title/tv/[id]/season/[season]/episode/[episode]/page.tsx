@@ -1,6 +1,7 @@
 "use client";
 
 
+import { Poster } from "@/components/Poster";
 import "@/styles/features/episode.css";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -10,7 +11,6 @@ import { ArrowLeft, Check, Clock, Eye, Loader2, RotateCcw, Save, SkipForward, St
 import { Search } from "@/components/Search";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 import { apiFetch, errorMessage, isApiError } from "@/lib/api-client";
-import { img } from "@/lib/tmdb";
 import { getEpisodeReleaseStatus, type EpisodeSummary } from "@/lib/title-seasons";
 import { BRAZIL_TIME_ZONE, dateKeyInTimeZone } from "@/lib/date-only";
 import { WatchNowButton } from "@/components/title/WatchNowButton";
@@ -208,7 +208,7 @@ export default function EpisodePage() {
       <div className="episode-detail-hero panel">
         <div className="episode-detail-image">
           {episode.still_path
-            ? <img src={img(episode.still_path, "w780")} alt="" loading="lazy" decoding="async" />
+            ? <Poster path={episode.still_path} alt="" sizes="(max-width: 760px) 100vw, 640px" tmdbSize="w780" priority />
             : <span className="episode-detail-image-fallback" aria-hidden="true">E{episode.episode_number}</span>}
         </div>
         <div className="episode-detail-copy">

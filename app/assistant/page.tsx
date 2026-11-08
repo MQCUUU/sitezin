@@ -385,7 +385,7 @@ export default function AssistantPage() {
                   >
                     {/* Pôster + botões do pôster (fora do link); tags de tipo/status ao vivo. */}
                     <div className="poster mc-pa-host">
-                      <Link href={`/title/${type}/${item.id}`} tabIndex={-1} aria-hidden="true">
+                      <Link href={`/title/${type}/${item.id}`} tabIndex={-1} aria-hidden="true" className="poster-link">
                         <Poster
                           path={item.poster_path}
                           alt=""

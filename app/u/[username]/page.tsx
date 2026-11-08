@@ -1,6 +1,7 @@
 "use client";
 
 
+import { Poster } from "@/components/Poster";
 import "@/styles/features/profile.css";
 import { apiFetch, errorMessage, isApiError } from "@/lib/api-client";
 import { ListCover } from "@/components/lists/ListCover";
@@ -56,7 +57,7 @@ function ReviewList({ items }: { items: any[] }) {
     >
       <div className="profile-review-poster">
         {media.poster_path
-          ? <img loading="lazy" src={img(media.poster_path, "w342")} alt={media.title} />
+          ? <Poster path={media.poster_path} alt={media.title} sizes="72px" tmdbSize="w185" />
           : <Film size={24} />}
       </div>
       <article>

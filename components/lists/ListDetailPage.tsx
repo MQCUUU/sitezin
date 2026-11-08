@@ -1,6 +1,7 @@
 "use client";
 
 
+import { Poster } from "@/components/Poster";
 import "@/styles/features/lists.css";
 import { apiFetch, errorMessage, isApiError } from "@/lib/api-client";
 import Link from "next/link";
@@ -14,7 +15,6 @@ import { useConfirm } from "@/components/ConfirmProvider";
 import { useToast } from "@/components/ToastProvider";
 import { useAuthState } from "@/hooks/useLibraryAuth";
 import { loginHref } from "@/lib/auth/pending-action";
-import { img } from "@/lib/tmdb";
 import { mediaStatusLabel } from "@/lib/media-status";
 import { moveInOrder, plural } from "@/lib/lists/validate";
 
@@ -368,7 +368,7 @@ function DetailContent() {
                 <div className="lst-item-media mc-pa-host">
                 <Link href={href} className="lst-item-poster" tabIndex={reorder ? -1 : 0} aria-label={`${item.title}${year ? `, ${year}` : ""}`}>
                   {item.poster_path ? (
-                    <img src={img(item.poster_path, "w342")} alt="" loading="lazy" decoding="async" />
+                    <Poster path={item.poster_path} alt="" sizes="(max-width: 700px) 30vw, 170px" tmdbSize="w342" />
                   ) : (
                     <span className="lst-item-fallback" aria-hidden="true">
                       <Clapperboard size={22} />

@@ -617,7 +617,7 @@ export default function HomeClient() {
               {trendingGuest.map((item) => (
                 <div key={`${item.media_type}-${item.id}`} className="home-guest-trending-item">
                   <div className="poster mc-pa-host">
-                    <Link href={`/title/${item.media_type}/${item.id}`} tabIndex={-1} aria-hidden="true">
+                    <Link href={`/title/${item.media_type}/${item.id}`} tabIndex={-1} aria-hidden="true" className="poster-link">
                       <Poster
                         path={item.poster_path}
                         alt=""
@@ -649,11 +649,6 @@ export default function HomeClient() {
 
         <div className="home-top-actions">
           <PickForMeLauncher />
-
-          <Link href="/calendar" className="btn">
-            <CalendarDays size={16} />
-            Calendário
-          </Link>
         </div>
       </div>
 

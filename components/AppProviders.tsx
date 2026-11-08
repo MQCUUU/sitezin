@@ -21,6 +21,7 @@ import { LibraryMutationWatcher } from "@/components/LibraryMutationWatcher";
 import { MediaRepair } from "@/components/MediaRepair";
 import { InsightsTracker } from "@/components/InsightsTracker";
 import { PreferencesSync } from "@/components/PreferencesSync";
+import { MotionProvider } from "@/components/MotionProvider";
 
 export function AppProviders({
   children,
@@ -29,6 +30,7 @@ export function AppProviders({
     ReactNode;
 }) {
   return (
+    <MotionProvider>
     <ToastProvider>
       <ConfirmProvider>
         <SessionSync />
@@ -43,5 +45,6 @@ export function AppProviders({
         <PosterPreviewHost>{children}</PosterPreviewHost>
       </ConfirmProvider>
     </ToastProvider>
+    </MotionProvider>
   );
 }

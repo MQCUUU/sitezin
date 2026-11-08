@@ -5,9 +5,11 @@ import "@/styles/features/nav.css";
 import Link from "next/link";
 import { BrandLogo, BrandMark } from "@/components/brand/BrandMark";
 import { usePathname } from "next/navigation";
+import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { useAuthState } from "@/hooks/useLibraryAuth";
 import { useModal } from "@/hooks/useModal";
+import { navIndicatorTransition, sheetExitTransition, sheetTransition } from "@/lib/motion";
 
 import {
   Bookmark,
@@ -26,26 +28,17 @@ import {
 
 /*
  * ==========================================
- * ITENS PRINCIPAIS DA NAVEGAÇÃO — V2.1-B
+ * ITENS DA NAVEGAÇÃO
  * ==========================================
  *
- * Reduzido de 12 para 8 destinos de primeiro nível
- * (docs/V2.1-B-PRODUCT-ARCHITECTURE.md):
+ * 9 destinos de primeiro nível (V2.1-B reduziu de 12; Watchlist entrou depois):
+ * - Estatísticas + Meu Ranking + Retrospectiva são "Insights" (um item,
+ *   ativo em /insights, /stats, /ranking e /retrospective — ver InsightsSubNav).
+ * - "/favorites" redireciona para "/library?favorite=true".
+ * - Fase 3: o Assistente IA é destino secundário — aparece no fim da barra
+ *   lateral (antes só existia no "Mais" do celular e num atalho do Para você).
  *
- * - Estatísticas + Meu Ranking + Retrospectiva viraram "Insights"
- *   (um item de nav, três URLs continuam existindo:
- *   /stats, /ranking, /retrospective — ver InsightsSubNav).
- * - Curtidos saiu do menu ("/favorites" agora redireciona para
- *   "/library?favorite=true", que já cobre o mesmo caso de uso).
- * - Assistente IA saiu do menu principal, mas "/assistant" continua
- *   acessível direto e ganhou um atalho dentro de "Para você" e no
- *   sheet "Mais" do mobile.
- *
- * Perfil, Configurações e Sair NÃO ficam aqui — ficam no AccountMenu,
- * na bolinha do usuário no canto superior direito.
- *
- * `insightsMatch` é usado só pelo item "Insights", que precisa ficar
- * ativo em 4 rotas diferentes (a própria + as 3 que agrupa).
+ * Perfil, Configurações e Sair ficam no AccountMenu (canto superior direito).
  */
 
 const INSIGHTS_ROUTES = ["/insights", "/stats", "/ranking", "/retrospective"];
@@ -147,6 +140,9 @@ export function Nav() {
     );
   };
 
+  // Página atual mora no "Mais" (Diário, Calendário…): o indicador da barra inferior fica nele.
+  const moreActive = [items[4], items[5], items[6], items[7], items[8], ...secondaryItems].some(([href]) => isActive(href));
+
   return (
     <>
       {/* ====================================== */}
@@ -189,6 +185,14 @@ export function Nav() {
                     : undefined
                 }
               >
+                {isActive(href) && (
+                  <motion.span
+                    layoutId="mc-nav-indicator"
+                    className="nav-indicator"
+                    transition={navIndicatorTransition}
+                    aria-hidden="true"
+                  />
+                )}
                 <Icon
                   size={18}
                   strokeWidth={2}
@@ -200,6 +204,29 @@ export function Nav() {
               </Link>
             )
           )}
+        </nav>
+
+        <nav className="nav nav-secondary" aria-label="Outras páginas">
+          {secondaryItems.map(([href, label, Icon]) => (
+            <Link
+              key={href}
+              href={href}
+              prefetch={prefetchFor(href)}
+              className={"mc-focusable " + (isActive(href) ? "active" : "")}
+              aria-current={isActive(href) ? "page" : undefined}
+            >
+              {isActive(href) && (
+                <motion.span
+                  layoutId="mc-nav-indicator"
+                  className="nav-indicator"
+                  transition={navIndicatorTransition}
+                  aria-hidden="true"
+                />
+              )}
+              <Icon size={18} strokeWidth={2} />
+              <span>{label}</span>
+            </Link>
+          ))}
         </nav>
 
       </aside>
@@ -240,6 +267,14 @@ export function Nav() {
                   : undefined
               }
             >
+              {isActive(href) && (
+                <motion.span
+                  layoutId="mc-mobile-nav-indicator"
+                  className="mobile-nav-indicator"
+                  transition={navIndicatorTransition}
+                  aria-hidden="true"
+                />
+              )}
               <Icon
                 size={18}
                 strokeWidth={2}
@@ -251,19 +286,50 @@ export function Nav() {
             </Link>
           )
         )}
-        <button className={`mc-focusable ${moreOpen ? "active" : ""}`} onClick={() => setMoreOpen((open) => !open)} aria-expanded={moreOpen} aria-label="Abrir mais páginas">
+        <button className={`mc-focusable ${moreOpen || moreActive ? "active" : ""}`} onClick={() => setMoreOpen((open) => !open)} aria-expanded={moreOpen} aria-label="Abrir mais páginas">
+          {moreActive && (
+            <motion.span
+              layoutId="mc-mobile-nav-indicator"
+              className="mobile-nav-indicator"
+              transition={navIndicatorTransition}
+              aria-hidden="true"
+            />
+          )}
           <MoreHorizontal size={18} strokeWidth={2} /><span>Mais</span>
         </button>
       </nav>
-      {moreOpen && <div className="mobile-more-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setMoreOpen(false)}>
-        <section ref={moreSheetRef as React.RefObject<HTMLElement>} className="mobile-more-sheet" aria-label="Mais páginas" role="dialog" aria-modal="true">
-          <header><strong>Todas as páginas</strong><button className="mc-focusable" onClick={() => setMoreOpen(false)} aria-label="Fechar"><X size={20} /></button></header>
-          <div>
-            {[items[4], items[5], items[6], items[7], items[8]].map(([href, label, Icon]) => <Link key={href} href={href} prefetch={prefetchFor(href)} className={`mc-focusable ${isActive(href) ? "active" : ""}`} aria-current={isActive(href) ? "page" : undefined}><Icon size={20} /><span>{label}</span></Link>)}
-            {secondaryItems.map(([href, label, Icon]) => <Link key={href} href={href} prefetch={prefetchFor(href)} className={`mc-focusable mobile-more-secondary ${isActive(href) ? "active" : ""}`} aria-current={isActive(href) ? "page" : undefined}><Icon size={20} /><span>{label}</span></Link>)}
-          </div>
-        </section>
-      </div>}
+      {/* Fase 3: a folha sobe de onde está o botão "Mais" e desce ao fechar (antes aparecia/sumia de uma vez). */}
+      <AnimatePresence>
+        {moreOpen && (
+          <motion.div
+            key="more"
+            className="mobile-more-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: sheetExitTransition }}
+            transition={sheetTransition}
+            onMouseDown={(event) => event.target === event.currentTarget && setMoreOpen(false)}
+          >
+            <motion.section
+              ref={moreSheetRef as React.RefObject<HTMLElement>}
+              className="mobile-more-sheet"
+              aria-label="Mais páginas"
+              role="dialog"
+              aria-modal="true"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%", transition: sheetExitTransition }}
+              transition={sheetTransition}
+            >
+              <header><strong>Todas as páginas</strong><button className="mc-focusable" onClick={() => setMoreOpen(false)} aria-label="Fechar"><X size={20} /></button></header>
+              <div>
+                {[items[4], items[5], items[6], items[7], items[8]].map(([href, label, Icon]) => <Link key={href} href={href} prefetch={prefetchFor(href)} className={`mc-focusable ${isActive(href) ? "active" : ""}`} aria-current={isActive(href) ? "page" : undefined}><Icon size={20} /><span>{label}</span></Link>)}
+                {secondaryItems.map(([href, label, Icon]) => <Link key={href} href={href} prefetch={prefetchFor(href)} className={`mc-focusable mobile-more-secondary ${isActive(href) ? "active" : ""}`} aria-current={isActive(href) ? "page" : undefined}><Icon size={20} /><span>{label}</span></Link>)}
+              </div>
+            </motion.section>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

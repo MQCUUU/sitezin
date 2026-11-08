@@ -137,24 +137,12 @@
    Popover (AccountMenu / NotificationCenter dropdown panels)
    ===================================================================== */
 
-.mc-popover {
-  animation: mc-popover-in var(--mc-duration-fast) var(--mc-ease-enter);
-}
-
+/* Fase 3: entrada/saída do .mc-popover vive no componente (Motion, components/ui/Popover.tsx).
+   @keyframes mc-popover-in continua para .library-card-status-menu (globals.css). */
 @keyframes mc-popover-in {
   from {
     opacity: 0;
     transform: translateY(-4px) scale(0.98);
-  }
-}
-
-[data-motion="reduced"] .mc-popover {
-  animation: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .mc-popover {
-    animation: none;
   }
 }
 

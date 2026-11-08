@@ -73,3 +73,21 @@
 .poster-link {
   position: relative;
 }
+
+/*
+ * Fase 3 — imagens do TMDB via <Poster> (next/image com `fill`): a caixa que
+ * recebe a imagem precisa ter posição e tamanho próprios. Antes o <img> cru
+ * definia a altura; agora quem define é a caixa (sem salto de layout).
+ */
+.collection-poster-wrap,
+.person-portrait-wrap {
+  position: relative;
+  aspect-ratio: 2 / 3;
+}
+
+.profile-review-poster,
+.episode-still,
+.episode-detail-image,
+.account-hidden-poster {
+  position: relative;
+}

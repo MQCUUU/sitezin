@@ -2,7 +2,9 @@
 
 
 import "@/styles/features/person.css";
-import { MediaPosterTags, mediaTypeLabel } from "@/components/media/MediaBadges";
+import { mediaTypeLabel } from "@/components/media/MediaBadges";
+import { MediaCard, MediaCardImage, MediaCardMeta } from "@/components/media";
+import { Poster } from "@/components/Poster";
 import {
   useEffect,
   useMemo,
@@ -638,15 +640,12 @@ export default function PersonPage() {
         <div className="person-hero-content">
           <div className="person-portrait-wrap">
             {person.profile_path ? (
-              <img loading="lazy" decoding="async"
-                src={img(
-                  person.profile_path,
-                  "w500"
-                )}
-                alt={
-                  person.name
-                }
+              <Poster
+                path={person.profile_path}
+                alt={person.name}
+                sizes="(max-width: 700px) 140px, 260px"
                 className="person-portrait"
+                priority
               />
             ) : (
               <div className="person-portrait person-portrait-empty">
@@ -1128,88 +1127,47 @@ function PersonCreditCard({
 
   const href = `/title/${item.media_type}/${item.id}`;
 
+  const rating = Number(item.vote_average || 0);
+
+  /* Fase 3: mesmo cartão de mídia das grades (MediaCard) — antes era um cartão próprio, com <img> cru. */
   return (
-    <div
-      className={
-        featured
-          ? "person-work-card featured"
-          : "person-work-card"
-      }
-    >
-      {/* Pôster (atalho decorativo) + botões do pôster FORA do link; o link acessível é o nome. */}
-      <div className="person-work-poster mc-pa-host">
-        <Link href={href} tabIndex={-1} aria-hidden="true" className="person-work-poster-link">
-        {item.poster_path ? (
-          <img
-            src={img(
-              item.poster_path
-            )}
-            alt={
-              title
-            }
-            loading="lazy"
-          />
-        ) : (
-          <div className="person-work-poster-empty">
-            {item.media_type ===
-            "tv" ? (
-              <Tv
-                size={26}
-              />
-            ) : (
-              <Film
-                size={26}
-              />
-            )}
-          </div>
-        )}
+    <MediaCard className={featured ? "person-work-card featured" : "person-work-card"}>
+      <MediaCardImage className="mc-pa-host">
+        {/* Pôster (atalho decorativo) + botões do pôster FORA do link; o link acessível é o nome. */}
+        <Link href={href} tabIndex={-1} aria-hidden="true" className="poster-link">
+          {item.poster_path ? (
+            <Poster
+              path={item.poster_path}
+              alt=""
+              sizes={featured ? "(max-width:700px) 46vw, 220px" : "(max-width:700px) 46vw, (max-width:1100px) 24vw, 170px"}
+            />
+          ) : (
+            <div className="person-work-poster-empty">
+              {item.media_type === "tv" ? <Tv size={26} /> : <Film size={26} />}
+            </div>
+          )}
         </Link>
 
-        <MediaPosterTags type={item.media_type} />
         <ConnectedPosterActions
-          media={{ tmdbId: Number(item.id), mediaType: item.media_type === "tv" ? "tv" : "movie", title, year, posterPath: item.poster_path ?? null, voteAverage: Number(item.vote_average || 0) || null }}
+          media={{ tmdbId: Number(item.id), mediaType: item.media_type === "tv" ? "tv" : "movie", title, year, posterPath: item.poster_path ?? null, voteAverage: rating || null }}
         />
-      </div>
-      <Link href={href} className="person-work-body">
-        <strong>
-          {
-            title
-          }
-        </strong>
+      </MediaCardImage>
 
-        <div className="person-work-meta">
-          <span className="mc-media-type-year">
-            {mediaTypeLabel(item.media_type)} · {year || "—"}
-          </span>
+      <Link href={href} className="card-title">
+        {title}
+      </Link>
 
-          {Number(
-            item.vote_average ||
-              0
-          ) >
-            0 && (
-            <span className="rating">
-              <Star
-                size={12}
-                fill="currentColor"
-              />
-
-              {Number(
-                item.vote_average
-              ).toFixed(
-                1
-              )}
-            </span>
-          )}
-        </div>
-
-        {role && (
-          <span className="person-work-role">
-            {
-              role
-            }
+      <MediaCardMeta>
+        <span className="mc-media-type-year">{mediaTypeLabel(item.media_type)} · {year || "—"}</span>
+        {rating > 0 && (
+          <span className="rating">
+            <Star size={12} fill="currentColor" />
+            {rating.toFixed(1)}
           </span>
         )}
-      </Link>
-    </div>
+      </MediaCardMeta>
+
+      {role && <span className="person-work-role">{role}</span>}
+    </MediaCard>
   );
 }

@@ -49,7 +49,7 @@ setup(
           "heading",
           {
             name:
-              /Entrar no MyCatalog/i,
+              /Acesse sua conta/i,
           }
         )
     ).toBeVisible();

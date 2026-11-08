@@ -24,12 +24,29 @@
   color: var(--mc-color-text);
 }
 
+/*
+ * Fase 3: o fundo e a barrinha do item ativo são um elemento só (.nav-indicator,
+ * Motion layoutId em Nav.tsx) que desliza até o novo destino ao navegar.
+ * O link fica isolado para o indicador (z-index -1) ficar atrás do ícone e do texto.
+ */
+.nav a {
+  isolation: isolate;
+}
+
 .nav a.active {
-  background: var(--mc-color-accent-soft);
+  background: transparent;
   color: var(--mc-color-text);
 }
 
-.nav a.active::before {
+.nav-indicator {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--mc-color-accent-soft);
+}
+
+.nav-indicator::before {
   content: "";
   position: absolute;
   left: -14px;
@@ -37,6 +54,29 @@
   transform: translateY(-50%);
   width: 3px;
   height: 18px;
+  border-radius: var(--mc-radius-pill);
+  background: var(--mc-color-accent);
+}
+
+.nav-secondary {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+/* Barra inferior: traço curto acima do ícone do destino atual. */
+.mobile-nav > a,
+.mobile-nav > button {
+  position: relative;
+}
+
+.mobile-nav-indicator {
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  width: 22px;
+  height: 3px;
+  margin-left: -11px;
   border-radius: var(--mc-radius-pill);
   background: var(--mc-color-accent);
 }

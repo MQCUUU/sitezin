@@ -66,24 +66,21 @@ function MediaPosterStatusChip({ status }: { status: string }) {
   );
 }
 
-/** Tipo (canto superior esquerdo) + status (canto inferior esquerdo) sobre o pôster. */
+/*
+ * Fase 3 (V3): sobre o pôster fica só o status. O tipo saiu daqui — repetia a
+ * legenda logo abaixo ("Filme · 2015") e cobria a arte. `type` segue na
+ * assinatura para os chamadores não mudarem.
+ */
 export function MediaPosterTags({
-  type,
   status,
 }: {
-  type: "movie" | "tv" | string;
+  type?: "movie" | "tv" | string;
   status?: string | null;
 }) {
+  if (!status) return null;
   return (
-    <>
-      <span className="mc-tag-slot mc-tag-slot--top">
-        <MediaTypeTag type={type} />
-      </span>
-      {status ? (
-        <span className="mc-tag-slot mc-tag-slot--bottom">
-          <MediaPosterStatusChip status={status} />
-        </span>
-      ) : null}
-    </>
+    <span className="mc-tag-slot mc-tag-slot--bottom">
+      <MediaPosterStatusChip status={status} />
+    </span>
   );
 }

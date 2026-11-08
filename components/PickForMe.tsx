@@ -1,6 +1,7 @@
 "use client";
 
 
+import { Poster } from "@/components/Poster";
 import { useConfirm } from "@/components/ConfirmProvider";
 import "@/styles/features/pick-for-me.css";
 import { removeFromLibrary } from "@/lib/library/actions";
@@ -2636,16 +2637,11 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                   <div className="pick-result-poster">
                     {current
                       ?.poster_path ? (
-                      <img loading="lazy" decoding="async"
-                        src={img(
-                          current.poster_path,
-                          "w500"
-                        )}
-                        alt={
-                          titleOf(
-                            current
-                          )
-                        }
+                      <Poster
+                        path={current.poster_path}
+                        alt={titleOf(current)}
+                        sizes="(max-width: 700px) 125px, 260px"
+                        priority
                       />
                     ) : (
                       <div className="pick-empty-poster">

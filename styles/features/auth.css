@@ -142,9 +142,13 @@
     color: var(--muted);
     font-size: var(--mc-fs-xs);
 }
+/* Fase 3 (V5): os dois painéis têm a mesma altura; o formulário centraliza dentro do seu. */
 .auth-card {
     padding: 32px;
-    align-self: center;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 .auth-card-head h2,
 .auth-card > h1 {
@@ -672,4 +676,45 @@
     color: var(--muted);
     font-size: var(--mc-fs-xs);
     line-height: 1.45;
+}
+
+/*
+ * Fase 3 — movimento da tela de entrada. Um único momento na chegada (painel da
+ * marca, depois o formulário, 60ms de intervalo) e o aviso de erro que surge
+ * junto ao botão quando o envio falha. CSS puro: roda fora da thread principal
+ * enquanto a página hidrata. Movimento reduzido: só opacidade.
+ */
+@keyframes mc-auth-rise {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+}
+@keyframes mc-auth-fade {
+    from {
+        opacity: 0;
+    }
+}
+.auth-visual,
+.auth-card {
+    animation: mc-auth-rise var(--mc-duration-slow) var(--mc-ease-out) backwards;
+}
+.auth-card {
+    animation-delay: 60ms;
+}
+.auth-form .auth-error {
+    animation: mc-auth-error-in var(--mc-duration-normal) var(--mc-ease-out);
+}
+@keyframes mc-auth-error-in {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .auth-visual,
+    .auth-card,
+    .auth-form .auth-error {
+        animation-name: mc-auth-fade;
+    }
 }

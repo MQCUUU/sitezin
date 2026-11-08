@@ -32,10 +32,9 @@ async function fillLogin(page: Page) {
   const emailInput = page.getByLabel("E-mail");
   const passwordInput = page.locator('input[autocomplete="current-password"]');
   /*
-   * Preencher antes da hidratação é perdido: o React reaplica o estado vazio
-   * do input controlado (o e-mail sumia e a senha ficava). Repete até os dois
-   * valores sobreviverem. O problema de produto (digitação perdida antes da
-   * hidratação) está anotado para a Fase 3 da reforma (telas de login).
+   * Fase 3: os campos do login deixaram de ser controlados e o texto digitado
+   * antes da hidratação sobrevive. O laço continua como proteção contra lentidão
+   * do `next dev`: repete até os dois valores estarem no campo.
    */
   await expect(async () => {
     await emailInput.fill(email);

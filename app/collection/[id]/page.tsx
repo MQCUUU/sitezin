@@ -1339,14 +1339,11 @@ export default function CollectionPage() {
         <div className="collection-hero-content">
           <div className="collection-poster-wrap">
             {collection.poster_path ? (
-              <img loading="lazy" decoding="async"
-                src={img(
-                  collection.poster_path,
-                  "w500"
-                )}
-                alt={
-                  collection.name
-                }
+              <Poster
+                path={collection.poster_path}
+                alt={collection.name}
+                sizes="(max-width: 700px) 96px, 260px"
+                priority
               />
             ) : (
               <div className="collection-poster-empty">

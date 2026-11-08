@@ -1,6 +1,7 @@
 "use client";
 
 
+import { Poster } from "@/components/Poster";
 import "@/styles/features/title-detail.css";
 import { apiFetch } from "@/lib/api-client";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
@@ -9,7 +10,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Check, ChevronRight, Clock, Eye, EyeOff, Loader2, Play } from "lucide-react";
 
-import { img } from "@/lib/tmdb";
 import {
   getEpisodeReleaseStatus,
   type EpisodeSummary,
@@ -61,7 +61,7 @@ function EpisodeStill({ episode }: { episode: EpisodeSummary }) {
   return (
     <div className="episode-still">
       {episode.still_path ? (
-        <img src={img(episode.still_path, "w300")} alt="" loading="lazy" decoding="async" />
+        <Poster path={episode.still_path} alt="" sizes="(max-width: 700px) 40vw, 220px" tmdbSize="w300" />
       ) : (
         <span aria-hidden="true">E{episode.episode_number}</span>
       )}

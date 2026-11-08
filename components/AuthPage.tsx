@@ -6,6 +6,7 @@ import {
   FormEvent,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -202,29 +203,11 @@ export function AuthPage({
     }
   }
 
-  const [
-    name,
-    setName,
-  ] =
-    useState("");
-
-  const [
-    email,
-    setEmail,
-  ] =
-    useState("");
-
   const [username, setUsername] = useState("");
 
   const [
     password,
     setPassword,
-  ] =
-    useState("");
-
-  const [
-    confirmPassword,
-    setConfirmPassword,
   ] =
     useState("");
 
@@ -285,11 +268,35 @@ export function AuthPage({
     router.refresh();
   }
 
+  /*
+   * Fase 3 (U3): os campos não são controlados pelo React. Quem digita antes da
+   * página terminar de carregar (hidratação) não perde o texto — antes o React
+   * reaplicava o estado vazio e o e-mail sumia. O valor de verdade é o do campo;
+   * o estado só espelha o que a tela mostra (força da senha, prévia do @).
+   */
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form) return;
+    const value = (field: string) => (form.elements.namedItem(field) as HTMLInputElement | null)?.value ?? "";
+    setUsername(value("username"));
+    setPassword(value("password"));
+  }, [isSignup]);
+
   async function submit(
     event:
-      FormEvent
+      FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
+
+    const data = new FormData(event.currentTarget);
+    const field = (key: string) => String(data.get(key) ?? "");
+    const name = field("name");
+    const username = field("username").toLowerCase().replace(/[^a-z0-9_]/g, "");
+    const email = field("email");
+    const password = field("password");
+    const confirmPassword = field("confirm-password");
 
     setError(
       ""
@@ -564,17 +571,12 @@ export function AuthPage({
         </section>
 
         <section className="auth-card">
+          {/* Fase 3 (V5): "Entrar" aparece uma vez na tela — no botão. */}
           <div className="auth-card-head">
-            <span className="eyebrow">
-              {isSignup
-                ? "NOVA CONTA"
-                : "ENTRAR"}
-            </span>
-
             <h2>
               {isSignup
                 ? "Criar conta"
-                : "Entrar no MyCatalog"}
+                : "Acesse sua conta"}
             </h2>
 
             <p>
@@ -622,8 +624,14 @@ export function AuthPage({
             </div>
           )}
 
+          {/*
+            * method="dialog": um clique em "Entrar" antes da hidratação não recarrega a
+            * página (fora de um <dialog> o envio nativo não faz nada) — o texto fica.
+            */}
           <form
+            ref={formRef}
             className="auth-form"
+            method="dialog"
             onSubmit={
               submit
             }
@@ -641,18 +649,8 @@ export function AuthPage({
                   />
 
                   <input
+                    name="name"
                     autoComplete="name"
-                    value={
-                      name
-                    }
-                    onChange={(
-                      event
-                    ) =>
-                      setName(
-                        event.target
-                          .value
-                      )
-                    }
                     placeholder="Como devemos te chamar?"
                   />
                 </div>
@@ -662,9 +660,15 @@ export function AuthPage({
                 <div className="auth-input">
                   <User size={16} />
                   <input
+                    name="username"
                     autoComplete="username"
-                    value={username}
-                    onChange={(event) => setUsername(event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    onChange={(event) => {
+                      const clean = event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "");
+                      if (clean !== event.target.value) event.target.value = clean;
+                      setUsername(clean);
+                    }}
                     placeholder="seu_usuario"
                     minLength={3}
                     maxLength={24}
@@ -687,19 +691,11 @@ export function AuthPage({
                 />
 
                 <input
+                  name="email"
                   type="email"
                   autoComplete="email"
-                  value={
-                    email
-                  }
-                  onChange={(
-                    event
-                  ) =>
-                    setEmail(
-                      event.target
-                        .value
-                    )
-                  }
+                  autoCapitalize="none"
+                  spellCheck={false}
                   placeholder="voce@email.com"
                 />
               </div>
@@ -729,13 +725,11 @@ export function AuthPage({
                       ? "text"
                       : "password"
                   }
+                  name="password"
                   autoComplete={
                     isSignup
                       ? "new-password"
                       : "current-password"
-                  }
-                  value={
-                    password
                   }
                   onChange={(
                     event
@@ -832,18 +826,8 @@ export function AuthPage({
                           ? "text"
                           : "password"
                       }
+                      name="confirm-password"
                       autoComplete="new-password"
-                      value={
-                        confirmPassword
-                      }
-                      onChange={(
-                        event
-                      ) =>
-                        setConfirmPassword(
-                          event.target
-                            .value
-                        )
-                      }
                       placeholder="Digite a senha novamente"
                     />
                   </div>

@@ -61,7 +61,7 @@ export function TitleRelatedSection({
               <div className="mc-title-recommendation-media mc-pa-host">
                 {/* Pôster = atalho decorativo (fora do Tab); o link acessível é o
                     nome logo abaixo. Os botões ficam FORA do link. */}
-                <Link href={`/title/${item.media_type}/${item.id}`} tabIndex={-1} aria-hidden="true">
+                <Link href={`/title/${item.media_type}/${item.id}`} tabIndex={-1} aria-hidden="true" className="poster-link">
                   <Poster
                     path={item.poster_path}
                     alt=""

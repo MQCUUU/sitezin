@@ -1,12 +1,12 @@
 "use client";
 
 
+import { Poster } from "@/components/Poster";
 import "@/styles/features/title-detail.css";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CalendarDays, ChevronRight, Clock3, Radio, Tv } from "lucide-react";
 
-import { img } from "@/lib/tmdb";
 import { useAuthState } from "@/hooks/useLibraryAuth";
 import { longDate, relativeWhen, shortDate, todayIn } from "@/lib/calendar/dates";
 
@@ -113,7 +113,7 @@ export function SeriesSchedule({ tvId, inProduction }: { tvId: number | string; 
         <div className="series-next-episode panel">
           <div className="series-next-visual">
             {next.still_path ? (
-              <img loading="lazy" decoding="async" src={img(next.still_path, "w780")} alt="" />
+              <Poster path={next.still_path} alt="" sizes="(max-width: 760px) 100vw, 420px" tmdbSize="w780" />
             ) : (
               <div className="series-next-placeholder">
                 <Tv size={34} aria-hidden="true" />

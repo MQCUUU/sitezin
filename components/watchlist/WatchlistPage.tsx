@@ -248,7 +248,7 @@ function WatchlistRow({
         {rank}
       </span>
       <div className="wl-poster mc-pa-host">
-        <Link href={href} tabIndex={-1} aria-hidden="true">
+        <Link href={href} tabIndex={-1} aria-hidden="true" className="poster-link">
           <Poster path={media.poster_path} alt="" sizes="92px" tmdbSize="w185" />
         </Link>
         <ConnectedPosterActions
