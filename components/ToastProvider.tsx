@@ -20,6 +20,9 @@ import {
   RotateCcw,
   X,
 } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+
+const TOAST_EASE = [0.23, 1, 0.32, 1] as const;
 
 export type ToastKind =
   | "success"
@@ -485,14 +488,23 @@ export function ToastProvider({
         aria-live="polite"
         aria-label="Notificações"
       >
+        {/* Fase 5: entra e sai por baixo (mesmo caminho); os demais deslizam
+            para o lugar quando um sai (layout). Interrompível: são transições do
+            Motion, não @keyframes. Redução de movimento: só opacidade. */}
+        <AnimatePresence initial={false} mode="popLayout">
         {toasts.map(
           (
             toast
           ) => (
-            <div
+            <motion.div
               key={
                 toast.id
               }
+              layout
+              initial={{ opacity: 0, y: 16, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: 0.24, ease: TOAST_EASE } }}
+              exit={{ opacity: 0, y: 16, scale: 0.98, transition: { duration: 0.16, ease: TOAST_EASE } }}
+              transition={{ layout: { duration: 0.22, ease: TOAST_EASE } }}
               className={`mycatalog-toast mycatalog-toast-${toast.kind}`}
               role={
                 toast.kind ===
@@ -586,9 +598,10 @@ export function ToastProvider({
                     `${toast.duration}ms`,
                 }}
               />
-            </div>
+            </motion.div>
           )
         )}
+        </AnimatePresence>
       </div>
     </ToastContext.Provider>
   );

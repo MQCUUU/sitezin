@@ -605,7 +605,6 @@
     transition: transform .15s ease,border-color .15s ease,background .15s ease
 }
 .title-watch-provider:hover {
-    transform: translateY(-1px);
     border-color: color-mix(in srgb,var(--accent) 32%,var(--border));
     background: color-mix(in srgb,var(--accent) 5%,var(--panel))
 }
@@ -690,7 +689,6 @@
     transition: transform .15s ease, border-color .15s ease, background .15s ease;
 }
 .title-person-link:hover {
-    transform: translateY(-2px);
     border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
     background: color-mix(in srgb, var(--accent) 4%, var(--panel));
 }
@@ -701,7 +699,6 @@
     transition: transform .15s ease, border-color .15s ease, background .15s ease, box-shadow .15s ease;
 }
 .title-cast-card:hover {
-    transform: translateY(-3px);
     border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
     background: color-mix(in srgb, var(--accent) 4%, var(--panel));
     box-shadow: 0 12px 30px rgba(0,0,0,.18);
@@ -735,7 +732,6 @@
     transition: transform .15s ease, border-color .15s ease;
 }
 .title-recommendation-card:hover {
-    transform: translateY(-2px);
     border-color: color-mix(in srgb, var(--accent) 36%, var(--border));
 }
 @media (max-width: 700px) {
@@ -1269,7 +1265,6 @@
     transition: border-color .15s ease, transform .15s ease;
 }
 .series-episode-row:hover {
-    transform: translateY(-1px);
     border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
 }
 .series-episode-row.next {
@@ -1496,7 +1491,6 @@
     background: var(--accent);
     border-color: var(--accent);
     color: #fff;
-    transform: translateY(-1px);
 }
 .episode-watch-action:active {
     transform: translateY(0.5px);

@@ -196,29 +196,16 @@
 .mc-media-card-image {
     border-radius: var(--mc-radius-lg);
     border-color: var(--mc-color-border-subtle);
-    transition: transform var(--mc-duration-normal) var(--mc-ease-standard), border-color var(--mc-duration-normal) var(--mc-ease-standard), box-shadow var(--mc-duration-normal) var(--mc-ease-standard);
+    transition: border-color var(--mc-duration-fast) ease;
 }
 /*
- * Overrides the existing `.card:hover .poster` rule in globals.css,
- * which hardcodes a fixed violet border (rgba(139,92,246,.55)) instead
- * of following the user's chosen accent (AppearanceProvider / --accent).
- * Same lift, now accent-aware, plus a small optional scale.
+ * Fase 5: o pôster não sobe, não cresce e não ganha sombra no hover — isso
+ * acontecia dezenas de vezes por dia em toda grade (e preso no toque). Fica só
+ * um contorno mais claro, e só com mouse: indica o que está sob o ponteiro.
  */
-.card:hover .mc-media-card-image,
-.card:focus-within .mc-media-card-image {
-    transform: translateY(-3px) scale(1.015);
-    border-color: color-mix(in srgb, var(--mc-color-accent) 55%, transparent);
-    box-shadow: var(--mc-shadow-lg);
-}
-@media (prefers-reduced-motion: reduce) {
-    .mc-media-card-image {
-        transition: border-color var(--mc-duration-fast) var(--mc-ease-standard), box-shadow var(--mc-duration-fast) var(--mc-ease-standard);
-    }
-}
-@media (prefers-reduced-motion: reduce) {
-    .card:hover .mc-media-card-image,
-  .card:focus-within .mc-media-card-image {
-        transform: none;
+@media (hover: hover) and (pointer: fine) {
+    .card:hover .mc-media-card-image {
+        border-color: color-mix(in srgb, var(--mc-color-text) 28%, transparent);
     }
 }
 .mc-media-card-meta .rating {

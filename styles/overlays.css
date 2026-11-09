@@ -22,7 +22,6 @@
   padding: var(--mc-space-16);
   background: color-mix(in srgb, black 55%, transparent);
   backdrop-filter: blur(6px);
-  animation: mc-overlay-fade-in var(--mc-duration-normal) var(--mc-ease-enter);
 }
 
 .mc-dialog {
@@ -35,20 +34,6 @@
   background: var(--mc-color-bg-elevated);
   box-shadow: var(--mc-shadow-modal);
   outline: none;
-  animation: mc-dialog-in var(--mc-duration-normal) var(--mc-ease-enter);
-}
-
-@keyframes mc-overlay-fade-in {
-  from {
-    opacity: 0;
-  }
-}
-
-@keyframes mc-dialog-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.98);
-  }
 }
 
 /*

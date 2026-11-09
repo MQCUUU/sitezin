@@ -2,7 +2,7 @@
 
 
 import "@/styles/features/media.css";
-import { useId, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
 
 import { Dialog } from "@/components/ui/Dialog";
@@ -50,6 +50,11 @@ export type MediaPreviewDialogProps = {
  */
 export function MediaPreviewDialog({ open, onClose, data, actions, providers, extraActions, personal }: MediaPreviewDialogProps) {
   const titleId = useId();
+  // Fase 5: o Dialog anima a saída; enquanto isso, mostra o último título
+  // (quem abre limpa `data` ao fechar, e o painel ficaria vazio na saída).
+  const [lastData, setLastData] = useState(data);
+  if (data && data !== lastData) setLastData(data);
+  data = data ?? lastData;
 
   if (!data) return null;
 

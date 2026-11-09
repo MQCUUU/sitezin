@@ -34,6 +34,9 @@ function isSkipped(key?: string): boolean {
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState<PendingConfirm | null>(null);
+  // Fase 5: o Dialog anima a saída; o texto da última confirmação fica até ele sumir.
+  const [shown, setShown] = useState<PendingConfirm | null>(null);
+  if (pending && pending !== shown) setShown(pending);
   const pendingRef = useRef<PendingConfirm | null>(null);
   const [skipChecked, setSkipChecked] = useState(false);
   const skipCheckedRef = useRef(false);
@@ -80,16 +83,16 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
         describedBy="global-confirm-description"
         className="mc-confirm-dialog"
       >
-        {pending && (
+        {shown && (
           <>
-            <div className={cx("mc-confirm-icon", pending.danger && "mc-confirm-icon--danger")}>
+            <div className={cx("mc-confirm-icon", shown.danger && "mc-confirm-icon--danger")}>
               <AlertTriangle size={22} />
             </div>
-            <h3 id="global-confirm-title">{pending.title}</h3>
+            <h3 id="global-confirm-title">{shown.title}</h3>
             <p id="global-confirm-description" className="mc-confirm-description">
-              {pending.description}
+              {shown.description}
             </p>
-            {pending.skipKey && (
+            {shown.skipKey && (
               <label className="mycatalog-confirm-option">
                 <input
                   type="checkbox"
@@ -104,15 +107,15 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             )}
             <div className="mc-confirm-actions">
               <Button variant="ghost" type="button" onClick={() => finish(false)}>
-                {pending.cancelLabel}
+                {shown.cancelLabel}
               </Button>
               <Button
-                variant={pending.danger ? "danger" : "primary"}
+                variant={shown.danger ? "danger" : "primary"}
                 type="button"
                 autoFocus
                 onClick={() => finish(true)}
               >
-                {pending.confirmLabel}
+                {shown.confirmLabel}
               </Button>
             </div>
           </>

@@ -34,7 +34,6 @@
 }
 .account-avatar-button:hover,
 .account-avatar-button.active {
-    transform: translateY(-1px);
     border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
     color: var(--text);
 }

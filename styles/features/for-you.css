@@ -690,7 +690,7 @@
 
 /* Painel de opiniões aberto pelo indicador social do card. */
 .fy-social-trigger { box-sizing: border-box; width: 100%; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 4px 5px; border: 1px solid transparent; border-radius: var(--mc-radius-sm, 8px); color: var(--text); text-align: left; font: inherit; cursor: pointer; transform: translateY(0) scale(1); transition: transform var(--mc-duration-fast) var(--mc-ease-enter, ease-out), border-color var(--mc-duration-instant) linear, box-shadow var(--mc-duration-fast) var(--mc-ease-enter, ease-out), background-color var(--mc-duration-fast) var(--mc-ease-enter, ease-out), color var(--mc-duration-fast) var(--mc-ease-standard); }
-.fy-social-trigger:hover,.fy-social-trigger:focus-visible { color: var(--accent); transform: translateY(-2px) scale(1.015); border-color: color-mix(in srgb, var(--mc-color-accent, var(--accent)) 55%, transparent); background: color-mix(in srgb, var(--panel) 76%, transparent); box-shadow: var(--mc-shadow-md, 0 6px 16px rgba(0,0,0,.24)); }
+.fy-social-trigger:hover,.fy-social-trigger:focus-visible { color: var(--accent); border-color: color-mix(in srgb, var(--mc-color-accent, var(--accent)) 55%, transparent); background: color-mix(in srgb, var(--panel) 76%, transparent); box-shadow: var(--mc-shadow-md, 0 6px 16px rgba(0,0,0,.24)); }
 .fy-social-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .fy-social-trigger:hover .fy-social-trigger-copy,.fy-social-trigger:focus-visible .fy-social-trigger-copy { color: var(--accent); }
 .fy-social-trigger:active { transform: translateY(0) scale(.99); }

@@ -387,16 +387,7 @@ button {
     height: 100%
 }
 .poster {
-    isolation: isolate;
-    transition: transform .2s ease,border-color .2s ease,box-shadow .2s ease
-}
-.card:hover .poster {
-    transform: translateY(-3px);
-    border-color: rgba(139,92,246,.55);
-    box-shadow: 0 14px 30px rgba(0,0,0,.35)
-}
-.card:hover .poster img {
-    transform: scale(1.045)
+    isolation: isolate
 }
 .card-meta {
     display: flex;

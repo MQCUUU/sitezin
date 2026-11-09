@@ -1057,7 +1057,6 @@
     transition: transform .16s ease,border-color .16s ease,background .16s ease
 }
 .profile-review-card:hover {
-    transform: translateY(-1px);
     border-color: color-mix(in srgb,var(--accent) 38%,var(--border));
     background: color-mix(in srgb,var(--accent) 4%,var(--panel))
 }

@@ -194,7 +194,6 @@
     transition: transform 0.15s ease, border-color 0.15s ease;
 }
 .lst-card-link:hover {
-    transform: translateY(-2px);
     border-color: color-mix(in srgb, var(--accent) 45%, transparent);
 }
 .lst-card-link:focus-visible {

@@ -31,7 +31,6 @@
     flex-wrap: wrap
 }
 .discover-page-btn:hover:not(:disabled) {
-    transform: translateY(-1px);
     color: var(--text);
     border-color: color-mix(in srgb,var(--accent) 40%,var(--border))
 }
