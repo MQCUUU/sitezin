@@ -12,6 +12,7 @@ import { pickHero, summarize } from "@/lib/calendar/build";
 import type { CalendarEvent, CalendarResponse } from "@/lib/calendar/types";
 
 import { AgendaView, DayDetails, Hero, MonthView, WeekView, groupByDay } from "./parts";
+import { Button } from "@/components/ui/Button";
 
 /*
  * Calendário V2 — "meu calendário pessoal de filmes e séries".
@@ -286,9 +287,9 @@ function CalendarContent() {
       {error && !data ? (
         <div className="cal-empty" role="alert">
           <strong>{error}</strong>
-          <button type="button" className="btn primary" onClick={() => setAttempt((n) => n + 1)}>
+          <Button variant="primary" type="button" onClick={() => setAttempt((n) => n + 1)}>
             Tentar de novo
-          </button>
+          </Button>
         </div>
       ) : null}
 
@@ -310,9 +311,9 @@ function CalendarContent() {
                 <>
                   <AgendaView events={events} today={today} />
                   <div className="cal-more-wrap">
-                    <button type="button" className="btn" onClick={loadMore} disabled={loadingMore}>
+                    <Button type="button" onClick={loadMore} disabled={loadingMore}>
                       {loadingMore ? "Carregando…" : "Carregar mais"}
-                    </button>
+                    </Button>
                     <span className="cal-note">Até {longDate(agendaTo, today).split(", ")[1]}</span>
                   </div>
                 </>

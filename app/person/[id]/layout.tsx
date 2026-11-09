@@ -1,5 +1,6 @@
 import "@/styles/features/person.css";
 import type { Metadata } from "next";
+import { knownDepartment } from "@/lib/person/department";
 
 import { DEFAULT_SHARE_IMAGE, shareDescription } from "@/lib/share-metadata";
 import { img, personTMDB } from "@/lib/tmdb";
@@ -15,16 +16,6 @@ import { img, personTMDB } from "@/lib/tmdb";
  * Sem JSON-LD: Person exigiria dados que a página não mostra no HTML inicial.
  */
 
-const DEPARTMENT: Record<string, string> = {
-  Acting: "Atuação",
-  Directing: "Direção",
-  Writing: "Roteiro",
-  Production: "Produção",
-  Creator: "Criação",
-  Sound: "Trilha sonora",
-  Camera: "Fotografia",
-  Editing: "Montagem",
-};
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -41,10 +32,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     if (!person?.name) return {};
 
     const name = person.name;
-    const role = person.known_for_department ? DEPARTMENT[person.known_for_department] : undefined;
+    const role = knownDepartment(person.known_for_department);
     const description = shareDescription(
       person.biography,
-      role ? `${name} · ${role}. Filmes e séries no MyCatalog.` : `Filmes e séries de ${name} no MyCatalog.`
+      role ? `${name}, ${role.toLowerCase()}. Filmes e séries no MyCatalog.` : `Filmes e séries de ${name} no MyCatalog.`
     );
     const image = person.profile_path ? img(person.profile_path, "w500") : undefined;
     const url = `/person/${id}`;

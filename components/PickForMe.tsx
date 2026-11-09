@@ -1,311 +1,23 @@
 "use client";
 
-
 import { Poster } from "@/components/Poster";
 import { useConfirm } from "@/components/ConfirmProvider";
 import "@/styles/features/pick-for-me.css";
 import { removeFromLibrary } from "@/lib/library/actions";
 import { removalConfirmOptions } from "@/lib/library/remove";
 import { apiFetch } from "@/lib/api-client";
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-
-import { useModal } from "@/hooks/useModal";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 
-import {
-  Check,
-  ChevronDown,
-  Clock3,
-  Eye,
-  EyeOff,
-  Film,
-  Filter,
-  Heart,
-  Loader2,
-  Plus,
-  RotateCcw,
-  Shuffle,
-  Sparkles,
-  Star,
-  Trash2,
-  Tv,
-  WandSparkles,
-  X,
-} from "lucide-react";
-
-import {
-  img,
-} from "@/lib/tmdb";
-
+import { Check, ChevronDown, Clock3, Eye, EyeOff, Film, Filter, Heart, Loader2, Plus, RotateCcw, Shuffle, Sparkles, Star, Trash2, Tv, WandSparkles, X } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 import { ApiError } from "@/lib/api-client";
 import { intentForMedia, type LibraryIntent } from "@/lib/auth/pending-action";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 import { fetchDiscoverFilters } from "@/lib/discover/filters-client";
-
-import { normalizeWatchProviders } from "@/components/media/providers/normalize";
-import { ProviderLogo } from "@/components/media/providers/ProviderLogo";
-import { WATCH_PROVIDER_KIND_LABELS } from "@/components/media/providers/types";
-import type { WatchProviderItem } from "@/components/media/providers/types";
-
-const STATUS_OPTIONS = [
-  ["want", "Quero assistir"],
-  ["watching", "Assistindo"],
-  ["watched", "Assistido"],
-  ["paused", "Pausado"],
-  ["dropped", "Abandonado"],
-  ["rewatching", "Reassistindo"],
-  ["rewatched", "Reassistido"],
-] as const;
-
-const COUNTRIES = [
-  ["", "Qualquer país"],
-  ["BR", "Brasil"],
-  ["US", "Estados Unidos"],
-  ["GB", "Reino Unido"],
-  ["KR", "Coreia do Sul"],
-  ["JP", "Japão"],
-  ["FR", "França"],
-  ["ES", "Espanha"],
-  ["DE", "Alemanha"],
-  ["IT", "Itália"],
-  ["MX", "México"],
-  ["CA", "Canadá"],
-  ["IN", "Índia"],
-  ["CN", "China"],
-  ["AU", "Austrália"],
-] as const;
-
-const DECADES = [
-  ["", "Qualquer época"],
-  ["2020", "2020–2029"],
-  ["2010", "2010–2019"],
-  ["2000", "2000–2009"],
-  ["1990", "1990–1999"],
-  ["1980", "1980–1989"],
-  ["1970", "1970–1979"],
-  ["1960", "1960–1969"],
-  ["1950", "1950–1959"],
-  ["1940", "1940–1949"],
-  ["1930", "1930–1939"],
-  ["1920", "1920–1929"],
-  ["1910", "1910–1919"],
-  ["1900", "1900–1909"],
-] as const;
-
-type MediaType =
-  | "movie"
-  | "tv";
-
-type PickMode =
-  | "safe"
-  | "popular"
-  | "discover"
-  | "gems";
-
-type PickResult = {
-  id: number;
-  media_type:
-    MediaType;
-  title?: string;
-  name?: string;
-  original_title?: string;
-  original_name?: string;
-  poster_path?: string | null;
-  backdrop_path?: string | null;
-  overview?: string;
-  release_date?: string;
-  first_air_date?: string;
-  vote_average?: number;
-  vote_count?: number;
-  runtime?: number;
-  episode_run_time?: number[];
-  genres?: {
-    id: number;
-    name: string;
-  }[];
-  watch_providers?: any;
-  in_library?: boolean;
-  library_id?: string | null;
-  library_status?: string | null;
-  favorite?: boolean;
-  personal_rating?: number | null;
-  [key: string]: any;
-};
-
-type FilterMeta = {
-  genres: {
-    key: string;
-    name: string;
-    movie_id?: number;
-    tv_id?: number;
-    special?: "teen";
-  }[];
-  providers: {
-    provider_id: number;
-    provider_name: string;
-    logo_path?: string | null;
-  }[];
-};
-
-function titleOf(
-  item:
-    PickResult |
-    null
-) {
-  return (
-    item?.title ||
-    item?.name ||
-    "Sem título"
-  );
-}
-
-function statusLabel(
-  status?:
-    string |
-    null
-) {
-  return (
-    STATUS_OPTIONS.find(
-      ([value]) =>
-        value ===
-        status
-    )?.[1] ||
-    "Na biblioteca"
-  );
-}
-
-function runtimeOf(
-  item:
-    PickResult |
-    null
-) {
-  if (!item) {
-    return null;
-  }
-
-  if (
-    item.media_type ===
-    "movie"
-  ) {
-    return Number(
-      item.runtime ||
-        0
-    ) ||
-      null;
-  }
-
-  const values =
-    Array.isArray(
-      item.episode_run_time
-    )
-      ? item.episode_run_time
-          .map(
-            Number
-          )
-          .filter(
-            (
-              value
-            ) =>
-              value >
-              0
-          )
-      : [];
-
-  return (
-    values[
-      0
-    ] ||
-    null
-  );
-}
-
-function formatRuntime(
-  minutes:
-    number |
-    null,
-  isTv:
-    boolean
-) {
-  if (
-    !minutes
-  ) {
-    return "";
-  }
-
-  if (
-    isTv
-  ) {
-    return `~${minutes} min/ep.`;
-  }
-
-  const hours =
-    Math.floor(
-      minutes /
-      60
-    );
-
-  const rest =
-    minutes %
-    60;
-
-  if (!hours) {
-    return `${rest} min`;
-  }
-
-  return `${hours}h ${rest}min`;
-}
-
-function normalizeGenreName(
-  value:
-    string
-) {
-  return value
-    .normalize("NFD")
-    .replace(
-      /[\u0300-\u036f]/g,
-      ""
-    )
-    .toLowerCase()
-    .replace(
-      /&/g,
-      " e "
-    )
-    .replace(
-      /[^a-z0-9]+/g,
-      " "
-    )
-    .trim();
-}
-
-async function safeJson(
-  response:
-    Response
-) {
-  const type =
-    response.headers.get(
-      "content-type"
-    ) ||
-    "";
-
-  if (
-    !type.includes(
-      "application/json"
-    )
-  ) {
-    throw new Error(
-      `A rota não retornou JSON (${response.status}).`
-    );
-  }
-
-  return response.json();
-}
-
+import { STATUS_OPTIONS, COUNTRIES, DECADES, titleOf, statusLabel, runtimeOf, formatRuntime, normalizeGenreName, safeJson, type MediaType, type PickMode, type PickResult, type FilterMeta } from "@/components/pick-for-me/shared";
+import { MultiPicker, PickForMeWatchProviders } from "@/components/pick-for-me/parts";
 /*
  * V2.9 — em Descobrir, "Escolha pra mim" parte dos filtros da página (tipo,
  * gênero, streaming, país, nota mínima, exclusões) em vez de pedir tudo de novo.
@@ -520,7 +232,6 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
 
   const [inheritedSummary, setInheritedSummary] = useState<string[]>([]);
   const inheritAppliedRef = useRef(false);
-
 
   const refSorteio =
     useRef<HTMLElement | null>(
@@ -1951,9 +1662,9 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
   return (
     <>
       {!hideTrigger && (
-        <button
+        <Button
           type="button"
-          className="btn pick-trigger"
+          className="pick-trigger"
           onClick={openPicker}
         >
           <Shuffle
@@ -1961,7 +1672,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
           />
 
           Escolha pra mim
-        </button>
+        </Button>
       )}
 
       {open && (
@@ -2012,17 +1723,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
             "filters" ? (
               <>
                 <div className="pick-heading">
-                  <div className="pick-heading-icon">
-                    <Shuffle
-                      size={22}
-                    />
-                  </div>
-
                   <div>
-                    <div className="eyebrow">
-                      ESCOLHA PRA MIM
-                    </div>
-
                     <h2>
                       O que vamos assistir?
                     </h2>
@@ -2590,9 +2291,9 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                 </p>
 
                 <div className="pick-main-actions">
-                  <button
+                  <Button
                     type="button"
-                    className="btn pick-surprise"
+                    className="pick-surprise"
                     onClick={() =>
                       pick(
                         true
@@ -2604,11 +2305,11 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                     />
 
                     Surpreenda-me
-                  </button>
+                  </Button>
 
-                  <button
+                  <Button variant="primary"
                     type="button"
-                    className="btn primary pick-go"
+                    className="pick-go"
                     onClick={() =>
                       pick(
                         false
@@ -2620,7 +2321,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                     />
 
                     Escolher pra mim
-                  </button>
+                  </Button>
                 </div>
               </>
             ) : (
@@ -2674,9 +2375,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                   {step ===
                   "spinning" ? (
                     <div className="pick-spinning-copy">
-                      <div className="eyebrow">
-                        GIRANDO...
-                      </div>
+                      <p className="pick-spinning-label">Sorteando…</p>
 
                       <h2>
                         {titleOf(
@@ -2696,13 +2395,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                     </div>
                   ) : (
                     <>
-                      <div className="pick-winner-label">
-                        <Sparkles
-                          size={16}
-                        />
-
-                        ESCOLHIDO PARA VOCÊ
-                      </div>
+                      <p className="pick-spinning-label">Escolhido para você</p>
 
                       <h2>
                         {titleOf(
@@ -2893,9 +2586,9 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                       <div className="pick-library-actions">
                         {!winner
                           ?.in_library ? (
-                          <button
+                          <Button variant="primary"
                             type="button"
-                            className="btn primary"
+                           
                             disabled={
                               processing
                             }
@@ -2915,13 +2608,13 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                             )}
 
                             Quero assistir
-                          </button>
+                          </Button>
                         ) : (
                           <>
                             <div className="pick-status-wrap">
-                              <button
+                              <Button
                                 type="button"
-                                className="btn pick-status-button"
+                                className="pick-status-button"
                                 disabled={
                                   processing
                                 }
@@ -2945,7 +2638,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                                 <ChevronDown
                                   size={14}
                                 />
-                              </button>
+                              </Button>
 
                               {openStatus && (
                                 <div className="pick-status-menu">
@@ -3006,10 +2699,10 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                               )}
                             </div>
 
-                            <button
+                            <Button
                               type="button"
                               className={
-                                "btn pick-favorite " +
+                                "pick-favorite " +
                                 (winner.favorite
                                   ? "active"
                                   : "")
@@ -3033,7 +2726,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                               {winner.favorite
                                 ? "Curtido"
                                 : "Curtir"}
-                            </button>
+                            </Button>
                           </>
                         )}
 
@@ -3050,9 +2743,9 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                       </div>
 
                       <div className="pick-reroll-actions">
-                        <button
+                        <Button
                           type="button"
-                          className="btn"
+                         
                           onClick={() =>
                             setStep(
                               "filters"
@@ -3064,11 +2757,11 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                           />
 
                           Alterar filtros
-                        </button>
+                        </Button>
 
-                        <button
+                        <Button
                           type="button"
-                          className="btn pick-not-interested"
+                          className="pick-not-interested"
                           disabled={
                             processing
                           }
@@ -3081,11 +2774,11 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                           />
 
                           Não tenho interesse
-                        </button>
+                        </Button>
 
-                        <button
+                        <Button
                           type="button"
-                          className="btn"
+                         
                           onClick={
                             rejectWinner
                           }
@@ -3095,11 +2788,10 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                           />
 
                           Não quero esse
-                        </button>
+                        </Button>
 
-                        <button
+                        <Button
                           type="button"
-                          className="btn primary"
                           onClick={() =>
                             pick(
                               false
@@ -3111,7 +2803,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
                           />
 
                           Girar novamente
-                        </button>
+                        </Button>
                       </div>
                     </>
                   )}
@@ -3126,432 +2818,3 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
   );
 }
 
-type MultiPickerOption = {
-  value:
-    string;
-
-  label:
-    string;
-
-  logo?:
-    string |
-    null;
-
-  badge?:
-    string;
-};
-
-function MultiPicker({
-  options,
-  selected,
-  onChange,
-  placeholder,
-  searchPlaceholder,
-  disabled,
-}: {
-  options:
-    MultiPickerOption[];
-
-  selected:
-    string[];
-
-  onChange:
-    (
-      values:
-        string[]
-    ) =>
-      void;
-
-  placeholder:
-    string;
-
-  searchPlaceholder:
-    string;
-
-  disabled?:
-    boolean;
-}) {
-  const [
-    open,
-    setOpen,
-  ] =
-    useState(false);
-
-  useModal(
-    open,
-    () =>
-      setOpen(
-        false
-      ),
-    false
-  );
-
-  const [
-    search,
-    setSearch,
-  ] =
-    useState("");
-
-  const ref =
-    useRef<HTMLDivElement>(
-      null
-    );
-
-  useEffect(() => {
-    if (
-      !open
-    ) {
-      return;
-    }
-
-    function outside(
-      event:
-        MouseEvent
-    ) {
-      if (
-        ref.current &&
-        !ref.current.contains(
-          event.target as Node
-        )
-      ) {
-        setOpen(
-          false
-        );
-      }
-    }
-
-    document.addEventListener(
-      "mousedown",
-      outside
-    );
-
-    return () =>
-      document.removeEventListener(
-        "mousedown",
-        outside
-      );
-  }, [
-    open,
-  ]);
-
-  const visible =
-    useMemo(
-      () => {
-        const q =
-          search
-            .trim()
-            .toLocaleLowerCase(
-              "pt-BR"
-            );
-
-        if (!q) {
-          return options;
-        }
-
-        return options.filter(
-          (
-            option
-          ) =>
-            option.label
-              .toLocaleLowerCase(
-                "pt-BR"
-              )
-              .includes(
-                q
-              )
-        );
-      },
-      [
-        options,
-        search,
-      ]
-    );
-
-  const selectedOptions =
-    options.filter(
-      (
-        option
-      ) =>
-        selected.includes(
-          option.value
-        )
-    );
-
-  function toggle(
-    value:
-      string
-  ) {
-    onChange(
-      selected.includes(
-        value
-      )
-        ? selected.filter(
-            (
-              current
-            ) =>
-              current !==
-              value
-          )
-        : [
-            ...selected,
-            value,
-          ]
-    );
-  }
-
-  return (
-    <div
-      className={
-        "pick-multi " +
-        (open
-          ? "open"
-          : "")
-      }
-      ref={
-        ref
-      }
-    >
-      <button
-        type="button"
-        className="pick-multi-trigger"
-        disabled={
-          disabled
-        }
-        onClick={() =>
-          setOpen(
-            (
-              value
-            ) =>
-              !value
-          )
-        }
-      >
-        <span>
-          {selectedOptions.length ===
-          0
-            ? placeholder
-            : selectedOptions.length ===
-                1
-              ? selectedOptions[
-                  0
-                ].label
-              : `${selectedOptions.length} selecionados`}
-        </span>
-
-        <ChevronDown
-          size={14}
-        />
-      </button>
-
-      {selectedOptions.length >
-        0 && (
-        <div className="pick-multi-chips">
-          {selectedOptions
-            .slice(
-              0,
-              4
-            )
-            .map(
-              (
-                option
-              ) => (
-                <button
-                  type="button"
-                  key={
-                    option.value
-                  }
-                  title={`Remover ${option.label}`}
-                  onClick={() =>
-                    toggle(
-                      option.value
-                    )
-                  }
-                >
-                  {
-                    option.label
-                  }
-                  <X
-                    size={12}
-                  />
-                </button>
-              )
-            )}
-
-          {selectedOptions.length >
-            4 && (
-            <span>
-              +{
-                selectedOptions.length -
-                4
-              }
-            </span>
-          )}
-        </div>
-      )}
-
-      {open && (
-        <div className="pick-multi-popover">
-          <div className="pick-multi-search">
-            <input
-              value={
-                search
-              }
-              autoFocus
-              placeholder={
-                searchPlaceholder
-              }
-              onChange={(
-                event
-              ) =>
-                setSearch(
-                  event.target
-                    .value
-                )
-              }
-            />
-
-            {selected.length >
-              0 && (
-              <button
-                type="button"
-                onClick={() =>
-                  onChange(
-                    []
-                  )
-                }
-              >
-                Limpar
-              </button>
-            )}
-          </div>
-
-          <div className="pick-multi-options">
-            {visible.map(
-              (
-                option
-              ) => {
-                const active =
-                  selected.includes(
-                    option.value
-                  );
-
-                return (
-                  <button
-                    type="button"
-                    key={
-                      option.value
-                    }
-                    className={
-                      active
-                        ? "active"
-                        : ""
-                    }
-                    onClick={() =>
-                      toggle(
-                        option.value
-                      )
-                    }
-                  >
-                    {option.logo ? (
-                      <img loading="lazy" decoding="async"
-                        src={img(
-                          option.logo,
-                          "w92"
-                        )}
-                        alt=""
-                      />
-                    ) : (
-                      <span className="pick-multi-check">
-                        {active
-                          ? "✓"
-                          : ""}
-                      </span>
-                    )}
-
-                    <strong>
-                      {
-                        option.label
-                      }
-                    </strong>
-
-                    {option.badge && (
-                      <small>
-                        {
-                          option.badge
-                        }
-                      </small>
-                    )}
-                  </button>
-                );
-              }
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/*
- * Region note (C3.2B): the "País" filter elsewhere in this component
- * (`country` state) is TMDB's `with_origin_country` — it narrows which
- * titles are eligible for the pick by production country, and is sent to
- * `/api/pick-for-me` for that purpose only. It has never had any
- * connection to which watch-provider region gets displayed here — this
- * box always read `results.BR`, independent of that filter, both before
- * and after this migration. Preserved exactly; not something this phase
- * changes (see C3.2B report — PRE-EXISTING REGION UX DEBT).
- */
-function PickForMeWatchProviders({
-  winner,
-}: {
-  winner:
-    PickResult |
-    null;
-}) {
-  const data = normalizeWatchProviders(winner?.watch_providers, "BR");
-
-  if (data.groups.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="pick-watch">
-      <strong>
-        Onde assistir no Brasil
-      </strong>
-
-      {data.groups.map((group) => (
-        <ProviderLine
-          key={group.kind}
-          label={WATCH_PROVIDER_KIND_LABELS[group.kind]}
-          providers={group.providers}
-        />
-      ))}
-    </div>
-  );
-}
-
-function ProviderLine({
-  label,
-  providers,
-}: {
-  label: string;
-  providers: WatchProviderItem[];
-}) {
-  return (
-    <div className="pick-provider-line">
-      <span>
-        {
-          label
-        }
-      </span>
-
-      <div>
-        {providers.map((provider) => (
-          <ProviderLogo key={provider.id} provider={provider} sizes="27px" className="pick-provider-logo" />
-        ))}
-      </div>
-    </div>
-  );
-}

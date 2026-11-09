@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { Bell, Loader2, Save } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
+import { Button } from "@/components/ui/Button";
 
 type Prefs = {
   new_season_site: boolean;
@@ -100,9 +101,9 @@ export function NotificationSettings() {
       {status === "error" && (
         <div className="set-inline-error" role="alert">
           <span>Não foi possível carregar suas preferências.</span>
-          <button type="button" className="btn" onClick={() => void load()}>
+          <Button type="button" onClick={() => void load()}>
             Tentar de novo
-          </button>
+          </Button>
         </div>
       )}
 
@@ -151,10 +152,10 @@ export function NotificationSettings() {
           <p className="muted notification-settings-note">Notificações sociais aparecem no sino. Notificações por e-mail ainda não estão disponíveis.</p>
 
           <div className="set-save-row">
-            <button type="button" className="btn primary" disabled={saving || !dirty} onClick={save}>
+            <Button variant="primary" type="button" disabled={saving || !dirty} onClick={save}>
               {saving ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <Save size={16} aria-hidden="true" />}{" "}
               Salvar notificações
-            </button>
+            </Button>
             <span className="muted" role="status" aria-live="polite">
               {dirty ? "Alterações não salvas." : ""}
             </span>

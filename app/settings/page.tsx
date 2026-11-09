@@ -17,6 +17,7 @@ import {
   Trash2,
   type LucideIcon,
 } from 'lucide-react';
+import { Button } from "@/components/ui/Button";
 
 import { Search } from '@/components/Search';
 import { DataBackup } from '@/components/DataBackup';
@@ -241,9 +242,9 @@ function AppearanceSection() {
       <div className="set-footer">
         {/* Restaura SÓ a aparência e a ordem da Biblioteca (uma chave: mycatalog.preferences.v1).
             Streaming, privacidade e notificações ficam intactos. */}
-        <button
+        <Button
           type="button"
-          className="btn"
+         
           onClick={() => {
             setPreferences(DEFAULT_PREFERENCES);
             savePreferences(DEFAULT_PREFERENCES);
@@ -251,7 +252,7 @@ function AppearanceSection() {
         >
           <RotateCcw size={16} aria-hidden="true" />
           Restaurar aparência padrão
-        </button>
+        </Button>
       </div>
     </section>
   );
@@ -363,9 +364,9 @@ function RatingsSection() {
       {status === 'error' && (
         <div className="set-inline-error" role="alert">
           <span>Não foi possível carregar suas categorias.</span>
-          <button type="button" className="btn" onClick={() => void load()}>
+          <Button type="button" onClick={() => void load()}>
             Tentar de novo
-          </button>
+          </Button>
         </div>
       )}
       {status === 'ready' && items.length === 0 && (
@@ -423,10 +424,10 @@ function RatingsSection() {
             onChange={(event) => setName(event.target.value)}
             onKeyDown={(event) => event.key === 'Enter' && add()}
           />
-          <button type="button" className="btn primary" onClick={add} disabled={!name.trim()}>
+          <Button variant="primary" type="button" onClick={add} disabled={!name.trim()}>
             <Plus size={16} aria-hidden="true" />
             Adicionar
-          </button>
+          </Button>
         </div>
       )}
       {error && <p className="set-error" role="alert">{error}</p>}

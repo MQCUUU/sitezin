@@ -11,6 +11,7 @@ import { CALENDAR_TZ, addMonths, capitalize, isDay, longDate, monthLabel, todayI
 import type { DiaryDay, DiaryFilter, DiaryResponse } from "@/lib/diary/types";
 
 import { Day, Skeleton } from "./parts";
+import { Button } from "@/components/ui/Button";
 
 /*
  * Diário V2.5 — "a minha história assistindo filmes e séries".
@@ -261,9 +262,9 @@ function DiaryContent() {
       {error ? (
         <div className="dy-state" role="alert">
           <strong>{error}</strong>
-          <button type="button" className="btn primary" onClick={() => setAttempt((n) => n + 1)}>
+          <Button variant="primary" type="button" onClick={() => setAttempt((n) => n + 1)}>
             Tentar de novo
-          </button>
+          </Button>
         </div>
       ) : !data ? (
         <Skeleton />

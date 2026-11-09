@@ -18,6 +18,7 @@ import { TitleStatusMenu } from "./hero/TitleStatusMenu";
 import { TitleWhereToWatch } from "./TitleWhereToWatch";
 import { WatchNowButton } from "./WatchNowButton";
 import type { LibraryItem, LooseTitleDetails, TitleType } from "./types";
+import { Button } from "@/components/ui/Button";
 
 export type TitleHeroProps = {
   type: TitleType;
@@ -128,25 +129,25 @@ export function TitleHero({
 
             <div className="tt-actions">
               <TitleStatusMenu {...statusMenuProps} variant="menu" />
-              <button
+              <Button
                 type="button"
-                className="btn tt-quiet tt-like"
+                className="tt-quiet tt-like"
                 aria-pressed={favorite}
                 onClick={toggleFavorite}
                 disabled={lookupPending}
               >
                 {heart}
                 {likeLabel}
-              </button>
+              </Button>
               {/*
                * Enquanto a sessão é verificada o botão já ocupa o lugar (invisível):
                * antes ele surgia depois do carregamento, a linha de ações ganhava uma
                * fileira e tudo abaixo (inclusive as abas) descia ~120px sob o cursor.
                */}
               {authState !== "guest" ? (
-                <button
+                <Button
                   type="button"
-                  className="btn tt-quiet"
+                  className="tt-quiet"
                   onClick={() => setListOpen(true)}
                   disabled={authState !== "authenticated"}
                   data-reserved={authState !== "authenticated" ? "true" : undefined}
@@ -155,7 +156,7 @@ export function TitleHero({
                 >
                   <ListPlus size={18} aria-hidden="true" />
                   Adicionar a uma lista
-                </button>
+                </Button>
               ) : null}
               <WatchNowButton
                 type={type}
@@ -187,20 +188,20 @@ export function TitleHero({
       {/* Celular: ações fixas acima da navegação inferior (antes "Curtir" ficava escondido sob ela). */}
       <div className="tt-mobile-bar">
         <TitleStatusMenu {...statusMenuProps} variant="sheet" className="tt-mobile-primary" />
-        <button
+        <Button
           type="button"
-          className="btn tt-quiet tt-icon tt-like"
+          className="tt-quiet tt-icon tt-like"
           aria-pressed={favorite}
           aria-label={likeLabel}
           onClick={toggleFavorite}
           disabled={lookupPending}
         >
           {heart}
-        </button>
+        </Button>
         {authState === "authenticated" ? (
-          <button type="button" className="btn tt-quiet tt-icon" aria-label="Adicionar a uma lista" onClick={() => setListOpen(true)}>
+          <Button type="button" className="tt-quiet tt-icon" aria-label="Adicionar a uma lista" onClick={() => setListOpen(true)}>
             <ListPlus size={20} aria-hidden="true" />
-          </button>
+          </Button>
         ) : null}
       </div>
 

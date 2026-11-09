@@ -32,7 +32,7 @@ test("pôsteres: 1º eager+high, resto da 1ª linha eager, demais lazy", () => {
 
 test("pôsteres: grades passam a posição; Busca só na primeira seção", () => {
   assert.match(read("components/discover/DiscoverGrid.tsx"), /position=\{position\}/);
-  assert.match(read("components/PosterGrid.tsx"), /posterLoading\(position\)/);
+  assert.match(read("components/library/PosterGridItems.tsx"), /posterLoading\(position\)/);
   const search = read("app/search/page.tsx");
   assert.equal((search.match(/<SearchMediaSection[^>]*\bpriority\b/g) || []).length, 2, "uma seção prioritária por ramo");
 });

@@ -1,157 +1,12 @@
 "use client";
 
-
 import "@/styles/features/title-detail.css";
 import { apiFetch } from "@/lib/api-client";
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-
+import { useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { useModal } from "@/hooks/useModal";
-
-import {
-  CalendarDays,
-  Check,
-  Clock3,
-  Edit3,
-  History,
-  Loader2,
-  Plus,
-  RefreshCcw,
-  Save,
-  Star,
-  Trash2,
-  X,
-} from "lucide-react";
-
-type WatchEntry = {
-  id:
-    string;
-
-  library_item_id:
-    string;
-
-  media_id:
-    string;
-
-  watched_at:
-    string;
-
-  rating:
-    number |
-    null;
-
-  comment:
-    string |
-    null;
-
-  is_rewatch:
-    boolean;
-
-  created_at:
-    string;
-
-  updated_at:
-    string;
-};
-
-function toLocalInput(
-  iso:
-    string
-) {
-  const date =
-    new Date(
-      iso
-    );
-
-  const offset =
-    date.getTimezoneOffset();
-
-  const local =
-    new Date(
-      date.getTime() -
-      offset *
-        60 *
-        1000
-    );
-
-  return local
-    .toISOString()
-    .slice(
-      0,
-      16
-    );
-}
-
-function nowLocalInput() {
-  return toLocalInput(
-    new Date()
-      .toISOString()
-  );
-}
-
-function formatDate(
-  value:
-    string
-) {
-  return new Intl.DateTimeFormat(
-    "pt-BR",
-    {
-      day:
-        "2-digit",
-
-      month:
-        "short",
-
-      year:
-        "numeric",
-
-      hour:
-        "2-digit",
-
-      minute:
-        "2-digit",
-    }
-  ).format(
-    new Date(
-      value
-    )
-  );
-}
-
-function sameDayKey(
-  value:
-    string
-) {
-  const date =
-    new Date(
-      value
-    );
-
-  return [
-    date.getFullYear(),
-
-    String(
-      date.getMonth() +
-        1
-    ).padStart(
-      2,
-      "0"
-    ),
-
-    String(
-      date.getDate()
-    ).padStart(
-      2,
-      "0"
-    ),
-  ].join(
-    "-"
-  );
-}
-
+import { CalendarDays, Check, Clock3, Edit3, History, Loader2, Plus, RefreshCcw, Save, Star, Trash2, X } from "lucide-react";
+import { toLocalInput, nowLocalInput, formatDate, sameDayKey, type WatchEntry } from "@/components/watch-history/shared";
 export function WatchHistory({
   libraryId,
   mediaType,
@@ -687,9 +542,6 @@ export function WatchHistory({
     <section className="watch-history">
       <div className="watch-history-head">
         <div>
-          <span className="eyebrow">
-            SUA LINHA DO TEMPO
-          </span>
 
           <h2>
             Histórico de visualizações
@@ -705,9 +557,9 @@ export function WatchHistory({
           </p>
         </div>
 
-        <button
+        <Button variant="primary"
           type="button"
-          className="btn primary"
+         
           onClick={() => {
             resetForm();
 
@@ -721,7 +573,7 @@ export function WatchHistory({
           />
 
           Registrar visualização
-        </button>
+        </Button>
       </div>
 
       {!loading &&
@@ -1022,9 +874,9 @@ export function WatchHistory({
                             </label>
 
                             <div className="watch-entry-edit-actions">
-                              <button
+                              <Button
                                 type="button"
-                                className="btn"
+                               
                                 onClick={() =>
                                   setEditingId(
                                     null
@@ -1035,11 +887,11 @@ export function WatchHistory({
                                   size={14}
                                 />
                                 Cancelar
-                              </button>
+                              </Button>
 
-                              <button
+                              <Button variant="primary"
                                 type="button"
-                                className="btn primary"
+                               
                                 disabled={
                                   saving
                                 }
@@ -1053,7 +905,7 @@ export function WatchHistory({
                                   size={14}
                                 />
                                 Salvar
-                              </button>
+                              </Button>
                             </div>
                           </div>
                         ) : (
@@ -1199,9 +1051,6 @@ export function WatchHistory({
             </div>
 
             <div>
-              <span className="eyebrow">
-                NOVA VISUALIZAÇÃO
-              </span>
 
               <h3>
                 Registrar que assisti
@@ -1320,9 +1169,9 @@ export function WatchHistory({
             </label>
 
             <div className="watch-register-actions">
-              <button
+              <Button
                 type="button"
-                className="btn"
+               
                 onClick={() =>
                   setFormOpen(
                     false
@@ -1330,11 +1179,11 @@ export function WatchHistory({
                 }
               >
                 Cancelar
-              </button>
+              </Button>
 
-              <button
+              <Button variant="primary"
                 type="button"
-                className="btn primary"
+               
                 disabled={
                   saving ||
                   !watchedAt
@@ -1355,7 +1204,7 @@ export function WatchHistory({
                 )}
 
                 Registrar
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1385,9 +1234,6 @@ export function WatchHistory({
             </div>
 
             <div>
-              <span className="eyebrow">
-                EXCLUIR VISUALIZAÇÃO
-              </span>
 
               <h3>
                 Remover esta entrada do histórico?
@@ -1402,9 +1248,9 @@ export function WatchHistory({
             </div>
 
             <div className="mycatalog-confirm-actions">
-              <button
+              <Button
                 type="button"
-                className="btn"
+               
                 onClick={() =>
                   setDeleteId(
                     null
@@ -1412,11 +1258,11 @@ export function WatchHistory({
                 }
               >
                 Cancelar
-              </button>
+              </Button>
 
-              <button
+              <Button variant="danger"
                 type="button"
-                className="btn danger"
+               
                 disabled={
                   saving
                 }
@@ -1430,7 +1276,7 @@ export function WatchHistory({
                   size={14}
                 />
                 Excluir
-              </button>
+              </Button>
             </div>
           </div>
         </div>

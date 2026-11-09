@@ -4,6 +4,7 @@ import Link from "next/link";
 import { UserRound } from "lucide-react";
 
 import { img } from "@/lib/tmdb";
+import { departmentLabel } from "@/lib/person/department";
 
 import type { AdvancedMeta } from "./types";
 
@@ -18,7 +19,7 @@ export type PersonPanelProps = {
  * toda no servidor (/api/search/advanced); aqui só se mostra o que já veio.
  */
 export function SearchPersonPanel({ person, creditsCount }: PersonPanelProps) {
-  const role = person.known_for_department === "Acting" ? "Atuação" : person.known_for_department || "Cinema e TV";
+  const role = departmentLabel(person.known_for_department);
 
   return (
     <div className="sp-found">

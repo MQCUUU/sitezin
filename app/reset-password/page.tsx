@@ -9,6 +9,7 @@ import {
   FormEvent,
   useState,
 } from "react";
+import { Button } from "@/components/ui/Button";
 
 import {
   useRouter,
@@ -233,8 +234,8 @@ export default function ResetPasswordPage() {
             </div>
           )}
 
-          <button
-            className="btn primary auth-submit"
+          <Button variant="primary"
+            className="auth-submit"
             disabled={
               loading
             }
@@ -251,7 +252,7 @@ export default function ResetPasswordPage() {
             )}
 
             Salvar nova senha
-          </button>
+          </Button>
         </form>
       </section>
     </div>

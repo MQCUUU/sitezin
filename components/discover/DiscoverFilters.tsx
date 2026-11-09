@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 
 import { COUNTRIES, type FilterResponse } from "./types";
 import type { DiscoverParams } from "@/lib/discover/params";
+import { Button } from "@/components/ui/Button";
 
 export type DiscoverFiltersProps = {
   params: DiscoverParams;
@@ -146,9 +147,9 @@ export function DiscoverFilters({
         </fieldset>
 
         {activeFilters > 0 && (
-          <button type="button" className="btn ghost" onClick={onClearFilters}>
+          <Button variant="ghost" type="button" onClick={onClearFilters}>
             Limpar filtros
-          </button>
+          </Button>
         )}
       </div>
     </motion.section>

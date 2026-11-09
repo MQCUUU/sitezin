@@ -892,3 +892,73 @@
     gap: 2px;
     color: var(--mc-color-text-secondary, var(--muted));
 }
+
+/* ===========================================================================
+ * Fase 4 — "Escolha pra mim" na direção "Tela 2.39:1": sem rótulo em caixa
+ * alta nem caixa de ícone no topo; escolhas (tipo, estilo, preferências, nota)
+ * marcadas com superfície clara em vez da cor de destaque; superfícies lisas.
+ * ======================================================================== */
+.pick-heading h2 {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+.pick-type-tabs button.active {
+    border-color: transparent;
+    background: var(--text);
+    color: var(--bg);
+}
+.pick-mode-grid button.active,
+.pick-toggle-grid > button.active {
+    border-color: var(--text);
+    background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+.pick-mode-grid button.active strong,
+.pick-toggle-grid button.active strong {
+    color: var(--text);
+}
+.pick-toggle-grid button.active > span {
+    border-color: var(--text);
+    background: var(--text);
+    color: var(--bg);
+}
+.pick-rating-buttons button.active {
+    border-color: transparent;
+    background: var(--text);
+    color: var(--bg);
+}
+@media (hover: hover) and (pointer: fine) {
+    .pick-rating-buttons button:hover:not(.active) {
+        border-color: color-mix(in srgb, var(--text) 30%, var(--line));
+        background: transparent;
+        color: var(--text);
+    }
+}
+.pick-status-menu button.active {
+    color: var(--text);
+    font-weight: 700;
+}
+.pick-multi-options > button.active {
+    border-color: transparent;
+    background: var(--text);
+    color: var(--bg);
+}
+.pick-spinning-label {
+    margin: 0 0 6px;
+    color: var(--mc-color-text-secondary);
+    font-size: 15px;
+    font-weight: 600;
+}
+.pick-modal {
+    background: var(--panel);
+}
+.pick-why {
+    border: 0;
+    background: var(--bg);
+}
+.pick-why strong {
+    font-size: 14px;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--text);
+}

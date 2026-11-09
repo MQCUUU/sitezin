@@ -6,6 +6,7 @@ import {
   FormEvent,
   useState,
 } from "react";
+import { Button } from "@/components/ui/Button";
 
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandMark";
@@ -189,8 +190,8 @@ export default function ForgotPasswordPage() {
               </div>
             )}
 
-            <button
-              className="btn primary auth-submit"
+            <Button variant="primary"
+              className="auth-submit"
               disabled={
                 loading
               }
@@ -207,7 +208,7 @@ export default function ForgotPasswordPage() {
               )}
 
               Enviar link
-            </button>
+            </Button>
           </form>
         )}
       </section>

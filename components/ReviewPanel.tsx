@@ -11,6 +11,7 @@ import {
   Trash2,
   Sparkles,
 } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 import { apiFetch, isAbortError } from "@/lib/api-client";
@@ -465,16 +466,16 @@ export function ReviewPanel({
                 avaliar.
               </p>
 
-              <button
+              <Button variant="primary"
                 type="button"
-                className="btn primary"
+               
                 onClick={() =>
                   setShowAddCategory(true)
                 }
               >
                 <Plus size={18} />
                 Criar categoria
-              </button>
+              </Button>
 
             </div>
           ) : (
@@ -646,24 +647,24 @@ export function ReviewPanel({
                 }}
               />
 
-              <button
+              <Button variant="primary"
                 type="button"
-                className="btn primary"
+               
                 onClick={addCategory}
               >
                 <Check size={16} />
                 Adicionar
-              </button>
+              </Button>
 
-              <button
+              <Button
                 type="button"
-                className="btn"
+               
                 onClick={() =>
                   setShowAddCategory(false)
                 }
               >
                 Cancelar
-              </button>
+              </Button>
 
             </div>
           )}

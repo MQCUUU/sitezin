@@ -8,6 +8,7 @@ import type { DiscoverParams } from "@/lib/discover/params";
 
 import { DiscoverSortControl } from "./DiscoverSortControl";
 import { DiscoverTabs } from "./DiscoverTabs";
+import { Button } from "@/components/ui/Button";
 
 export type DiscoverToolbarProps = {
   params: DiscoverParams;
@@ -50,9 +51,9 @@ export function DiscoverToolbar({
             }}
           />
 
-          <button
+          <Button
             type="button"
-            className="btn sk-btn"
+            className="sk-btn"
             aria-expanded={showFilters}
             aria-label={activeFilters > 0 ? `Filtros, ${activeFilters} ${activeFilters === 1 ? "ativo" : "ativos"}` : undefined}
             onClick={onToggleFilters}
@@ -62,7 +63,7 @@ export function DiscoverToolbar({
             {activeFilters > 0 && (
               <span className="sk-btn-count" aria-hidden="true">{activeFilters}</span>
             )}
-          </button>
+          </Button>
         </div>
       </div>
     </section>

@@ -6,6 +6,7 @@ import { useState, type ChangeEvent } from "react";
 
 import { useToast } from "@/components/ToastProvider";
 import { apiFetch, errorMessage } from "@/lib/api-client";
+import { Button } from "@/components/ui/Button";
 
 /*
  * Banner do perfil (imagem larga no topo do perfil público). Mesmo jeito do editor
@@ -76,9 +77,9 @@ export function BannerSettings({ current, onChange }: { current: string | null; 
             <input type="file" accept="image/jpeg,image/png,image/webp" disabled={saving} onChange={upload} />
           </label>
           {url ? (
-            <button type="button" className="btn" disabled={saving} onClick={remove}>
+            <Button type="button" disabled={saving} onClick={remove}>
               <Trash2 size={16} /> Remover
-            </button>
+            </Button>
           ) : null}
         </div>
       </div>

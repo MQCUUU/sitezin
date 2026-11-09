@@ -9,6 +9,7 @@ import { Check, Clapperboard, Loader2, Plus, Search as SearchIcon, X } from "luc
 import { useDialogFocus } from "./useDialogFocus";
 import { Dialog } from "@/components/ui/Dialog";
 import { img } from "@/lib/tmdb";
+import { Button } from "@/components/ui/Button";
 
 /*
  * Adicionar títulos à lista: pesquisa o CATÁLOGO (filmes e séries, título e
@@ -159,10 +160,10 @@ export function AddTitlesDialog({
                   <Check size={14} aria-hidden="true" /> Já está nesta lista
                 </span>
               ) : (
-                <button type="button" className="btn lst-add-btn" disabled={busy} onClick={() => add(result)} aria-label={`Adicionar ${result.title} à lista`}>
+                <Button type="button" className="lst-add-btn" disabled={busy} onClick={() => add(result)} aria-label={`Adicionar ${result.title} à lista`}>
                   {busy ? <Loader2 size={14} className="spin" aria-hidden="true" /> : <Plus size={14} aria-hidden="true" />}
                   Adicionar
-                </button>
+                </Button>
               )}
             </li>
           );

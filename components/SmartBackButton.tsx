@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { hasInAppHistory } from "@/components/ScrollMemory";
+import { Button } from "@/components/ui/Button";
 
 /*
  * "Voltar" do app = o mesmo que o botão voltar do navegador quando a página
@@ -23,9 +24,9 @@ export function SmartBackButton({ fallback = "/" }: { fallback?: string }) {
   }
 
   return (
-    <button type="button" className="btn title-back-btn" onClick={goBack}>
+    <Button type="button" className="title-back-btn" onClick={goBack}>
       <ArrowLeft size={18} />
       Voltar
-    </button>
+    </Button>
   );
 }

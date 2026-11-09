@@ -1,5 +1,5 @@
 import "@/styles/features/media.css";
-import { Bookmark, Check, CheckCheck, Film, Pause, Play, Repeat, Tv, X as XIcon } from "lucide-react";
+import { Bookmark, Check, CheckCheck, Pause, Play, Repeat, X as XIcon } from "lucide-react";
 
 import { mediaStatusGroup, mediaStatusLabel } from "@/lib/media-status";
 
@@ -22,18 +22,6 @@ export function MediaStatusIcon({ status, size = 14 }: { status?: string | null;
     case "dropped": return <XIcon {...props} />;
     default: return <Check {...props} />;
   }
-}
-
-export function MediaTypeTag({ type }: { type: "movie" | "tv" | string }) {
-  const isTv = type === "tv";
-  const label = isTv ? "Série" : "Filme";
-
-  return (
-    <span className={`mc-type-chip mc-type-chip--${isTv ? "tv" : "movie"}`} role="img" aria-label={label}>
-      {isTv ? <Tv size={14} aria-hidden="true" /> : <Film size={14} aria-hidden="true" />}
-      <span className="mc-type-chip-label" aria-hidden="true">{label}</span>
-    </span>
-  );
 }
 
 export function mediaTypeLabel(type: "movie" | "tv" | string) {
@@ -68,7 +56,7 @@ function MediaPosterStatusChip({ status }: { status: string }) {
 
 /*
  * Fase 3 (V3): sobre o pôster fica só o status. O tipo saiu daqui — repetia a
- * legenda logo abaixo ("Filme · 2015") e cobria a arte. `type` segue na
+ * legenda logo abaixo ("Filme 2015") e cobria a arte. `type` segue na
  * assinatura para os chamadores não mudarem.
  */
 export function MediaPosterTags({

@@ -1,4 +1,5 @@
 import "@/styles/features/screen-kit.css";
+import { Button } from "@/components/ui/Button";
 
 export type DiscoverErrorStateProps = {
   onRetry: () => void;
@@ -16,9 +17,9 @@ export function DiscoverErrorState({ onRetry }: DiscoverErrorStateProps) {
     <div className="sk-empty" role="alert">
       <h2>Não foi possível carregar os títulos agora</h2>
       <p>Verifique sua conexão e tente de novo.</p>
-      <button type="button" className="btn" onClick={onRetry}>
+      <Button type="button" onClick={onRetry}>
         Tentar de novo
-      </button>
+      </Button>
     </div>
   );
 }

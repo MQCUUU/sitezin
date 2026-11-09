@@ -8,6 +8,7 @@ import { Dialog } from "@/components/ui/Dialog";
 import { ProviderLogo } from "@/components/media/providers/ProviderLogo";
 import { whereToWatchRows, type WatchOffer } from "@/lib/streaming/watch-link";
 import type { LooseTitleDetails, TitleType } from "./types";
+import { Button } from "@/components/ui/Button";
 
 const OFFER_LABEL: Record<WatchOffer, string> = {
   subscription: "Assinatura",
@@ -67,10 +68,10 @@ export function TitleWhereToWatch({ type, details }: { type: TitleType; details:
 
   return (
     <>
-      <button type="button" className="btn title-main-btn title-where-btn" onClick={openPanel} aria-haspopup="dialog">
+      <Button type="button" className="title-main-btn title-where-btn" onClick={openPanel} aria-haspopup="dialog">
         <Play size={17} fill="currentColor" />
         Onde assistir
-      </button>
+      </Button>
 
       <Dialog open={open} onClose={close} labelledBy={titleId} className="title-where-dialog">
         <header className="title-where-head">
@@ -92,10 +93,10 @@ export function TitleWhereToWatch({ type, details }: { type: TitleType; details:
         ) : state === "error" ? (
           <div className="title-where-status" role="alert">
             <p>Não conseguimos consultar onde assistir agora. Verifique sua conexão e tente de novo.</p>
-            <button type="button" className="btn" onClick={() => void retry()}>
+            <Button type="button" onClick={() => void retry()}>
               <RefreshCw size={16} />
               Tentar de novo
-            </button>
+            </Button>
           </div>
         ) : rows.length === 0 ? (
           <div className="title-where-status" role="status">

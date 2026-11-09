@@ -10,6 +10,7 @@ import {
   RefreshCcw,
   WifiOff,
 } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 
 import Link from "next/link";
 
@@ -92,9 +93,9 @@ export function ErrorState({
 
       <div className="mc-error-actions">
         {onRetry && (
-          <button
+          <Button variant="primary"
             type="button"
-            className="btn primary"
+           
             onClick={
               onRetry
             }
@@ -106,7 +107,7 @@ export function ErrorState({
             {
               retryLabel
             }
-          </button>
+          </Button>
         )}
 
         {showHome && (
@@ -170,9 +171,9 @@ export function NotFoundState({
           Ir para o início
         </Link>
 
-        <button
+        <Button
           type="button"
-          className="btn"
+         
           onClick={() =>
             history.back()
           }
@@ -182,7 +183,7 @@ export function NotFoundState({
           />
 
           Voltar
-        </button>
+        </Button>
       </div>
     </div>
   );

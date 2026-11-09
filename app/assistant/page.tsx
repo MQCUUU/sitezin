@@ -15,6 +15,7 @@ import Link from "next/link";
 import {
   Search,
 } from "@/components/Search";
+import { Button } from "@/components/ui/Button";
 
 
 export default function AssistantPage() {
@@ -210,10 +211,10 @@ export default function AssistantPage() {
         <div className="ai-composer-actions">
           <span id="ai-assistant-hint">Enter para enviar, Shift+Enter para quebrar linha</span>
 
-          <button type="button" className="btn primary ai-send" disabled={loading || !message.trim()} onClick={ask}>
+          <Button variant="primary" type="button" className="ai-send" disabled={loading || !message.trim()} onClick={ask}>
             {loading ? <Loader2 size={18} className="spin" aria-hidden="true" /> : <Send size={18} aria-hidden="true" />}
             {loading ? "Procurando…" : "Recomendar"}
-          </button>
+          </Button>
         </div>
       </section>
 

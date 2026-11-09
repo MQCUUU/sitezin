@@ -24,6 +24,7 @@ import { ListCover } from "./ListCover";
 import { ListFormDialog } from "./ListFormDialog";
 import { ListMenu } from "./ListMenu";
 import { Visibility, copyListLink } from "./ListsPage";
+import { Button } from "@/components/ui/Button";
 
 /*
  * Detalhe da lista. Itens na ordem editorial do dono (position). "Reorganizar"
@@ -263,9 +264,9 @@ function DetailContent() {
     return (
       <div className="sk-empty" role="alert">
         <h2>Não foi possível carregar esta lista</h2>
-        <button type="button" className="btn primary" onClick={() => load(1)}>
+        <Button variant="primary" type="button" onClick={() => load(1)}>
           Tentar de novo
-        </button>
+        </Button>
       </div>
     );
   }
@@ -294,14 +295,14 @@ function DetailContent() {
           <div className="lst-detail-actions">
             {owner ? (
               <>
-                <button type="button" className="btn primary" onClick={() => setAdding(true)}>
+                <Button variant="primary" type="button" onClick={() => setAdding(true)}>
                   <Plus size={16} aria-hidden="true" /> Adicionar títulos
-                </button>
+                </Button>
                 {canReorder || reorder ? (
-                  <button type="button" className="btn sk-btn" aria-pressed={reorder} onClick={() => setReorder((v) => !v)}>
+                  <Button type="button" className="sk-btn" aria-pressed={reorder} onClick={() => setReorder((v) => !v)}>
                     {reorder ? <Check size={16} aria-hidden="true" /> : <ListOrdered size={16} aria-hidden="true" />}
                     {reorder ? "Concluir" : "Reorganizar"}
-                  </button>
+                  </Button>
                 ) : null}
                 <ListMenu
                   label="Mais ações da lista"
@@ -313,9 +314,9 @@ function DetailContent() {
                 />
               </>
             ) : meta.is_public ? (
-              <button type="button" className="btn" onClick={() => void share()}>
+              <Button type="button" onClick={() => void share()}>
                 <Link2 size={16} aria-hidden="true" /> Copiar link
-              </button>
+              </Button>
             ) : null}
           </div>
           {owner && !meta.is_public ? <p className="lst-hint">Esta lista é privada. Para compartilhar, torne-a pública em “Editar lista”.</p> : null}
@@ -346,17 +347,17 @@ function DetailContent() {
           <h2>Esta lista ainda está vazia</h2>
           {owner ? <p>Adicione filmes e séries para começar.</p> : null}
           {owner ? (
-            <button type="button" className="btn primary" onClick={() => setAdding(true)}>
+            <Button variant="primary" type="button" onClick={() => setAdding(true)}>
               <Plus size={16} aria-hidden="true" /> Adicionar títulos
-            </button>
+            </Button>
           ) : null}
         </div>
       ) : totalFiltered === 0 && q ? (
         <div className="sk-empty">
           <h2>Nenhum título desta lista com essa busca</h2>
-          <button type="button" className="btn" onClick={() => setSearchInput("")}>
+          <Button type="button" onClick={() => setSearchInput("")}>
             Limpar busca
-          </button>
+          </Button>
         </div>
       ) : (
         <ol className={`lst-items${reorder ? " is-reordering" : ""}${busy ? " is-busy" : ""}`} aria-busy={busy}>
@@ -416,9 +417,9 @@ function DetailContent() {
 
       {state === "ready" && page < totalPages ? (
         <div className="lst-more">
-          <button type="button" className="btn" disabled={busy} onClick={() => load(page + 1)}>
+          <Button type="button" disabled={busy} onClick={() => load(page + 1)}>
             {busy ? "Carregando…" : `Carregar mais (${totalFiltered - items.length})`}
-          </button>
+          </Button>
         </div>
       ) : null}
 

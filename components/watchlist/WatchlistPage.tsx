@@ -14,6 +14,7 @@ import { useToast } from "@/components/ToastProvider";
 import { apiFetch, errorMessage } from "@/lib/api-client";
 import { setLibraryEntry, useLibraryEntry } from "@/lib/library/entry-store";
 import type { WatchlistItem } from "@/lib/watchlist";
+import { Button } from "@/components/ui/Button";
 
 /*
  * Watchlist automática — tudo que está como "Quero assistir", na ordem de
@@ -138,9 +139,9 @@ export function WatchlistPage() {
         <div className="sk-empty" role="alert">
           <h2>Não foi possível carregar sua watchlist</h2>
           <p>Verifique sua conexão e tente de novo.</p>
-          <button type="button" className="btn" onClick={() => window.location.reload()}>
+          <Button type="button" onClick={() => window.location.reload()}>
             Tentar de novo
-          </button>
+          </Button>
         </div>
       ) : items.length === 0 ? (
         <div className="sk-empty">
@@ -185,9 +186,9 @@ export function WatchlistPage() {
 
       {state === "ready" && items.length < total ? (
         <div className="wl-more">
-          <button type="button" className="btn" disabled={loadingMore} onClick={loadMore}>
+          <Button type="button" disabled={loadingMore} onClick={loadMore}>
             {loadingMore ? "Carregando…" : `Carregar mais (${total - items.length})`}
-          </button>
+          </Button>
         </div>
       ) : null}
     </div>

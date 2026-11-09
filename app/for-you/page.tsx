@@ -1,170 +1,28 @@
 "use client";
 
-
 import { useConfirm } from "@/components/ConfirmProvider";
 import "@/styles/features/for-you.css";
 import { removeFromLibrary } from "@/lib/library/actions";
 import { removalConfirmOptions } from "@/lib/library/remove";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 import { apiFetch } from "@/lib/api-client";
-import { MediaPosterActions } from "@/components/media/MediaPosterActions";
-import { MediaPosterTags, mediaTypeLabel } from "@/components/media/MediaBadges";
-import { MediaCard, MediaCardImage } from "@/components/media";
 import { getLibraryVersion } from "@/lib/library-cache";
 import { authClient } from "@/lib/auth/client";
-import { Poster } from "@/components/Poster";
 import { SmartQueue } from "@/components/SmartQueue";
-import { TitleBand } from "@/components/title/hero/TitleBand";
-import { TitleMeta } from "@/components/title/hero/TitleMeta";
-import {
-  Fragment,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DEFAULT_FOR_YOU_QUERY, parseForYouQuery, serializeForYouQuery, type ForYouQuery } from "@/lib/for-you/url";
-
-import {
-  Bot,
-  ChevronDown,
-  Film,
-  Filter,
-  Loader2,
-  RotateCcw,
-  Sparkles,
-  Star,
-  Trash2,
-  Tv,
-  X,
-} from "lucide-react";
-import { CarouselRail } from "@/components/CarouselRail";
-
+import { Bot, ChevronDown, Film, Filter, Loader2, RotateCcw, Sparkles, Tv, X } from "lucide-react";
 import Link from "next/link";
 
-import {
-  Search,
-} from "@/components/Search";
-
-import {
-} from "@/lib/tmdb";
-
+import { Search } from "@/components/Search";
 import { MediaPreviewDialog } from "@/components/media/preview/MediaPreviewDialog";
 import { WatchProviderList } from "@/components/media/preview/WatchProviderList";
 import { fromLooseMediaItem } from "@/components/media/preview/adapters";
 import { normalizeWatchProviders } from "@/components/media/providers";
-import { FriendOpinions } from "@/components/for-you/FriendOpinions";
-
-/*
- * Cache do Para você (sessionStorage). `v3`: a v2 não tinha a lista de amigos
- * avaliadores necessária para o indicador social compacto.
- * A v1 foi gravada por versões
- * anteriores; qualquer entrada v1 é ignorada e removida (AccountMenu limpa
- * tudo que começa com `mycatalog:foryou:` fora do prefixo atual).
- */
-const FOR_YOU_CACHE_PREFIX = "mycatalog:foryou:v3:";
-
-/*
- * Nunca reaproveita um cache cujo formato não seja exatamente o que a tela
- * consome: prateleiras com `results` de objetos que têm id e tipo de mídia.
- * Campos de imagem ausentes/nulos são OK (o Poster usa o placeholder).
- */
-function isValidForYouPayload(data: any): boolean {
-  return (
-    !!data &&
-    Array.isArray(data.shelves) &&
-    data.shelves.every(
-      (shelf: any) =>
-        shelf &&
-        typeof shelf.id === "string" &&
-        Array.isArray(shelf.results) &&
-        shelf.results.every(
-          (item: any) =>
-            item &&
-            (typeof item.id === "number" || typeof item.id === "string") &&
-            (item.media_type === "movie" || item.media_type === "tv") &&
-            (item.poster_path === undefined || item.poster_path === null || typeof item.poster_path === "string")
-        )
-    )
-  );
-}
-
-
-type Shelf = {
-  id: string;
-  kind?: string;
-  title: string;
-  subtitle?: string;
-  icon:
-    | "sparkles"
-    | "star"
-    | "film"
-    | "tv"
-    | "gem"
-    | "trending"
-    | "calendar"
-    | "users";
-  results: any[];
-};
-
-type FilterData = {
-  genres:
-    string[];
-  providers:
-    {
-      id: string;
-      name: string;
-    }[];
-};
-
-type LibraryItem = {
-  library_id: string;
-  tmdb_id: number;
-  media_type:
-    | "movie"
-    | "tv";
-  favorite: boolean;
-  status:
-    string |
-    null;
-  personal_rating:
-    number |
-    null;
-};
-
-
-async function safeJson(
-  response:
-    Response
-) {
-  const type =
-    response.headers.get(
-      "content-type"
-    ) ||
-    "";
-
-  if (
-    !type.includes(
-      "application/json"
-    )
-  ) {
-    const text =
-      await response.text();
-
-    throw new Error(
-      `A rota ${response.url} não retornou JSON (${response.status}). ${
-        text.startsWith(
-          "<!DOCTYPE"
-        )
-          ? "Provavelmente retornou HTML/404."
-          : ""
-      }`
-    );
-  }
-
-  return response.json();
-}
-
+import { FOR_YOU_CACHE_PREFIX, isValidForYouPayload, safeJson, type Shelf, type FilterData, type LibraryItem } from "@/components/for-you/shared";
+import { ShelfRow, FeedSkeleton, joinNames, FeaturedPick } from "@/components/for-you/ForYouParts";
 export default function ForYouPage() {
   // Fase 6: erros das ações de biblioteca (401 = "Sua sessão expirou", resto = aviso amigável).
   const libraryAuth = useLibraryAuth();
@@ -291,11 +149,8 @@ export default function ForYouPage() {
   /* V2.8 — nível do perfil (cold start honesto) */
   const [profileLevel, setProfileLevel] = useState<"cold" | "warm" | "full" | null>(null);
 
-
-
   const { data: sessionData, isPending: sessionPending } = authClient.useSession();
   const userId: string | undefined = sessionData?.user?.id;
-
 
   /* V2.1-E — "Nos meus serviços" ativo sem serviços configurados. */
   const [
@@ -303,11 +158,6 @@ export default function ForYouPage() {
     setNeedsStreamingSetup,
   ] =
     useState(false);
-
-
-
-
-
 
   const [
     openMenu,
@@ -1291,7 +1141,6 @@ export default function ForYouPage() {
           </section>
         )}
 
-
         <section className="fy-toolbar">
           <div className="fy-tabs">
             <button
@@ -1721,9 +1570,9 @@ export default function ForYouPage() {
               }
             </span>
 
-            <button
+            <Button
               type="button"
-              className="btn"
+             
               onClick={() =>
                 load(
                   1,
@@ -1732,7 +1581,7 @@ export default function ForYouPage() {
               }
             >
               Tentar novamente
-            </button>
+            </Button>
           </section>
         ) : shelves.length ===
           0 ? (
@@ -1749,15 +1598,15 @@ export default function ForYouPage() {
               Tente remover algum filtro ou continue avaliando títulos.
             </span>
 
-            <button
+            <Button
               type="button"
-              className="btn"
+             
               onClick={
                 resetFilters
               }
             >
               Limpar filtros
-            </button>
+            </Button>
           </section>
         ) : (
           <>
@@ -1824,9 +1673,9 @@ export default function ForYouPage() {
 
             {hasMore && (
               <div className="fy-load-more">
-                <button
+                <Button
                   type="button"
-                  className="btn fy-load-more-btn"
+                  className="fy-load-more-btn"
                   disabled={loadingMore}
                   onClick={() => load(page + 1, true)}
                 >
@@ -1838,7 +1687,7 @@ export default function ForYouPage() {
                   ) : (
                     "Mais recomendações"
                   )}
-                </button>
+                </Button>
               </div>
             )}
           </>
@@ -1867,284 +1716,3 @@ export default function ForYouPage() {
   );
 }
 
-function ShelfRow({
-  shelf,
-  openMenu,
-  setOpenMenu,
-  setPreviewItem,
-  getLibraryItem,
-  processing,
-  addToLibrary,
-  updateStatus,
-  toggleFavorite,
-  requestRemove,
-}: any) {
-  return (
-    <section className="fy-shelf" data-rec-shelf={shelf.kind || undefined}>
-      {/* Fase 4: título e o motivo da prateleira; sem ícone em caixa nem contador. */}
-      <div className="fy-shelf-head">
-        <h2>{shelf.title}</h2>
-        {shelf.subtitle && <p>{shelf.subtitle}</p>}
-      </div>
-
-      <CarouselRail className="fy-row" label={shelf.title}>
-        {shelf.results.map(
-          (
-            item:
-              any
-          ) => (
-            <MovieCard
-              key={`${item.media_type}-${item.id}`}
-              item={
-                item
-              }
-              openMenu={
-                openMenu
-              }
-              setOpenMenu={
-                setOpenMenu
-              }
-              setPreviewItem={
-                setPreviewItem
-              }
-              getLibraryItem={
-                getLibraryItem
-              }
-              processing={
-                processing
-              }
-              addToLibrary={
-                addToLibrary
-              }
-              updateStatus={
-                updateStatus
-              }
-              toggleFavorite={
-                toggleFavorite
-              }
-              requestRemove={
-                requestRemove
-              }
-            />
-          )
-        )}
-      </CarouselRail>
-    </section>
-  );
-}
-
-function MovieCard({
-  item,
-  setPreviewItem,
-  getLibraryItem,
-  processing,
-  addToLibrary,
-  updateStatus,
-  toggleFavorite,
-  requestRemove,
-}: any) {
-  const type =
-    item.media_type ===
-      "tv"
-      ? "tv"
-      : "movie";
-
-  const title =
-    item.title ||
-    item.name ||
-    "Sem título";
-
-  const year =
-    (
-      item.release_date ||
-      item.first_air_date ||
-      ""
-    ).slice(
-      0,
-      4
-    );
-
-  const key =
-    `${type}-${item.id}`;
-
-  const existing =
-    getLibraryItem(
-      item
-    );
-
-  const busy =
-    processing ===
-    key;
-
-  const endorsement = item.friend_endorsement || item.friend_opinion_summary;
-
-  return (
-    <MediaCard className="fy-card-wrap">
-      <MediaCardImage className="fy-card-poster-wrap">
-        <Link
-          href={`/title/${type}/${item.id}`}
-          className="poster-link fy-poster-link"
-        >
-          {item.poster_path ? (
-            <Poster
-              path={item.poster_path}
-              alt={title}
-              sizes="(max-width: 700px) 45vw, 190px"
-            />
-          ) : (
-            <div className="fy-no-poster">
-              {type ===
-              "tv" ? (
-                <Tv
-                  size={28}
-                />
-              ) : (
-                <Film
-                  size={28}
-                />
-              )}
-            </div>
-          )}
-        </Link>
-
-        <MediaPosterTags type={type} status={existing ? existing.status : null} />
-
-        <MediaPosterActions
-          title={title}
-          inLibrary={Boolean(existing)}
-          status={existing?.status}
-          favorite={Boolean(existing?.favorite)}
-          busy={busy}
-          onPreview={() => setPreviewItem(item)}
-          onMarkWatched={() => updateStatus(item, "watched")}
-          onAdd={() => addToLibrary(item)}
-          onChangeStatus={(status: string) => updateStatus(item, status)}
-          onToggleFavorite={() => toggleFavorite(item)}
-          onRemove={() => requestRemove(item)}
-        />
-      </MediaCardImage>
-      <Link
-        href={`/title/${type}/${item.id}`}
-        className="card-title fy-card-title"
-      >
-        {title}
-      </Link>
-
-      <div className="card-meta fy-card-meta">
-        <span className="mc-media-type-year">{mediaTypeLabel(type)}{year ? ` ${year}` : ""}</span>
-
-        {Number(item.vote_average || 0) > 0 && (
-          <span className="rating fy-rating">
-            <Star size={12} fill="currentColor" />
-            {Number(item.vote_average).toFixed(1)}
-          </span>
-        )}
-      </div>
-
-      {endorsement && <FriendOpinions item={item} />}
-    </MediaCard>
-  );
-}
-
-function FeedSkeleton() {
-  return (
-    <div className="fy-feed">
-      {[1,2,3].map(
-        (
-          row
-        ) => (
-          <section
-            className="fy-shelf"
-            key={
-              row
-            }
-          >
-            <div className="fy-skeleton-title" />
-
-            <div className="fy-row">
-              {[1,2,3,4,5,6,7].map(
-                (
-                  item
-                ) => (
-                  <div
-                    key={
-                      item
-                    }
-                    className="fy-skeleton-card"
-                  >
-                    <div />
-                    <span />
-                    <small />
-                  </div>
-                )
-              )}
-            </div>
-          </section>
-        )
-      )}
-    </div>
-  );
-}
-
-/* "A, B, C e D" */
-function joinNames(names: string[]) {
-  if (names.length <= 1) return names.join("");
-  return `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
-}
-
-/**
- * Fase 4 — a melhor aposta do momento: faixa panorâmica, nome grande, o motivo
- * e uma ação clara ("Quero assistir"). Já na biblioteca, a ação vira abrir o título.
- */
-function FeaturedPick({
-  item,
-  reason,
-  inLibrary,
-  busy,
-  onAdd,
-  onPreview,
-}: {
-  item: any;
-  reason: string;
-  inLibrary: boolean;
-  busy: boolean;
-  onAdd: () => void;
-  onPreview: () => void;
-}) {
-  const title = item.title || item.name || "Sem título";
-  const href = `/title/${item.media_type}/${item.id}`;
-  const year = String(item.release_date || item.first_air_date || "").slice(0, 4);
-
-  return (
-    <section className="fy-feature" aria-labelledby="fy-feature-title">
-      <TitleBand path={item.backdrop_path} />
-      <div className="fy-feature-body">
-        <div className="fy-feature-copy">
-          <h2 id="fy-feature-title" className="fy-feature-title">
-            <Link href={href}>{title}</Link>
-          </h2>
-          <TitleMeta
-            lead={[mediaTypeLabel(item.media_type), year || null]}
-            rating={Number(item.vote_average || 0)}
-            votes={Number(item.vote_count || 1)}
-          />
-          <p className="fy-feature-text">{reason}</p>
-        </div>
-        <div className="fy-feature-actions">
-          {inLibrary ? (
-            <Link href={href} className="btn primary fy-feature-action">
-              Abrir o título
-            </Link>
-          ) : (
-            <button type="button" className="btn primary fy-feature-action" onClick={onAdd} disabled={busy}>
-              {busy ? "Adicionando…" : "Quero assistir"}
-            </button>
-          )}
-          <button type="button" className="btn fy-feature-action fy-feature-action--quiet" onClick={onPreview}>
-            Ver detalhes
-          </button>
-        </div>
-      </div>
-    </section>
-  );
-}

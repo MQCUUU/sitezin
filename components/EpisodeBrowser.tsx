@@ -16,6 +16,7 @@ import {
   type SeasonDetails,
   type SeasonSummary,
 } from "@/lib/title-seasons";
+import { Button } from "@/components/ui/Button";
 import { useUncensoredMode } from "@/lib/uncensored-mode";
 import type { LibraryItem, LibraryItemUpdate } from "@/components/title";
 
@@ -509,9 +510,9 @@ export function EpisodeBrowser({
         <div className="episode-browser-error" role="alert">
           <AlertTriangle size={18} aria-hidden="true" />
           <span>{loadError}</span>
-          <button type="button" className="btn" onClick={() => setRetryToken((value) => value + 1)}>
+          <Button type="button" onClick={() => setRetryToken((value) => value + 1)}>
             Tentar novamente
-          </button>
+          </Button>
         </div>
       )}
 
@@ -542,9 +543,9 @@ export function EpisodeBrowser({
       )}
 
       {libraryItem && released.length > 0 && (
-        <button type="button" className="btn primary episode-complete-season" disabled={saving} onClick={completeSeason}>
+        <Button variant="primary" type="button" className="episode-complete-season" disabled={saving} onClick={completeSeason}>
           <Check size={16} aria-hidden="true" /> Marcar episódios lançados como assistidos
-        </button>
+        </Button>
       )}
     </section>
   );

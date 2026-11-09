@@ -2,6 +2,7 @@ import "@/styles/features/screen-kit.css";
 
 import { SEARCH_ERROR_COPY } from "../errorCopy";
 import type { SearchErrorKind } from "../types";
+import { Button } from "@/components/ui/Button";
 
 export type SearchPageErrorStateProps = {
   onRetry: () => void;
@@ -21,9 +22,9 @@ export function SearchPageErrorState({ onRetry, kind = "unavailable" }: SearchPa
     <div className="sk-empty" role="alert">
       <h2>{copy.title}.</h2>
       <p>{copy.hint}</p>
-      <button type="button" className="btn" onClick={onRetry}>
+      <Button type="button" onClick={onRetry}>
         Tentar de novo
-      </button>
+      </Button>
     </div>
   );
 }

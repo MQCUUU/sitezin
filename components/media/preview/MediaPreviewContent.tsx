@@ -1,7 +1,7 @@
 import "@/styles/features/media.css";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Film, Star, Tv } from "lucide-react";
+import { Star } from "lucide-react";
 
 import { Poster } from "@/components/Poster";
 import { MediaPreviewActions } from "./MediaPreviewActions";
@@ -65,14 +65,8 @@ export function MediaPreviewContent({ data, actions, providers, extraActions, pe
 
         <div className="mc-preview-main">
           <div className="mc-preview-eyebrow">
-            {data.mediaType === "tv" ? <Tv size={14} /> : <Film size={14} />}
             {data.mediaType === "tv" ? "Série" : "Filme"}
-            {year && (
-              <>
-                <span aria-hidden="true">•</span>
-                {year}
-              </>
-            )}
+            {year ? ` ${year}` : ""}
           </div>
 
           <h2 id={titleId} className="mc-preview-title">

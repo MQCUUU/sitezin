@@ -17,6 +17,7 @@ import { plural } from "@/lib/lists/validate";
 import { ListCover } from "./ListCover";
 import { ListFormDialog, type ListFormValue } from "./ListFormDialog";
 import { ListMenu } from "./ListMenu";
+import { Button } from "@/components/ui/Button";
 
 /*
  * Listas V2.7 — "seleções de títulos que eu escolhi colocar juntos".
@@ -146,9 +147,9 @@ export function ListsPage() {
           <p>Seleções de filmes e séries feitas por você, na ordem que você escolher.</p>
         </div>
         {state === "ready" ? (
-          <button type="button" className="btn primary lst-new" onClick={() => setForm({ open: true, initial: null })}>
+          <Button variant="primary" type="button" className="lst-new" onClick={() => setForm({ open: true, initial: null })}>
             <Plus size={16} aria-hidden="true" /> Nova lista
-          </button>
+          </Button>
         ) : null}
       </header>
 
@@ -176,9 +177,9 @@ export function ListsPage() {
       {state === "error" ? (
         <div className="sk-empty" role="alert">
           <h2>Não foi possível carregar suas listas</h2>
-          <button type="button" className="btn primary" onClick={() => load(1)}>
+          <Button variant="primary" type="button" onClick={() => load(1)}>
             Tentar de novo
-          </button>
+          </Button>
         </div>
       ) : null}
 
@@ -219,9 +220,9 @@ export function ListsPage() {
           </div>
           {page < totalPages ? (
             <div className="lst-more">
-              <button type="button" className="btn" disabled={loadingMore} onClick={() => load(page + 1)}>
+              <Button type="button" disabled={loadingMore} onClick={() => load(page + 1)}>
                 {loadingMore ? "Carregando…" : "Mostrar mais listas"}
-              </button>
+              </Button>
             </div>
           ) : null}
         </>

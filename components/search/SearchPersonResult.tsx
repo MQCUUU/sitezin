@@ -1,3 +1,4 @@
+import { departmentLabel } from "@/lib/person/department";
 import "@/styles/features/search-suggest.css";
 import Link from "next/link";
 import { Drama, UserRound } from "lucide-react";
@@ -44,7 +45,7 @@ export function SearchPersonResult({ item, className, id, ariaSelected, onOpen }
         <div className="muted">
           {isCharacter
             ? `${item.count} ${item.count === 1 ? "título encontrado" : "títulos encontrados"} como personagem`
-            : `${item.known_for_department || "Cinema e TV"}`}
+            : departmentLabel(item.known_for_department)}
         </div>
       </div>
     </Link>

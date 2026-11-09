@@ -1,5 +1,6 @@
 import "@/styles/features/screen-kit.css";
 import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 
 export type DiscoverEmptyStateProps = {
   hasActiveFilters: boolean;
@@ -28,9 +29,9 @@ export function DiscoverEmptyState({
           <Link className="btn primary" href="/settings?tab=general">
             Escolher meus serviços
           </Link>
-          <button type="button" className="btn ghost" onClick={onClearFilters}>
+          <Button variant="ghost" type="button" onClick={onClearFilters}>
             Limpar filtros
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -42,9 +43,9 @@ export function DiscoverEmptyState({
       {hasActiveFilters ? (
         <>
           <p>Tente tirar um ou dois filtros, ou limpe todos.</p>
-          <button type="button" className="btn" onClick={onClearFilters}>
+          <Button type="button" onClick={onClearFilters}>
             Limpar filtros
-          </button>
+          </Button>
         </>
       ) : (
         <p>Tente outra combinação de tipo e ordem.</p>

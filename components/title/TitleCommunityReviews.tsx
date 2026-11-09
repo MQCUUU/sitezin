@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { apiFetch } from "@/lib/api-client";
 import type { CommunityReview } from "@/lib/reviews/community";
+import { Button } from "@/components/ui/Button";
 
 /*
  * "Da comunidade" — notas e resenhas de outras pessoas para este título
@@ -118,9 +119,9 @@ export function TitleCommunityReviews({ type, tmdbId }: { type: "movie" | "tv"; 
 
           {items.length < data.total ? (
             <div className="title-community-more">
-              <button type="button" className="btn" disabled={more} onClick={loadMore}>
+              <Button type="button" disabled={more} onClick={loadMore}>
                 {more ? "Carregando…" : `Ver mais avaliações (${data.total - items.length})`}
-              </button>
+              </Button>
             </div>
           ) : null}
         </>

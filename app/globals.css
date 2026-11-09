@@ -137,19 +137,20 @@ button {
     border-radius: var(--mc-radius-sm)
 }
 .eyebrow {
-    color: var(--accent);
-    text-transform: uppercase;
+    color: var(--mc-color-text-secondary);
+    text-transform: none;
     font-size: var(--mc-fs-xs);
     font-weight: 800;
-    letter-spacing: 1.4px
+    letter-spacing: 0
 }
 .muted {
     color: var(--muted)
 }
 /*
- * Fase 2 (reforma) — botão ÚNICO. `.btn` tem exatamente o visual do <Button>
- * do design system (.mc-btn, styles/primitives.css): mesmas cores por variante,
- * peso 600, sem "pulo" no hover. Antes a base vivia em 6 blocos espalhados
+ * Fase 2 (reforma) — botão ÚNICO. `.btn` é o visual do botão do MyCatalog; o
+ * componente <Button> (components/ui/Button.tsx) monta estas classes e é o
+ * que se usa em <button>. Links com cara de botão usam `.btn` direto. Peso 600,
+ * sem "pulo" no hover. Antes a base vivia em 6 blocos espalhados
  * (peso 750, cinza fixo #fff, perigo vermelho sólido fixo).
  * Fica no topo da cascata de propósito: regras de página (".x .btn") vencem.
  * Altura, rótulo e raio: styles/controls.css.
@@ -216,6 +217,31 @@ button {
 }
 .btn.danger:hover {
     background: var(--mc-color-danger-soft)
+}
+/* Tamanhos do <Button size="sm|lg"> (o padrão é o de styles/controls.css). */
+.btn.btn--sm {
+    min-height: 32px;
+    padding: 0 var(--mc-space-12);
+    gap: var(--mc-space-6);
+    font-size: var(--mc-text-body-small-size)
+}
+.btn.btn--lg {
+    min-height: 48px;
+    padding: 0 var(--mc-space-24);
+    font-size: var(--mc-text-title-size)
+}
+/* <Button loading>: rótulo some, o indicador fica no lugar (mesma largura). */
+.btn[data-loading="true"] {
+    position: relative;
+    color: transparent;
+    pointer-events: none
+}
+.btn[data-loading="true"] .mc-spinner {
+    position: absolute;
+    color: var(--mc-color-text)
+}
+.btn.primary[data-loading="true"] .mc-spinner {
+    color: var(--mc-color-primary-contrast)
 }
 .grid {
     display: grid;
@@ -428,11 +454,11 @@ button {
 }
 .title-section-heading span {
     display: block;
-    color: var(--accent);
-    text-transform: uppercase;
+    color: var(--mc-color-text-secondary);
+    text-transform: none;
     font-size: var(--mc-fs-xs);
     font-weight: 900;
-    letter-spacing: 1.5px;
+    letter-spacing: 0;
     margin-bottom: 4px
 }
 .title-section-heading h2,.title-section-heading h3 {
@@ -1353,11 +1379,11 @@ button:disabled,input:disabled,select:disabled,textarea:disabled {
     margin-left: 8px;
     border-radius: var(--mc-radius-pill);
     background: color-mix(in srgb,var(--accent) 14%,var(--panel));
-    color: var(--accent);
+    color: var(--mc-color-text-secondary);
     font-size: var(--mc-fs-xs);
     font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: .04em
+    text-transform: none;
+    letter-spacing: 0
 }
 .episode-spoiler-hidden {
     color: var(--muted);

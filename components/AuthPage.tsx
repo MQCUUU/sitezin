@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { Button } from "@/components/ui/Button";
 
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandMark";
@@ -818,9 +819,9 @@ export function AuthPage({
               </div>
             )}
 
-            <button
+            <Button variant="primary"
               type="submit"
-              className="btn primary auth-submit"
+              className="auth-submit"
               disabled={
                 loading
               }
@@ -837,7 +838,7 @@ export function AuthPage({
               )}
 
               {isSignup ? "Criar minha conta" : "Entrar"}
-            </button>
+            </Button>
           </form>
 
           <div className="auth-switch">

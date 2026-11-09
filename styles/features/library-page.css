@@ -299,9 +299,9 @@
 .lib-progress-eyebrow {
     font-size: var(--mc-fs-xs);
     font-weight: 800;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--accent);
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--mc-color-text-secondary);
 }
 .lib-progress-title {
     display: flex;

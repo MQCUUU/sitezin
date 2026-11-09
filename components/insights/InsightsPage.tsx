@@ -23,6 +23,7 @@ import {
   YearChapter,
   visibleChapters as chapterIds,
 } from "./story";
+import { Button } from "@/components/ui/Button";
 
 /*
  * Página Insights — uma narrativa contínua (sem abas escondendo conteúdo).
@@ -301,9 +302,9 @@ function InsightsContent() {
       {error ? (
         <div className="empty" role="alert">
           <strong>{error}</strong>
-          <button type="button" className="btn primary" onClick={() => setAttempt((n) => n + 1)}>
+          <Button variant="primary" type="button" onClick={() => setAttempt((n) => n + 1)}>
             Tentar de novo
-          </button>
+          </Button>
         </div>
       ) : null}
 

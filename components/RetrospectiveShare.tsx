@@ -10,6 +10,7 @@ import {
   retrospectiveFileName,
   type RetrospectiveCardData,
 } from "@/lib/retrospective-card";
+import { Button } from "@/components/ui/Button";
 
 /*
  * V2.1-E — "Gerar card" / "Compartilhar" / "Baixar".
@@ -102,18 +103,18 @@ export function RetrospectiveShare({ data }: { data: RetrospectiveCardData }) {
       </div>
 
       <div className="retrospective-share-actions">
-        <button type="button" className="btn primary" onClick={generate}>
+        <Button variant="primary" type="button" onClick={generate}>
           <ImageIcon size={16} />
           Gerar card
-        </button>
-        <button type="button" className="btn" onClick={onShare} disabled={!generated}>
+        </Button>
+        <Button type="button" onClick={onShare} disabled={!generated}>
           <Share2 size={16} />
           Compartilhar
-        </button>
-        <button type="button" className="btn" onClick={onDownload} disabled={!generated}>
+        </Button>
+        <Button type="button" onClick={onDownload} disabled={!generated}>
           <Download size={16} />
           Baixar
-        </button>
+        </Button>
       </div>
 
       <p className="ins-muted ins-small" role="status" aria-live="polite">

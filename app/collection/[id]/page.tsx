@@ -1,7 +1,5 @@
 "use client";
 
-
-
 import { useConfirm } from "@/components/ConfirmProvider";
 import "@/styles/features/collection.css";
 import "@/styles/features/screen-kit.css";
@@ -9,157 +7,24 @@ import { motion } from "motion/react";
 import { removeFromLibrary } from "@/lib/library/actions";
 import { removalConfirmOptions } from "@/lib/library/remove";
 import { apiFetch } from "@/lib/api-client";
-import { MediaPosterActions } from "@/components/media/MediaPosterActions";
-import { MediaPosterTags, mediaTypeLabel } from "@/components/media/MediaBadges";
 import { Poster } from "@/components/Poster";
 import { chunkLibraryStateIds } from "@/lib/library-state-batches";
 import { ApiError } from "@/lib/api-client";
 import { intentForMedia, type LibraryIntent } from "@/lib/auth/pending-action";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-
-import {
-  useParams,
-} from "next/navigation";
-
-import Link from "next/link";
-
-import {
-  Clock3,
-  Film,
-  Layers3,
-  Loader2,
-  Plus,
-  Sparkles,
-  Star,
-  Trash2,
-} from "lucide-react";
-
-import {
-  Search,
-} from "@/components/Search";
-
-import {
-  SmartBackButton,
-} from "@/components/SmartBackButton";
-
-import {
-  img,
-} from "@/lib/tmdb";
-
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { useParams } from "next/navigation";
+import { Layers3, Loader2, Plus } from "lucide-react";
+import { Search } from "@/components/Search";
+import { SmartBackButton } from "@/components/SmartBackButton";
+import { img } from "@/lib/tmdb";
 import { MediaPreviewDialog } from "@/components/media/preview/MediaPreviewDialog";
 import { WatchProviderList } from "@/components/media/preview/WatchProviderList";
 import { fromLooseMediaItem } from "@/components/media/preview/adapters";
 import { normalizeWatchProviders } from "@/components/media/providers";
-
-
-type CollectionMovie = {
-  id: number;
-  media_type:
-    "movie";
-  title?: string;
-  original_title?: string;
-  poster_path?:
-    | string
-    | null;
-  backdrop_path?:
-    | string
-    | null;
-  release_date?: string;
-  vote_average?: number;
-  vote_count?: number;
-  overview?: string;
-  runtime?: number;
-  genres?: any[];
-  popularity?: number;
-  status?: string;
-  [key: string]: any;
-};
-
-type LibraryItem = {
-  library_id: string;
-  tmdb_id: number;
-  media_type:
-    "movie";
-  favorite: boolean;
-  status:
-    string |
-    null;
-  personal_rating:
-    number |
-    null;
-};
-
-async function safeJson(
-  response:
-    Response
-) {
-  const type =
-    response.headers.get(
-      "content-type"
-    ) ||
-    "";
-
-  if (
-    !type.includes(
-      "application/json"
-    )
-  ) {
-    const text =
-      await response.text();
-
-    throw new Error(
-      `A rota ${response.url} não retornou JSON (${response.status}). ${
-        text.startsWith(
-          "<!DOCTYPE"
-        )
-          ? "Provavelmente retornou uma página HTML/404."
-          : ""
-      }`
-    );
-  }
-
-  return response.json();
-}
-
-
-function formatRuntime(
-  minutes:
-    number
-) {
-  if (
-    !minutes ||
-    minutes <=
-      0
-  ) {
-    return "—";
-  }
-
-  const hours =
-    Math.floor(
-      minutes /
-      60
-    );
-
-  const rest =
-    minutes %
-    60;
-
-  if (
-    hours ===
-    0
-  ) {
-    return `${rest}min`;
-  }
-
-  return `${hours}h ${rest}min`;
-}
-
+import { safeJson, formatRuntime, type CollectionMovie, type LibraryItem } from "@/components/collection/shared";
+import { CollectionCard } from "@/components/collection/CollectionCard";
 export default function CollectionPage() {
   // Fase 1: visitante é convidado a entrar; 401 nunca vira "Não autenticado".
   const libraryAuth = useLibraryAuth();
@@ -232,7 +97,6 @@ export default function CollectionPage() {
       "release" |
       "rating"
     >("release");
-
 
   const [
     openMenu,
@@ -1363,13 +1227,13 @@ export default function CollectionPage() {
             </dl>
 
             <div className="sk-hero-actions">
-              <button type="button" className="btn primary" disabled={bulkProcessing} onClick={() => guardedBulk(addAll)}>
+              <Button variant="primary" type="button" disabled={bulkProcessing} onClick={() => guardedBulk(addAll)}>
                 {bulkProcessing ? <Loader2 size={16} className="spin" aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
                 Adicionar os que faltam
-              </button>
-              <button type="button" className="btn sk-btn" disabled={bulkProcessing} onClick={() => guardedBulk(setAllWant)}>
+              </Button>
+              <Button type="button" className="sk-btn" disabled={bulkProcessing} onClick={() => guardedBulk(setAllWant)}>
                 Quero assistir todos
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1448,11 +1312,10 @@ export default function CollectionPage() {
           </div>
         ) : (
           <div className="collection-grid">
-            {visibleMovies.map((movie, index) => (
+            {visibleMovies.map((movie) => (
               <CollectionCard
                 key={movie.id}
                 movie={movie}
-                index={index}
                 libraryItem={getLibraryItem(movie)}
                 processing={processing}
                 menuOpen={openMenu === `movie-${movie.id}`}
@@ -1491,124 +1354,3 @@ export default function CollectionPage() {
   );
 }
 
-function CollectionCard({
-  movie,
-  index,
-  libraryItem,
-  processing,
-  setPreviewItem,
-  addToLibrary,
-  updateStatus,
-  toggleFavorite,
-  requestRemove,
-}: any) {
-  const key =
-    `movie-${movie.id}`;
-
-  const busy =
-    processing ===
-    key;
-
-  const year =
-    (
-      movie.release_date ||
-      ""
-    ).slice(
-      0,
-      4
-    );
-
-  return (
-    <article className="collection-card">
-      <div className="collection-card-poster">
-        <Link
-          href={`/title/movie/${movie.id}`}
-        >
-          {movie.poster_path ? (
-            <Poster
-              path={movie.poster_path}
-              alt={movie.title}
-              sizes="(max-width: 700px) 45vw, 190px"
-            />
-          ) : (
-            <div className="collection-no-poster">
-              <Film
-                size={28}
-              />
-            </div>
-          )}
-        </Link>
-
-        <span className="collection-order">
-          #{index + 1}
-        </span>
-
-        <MediaPosterTags type="movie" status={libraryItem ? libraryItem.status : null} />
-        <MediaPosterActions
-          title={movie.title}
-          inLibrary={Boolean(libraryItem)}
-          status={libraryItem?.status}
-          favorite={Boolean(libraryItem?.favorite)}
-          busy={busy}
-          onPreview={() => setPreviewItem(movie)}
-          onMarkWatched={() => updateStatus(movie, "watched")}
-          onAdd={() => addToLibrary(movie, "want")}
-          onChangeStatus={(status: string) => updateStatus(movie, status)}
-          onToggleFavorite={() => toggleFavorite(movie)}
-          onRemove={() => requestRemove(movie)}
-        />
-      </div>
-      <Link
-        href={`/title/movie/${movie.id}`}
-        className="collection-card-body"
-      >
-        <strong>
-          {
-            movie.title
-          }
-        </strong>
-
-        <div className="collection-card-meta">
-          <span className="mc-media-type-year">
-            {mediaTypeLabel("movie")} {year || "sem data"}
-          </span>
-
-          {Number(
-            movie.runtime ||
-              0
-          ) >
-            0 && (
-            <span>
-              <Clock3
-                size={12}
-              />
-              {formatRuntime(
-                Number(
-                  movie.runtime
-                )
-              )}
-            </span>
-          )}
-
-          {Number(
-            movie.vote_average ||
-              0
-          ) >
-            0 && (
-            <span className="rating">
-              <Star
-                size={12}
-                fill="currentColor"
-              />
-              {Number(
-                movie.vote_average
-              ).toFixed(
-                1
-              )}
-            </span>
-          )}
-        </div>
-      </Link>
-    </article>
-  );
-}

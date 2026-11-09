@@ -19,26 +19,6 @@
     min-width: 0;
     overflow: visible;
 }
-.collection-card-poster {
-    position: relative;
-    aspect-ratio: 2 / 3;
-}
-.collection-card-poster > a {
-    position: absolute;
-    inset: 0;
-    display: block;
-    overflow: hidden;
-    border: 1px solid var(--border);
-    border-radius: var(--mc-radius-lg);
-    background: var(--panel);
-    transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
-}
-.collection-card:hover
-.collection-card-poster > a {
-    transform: translateY(-3px);
-    border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
-    box-shadow: 0 16px 35px rgba(0,0,0,.22);
-}
 .collection-card-poster img,
 .collection-no-poster {
     width: 100%;
@@ -52,66 +32,6 @@
     justify-content: center;
     color: var(--muted);
 }
-.collection-order {
-    position: absolute;
-    top: 30px;
-    left: 8px;
-    z-index: 6;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(255,255,255,.14);
-    border-radius: var(--mc-radius-pill);
-    background: rgba(4,8,15,.78);
-    color: white;
-    backdrop-filter: blur(10px);
-    font-size: var(--mc-fs-xs);
-    font-weight: 900;
-}
-.collection-card-poster .badge {
-    position: absolute;
-    left: 8px;
-    top: 42px;
-    z-index: 6;
-}
-/* CARD BODY */
-.collection-card-body {
-    display: block;
-    padding-top: 8px;
-    color: inherit;
-    text-decoration: none;
-}
-.collection-card-body > strong {
-    display: -webkit-box;
-    min-height: 36px;
-    max-height: 36px;
-    overflow: hidden;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    font-size: var(--mc-fs-xs);
-    line-height: 18px;
-    overflow-wrap: anywhere;
-}
-.collection-card-meta {
-    margin-top: 5px;
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    flex-wrap: wrap;
-    color: var(--muted);
-    font-size: var(--mc-fs-xs);
-}
-.collection-card-meta > span {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-}
-.collection-card-meta .rating {
-    color: var(--mc-color-rating);
-}
 @media (max-width: 1100px) {
     .collection-grid {
         grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -124,17 +44,6 @@
     }
 }
 /* RESPONSIVO */
-/* Coleção: ordem (#n) no canto inferior direito — o topo esquerdo é da tag de tipo. */
-.collection-card-poster .collection-order {
-    top: auto;
-    left: auto;
-    right: 8px;
-    bottom: 8px;
-}
-/* Reserva só a largura do selo de ordem e um pequeno intervalo, sem cortar o status. */
-.collection-card-poster .mc-tag-slot--bottom {
-    max-width: calc(100% - 40px);
-}
 
 /* ===========================================================================
  * Fase 4b — Coleção na direção "Tela 2.39:1": topo de screen-kit.css

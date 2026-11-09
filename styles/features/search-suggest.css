@@ -252,8 +252,8 @@
     font-size: var(--mc-text-caption-size);
     font-weight: 600;
     color: var(--mc-color-text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    text-transform: none;
+    letter-spacing: 0;
 }
 .mc-search-idle-header > span {
     display: inline-flex;

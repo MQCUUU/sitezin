@@ -28,6 +28,7 @@ import {
   type LibrarySort,
   type LibraryStatusFilter,
 } from "@/lib/library/url";
+import { Button } from "@/components/ui/Button";
 
 /*
  * Biblioteca V2.6 — "minha coleção atual, onde entendo estado e progresso em segundos".
@@ -371,11 +372,11 @@ function LibraryContent() {
 
       {/* Uma linha: Curtidos (combina com qualquer status) à esquerda; ordem, filtros e visualização à direita. */}
       <div className="lb-controls">
-        <button type="button" className="btn lb-liked" aria-pressed={query.favorite} title="Curtidos combina com qualquer status" onClick={() => change({ favorite: !query.favorite })}>
+        <Button type="button" className="lb-liked" aria-pressed={query.favorite} title="Curtidos combina com qualquer status" onClick={() => change({ favorite: !query.favorite })}>
           <Heart size={16} fill={query.favorite ? "currentColor" : "none"} aria-hidden="true" />
           Curtidos
           <span className="lb-control-count">{counts.favorites ?? 0}</span>
-        </button>
+        </Button>
 
         <div className="lb-controls-end">
           <label className="lb-sort">
@@ -389,11 +390,11 @@ function LibraryContent() {
             </select>
           </label>
 
-          <button type="button" className="btn lb-filters-btn" aria-expanded={showFilters} aria-controls="library-filters-panel" onClick={() => setShowFilters((v) => !v)}>
+          <Button type="button" className="lb-filters-btn" aria-expanded={showFilters} aria-controls="library-filters-panel" onClick={() => setShowFilters((v) => !v)}>
             <SlidersHorizontal size={16} aria-hidden="true" />
             Filtros
             {panelCount > 0 ? <span className="lb-control-count">{panelCount}</span> : null}
-          </button>
+          </Button>
 
           <div className="lb-view" role="group" aria-label="Modo de visualização">
             {viewModes.map(([mode, label, Icon]) => (
@@ -495,9 +496,9 @@ function LibraryContent() {
           <div className="lb-empty" role="alert">
             <strong>Não foi possível carregar sua biblioteca.</strong>
             <p>Verifique sua conexão e tente novamente.</p>
-            <button type="button" className="btn primary" onClick={() => setReloadTick((n) => n + 1)}>
+            <Button variant="primary" type="button" onClick={() => setReloadTick((n) => n + 1)}>
               Tentar de novo
-            </button>
+            </Button>
           </div>
         ) : !result ? (
           <div role="status" aria-live="polite" aria-label="Carregando biblioteca">
@@ -515,9 +516,9 @@ function LibraryContent() {
           <div className="lb-empty">
             <strong>{query.search ? "Nenhum título encontrado na sua Biblioteca." : "Nenhum título corresponde a esses filtros."}</strong>
             {query.search ? <p>A busca procura só entre os títulos da sua coleção.</p> : null}
-            <button type="button" className="btn" onClick={clearAll}>
+            <Button type="button" onClick={clearAll}>
               {query.search ? "Limpar busca e filtros" : "Limpar filtros"}
-            </button>
+            </Button>
           </div>
         ) : (
           <>

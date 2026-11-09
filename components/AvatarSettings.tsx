@@ -7,6 +7,7 @@ import { ChangeEvent, useEffect, useState } from "react";
 import { Camera, Loader2, Trash2, Upload } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 import { useConfirm } from "@/components/ConfirmProvider";
+import { Button } from "@/components/ui/Button";
 
 async function squareAvatar(file: File): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
@@ -120,9 +121,9 @@ export function AvatarSettings() {
           Escolher imagem
           <input type="file" accept="image/jpeg,image/png,image/webp" disabled={saving} onChange={upload} />
         </label>
-        {url && <button className="btn" disabled={saving} onClick={remove}>
+        {url && <Button disabled={saving} onClick={remove}>
           <Trash2 size={16} /> Remover
-        </button>}
+        </Button>}
       </div>
       <small>JPG, PNG ou WebP, até 5 MB</small>
     </div>

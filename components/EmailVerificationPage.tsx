@@ -9,6 +9,7 @@ import { authClient } from "@/lib/auth/client";
 import { authErrorMessage } from "@/lib/auth-client";
 import { clearPendingSignup, clearPendingVerificationEmail, clearPendingVerificationError, readPendingSignup, readPendingVerificationEmail, readPendingVerificationError, savePendingVerificationEmail } from "@/lib/auth/pending-signup";
 import { safeNextPath } from "@/lib/safe-next";
+import { Button } from "@/components/ui/Button";
 
 const CODE_LENGTH = 6;
 const RESEND_COOLDOWN_SECONDS = 60;
@@ -208,7 +209,6 @@ export function EmailVerificationPage() {
             <div className="verify-story-envelope"><MailCheck size={39} /></div>
             <span className="verify-story-check"><CheckCircle2 size={19} /></span>
           </div>
-          <p className="verify-eyebrow">QUASE LÁ</p>
           <h2>Seu próximo filme começa aqui.</h2>
           <p className="verify-story-copy">Confirme seu e-mail para entrar no MyCatalog e levar seu catálogo com você.</p>
           <div className="verify-story-steps">
@@ -223,7 +223,6 @@ export function EmailVerificationPage() {
         <div className={`verify-icon${verified ? " is-verified" : ""}`} aria-hidden="true">
           {verified ? <CheckCircle2 size={27} /> : <MailCheck size={27} />}
         </div>
-        <p className="verify-eyebrow">{verified ? "E-MAIL CONFIRMADO" : "SÓ MAIS UM PASSO"}</p>
         <h1>{verified ? "Tudo certo!" : "Confirme seu e-mail"}</h1>
         <p className="verify-copy">
           {verified
@@ -264,9 +263,9 @@ export function EmailVerificationPage() {
             </fieldset>
             {error && <p className="verify-message is-error" role="alert">{error}</p>}
             {notice && <p className="verify-message is-notice" role="status">{notice}</p>}
-            <button className="btn primary auth-submit" type="submit" disabled={loading || digits.join("").length !== CODE_LENGTH}>
+            <Button variant="primary" className="auth-submit" type="submit" disabled={loading || digits.join("").length !== CODE_LENGTH}>
               {loading ? <><Loader2 size={17} className="spin" /> Confirmando…</> : <><ShieldCheck size={17} /> Confirmar e-mail</>}
-            </button>
+            </Button>
           </form>
         )}
 

@@ -2,6 +2,7 @@ import "@/styles/features/media.css";
 import { Plus } from "lucide-react";
 
 import type { MediaPreviewActionsConfig, MediaPreviewData } from "./types";
+import { Button } from "@/components/ui/Button";
 
 const RATING_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
@@ -24,15 +25,15 @@ export function MediaPreviewActions({ data, actions }: MediaPreviewActionsProps)
   return (
     <div className="mc-preview-actions">
       {onAdd && !inLibrary && (
-        <button
+        <Button variant="primary"
           type="button"
-          className="btn primary mc-preview-add-btn"
+          className="mc-preview-add-btn"
           onClick={() => onAdd(data)}
           disabled={disabled}
         >
           <Plus size={16} />
           {addLabel || "Adicionar à biblioteca"}
-        </button>
+        </Button>
       )}
 
       {onRating && inLibrary && (

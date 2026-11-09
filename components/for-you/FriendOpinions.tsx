@@ -7,6 +7,7 @@ import { CircleCheck, CircleX, Minus, Star, ThumbsDown, ThumbsUp, Users, X } fro
 
 import { apiFetch } from "@/lib/api-client";
 import { useModal } from "@/hooks/useModal";
+import { Button } from "@/components/ui/Button";
 
 type Review = {
   username: string;
@@ -124,7 +125,7 @@ export function FriendOpinions({ item }: { item: any }) {
       {open && typeof document !== "undefined" && createPortal(<div className="fy-opinions-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setOpen(false)}>
         <section ref={modalRef as React.RefObject<HTMLElement>} className="fy-opinions-panel" role="dialog" aria-modal="true" aria-labelledby={`fy-opinions-title-${type}-${item.id}`}>
           <header className="fy-opinions-head">
-            <div><span className="eyebrow">OPINIÕES DOS SEUS AMIGOS</span><h2 id={`fy-opinions-title-${type}-${item.id}`}>{title}</h2><p>{data?.total ?? total} amigos avaliaram este título</p></div>
+            <div><h2 id={`fy-opinions-title-${type}-${item.id}`}>{title}</h2><p>{data?.total ?? total} amigos avaliaram este título</p></div>
             <button type="button" aria-label="Fechar painel" onClick={() => setOpen(false)}><X size={20} /></button>
           </header>
 
@@ -184,7 +185,7 @@ export function FriendOpinions({ item }: { item: any }) {
             {review.review && <p>{review.review}</p>}
             <time dateTime={review.updated_at}>{new Date(review.updated_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}</time>
           </li>)}</ul>}
-          {data && data.items.length < activeCount && <button type="button" className="btn fy-opinions-more" disabled={loading} onClick={loadMore}>{loading ? "Carregando…" : "Ver todos os amigos que avaliaram"}</button>}
+          {data && data.items.length < activeCount && <Button type="button" className="fy-opinions-more" disabled={loading} onClick={loadMore}>{loading ? "Carregando…" : "Ver todos os amigos que avaliaram"}</Button>}
         </section>
       </div>, document.body)}
     </>

@@ -8,6 +8,7 @@ import { useState } from "react";
 import { EyeOff, Loader2, Undo2 } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
+import { Button } from "@/components/ui/Button";
 
 /*
  * V3.3 — "Não tenho interesse" é preferência de RECOMENDAÇÃO (Para você,
@@ -97,9 +98,9 @@ export function HiddenTitlesSettings() {
             recomendações. Descobrir e a Busca continuam mostrando tudo.
           </p>
         </div>
-        <button type="button" className="btn" aria-expanded={open} aria-controls="hidden-titles-list" onClick={toggle}>
+        <Button type="button" aria-expanded={open} aria-controls="hidden-titles-list" onClick={toggle}>
           {open ? "Ocultar lista" : data ? `Ver lista (${data.total})` : "Ver lista"}
-        </button>
+        </Button>
       </div>
 
       {open && (
@@ -107,9 +108,9 @@ export function HiddenTitlesSettings() {
           {error && (
             <div className="account-hidden-error" role="alert">
               <span>{error}</span>
-              <button type="button" className="btn" onClick={() => void load(data ? data.items.length : 0)}>
+              <Button type="button" onClick={() => void load(data ? data.items.length : 0)}>
                 Tentar de novo
-              </button>
+              </Button>
             </div>
           )}
 
@@ -146,9 +147,9 @@ export function HiddenTitlesSettings() {
                         {item.year ? ` ${item.year}` : ""}
                       </span>
                     </div>
-                    <button
+                    <Button
                       type="button"
-                      className="btn"
+                     
                       disabled={restoring === item.id}
                       onClick={() => restore(item)}
                       aria-label={`Voltar a recomendar ${item.title}`}
@@ -159,7 +160,7 @@ export function HiddenTitlesSettings() {
                         <Undo2 size={14} aria-hidden="true" />
                       )}
                       Voltar a recomendar
-                    </button>
+                    </Button>
                   </article>
                 ))}
               </div>
@@ -173,9 +174,9 @@ export function HiddenTitlesSettings() {
           )}
 
           {data?.hasMore && !loading && (
-            <button type="button" className="btn" onClick={() => void load(data.items.length)}>
+            <Button type="button" onClick={() => void load(data.items.length)}>
               Mostrar mais
-            </button>
+            </Button>
           )}
         </div>
       )}

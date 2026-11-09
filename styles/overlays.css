@@ -129,7 +129,7 @@
   margin-top: var(--mc-space-20);
 }
 
-.mc-confirm-actions .mc-btn {
+.mc-confirm-actions .btn {
   flex: 1;
 }
 

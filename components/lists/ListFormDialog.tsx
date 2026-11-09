@@ -9,6 +9,7 @@ import { Globe, Loader2, Lock, X } from "lucide-react";
 import { useDialogFocus } from "./useDialogFocus";
 import { Dialog } from "@/components/ui/Dialog";
 import { DESCRIPTION_MAX, NAME_MAX } from "@/lib/lists/validate";
+import { Button } from "@/components/ui/Button";
 
 /*
  * Criar / editar lista: nome, descrição opcional e privacidade. Privada é o padrão.
@@ -125,13 +126,13 @@ export function ListFormDialog({
         ) : null}
 
         <div className="lst-dialog-actions">
-          <button type="button" className="btn" onClick={close}>
+          <Button type="button" onClick={close}>
             Cancelar
-          </button>
-          <button type="submit" className="btn primary" disabled={saving}>
+          </Button>
+          <Button variant="primary" type="submit" disabled={saving}>
             {saving ? <Loader2 size={16} className="spin" aria-hidden="true" /> : null}
             {editing ? "Salvar" : "Criar lista"}
-          </button>
+          </Button>
         </div>
       </form>
     </Dialog>

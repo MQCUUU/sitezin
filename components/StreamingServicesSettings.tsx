@@ -10,6 +10,7 @@ import {
   MAX_STREAMING_SERVICES,
   type StreamingService,
 } from "@/lib/streaming-services";
+import { Button } from "@/components/ui/Button";
 
 /*
  * V2.1-E — "Meus serviços de streaming".
@@ -178,14 +179,14 @@ export function StreamingServicesSettings() {
           </fieldset>
 
           <div className="streaming-actions">
-            <button type="button" className="btn primary" onClick={save} disabled={saving || !dirty}>
+            <Button variant="primary" type="button" onClick={save} disabled={saving || !dirty}>
               {saving ? <Loader2 size={16} className="spin" /> : <Save size={16} />}
               Salvar serviços
-            </button>
+            </Button>
             {selected.size > 0 && (
-              <button type="button" className="btn" onClick={() => setSelected(new Map())} disabled={saving}>
+              <Button type="button" onClick={() => setSelected(new Map())} disabled={saving}>
                 Limpar seleção
-              </button>
+              </Button>
             )}
             <span className="muted" role="status" aria-live="polite">
               {dirty ? "Alterações não salvas." : ""}

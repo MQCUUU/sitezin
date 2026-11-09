@@ -18,6 +18,7 @@ import { MonthlyChart, type MonthMetric } from "@/components/insights/charts-sto
 import { dec, durationLabel, nf, pct } from "@/components/insights/ui";
 import { monthName } from "@/lib/insights/rules";
 import type { InsightsPayload, RatedRef } from "@/lib/insights/types";
+import { Button } from "@/components/ui/Button";
 
 /*
  * V2.3 — Retrospectiva reconstruída sobre o MESMO motor do Insights
@@ -126,9 +127,9 @@ function RetrospectiveContent() {
       {error ? (
         <div className="empty" role="alert">
           <strong>Não foi possível montar sua retrospectiva agora.</strong>
-          <button type="button" className="btn primary" onClick={() => setAttempt((n) => n + 1)}>
+          <Button variant="primary" type="button" onClick={() => setAttempt((n) => n + 1)}>
             Tentar de novo
-          </button>
+          </Button>
         </div>
       ) : null}
 
@@ -148,9 +149,9 @@ function RetrospectiveContent() {
           <p className="ins-hero-title">Nenhum filme ou episódio registrado em {year}.</p>
           <p className="ins-hero-sub">A retrospectiva usa as datas em que você marcou filmes e episódios como assistidos.</p>
           {year !== thisYear ? (
-            <button type="button" className="btn primary" onClick={() => setYear(thisYear)}>
+            <Button variant="primary" type="button" onClick={() => setYear(thisYear)}>
               Ver {thisYear}
-            </button>
+            </Button>
           ) : null}
         </section>
       ) : null}

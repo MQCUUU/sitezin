@@ -10,6 +10,7 @@ import "@/styles/shell.css";
 import {
   useEffect,
 } from "react";
+import { Button } from "@/components/ui/Button";
 
 export default function GlobalError({
   error,
@@ -39,9 +40,6 @@ export default function GlobalError({
       <body>
         <main className="mc-global-error">
           <div className="mc-global-error-card">
-            <div className="mc-global-error-eyebrow">
-              MYCATALOG
-            </div>
 
             <h1>
               Algo saiu do lugar.
@@ -51,15 +49,15 @@ export default function GlobalError({
               O aplicativo encontrou um erro inesperado. Tente carregar novamente.
             </p>
 
-            <button
+            <Button variant="primary"
               type="button"
-              className="mc-btn mc-btn--primary mc-focusable"
+              className="mc-focusable"
               onClick={
                 reset
               }
             >
               Tentar novamente
-            </button>
+            </Button>
           </div>
         </main>
       </body>

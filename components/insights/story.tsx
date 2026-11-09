@@ -6,13 +6,13 @@ import { ArrowRight, Info, Sparkles, Star } from "lucide-react";
 
 import { Poster } from "@/components/Poster";
 import { ConnectedPosterActions } from "@/components/media/ConnectedPosterActions";
-import { MediaTypeTag } from "@/components/media/MediaBadges";
 import { SOURCE_LABEL, hourLabel, monthName } from "@/lib/insights/rules";
 import type { Insight, InsightsPayload, SectionKey, TitleRef } from "@/lib/insights/types";
 
 import { Columns, HBars, Heatmap } from "./charts";
 import { Histogram, MonthlyChart, SplitBar, StackedYears, type MonthMetric } from "./charts-story";
 import { CountUp, dec, durationLabel, hoursText, monthShort, nf, pct } from "./ui";
+import { Button } from "@/components/ui/Button";
 
 /*
  * Capítulos da página Insights — uma narrativa, nesta ordem:
@@ -184,9 +184,6 @@ function PosterStrip({ items, caption }: { items: TitleRef[]; caption: (item: Ti
             <Link href={`/title/${item.type}/${item.tmdb_id}`} tabIndex={-1} aria-hidden="true" className="ins-poster-link">
               <Poster path={item.poster_path} alt="" sizes="150px" />
             </Link>
-            <span className="mc-tag-slot mc-tag-slot--top">
-              <MediaTypeTag type={item.type} />
-            </span>
             <ConnectedPosterActions media={{ tmdbId: Number(item.tmdb_id), mediaType: item.type === "tv" ? "tv" : "movie", title: item.title, posterPath: item.poster_path ?? null }} />
           </span>
           <Link href={`/title/${item.type}/${item.tmdb_id}`} className="mc-focusable">
@@ -242,13 +239,13 @@ export function SummaryChapter({ data, onPeriod }: { data: Data; onPeriod: (p: s
         {data.meta.historyTotal > 0 ? (
           <div className="ins-hero-actions">
             {data.meta.period !== "12m" ? (
-              <button type="button" className="btn primary" onClick={() => onPeriod("12m")}>
+              <Button variant="primary" type="button" onClick={() => onPeriod("12m")}>
                 Ver últimos 12 meses
-              </button>
+              </Button>
             ) : null}
-            <button type="button" className="btn" onClick={() => onPeriod("all")}>
+            <Button type="button" onClick={() => onPeriod("all")}>
               Ver todo o histórico
-            </button>
+            </Button>
           </div>
         ) : (
           <Link href="/discover" className="btn primary">

@@ -1,215 +1,18 @@
 "use client";
 
-
 import "@/styles/features/person.css";
 import "@/styles/features/screen-kit.css";
 import { motion } from "motion/react";
-import { mediaTypeLabel } from "@/components/media/MediaBadges";
-import { MediaCard, MediaCardImage, MediaCardMeta } from "@/components/media";
+import { departmentLabel } from "@/lib/person/department";
 import { Poster } from "@/components/Poster";
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-
-import {
-  useParams,
-  usePathname,
-  useRouter,
-  useSearchParams,
-} from "next/navigation";
-
-import Link from "next/link";
-
-import {
-  Film,
-  Loader2,
-  Star,
-  Tv,
-  UserRound,
-} from "lucide-react";
-
-import {
-  Search,
-} from "@/components/Search";
-
-import {
-  SmartBackButton,
-} from "@/components/SmartBackButton";
-import { ConnectedPosterActions } from "@/components/media/ConnectedPosterActions";
-
-import {
-  img,
-} from "@/lib/tmdb";
-
-type Person = {
-  id: number;
-  name: string;
-  profile_path:
-    | string
-    | null;
-  known_for_department?:
-    string;
-  biography?:
-    string;
-  birthday?:
-    string |
-    null;
-  deathday?:
-    string |
-    null;
-  place_of_birth?:
-    string |
-    null;
-  also_known_as?:
-    string[];
-  homepage?:
-    string |
-    null;
-  popularity?:
-    number;
-};
-
-type Credit = {
-  id: number;
-  media_type:
-    | "movie"
-    | "tv";
-  title?: string;
-  name?: string;
-  poster_path?:
-    | string
-    | null;
-  backdrop_path?:
-    | string
-    | null;
-  release_date?: string;
-  first_air_date?: string;
-  vote_average?: number;
-  vote_count?: number;
-  popularity?: number;
-  character?: string;
-  job?: string;
-  department?: string;
-  roles?: string[];
-  [key: string]: any;
-};
-
-async function safeJson(
-  response:
-    Response
-) {
-  const type =
-    response.headers.get(
-      "content-type"
-    ) ||
-    "";
-
-  if (
-    !type.includes(
-      "application/json"
-    )
-  ) {
-    throw new Error(
-      `A rota não retornou JSON (${response.status}).`
-    );
-  }
-
-  return response.json();
-}
-
-function formatDate(
-  value?:
-    string |
-    null
-) {
-  if (!value) {
-    return "";
-  }
-
-  const [
-    year,
-    month,
-    day,
-  ] =
-    value.split("-");
-
-  if (
-    !year ||
-    !month ||
-    !day
-  ) {
-    return value;
-  }
-
-  return `${day}/${month}/${year}`;
-}
-
-function getYear(
-  item:
-    Credit
-) {
-  return (
-    item.release_date ||
-    item.first_air_date ||
-    ""
-  ).slice(
-    0,
-    4
-  );
-}
-
-function getTitle(
-  item:
-    Credit
-) {
-  return (
-    item.title ||
-    item.name ||
-    "Sem título"
-  );
-}
-
-function translateDepartment(
-  value?:
-    string
-) {
-  const map:
-    Record<
-      string,
-      string
-    > = {
-      Acting:
-        "Atuação",
-      Directing:
-        "Direção",
-      Writing:
-        "Roteiro",
-      Production:
-        "Produção",
-      Camera:
-        "Fotografia",
-      Editing:
-        "Edição",
-      Sound:
-        "Som",
-      Art:
-        "Arte",
-      Crew:
-        "Equipe",
-    };
-
-  return (
-    map[
-      value ||
-      ""
-    ] ||
-    value ||
-    "Cinema e TV"
-  );
-}
-
+import { useEffect, useMemo, useState } from "react";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Loader2, UserRound } from "lucide-react";
+import { Search } from "@/components/Search";
+import { SmartBackButton } from "@/components/SmartBackButton";
+import { img } from "@/lib/tmdb";
+import { safeJson, formatDate, getYear, type Person, type Credit } from "@/components/person/shared";
+import { PersonCreditsSection, PersonCreditCard } from "@/components/person/PersonCredits";
 export default function PersonPage() {
   const params =
     useParams<{
@@ -627,7 +430,7 @@ export default function PersonPage() {
           </div>
 
           <div className="sk-hero-copy">
-            <p className="sk-hero-kicker">{translateDepartment(person.known_for_department)}</p>
+            <p className="sk-hero-kicker">{departmentLabel(person.known_for_department)}</p>
             <h1>{person.name}</h1>
             {person.also_known_as && person.also_known_as.length > 0 && person.also_known_as[0] !== person.name ? (
               <p className="sk-hero-sub">Também conhecido(a) como {person.also_known_as[0]}</p>
@@ -718,7 +521,7 @@ export default function PersonPage() {
             )}
             <div>
               <dt>Área principal</dt>
-              <dd>{translateDepartment(person.known_for_department)}</dd>
+              <dd>{departmentLabel(person.known_for_department)}</dd>
             </div>
             {careerYears && (
               <div>
@@ -784,126 +587,3 @@ export default function PersonPage() {
   );
 }
 
-function PersonCreditsSection({
-  title,
-  items,
-  total,
-  expanded,
-  onToggle,
-}: {
-  title: string;
-  items: Credit[];
-  total: number;
-  expanded: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <section className="sk-section pp-section">
-      <div className="sk-section-head">
-        <h2>
-          {title} <span className="pp-count">{total}</span>
-        </h2>
-      </div>
-
-      <div className="person-credit-grid">
-        {items.map((item) => (
-          <PersonCreditCard key={`${item.media_type}-${item.id}`} item={item} />
-        ))}
-      </div>
-
-      {total > 12 && (
-        <div className="person-show-more">
-          <button type="button" className="btn" onClick={onToggle}>
-            {expanded ? "Mostrar menos" : `Ver todos os ${total}`}
-          </button>
-        </div>
-      )}
-    </section>
-  );
-}
-
-function PersonCreditCard({
-  item,
-  featured =
-    false,
-}: {
-  item:
-    Credit;
-  featured?:
-    boolean;
-}) {
-  const title =
-    getTitle(
-      item
-    );
-
-  const year =
-    getYear(
-      item
-    );
-
-  const role =
-    (
-      item.roles ||
-      []
-    )
-      .filter(
-        Boolean
-      )
-      .slice(
-        0,
-        2
-      )
-      .join(
-        ", "
-      ) ||
-    item.character ||
-    item.job ||
-    "";
-
-  const href = `/title/${item.media_type}/${item.id}`;
-
-  const rating = Number(item.vote_average || 0);
-
-  /* Fase 3: mesmo cartão de mídia das grades (MediaCard) — antes era um cartão próprio, com <img> cru. */
-  return (
-    <MediaCard className={featured ? "person-work-card featured" : "person-work-card"}>
-      <MediaCardImage className="mc-pa-host">
-        {/* Pôster (atalho decorativo) + botões do pôster FORA do link; o link acessível é o nome. */}
-        <Link href={href} tabIndex={-1} aria-hidden="true" className="poster-link">
-          {item.poster_path ? (
-            <Poster
-              path={item.poster_path}
-              alt=""
-              sizes={featured ? "(max-width:700px) 46vw, 220px" : "(max-width:700px) 46vw, (max-width:1100px) 24vw, 170px"}
-            />
-          ) : (
-            <div className="person-work-poster-empty">
-              {item.media_type === "tv" ? <Tv size={26} /> : <Film size={26} />}
-            </div>
-          )}
-        </Link>
-
-        <ConnectedPosterActions
-          media={{ tmdbId: Number(item.id), mediaType: item.media_type === "tv" ? "tv" : "movie", title, year, posterPath: item.poster_path ?? null, voteAverage: rating || null }}
-        />
-      </MediaCardImage>
-
-      <Link href={href} className="card-title">
-        {title}
-      </Link>
-
-      <MediaCardMeta>
-        <span className="mc-media-type-year">{mediaTypeLabel(item.media_type)}{year ? ` ${year}` : ""}</span>
-        {rating > 0 && (
-          <span className="rating">
-            <Star size={12} fill="currentColor" />
-            {rating.toFixed(1)}
-          </span>
-        )}
-      </MediaCardMeta>
-
-      {role && <span className="person-work-role">{role}</span>}
-    </MediaCard>
-  );
-}

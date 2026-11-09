@@ -8,24 +8,24 @@ import { cx } from "./cx";
 import { Spinner } from "./Spinner";
 
 /*
- * Botão do design system MyCatalog. A API (variant/size/loading e os
- * demais atributos de <button>) é a mesma do HEAD; as classes vêm de
- * styles/primitives.css (.mc-btn e .mc-btn--*). `cva` só organiza o
- * mapeamento variante → classe, no mesmo padrão dos componentes shadcn.
- * Não usa classes utilitárias do Tailwind.
+ * O botão do MyCatalog — um só. Monta as classes de `.btn` (app/globals.css,
+ * styles/controls.css): `.btn` + `primary` | `ghost` | `danger`, e
+ * `btn--sm` | `btn--lg`. Assim as regras de contexto (".x .btn") valem para
+ * todos. Links com cara de botão usam as mesmas classes direto no <a>/<Link>.
+ * `cva` só organiza o mapeamento variante → classe. Sem Tailwind.
  */
-const buttonVariants = cva("mc-btn mc-focusable", {
+const buttonVariants = cva("btn mc-focusable", {
   variants: {
     variant: {
-      primary: "mc-btn--primary",
-      secondary: "mc-btn--secondary",
-      ghost: "mc-btn--ghost",
-      danger: "mc-btn--danger",
+      primary: "primary",
+      secondary: "",
+      ghost: "ghost",
+      danger: "danger",
     },
     size: {
-      sm: "mc-btn--sm",
+      sm: "btn--sm",
       md: "",
-      lg: "mc-btn--lg",
+      lg: "btn--lg",
     },
   },
   defaultVariants: {

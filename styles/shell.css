@@ -152,6 +152,6 @@
   line-height: var(--mc-text-body-small-line);
 }
 
-.mc-global-error-card .mc-btn {
+.mc-global-error-card .btn {
   margin: 0 auto;
 }

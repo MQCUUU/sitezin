@@ -20,8 +20,8 @@
     color: var(--mc-color-rating);
     font-size: var(--mc-fs-xs);
     font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 1px
+    text-transform: none;
+    letter-spacing: 0
 }
 .big-rating {
     display: flex;
@@ -490,9 +490,9 @@
 .title-fact span {
     color: var(--muted);
     font-size: var(--mc-fs-xs);
-    text-transform: uppercase;
+    text-transform: none;
     font-weight: 800;
-    letter-spacing: .7px
+    letter-spacing: 0
 }
 .title-fact strong {
     font-size: var(--mc-fs-xs);
@@ -1292,10 +1292,10 @@
 }
 .series-episode-date span {
     margin-top: -1px;
-    color: var(--accent);
+    color: var(--mc-color-text-secondary);
     font-size: var(--mc-fs-xs);
     font-weight: 900;
-    text-transform: uppercase;
+    text-transform: none;
 }
 .series-episode-number {
     color: var(--accent);
@@ -1406,10 +1406,10 @@
     margin-bottom: 16px
 }
 .episode-browser-head span {
-    color: var(--accent);
+    color: var(--mc-color-text-secondary);
     font-size: var(--mc-fs-xs);
     font-weight: 800;
-    text-transform: uppercase
+    text-transform: none
 }
 .episode-browser-head h2 {
     margin: 3px 0 0
@@ -1730,7 +1730,7 @@
     }
 }
 @media (max-width: 700px) {
-    .mc-title-actions .mc-btn {
+    .mc-title-actions .btn {
         flex: 1 1 auto;
     }
 }
@@ -1884,10 +1884,10 @@
     display: block;
     margin-bottom: 10px;
     color: var(--mc-color-text-muted);
-    text-transform: uppercase;
+    text-transform: none;
     font-size: var(--mc-fs-xs);
     font-weight: 800;
-    letter-spacing: 1px;
+    letter-spacing: 0;
 }
 .mc-title-cast-card-media {
     position: relative;
@@ -2092,8 +2092,8 @@ a.series-episode-row {
     color: var(--muted);
     font-size: var(--mc-fs-xs);
     font-weight: 800;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    letter-spacing: 0;
+    text-transform: none;
 }
 .title-community-list {
     display: grid;
@@ -2332,11 +2332,11 @@ a.series-episode-row {
 }
 .title-where-section h3 {
     margin: 0 0 7px;
-    color: var(--accent);
+    color: var(--mc-color-text-secondary);
     font-size: var(--mc-fs-xs);
     font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: .7px
+    text-transform: none;
+    letter-spacing: 0
 }
 .title-where-section ul {
     list-style: none;

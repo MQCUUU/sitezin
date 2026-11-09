@@ -99,7 +99,6 @@ export function SeriesSchedule({ tvId, inProduction }: { tvId: number | string; 
       <div className="series-schedule">
         <div className="series-schedule-head">
           <div>
-            <span className="eyebrow">AGENDA DA SÉRIE</span>
             <h2>Próximos episódios</h2>
             <p className="muted">Datas informadas pelo TMDB para os próximos lançamentos.</p>
           </div>

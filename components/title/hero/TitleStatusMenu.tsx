@@ -11,6 +11,7 @@ import { MEDIA_STATUS_OPTIONS, mediaStatusLabel } from "@/lib/media-status";
 import { sheetExitTransition, sheetTransition } from "@/lib/motion";
 import type { LibraryLookupState } from "@/lib/library/lookup";
 import type { Status } from "@/lib/types";
+import { Button } from "@/components/ui/Button";
 
 export type TitleStatusMenuProps = {
   /** Status atual; null = fora da biblioteca. */
@@ -48,10 +49,10 @@ export function TitleStatusMenu({
 
   if (!inLibrary && libraryLookup === "error") {
     return (
-      <button type="button" className={`btn primary tt-primary ${className ?? ""}`} onClick={onRetryLookup}>
+      <Button type="button" variant="primary" className={`tt-primary ${className ?? ""}`} onClick={onRetryLookup}>
         <RefreshCw size={18} aria-hidden="true" />
         Tentar de novo
-      </button>
+      </Button>
     );
   }
 
@@ -69,10 +70,11 @@ export function TitleStatusMenu({
   }
 
   const trigger = (
-    <button
+    <Button
       ref={triggerRef}
       type="button"
-      className={`btn primary tt-primary ${className ?? ""}`}
+      variant="primary"
+      className={`tt-primary ${className ?? ""}`}
       aria-haspopup={variant === "menu" ? "menu" : "dialog"}
       aria-expanded={open}
       disabled={pending || saving}
@@ -83,7 +85,7 @@ export function TitleStatusMenu({
       {inLibrary ? <MediaStatusIcon status={status} size={18} /> : <Plus size={18} aria-hidden="true" />}
       <span className="tt-primary-label">{label}</span>
       <ChevronDown size={16} aria-hidden="true" className="tt-primary-chevron" />
-    </button>
+    </Button>
   );
 
   const options = (

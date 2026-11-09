@@ -15,6 +15,7 @@ import { useState } from "react";
 import { Loader2, Shuffle } from "lucide-react";
 
 import type { PickInherit } from "@/components/PickForMe";
+import { Button } from "@/components/ui/Button";
 
 const loadPickForMe = () => import("@/components/PickForMe");
 
@@ -27,9 +28,9 @@ export function PickForMeLauncher({ inherit, className }: { inherit?: PickInheri
 
   return (
     <>
-      <button
+      <Button
         type="button"
-        className={"btn pick-trigger" + (className ? ` ${className}` : "")}
+        className={"pick-trigger" + (className ? ` ${className}` : "")}
         aria-busy={loading || undefined}
         onPointerEnter={() => void loadPickForMe()}
         onFocus={() => void loadPickForMe()}
@@ -37,7 +38,7 @@ export function PickForMeLauncher({ inherit, className }: { inherit?: PickInheri
       >
         {loading ? <Loader2 size={16} className="spin" aria-hidden="true" /> : <Shuffle size={16} aria-hidden="true" />}
         Escolha pra mim
-      </button>
+      </Button>
 
       {openRequest > 0 && (
         <PickForMe inherit={inherit} hideTrigger openRequest={openRequest} onMounted={() => setReady(true)} />

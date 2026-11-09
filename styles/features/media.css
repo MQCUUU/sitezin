@@ -347,8 +347,8 @@
     color: var(--mc-color-text-secondary);
     font-family: var(--mc-font-sans);
     font-size: var(--mc-text-overline-size);
-    letter-spacing: var(--mc-text-overline-tracking);
-    text-transform: uppercase;
+    letter-spacing: 0;
+    text-transform: none;
 }
 .mc-preview-title {
     margin: 0;
@@ -499,74 +499,6 @@
     left: 0;
     max-width: 100%;
 }
-.mc-type-chip {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-start;
-    box-sizing: border-box;
-    width: max-content;
-    height: 22px;
-    min-width: 22px;
-    max-width: 22px;
-    gap: 0;
-    padding: 0;
-    overflow: hidden;
-    border: 1.5px solid var(--accent);
-    border-radius: 0 0 8px 0;
-    color: var(--accent);
-    transition: max-width 180ms ease, gap 180ms ease, padding 180ms ease;
-}
-.mc-type-chip--movie {
-    background: rgba(0, 0, 0, 0.7);
-}
-.mc-type-chip--tv {
-    background: var(--accent);
-    color: var(--on-accent, #fff);
-}
-.mc-type-chip > svg {
-    flex: 0 0 14px;
-    width: 14px;
-    height: 14px;
-    margin-left: 2.5px;
-}
-.mc-type-chip-label {
-    display: inline-block;
-    max-width: 0;
-    overflow: hidden;
-    opacity: 0;
-    font-size: var(--mc-fs-xs);
-    font-weight: 500;
-    line-height: 1;
-    white-space: nowrap;
-    transition: max-width 180ms ease, opacity 120ms ease;
-}
-.card:hover .mc-type-chip,
-.card:focus-within .mc-type-chip,
-.mc-pa-host:hover .mc-type-chip,
-.mc-pa-host:focus-within .mc-type-chip,
-.collection-card:hover .mc-type-chip,
-.collection-card:focus-within .mc-type-chip {
-    width: max-content;
-    max-width: 72px;
-    gap: 4px;
-    padding: 0 6px 0 0;
-}
-.card:hover .mc-type-chip-label,
-.card:focus-within .mc-type-chip-label,
-.mc-pa-host:hover .mc-type-chip-label,
-.mc-pa-host:focus-within .mc-type-chip-label,
-.collection-card:hover .mc-type-chip-label,
-.collection-card:focus-within .mc-type-chip-label {
-    max-width: 40px;
-    opacity: 1;
-}
-@media (hover: none) {
-    .mc-type-chip,
-    .mc-type-chip-label {
-        transition: none;
-    }
-}
 .mc-media-card-meta > .mc-media-type-year,
 .fy-card-meta > .mc-media-type-year,
 .person-work-meta > .mc-media-type-year,
@@ -674,8 +606,8 @@
     gap: 8px;
     padding: 4px 8px 8px;
     font-size: var(--mc-fs-xs);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    letter-spacing: 0;
+    text-transform: none;
     color: var(--muted);
 }
 .mc-pa-menu-head strong {

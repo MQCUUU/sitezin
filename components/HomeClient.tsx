@@ -379,7 +379,7 @@ export default function HomeClient() {
       const extra = detailLabel(nextEvent);
 
       return {
-        eyebrow: days === 0 ? "É HOJE" : days === 1 ? "É AMANHÃ" : "ESTÁ CHEGANDO",
+        eyebrow: days === 0 ? "É hoje" : days === 1 ? "É amanhã" : "Está chegando",
         title: nextEvent.title,
         description: `${typeLabel(nextEvent)}${extra ? `, ${extra}` : ""}`,
         href: `/title/${nextEvent.media_type}/${nextEvent.tmdb_id}`,
@@ -392,7 +392,7 @@ export default function HomeClient() {
 
     if (kind === "queue" && want[0]) {
       return {
-        eyebrow: "DA SUA FILA",
+        eyebrow: "Da sua fila",
         title: want[0].title,
         description:
           totals.want === 1
@@ -407,7 +407,7 @@ export default function HomeClient() {
     }
 
     return {
-      eyebrow: "DESCUBRA ALGO NOVO",
+      eyebrow: "Descubra algo novo",
       title: librarySize > 0 ? "Que tal encontrar seu próximo título?" : "Comece seu catálogo",
       description:
         librarySize > 0

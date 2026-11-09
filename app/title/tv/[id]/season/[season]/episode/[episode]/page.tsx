@@ -7,7 +7,7 @@ import "@/styles/features/screen-kit.css";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Check, Clock, Eye, Loader2, Save, SkipForward, Star } from "lucide-react";
+import { ArrowLeft, Check, Clock, Eye, Loader2, Save, SkipBack, SkipForward, Star } from "lucide-react";
 
 import { Search } from "@/components/Search";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
@@ -16,6 +16,7 @@ import { getEpisodeReleaseStatus, type EpisodeSummary } from "@/lib/title-season
 import { BRAZIL_TIME_ZONE, dateKeyInTimeZone } from "@/lib/date-only";
 import { WatchNowButton } from "@/components/title/WatchNowButton";
 import type { LibraryItem, LooseTitleDetails } from "@/components/title";
+import { Button } from "@/components/ui/Button";
 
 type EpisodeProgressRow = {
   watched?: boolean;
@@ -62,6 +63,7 @@ export default function EpisodePage() {
   const [releasedCount, setReleasedCount] = useState(0);
   const [spoilerRevealed, setSpoilerRevealed] = useState(false);
   const [nextEpisode, setNextEpisode] = useState<{ season: number; episode: number } | null>(null);
+  const [prevEpisode, setPrevEpisode] = useState<{ season: number; episode: number } | null>(null);
 
   useEffect(() => {
     if (!paramsValid) {
@@ -118,6 +120,18 @@ export default function EpisodePage() {
         }
       }
       setNextEpisode(nextEp);
+
+      // E o anterior: o episódio de antes nesta temporada ou o último da temporada anterior.
+      let prevEp: { season: number; episode: number } | null = null;
+      if (episodesList.some((item) => item.episode_number === episodeNumber - 1)) {
+        prevEp = { season: seasonNumber, episode: episodeNumber - 1 };
+      } else if (episodeNumber === 1 && showData && Array.isArray(showData.seasons)) {
+        const previousSeason = showData.seasons.find(
+          (s: { season_number: number; episode_count?: number }) => s.season_number === seasonNumber - 1 && seasonNumber - 1 >= 1
+        );
+        if (previousSeason?.episode_count) prevEp = { season: seasonNumber - 1, episode: previousSeason.episode_count };
+      }
+      setPrevEpisode(prevEp);
 
       if (libraryData?.id) {
         const values = await apiFetch(`/api/episodes?library_id=${libraryData.id}&season=${seasonNumber}`, {
@@ -239,6 +253,17 @@ export default function EpisodePage() {
             Assistir agora
           </WatchNowButton>
 
+          {prevEpisode && (
+            <Link
+              href={`/title/tv/${params.id}/season/${prevEpisode.season}/episode/${prevEpisode.episode}`}
+              className="btn ghost episode-action-btn"
+              title={`Ir para o episódio ${prevEpisode.episode} da temporada ${prevEpisode.season}`}
+            >
+              <SkipBack size={16} aria-hidden="true" />
+              Episódio anterior
+            </Link>
+          )}
+
           {nextEpisode && (
             <Link
               href={`/title/tv/${params.id}/season/${nextEpisode.season}/episode/${nextEpisode.episode}`}
@@ -277,15 +302,15 @@ export default function EpisodePage() {
               <p className="ep-muted">{watchDisabledReason}: ainda não é possível marcar este episódio como assistido.</p>
             )}
             <div className="ep-actions">
-              <button
-                className="btn primary"
+              <Button variant="primary"
+               
                 disabled={saving || (watchActionDisabled && !progress?.watched)}
                 title={watchActionDisabled && !progress?.watched ? watchDisabledReason || undefined : undefined}
                 onClick={() => save(true)}
               >
                 {saving ? <Loader2 className="spin" size={16} /> : progress?.watched ? <Save size={16} /> : <Check size={16} />} {progress?.watched ? "Salvar alterações" : "Marcar como assistido"}
-              </button>
-              {progress?.watched && <button className="btn ghost" disabled={saving} onClick={() => save(false)}>Desmarcar assistido</button>}
+              </Button>
+              {progress?.watched && <Button variant="ghost" disabled={saving} onClick={() => save(false)}>Desmarcar assistido</Button>}
             </div>
           </>
         ) : (

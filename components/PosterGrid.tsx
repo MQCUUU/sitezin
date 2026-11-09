@@ -1,46 +1,24 @@
 "use client";
 
-
 import { useConfirm } from "@/components/ConfirmProvider";
 import "@/styles/features/library-page.css";
 import { removeFromLibrary } from "@/lib/library/actions";
-import { MediaPosterActions } from "@/components/media/MediaPosterActions";
-import { MediaPosterTags, MediaStatusTag, mediaTypeLabel } from "@/components/media/MediaBadges";
-import { TvNextEpisode } from "@/components/TvNextEpisode";
-import { SeriesProgressLine, SeriesProgressPanel } from "@/components/library/SeriesProgress";
-import Link from "next/link";
-import {
-  Heart,
-  Grid3X3,
-  LayoutGrid,
-  List,
-  Star,
-} from "lucide-react";
-
+import { SeriesProgressPanel } from "@/components/library/SeriesProgress";
+import { Heart, Grid3X3, LayoutGrid, List } from "lucide-react";
 import type { LibraryItem } from "@/lib/types";
 import { STATUS_LABELS } from "@/lib/types";
 import { useToast } from "@/components/ToastProvider";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 import { apiFetch } from "@/lib/api-client";
-
-import { Poster } from "@/components/Poster";
-import { posterLoading } from "@/lib/poster-loading";
 import { CarouselRail } from "@/components/CarouselRail";
-import {
-  MediaCard,
-  MediaCardImage,
-  MediaCardMeta,
-} from "@/components/media";
-
 import { useEffect, useState } from "react";
-
 import { MediaPreviewDialog } from "@/components/media/preview/MediaPreviewDialog";
 import { WatchProviderList } from "@/components/media/preview/WatchProviderList";
 import { fromLibraryItem } from "@/components/media/preview/adapters";
 import { normalizeWatchProviders } from "@/components/media/providers";
 import { LIBRARY_ACTION_COPY, removalConfirmOptions } from "@/lib/library/remove";
-import { genreName } from "@/lib/title-locale";
-
+import { Button } from "@/components/ui/Button";
+import { Card, ListItem } from "@/components/library/PosterGridItems";
 type ViewMode =
   | "grid"
   | "compact"
@@ -98,7 +76,6 @@ export function PosterGrid({
     setLocalItems(items);
   }, [items]);
 
-
   useEffect(() => {
     let cancelled =
       false;
@@ -145,8 +122,6 @@ export function PosterGrid({
     previewItem?.tmdb_id,
     previewItem?.media_type,
   ]);
-
-
 
   if (!localItems.length) {
     return (
@@ -651,7 +626,6 @@ export function PosterGrid({
     );
   }
 
-
   function toggleStatusMenuWithoutScroll(
     key: string | number
   ) {
@@ -807,19 +781,16 @@ export function PosterGrid({
         providers={<WatchProviderList data={normalizeWatchProviders(previewDetails?.watch_providers, "BR")} loading={previewDetailsLoading} />}
         extraActions={
           previewItem && (
-            <button
+            <Button
               type="button"
-              className={
-                previewItem.favorite
-                  ? "btn primary mc-preview-favorite-btn"
-                  : "btn mc-preview-favorite-btn"
-              }
+              variant={previewItem.favorite ? "primary" : "secondary"}
+              className="mc-preview-favorite-btn"
               onClick={() => toggleFavorite(previewItem)}
               disabled={processing === previewItem.library_id}
             >
               <Heart size={16} fill={previewItem.favorite ? "currentColor" : "none"} />
               {previewItem.favorite ? "Curtido" : "Curtir"}
-            </button>
+            </Button>
           )
         }
       />
@@ -828,166 +799,3 @@ export function PosterGrid({
   );
 }
 
-type CardActionProps = {
-  processing: string | number | null;
-  openStatusMenu: string | number | null;
-  onPreview: (item: LibraryItem) => void;
-  onToggleFavorite: (item: LibraryItem) => void;
-  onToggleStatusMenu: (key: string | number) => void;
-  onChangeStatus: (item: LibraryItem, status: string) => void;
-  onRequestRemove: (item: LibraryItem) => void;
-  onAddToList?: (item: LibraryItem) => void;
-};
-
-function ActionButtons({
-  item,
-  processing,
-  onPreview,
-  onToggleFavorite,
-  onChangeStatus,
-  onRequestRemove,
-  onAddToList,
-  inline = false,
-}: CardActionProps & { item: LibraryItem; inline?: boolean }) {
-  /*
-   * V2.3 — ações e menu de status vêm do componente PADRÃO do site
-   * (MediaPosterActions): portal + posição fixa + foco sem rolar.
-   */
-  return (
-    <MediaPosterActions
-      inline={inline}
-      title={item.title}
-      year={(item.media_type === "tv" ? item.first_air_date : item.release_date)?.slice(0, 4)}
-      inLibrary
-      status={item.status}
-      favorite={Boolean(item.favorite)}
-      busy={processing === item.library_id}
-      onPreview={() => onPreview(item)}
-      onMarkWatched={() => onChangeStatus(item, "watched")}
-      onToggleFavorite={() => onToggleFavorite(item)}
-      onChangeStatus={(status) => onChangeStatus(item, status)}
-      onRemove={() => onRequestRemove(item)}
-      onAddToList={onAddToList ? () => onAddToList(item) : undefined}
-    />
-  );
-}
-
-function Card({ item, position, ...actionProps }: CardActionProps & { item: LibraryItem; position?: number }) {
-  const date = item.media_type === "tv" ? item.first_air_date : item.release_date;
-  const year = date ? new Date(date).getFullYear() : null;
-
-  return (
-    <MediaCard>
-      <MediaCardImage>
-        <Link href={`/title/${item.media_type}/${item.tmdb_id}`} className="poster-link">
-          <Poster path={item.poster_path} alt={item.title} sizes="(max-width:700px) 46vw, (max-width:1100px) 24vw, 170px" {...posterLoading(position)} />
-        </Link>
-
-        <MediaPosterTags type={item.media_type} status={item.status} />
-        <ActionButtons item={item} {...actionProps} />
-      </MediaCardImage>
-      <Link href={`/title/${item.media_type}/${item.tmdb_id}`} className="card-title">
-        {item.title}
-      </Link>
-
-      {/* Fase 4: uma linha que nunca quebra — tipo e ano; sua nota só se existir; curtido = só o coração. */}
-      <MediaCardMeta>
-        <span className="mc-media-type-year">
-          {mediaTypeLabel(item.media_type)}
-          {year ? ` ${year}` : ""}
-        </span>
-        {item.personal_rating !== null && item.personal_rating !== undefined ? (
-          <span className="rating" title="Sua nota">
-            <Star size={12} fill="currentColor" aria-hidden="true" />
-            {Number(item.personal_rating).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-          </span>
-        ) : null}
-
-        {item.favorite && (
-          <span className="favorite-label" role="img" aria-label="Curtido" title="Curtido">
-            <Heart size={13} fill="currentColor" aria-hidden="true" />
-          </span>
-        )}
-      </MediaCardMeta>
-      {item.library_progress !== undefined ? (
-        <SeriesProgressLine progress={item.library_progress} />
-      ) : (
-        <TvNextEpisode progress={item.progress} runtime={item.episode_runtime} />
-      )}
-    </MediaCard>
-  );
-}
-
-/** `media.genres` é `text[]` no banco; objetos {id,name} (TMDB) também são aceitos. Vazios nunca viram chip. */
-function genreNames(genres: unknown): string[] {
-  if (!Array.isArray(genres)) return [];
-
-  // Fase 4: gêneros de série do TMDB em português ("Action & Adventure" → "Ação e aventura").
-  return [...new Set(genres.map((g) => genreName((typeof g === "string" ? g : (g as { name?: string })?.name || "").trim())).filter(Boolean))];
-}
-
-function ListItem({ item, ...actionProps }: CardActionProps & { item: LibraryItem }) {
-  const date = item.media_type === "tv" ? item.first_air_date : item.release_date;
-  const year = date ? new Date(date).getFullYear() : null;
-
-  return (
-    <div className="library-list-item">
-      <Link href={`/title/${item.media_type}/${item.tmdb_id}`} className="library-list-poster">
-        <Poster path={item.poster_path} alt={item.title} sizes="80px" tmdbSize="w342" />
-      </Link>
-
-      <div className="library-list-info">
-        <div className="library-list-top">
-          <div>
-            <Link href={`/title/${item.media_type}/${item.tmdb_id}`} className="library-list-title">
-              {item.title}
-            </Link>
-          </div>
-
-          <ActionButtons item={item} {...actionProps} inline />
-        </div>
-
-        <div className="library-list-meta">
-          <MediaStatusTag status={item.status} />
-
-          <span className="library-list-kind">
-            {mediaTypeLabel(item.media_type)}
-            {year ? ` ${year}` : ""}
-          </span>
-
-          {item.personal_rating !== null && item.personal_rating !== undefined && (
-            <span className="rating" title="Sua nota">
-              <Star size={12} fill="currentColor" aria-hidden="true" />
-              {Number(item.personal_rating).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-            </span>
-          )}
-
-          {item.tmdb_rating !== undefined && item.tmdb_rating !== null && Number(item.tmdb_rating) > 0 && (
-            <span className="muted">TMDB {Number(item.tmdb_rating).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>
-          )}
-
-          {item.favorite && (
-            <span className="favorite-label">
-              <Heart size={12} fill="currentColor" aria-hidden="true" />
-              Curtido
-            </span>
-          )}
-        </div>
-
-        {item.library_progress ? <SeriesProgressLine progress={item.library_progress} /> : null}
-
-        {item.overview && <p className="library-list-overview lib-clamp-2">{item.overview}</p>}
-
-        {genreNames(item.genres).length > 0 && (
-          <div className="library-list-genres">
-            {genreNames(item.genres).slice(0, 4).map((name) => (
-              <span key={name} className="chip">
-                {name}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}

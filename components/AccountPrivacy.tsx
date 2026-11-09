@@ -16,6 +16,7 @@ import {
   Trash2,
   UserRound,
 } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 
 import { authClient } from "@/lib/auth/client";
 import { useToast } from "@/components/ToastProvider";
@@ -274,14 +275,14 @@ export function AccountPrivacy() {
               <span>Nome</span>
               <input value={displayName} maxLength={60} onChange={(event) => setDisplayName(event.target.value)} />
             </label>
-            <button
+            <Button
               type="submit"
-              className="btn"
+             
               disabled={savingProfile || displayName.trim() === account.displayName}
             >
               {savingProfile ? <Loader2 size={14} className="spin" aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}
               Salvar nome
-            </button>
+            </Button>
           </form>
 
           <div className="account-settings-card">
@@ -384,14 +385,14 @@ export function AccountPrivacy() {
             </p>
           )}
 
-          <button
+          <Button variant="primary"
             type="submit"
-            className="btn primary"
+           
             disabled={savingPassword || !currentPassword || newPassword.length < 8 || newPassword !== confirmPassword}
           >
             {savingPassword ? <Loader2 size={14} className="spin" aria-hidden="true" /> : <KeyRound size={14} aria-hidden="true" />}
             Alterar senha
-          </button>
+          </Button>
         </form>
       </section>
 
@@ -418,10 +419,10 @@ export function AccountPrivacy() {
               seguidores, notificações e preferências.
             </span>
           </div>
-          <button type="button" className="btn danger" onClick={() => setDeleteOpen(true)}>
+          <Button variant="danger" type="button" onClick={() => setDeleteOpen(true)}>
             <Trash2 size={14} aria-hidden="true" />
             Excluir conta
-          </button>
+          </Button>
         </div>
       </section>
 
@@ -436,7 +437,6 @@ export function AccountPrivacy() {
         <div className="mycatalog-confirm-icon danger" aria-hidden="true">
           <Trash2 size={20} />
         </div>
-        <div className="eyebrow">EXCLUSÃO PERMANENTE</div>
         <h3 id="account-delete-title">Excluir sua conta do MyCatalog?</h3>
         <div id="account-delete-desc">
           <p className="muted">
@@ -460,18 +460,18 @@ export function AccountPrivacy() {
           />
         </label>
         <div className="mycatalog-confirm-actions">
-          <button type="button" className="btn" disabled={deleting} onClick={closeDelete}>
+          <Button type="button" disabled={deleting} onClick={closeDelete}>
             Cancelar
-          </button>
-          <button
+          </Button>
+          <Button variant="danger"
             type="button"
-            className="btn danger"
+           
             disabled={deleting || deleteConfirm !== "EXCLUIR"}
             onClick={deleteAccount}
           >
             {deleting ? <Loader2 size={14} className="spin" aria-hidden="true" /> : <Trash2 size={14} aria-hidden="true" />}
             Excluir definitivamente
-          </button>
+          </Button>
         </div>
       </Dialog>
     </>

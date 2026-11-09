@@ -9,6 +9,7 @@ import Link from "next/link";
 import { Check, Loader2, Users } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
+import { Button } from "@/components/ui/Button";
 
 /*
  * E1 — SocialSettings deixou de reimplementar a lista de
@@ -122,9 +123,9 @@ export function SocialSettings() {
         {status === "error" && (
           <div className="set-inline-error" role="alert">
             <span>Não foi possível carregar sua privacidade.</span>
-            <button type="button" className="btn" onClick={() => void load()}>
+            <Button type="button" onClick={() => void load()}>
               Tentar de novo
-            </button>
+            </Button>
           </div>
         )}
 
@@ -162,10 +163,10 @@ export function SocialSettings() {
             </p>
 
             <div className="set-save-row">
-              <button type="button" className="btn primary" disabled={saving || !dirty} onClick={saveSettings}>
+              <Button variant="primary" type="button" disabled={saving || !dirty} onClick={saveSettings}>
                 {saving ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <Check size={16} aria-hidden="true" />}{" "}
                 Salvar privacidade
-              </button>
+              </Button>
               <span className="muted" role="status" aria-live="polite">
                 {dirty ? "Alterações não salvas." : ""}
               </span>

@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { Button } from "@/components/ui/Button";
 
 import {
   ArchiveRestore,
@@ -460,9 +461,9 @@ if (
             </p>
           </div>
 
-          <button
+          <Button variant="primary"
             type="button"
-            className="btn primary"
+           
             disabled={
               exporting !==
               null
@@ -486,7 +487,7 @@ if (
             )}
 
             Exportar backup
-          </button>
+          </Button>
         </article>
 
         <article className="data-backup-card">
@@ -506,9 +507,9 @@ if (
             </p>
           </div>
 
-          <button
+          <Button
             type="button"
-            className="btn"
+           
             disabled={
               exporting !==
               null
@@ -532,7 +533,7 @@ if (
             )}
 
             Exportar CSV
-          </button>
+          </Button>
         </article>
 
         <article className="data-backup-card restore">
@@ -565,9 +566,9 @@ if (
             }
           />
 
-          <button
+          <Button
             type="button"
-            className="btn"
+           
             onClick={() =>
               inputRef.current
                 ?.click()
@@ -578,7 +579,7 @@ if (
             />
 
             Selecionar backup
-          </button>
+          </Button>
         </article>
 
         <article className="data-backup-card restore">
@@ -600,9 +601,9 @@ if (
             onChange={selectLetterboxd}
           />
 
-          <button type="button" className="btn" onClick={() => letterboxdInputRef.current?.click()}>
+          <Button type="button" onClick={() => letterboxdInputRef.current?.click()}>
             <Upload size={16} /> Selecionar CSV
-          </button>
+          </Button>
         </article>
       </div>
 
@@ -631,9 +632,6 @@ if (
               />
             </div>
 
-            <div className="eyebrow">
-              RESTAURAR BACKUP
-            </div>
 
             <h3>
               Importar {pendingName}?
@@ -644,9 +642,9 @@ if (
             </p>
 
             <div className="mycatalog-confirm-actions">
-              <button
+              <Button
                 type="button"
-                className="btn"
+               
                 onClick={() => {
                   setPendingBackup(
                     null
@@ -658,11 +656,11 @@ if (
                 }}
               >
                 Cancelar
-              </button>
+              </Button>
 
-              <button
+              <Button variant="primary"
                 type="button"
-                className="btn primary"
+               
                 disabled={
                   importing
                 }
@@ -682,7 +680,7 @@ if (
                 )}
 
                 Restaurar
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -692,18 +690,17 @@ if (
         <div className="mycatalog-confirm-backdrop">
           <div className="mycatalog-confirm-modal">
             <div className="mycatalog-confirm-icon"><FileSpreadsheet size={20} /></div>
-            <div className="eyebrow">IMPORTAR LETTERBOXD</div>
             <h3>Importar {letterboxdName}?</h3>
             <p className="muted">
               Encontramos {letterboxdRows.length} registros. Exemplo: {letterboxdRows.slice(0, 3).map((item) => `${item.name}${item.year ? ` (${item.year})` : ""}`).join(", ")}.
             </p>
             <p className="muted">Os títulos existentes serão mesclados e nenhum dado atual será apagado.</p>
             <div className="mycatalog-confirm-actions">
-              <button type="button" className="btn" disabled={letterboxdImporting} onClick={() => { setLetterboxdRows([]); setLetterboxdName(""); }}>Cancelar</button>
-              <button type="button" className="btn primary" disabled={letterboxdImporting} onClick={importLetterboxd}>
+              <Button type="button" disabled={letterboxdImporting} onClick={() => { setLetterboxdRows([]); setLetterboxdName(""); }}>Cancelar</Button>
+              <Button variant="primary" type="button" disabled={letterboxdImporting} onClick={importLetterboxd}>
                 {letterboxdImporting ? <Loader2 size={16} className="spin" /> : <Upload size={16} />}
                 {letterboxdImporting ? "Localizando filmes..." : "Importar"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

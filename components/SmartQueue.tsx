@@ -9,8 +9,9 @@ import Link from "next/link";
 import { Check, EyeOff, Loader2, Play, Plus, Shuffle, Sparkles, Star, X } from "lucide-react";
 import { useModal } from "@/hooks/useModal";
 import { Poster } from "@/components/Poster";
-import { MediaStatusTag, MediaTypeTag } from "@/components/media/MediaBadges";
+import { MediaStatusTag, mediaTypeLabel } from "@/components/media/MediaBadges";
 import { useToast } from "@/components/ToastProvider";
+import { Button } from "@/components/ui/Button";
 
 /*
  * "O que assistir agora?" (dentro de /for-you; sem item novo na navegação).
@@ -225,9 +226,9 @@ export function SmartQueue({ genres }: { genres: string[] }) {
           <p className="muted">Diga quanto tempo você tem e receba até 3 sugestões feitas para o seu gosto.</p>
         </div>
 
-        <button type="button" className="btn fy-smart-queue-btn" onClick={() => setOpen(true)}>
+        <Button type="button" className="fy-smart-queue-btn" onClick={() => setOpen(true)}>
           Sugerir agora
-        </button>
+        </Button>
       </section>
 
       {open && (
@@ -241,9 +242,9 @@ export function SmartQueue({ genres }: { genres: string[] }) {
           >
             <header className="smart-queue-head">
               <h2 id="smart-queue-title">O que assistir agora?</h2>
-              <button type="button" className="btn icon" onClick={() => setOpen(false)} aria-label="Fechar">
+              <Button type="button" className="icon" onClick={() => setOpen(false)} aria-label="Fechar">
                 <X size={16} />
-              </button>
+              </Button>
             </header>
 
             <div className="smart-queue-filters">
@@ -308,14 +309,14 @@ export function SmartQueue({ genres }: { genres: string[] }) {
             </div>
 
             <div className="smart-queue-actions">
-              <button type="button" className="btn primary" onClick={() => run(false)} disabled={loading}>
+              <Button variant="primary" type="button" onClick={() => run(false)} disabled={loading}>
                 {loading ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
                 Sugerir
-              </button>
-              <button type="button" className="btn" onClick={() => run(true)} disabled={loading}>
+              </Button>
+              <Button type="button" onClick={() => run(true)} disabled={loading}>
                 <Shuffle size={16} />
                 Surpreenda-me
-              </button>
+              </Button>
             </div>
 
             <div className="smart-queue-results" aria-live="polite" data-rec-tool="smart_queue">
@@ -358,7 +359,6 @@ export function SmartQueue({ genres }: { genres: string[] }) {
 
                         <div className="smart-queue-info">
                           <div className="smart-queue-tags">
-                            <MediaTypeTag type={result.media_type} />
                             {status ? <MediaStatusTag status={status} /> : <span className="mc-tag mc-tag--info">Novidade</span>}
                           </div>
 
@@ -371,10 +371,11 @@ export function SmartQueue({ genres }: { genres: string[] }) {
                           </Link>
 
                           <span className="muted smart-queue-meta">
-                            {result.year ? `${result.year}` : ""}
+                            {mediaTypeLabel(result.media_type)}
+                            {result.year ? ` ${result.year}` : ""}
                             {result.vote_average ? (
                               <>
-                                {result.year ? ", " : ""}
+                                {", "}
                                 <Star size={12} fill="currentColor" aria-hidden="true" /> {Number(result.vote_average).toFixed(1)}
                               </>
                             ) : null}
@@ -398,17 +399,17 @@ export function SmartQueue({ genres }: { genres: string[] }) {
 
                           <div className="smart-queue-card-actions">
                             {result.source === "library" && result.library_id && status !== "watching" && status !== "rewatching" && (
-                              <button type="button" className="btn primary" disabled={busy} onClick={() => startWatching(result)}>
+                              <Button variant="primary" type="button" disabled={busy} onClick={() => startWatching(result)}>
                                 {busy ? <Loader2 size={14} className="spin" /> : <Play size={14} />}
                                 Começar a assistir
-                              </button>
+                              </Button>
                             )}
 
                             {result.source === "discover" && !addedStatus && (
-                              <button type="button" className="btn primary" disabled={busy} onClick={() => addToQueue(result)}>
+                              <Button variant="primary" type="button" disabled={busy} onClick={() => addToQueue(result)}>
                                 {busy ? <Loader2 size={14} className="spin" /> : <Plus size={14} />}
                                 Adicionar à fila
-                              </button>
+                              </Button>
                             )}
 
                             {addedStatus && (
@@ -426,10 +427,10 @@ export function SmartQueue({ genres }: { genres: string[] }) {
                             </Link>
 
                             {result.source === "discover" && !addedStatus && (
-                              <button type="button" className="btn ghost" disabled={busy} onClick={() => notInterested(result)}>
+                              <Button variant="ghost" type="button" disabled={busy} onClick={() => notInterested(result)}>
                                 <EyeOff size={14} />
                                 Não tenho interesse
-                              </button>
+                              </Button>
                             )}
                           </div>
                         </div>
