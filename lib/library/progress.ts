@@ -82,9 +82,9 @@ export function libraryProgress(input: {
 
   if (progress.state === "in_progress" && progress.next) {
     const season = seasonStats(structure, watched, progress.next.season);
-    const fraction = season && season.total ? ` · ${season.watched}/${season.total}` : "";
+    const fraction = season && season.total ? `, ${season.watched}/${season.total}` : "";
     const code = episodeCode(progress.next.season, progress.next.episode);
-    const totals = progress.total ? ` · ${progress.watched} de ${progress.total} no total` : "";
+    const totals = progress.total ? `, ${progress.watched} de ${progress.total} no total` : "";
     const seasonDetail = season && season.total ? `${season.watched} de ${plural(season.total, "episódio", "episódios")} da temporada ${season.number}${totals}` : null;
 
     if (status === "dropped") {

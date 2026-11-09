@@ -124,7 +124,7 @@ export function AvatarSettings() {
           <Trash2 size={16} /> Remover
         </button>}
       </div>
-      <small>JPG, PNG ou WebP · máximo de 5 MB</small>
+      <small>JPG, PNG ou WebP, até 5 MB</small>
     </div>
   </section>;
 }

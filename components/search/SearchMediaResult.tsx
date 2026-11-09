@@ -51,11 +51,11 @@ export function SearchMediaResult({
       <div className="search-result-info">
         <b>{title}</b>
         <div className="muted">
-          {year || "Ano desconhecido"} · {isMovie ? "Filme" : "Série"}
-          {item.reason ? ` · ${item.reason}` : ""}
+          {isMovie ? "Filme" : "Série"} {year || "sem ano"}
+          {item.reason ? `, ${item.reason}` : ""}
           {typeof item.vote_average === "number" && item.vote_average > 0 && (
             <>
-              {" · "}
+              {", "}
               <span title="Média TMDB">
                 <Star size={12} fill="currentColor" aria-hidden="true" /> {item.vote_average.toFixed(1)} TMDB
               </span>

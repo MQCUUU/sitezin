@@ -381,7 +381,7 @@ export default function HomeClient() {
       return {
         eyebrow: days === 0 ? "É HOJE" : days === 1 ? "É AMANHÃ" : "ESTÁ CHEGANDO",
         title: nextEvent.title,
-        description: `${typeLabel(nextEvent)}${extra ? ` · ${extra}` : ""}`,
+        description: `${typeLabel(nextEvent)}${extra ? `, ${extra}` : ""}`,
         href: `/title/${nextEvent.media_type}/${nextEvent.tmdb_id}`,
         action: "Ver lançamento",
         meta: personalLine(nextEvent),
@@ -397,7 +397,7 @@ export default function HomeClient() {
         description:
           totals.want === 1
             ? "O único título na sua lista Quero assistir."
-            : `O último a entrar na sua lista Quero assistir · ${totals.want} títulos esperando.`,
+            : `O último a entrar na sua lista Quero assistir, com ${totals.want} títulos esperando.`,
         href: `/title/${want[0].media_type}/${want[0].tmdb_id}`,
         action: "Ver título",
         meta: null,

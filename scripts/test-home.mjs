@@ -143,7 +143,7 @@ test("hero: filme Assistindo — sem campos de episódio, sem % inventado, com d
   const h = activeHero(item);
   assert.equal(isActionable(item), true);
   assert.equal(h.bar, null);
-  assert.equal(h.meta, "Filme · 2h 15min");
+  assert.equal(h.meta, "Filme, 2h 15min");
   assert.doesNotMatch(`${h.description} ${h.meta}`, /epis|T\d+:E|%/i);
   assert.equal(h.href, `/title/movie/${item.tmdb_id}`);
   assert.equal(activeHero(await one(movieRow({ title: "Sem duração", runtime: null }))).meta, "Filme");
@@ -268,8 +268,8 @@ test("Home × Library: mesmo título → mesmo progresso e mesmo próximo episó
     assert.deepEqual(item.library_progress, libraryProgress({ status: "watching", progress, structure, watched, completedSeasons: 0 }));
     if (item.library_progress.next) assert.match(activeHero(item).description, new RegExp(`T${item.library_progress.next.season}:E0?${item.library_progress.next.episode}$`));
   });
-  assert.equal(items[0].library_progress.card, "Próximo: T4:E04 · 3/8");
-  assert.equal(items[1].library_progress.card, "Próximo: T2:E08 · 7/20");
+  assert.equal(items[0].library_progress.card, "Próximo: T4:E04, 3/8");
+  assert.equal(items[1].library_progress.card, "Próximo: T2:E08, 7/20");
   assert.equal(items[4].library_progress.state, "caught_up");
   assert.equal(items[5].library_progress.state, "completed");
   assert.ok(!("_seasons" in items[0]) && !("_last_episode" in items[0]) && !("_series_status" in items[0]), "colunas auxiliares nunca vão ao client");
@@ -296,7 +296,7 @@ test("Retomar: aparece com 2+ ativos; com 1 ativo que já é o destaque, não re
 test("card 'Em andamento' não repete o destaque", async () => {
   const { items } = await homeItems([tvRow({ title: "Hero", watched: [[1, 1]] }), tvRow({ title: "Outra", watched: eps([[1, 1, 3]]) })]);
   const hero = pickHeroItem(items);
-  assert.equal(watchingSummaryLine(items, hero), "Outra · T1:E04");
+  assert.equal(watchingSummaryLine(items, hero), "Outra, T1:E04");
   assert.equal(watchingSummaryLine([items[0]], items[0]), "Ver na Biblioteca");
   const movies = await homeItems([movieRow({ title: "H" }), movieRow({ title: "M2" })]);
   assert.equal(watchingSummaryLine(movies.items, movies.items[0]), "Também: M2");

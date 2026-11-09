@@ -127,7 +127,7 @@ export function HiddenTitlesSettings() {
             <>
               <p className="muted" aria-live="polite">
                 {data.total} {data.total === 1 ? "título oculto" : "títulos ocultos"}
-                {data.items.length < data.total ? ` · mostrando ${data.items.length}` : ""}.
+                {data.items.length < data.total ? `, mostrando ${data.items.length}` : ""}.
               </p>
               <div className="account-hidden-list">
                 {data.items.map((item) => (
@@ -143,7 +143,7 @@ export function HiddenTitlesSettings() {
                       <strong>{item.title}</strong>
                       <span>
                         {item.media_type === "tv" ? "Série" : "Filme"}
-                        {item.year ? ` · ${item.year}` : ""}
+                        {item.year ? ` ${item.year}` : ""}
                       </span>
                     </div>
                     <button

@@ -25,69 +25,6 @@
 }
 
 /* =====================================================================
-   Toolbar / tabs
-   ===================================================================== */
-
-.mc-discover-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--mc-space-8);
-  padding: var(--mc-space-8) var(--mc-space-16);
-  min-height: 40px;
-  border: none;
-  border-radius: var(--mc-radius-pill);
-  background: transparent;
-  color: var(--mc-color-text-secondary);
-  font-size: var(--mc-text-body-small-size);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background var(--mc-duration-fast) var(--mc-ease-standard),
-    color var(--mc-duration-fast) var(--mc-ease-standard);
-}
-
-/* =====================================================================
-   Shortcuts
-   ===================================================================== */
-
-.mc-discover-shortcut {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--mc-space-6);
-  flex: none;
-  padding: var(--mc-space-6) var(--mc-space-12);
-  min-height: 34px;
-  border-radius: var(--mc-radius-pill);
-  border: var(--mc-border-default);
-  background: var(--mc-color-surface);
-  color: var(--mc-color-text-secondary);
-  font-size: var(--mc-text-caption-size);
-  font-weight: 600;
-  cursor: pointer;
-  transition: border-color var(--mc-duration-fast) var(--mc-ease-standard),
-    color var(--mc-duration-fast) var(--mc-ease-standard),
-    background var(--mc-duration-fast) var(--mc-ease-standard);
-}
-
-/* =====================================================================
-   Filters panel
-   ===================================================================== */
-
-.mc-discover-toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--mc-space-12);
-  padding: var(--mc-space-12) var(--mc-space-16);
-  border-radius: var(--mc-radius-md);
-  border: var(--mc-border-default);
-  background: var(--mc-color-surface-muted);
-  color: var(--mc-color-text-secondary);
-  text-align: left;
-  cursor: pointer;
-  transition: border-color var(--mc-duration-fast) var(--mc-ease-standard),
-    background var(--mc-duration-fast) var(--mc-ease-standard);
-}
-
-/* =====================================================================
    Results summary (focus anchor)
    ===================================================================== */
 
@@ -117,18 +54,6 @@
   outline: none;
   box-shadow: var(--mc-focus-ring);
   border-radius: var(--mc-radius-sm);
-}
-
-/* =====================================================================
-   Empty / error states
-   ===================================================================== */
-
-.mc-discover-empty {
-  gap: var(--mc-space-8);
-}
-
-.mc-discover-empty--error svg {
-  color: var(--mc-color-danger);
 }
 
 /* =====================================================================

@@ -2033,7 +2033,7 @@ export function PickForMe({ inherit, hideTrigger = false, openRequest = 0, onMou
 
                     {inheritedSummary.length > 0 ? (
                       <p className="pick-inherited" role="note">
-                        Usando seus filtros de Descobrir: <strong>{inheritedSummary.join(" · ")}</strong>. Ajuste abaixo se quiser.
+                        Usando seus filtros de Descobrir: <strong>{inheritedSummary.join(", ")}</strong>. Ajuste abaixo se quiser.
                       </p>
                     ) : null}
                   </div>

@@ -10,11 +10,11 @@ export function tvProgressLabel(progress: TvProgress | null | undefined): string
   if (!progress) return null;
 
   if (progress.state === "in_progress" && progress.next) {
-    return `S${progress.next.season} E${progress.next.episode} · Próximo episódio`;
+    return `S${progress.next.season} E${progress.next.episode}, próximo episódio`;
   }
 
   if (progress.state === "not_started" && progress.next) {
-    return `S${progress.next.season} E${progress.next.episode} · Começar`;
+    return `S${progress.next.season} E${progress.next.episode}, começar`;
   }
 
   if (progress.state === "rewatching") return "Reassistindo";
@@ -43,7 +43,7 @@ export function TvNextEpisode({
       <span className="tv-next-episode-label">{label}</span>
       {progress.total ? (
         <span className="tv-next-episode-detail">
-          {progress.watched}/{progress.total} episódios{runtime ? ` · ~${runtime} min` : ""}
+          {progress.watched}/{progress.total} episódios{runtime ? `, cerca de ${runtime} min` : ""}
         </span>
       ) : null}
       {percent !== null && progress.total ? (

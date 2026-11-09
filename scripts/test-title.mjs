@@ -191,7 +191,7 @@ test("série sintética: Título = Biblioteca = Quick View = Home → Próximo T
   assert.deepEqual(title.library_progress, list.library_progress, "Título = Biblioteca (= Quick View, que usa library_progress)");
   assert.deepEqual(title.progress, home.progress, "Título = Home (contagem global)");
   assert.equal(title.library_progress.title, "Próximo episódio: T2:E04");
-  assert.equal(list.library_progress.card, "Próximo: T2:E04 · 3/15");
+  assert.equal(list.library_progress.card, "Próximo: T2:E04, 3/15");
   assert.equal(`${title.progress.watched}/${title.progress.total}`, "18/30");
   const hero = activeHero({ ...home, ...home.media, library_id: home.id });
   assert.equal(hero.description, "Próximo episódio: T2:E04");

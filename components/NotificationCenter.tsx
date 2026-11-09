@@ -34,7 +34,7 @@ const when = (notice: Notice) =>
           ? { dateStyle: "medium", timeStyle: "short" }
           : { dateStyle: "long", timeZone: "UTC" }
       ).format(new Date(notice.release_at)) +
-      (notice.release_precision === "date" ? " · horário ainda não divulgado" : "")
+      (notice.release_precision === "date" ? ", horário ainda não divulgado" : "")
     : "Data ainda não divulgada";
 
 export function NotificationCenter() {
@@ -68,7 +68,7 @@ export function NotificationCenter() {
       ) {
         sessionStorage.setItem(`mycatalog:notice:${latest.id}`, "1");
         toast.info(latest.title, {
-          description: `${latest.message} · ${when(latest)}`,
+          description: `${latest.message}, ${when(latest)}`,
           actionLabel: "Ver",
           onAction: () => setOpen(true),
           duration: 10000,

@@ -176,7 +176,7 @@ export function DataBackup() {
       setLetterboxdName("");
       toast.success("Letterboxd importado", {
         description:
-          `${total.imported} adicionados · ${total.updated} atualizados · ${total.history} visualizações novas no Diário · ${total.notFound} não encontrados` +
+          `${total.imported} adicionados, ${total.updated} atualizados, ${total.history} visualizações novas no Diário, ${total.notFound} não encontrados` +
           (missing.length ? ` (ex.: ${missing.join(", ")})` : "") +
           ".",
         duration: 12000,
@@ -393,7 +393,7 @@ if (
         "Backup restaurado",
         {
           description:
-            `${data.restored?.library_added || 0} títulos adicionados · ${data.restored?.library_updated || 0} atualizados · ${data.restored?.library_kept || 0} mantidos (a versão da conta era mais recente) · ${data.restored?.watch_history || 0} visualizações · ${data.restored?.episodes || 0} episódios.` +
+            `${data.restored?.library_added || 0} títulos adicionados, ${data.restored?.library_updated || 0} atualizados, ${data.restored?.library_kept || 0} mantidos (a versão da conta era mais recente), ${data.restored?.watch_history || 0} visualizações · ${data.restored?.episodes || 0} episódios.` +
             (data.restored?.catalog_unresolved
               ? ` ${data.restored.catalog_unresolved} títulos não puderam ser confirmados no catálogo agora: restaure o mesmo arquivo de novo para continuar (nada é duplicado).`
               : ""),

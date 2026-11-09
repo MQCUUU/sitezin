@@ -32,13 +32,13 @@ test("Quero assistir sem episódios: nada no card (o status já diz)", () => {
 
 test("T1:E1 assistido → próximo T1:E02 · 1/10", () => {
   const p = run({ r: ENDED, watched: eps([[1, 1, 1]]) });
-  assert.equal(p.card, "Próximo: T1:E02 · 1/10");
+  assert.equal(p.card, "Próximo: T1:E02, 1/10");
   assert.equal(p.title, "Próximo episódio: T1:E02");
-  assert.equal(p.detail, "1 de 10 episódios da temporada 1 · 1 de 20 no total");
+  assert.equal(p.detail, "1 de 10 episódios da temporada 1, 1 de 20 no total");
 });
 
 test("meio da temporada 2", () => {
-  assert.equal(run({ r: ENDED, watched: eps([[1, 1, 10], [2, 1, 4]]) }).card, "Próximo: T2:E05 · 4/10");
+  assert.equal(run({ r: ENDED, watched: eps([[1, 1, 10], [2, 1, 4]]) }).card, "Próximo: T2:E05, 4/10");
 });
 
 test("buraco não é pulado (E1 ✓, E2 ✗, E3 ✓ → próximo E2)", () => {
@@ -46,7 +46,7 @@ test("buraco não é pulado (E1 ✓, E2 ✗, E3 ✓ → próximo E2)", () => {
 });
 
 test("temporada completa → próximo é o E01 da seguinte", () => {
-  assert.equal(run({ r: ENDED, watched: eps([[1, 1, 10]]) }).card, "Próximo: T2:E01 · 0/10");
+  assert.equal(run({ r: ENDED, watched: eps([[1, 1, 10]]) }).card, "Próximo: T2:E01, 0/10");
 });
 
 test("último episódio de série encerrada → 'Série concluída'", () => {
@@ -73,13 +73,13 @@ test("série em andamento em dia (episódios futuros não contam) → 'Você est
 });
 
 test("episódio futuro: temporada no ar mostra só os exibidos (x/4, não x/8)", () => {
-  assert.equal(run({ r: AIRING, watched: eps([[1, 1, 10], [2, 1, 10], [3, 1, 2]]) }).card, "Próximo: T3:E03 · 2/4");
+  assert.equal(run({ r: AIRING, watched: eps([[1, 1, 10], [2, 1, 10], [3, 1, 2]]) }).card, "Próximo: T3:E03, 2/4");
   assert.equal(seasonStats(tvStructureFromRaw(AIRING), [], 3).total, 4);
 });
 
 test("abandonada com episódios → 'Parou na T2 · 4/10' (sem tom de erro)", () => {
   const p = run({ r: ENDED, watched: eps([[1, 1, 10], [2, 1, 4]]), status: "dropped" });
-  assert.equal(p.card, "Parou na T2 · 4/10");
+  assert.equal(p.card, "Parou na T2, 4/10");
   assert.doesNotMatch(p.card + p.title, /falh|erro|abandon/i);
 });
 

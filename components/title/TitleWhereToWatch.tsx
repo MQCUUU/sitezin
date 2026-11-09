@@ -76,7 +76,7 @@ export function TitleWhereToWatch({ type, details }: { type: TitleType; details:
         <header className="title-where-head">
           <div>
             <h2 id={titleId}>Onde assistir</h2>
-            <p>{title} · no Brasil</p>
+            <p>{title}, no Brasil</p>
           </div>
 
           <button type="button" className="title-where-close" onClick={close} aria-label="Fechar">

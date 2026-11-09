@@ -124,12 +124,12 @@ function EpisodeRow({
         <EpisodeStill episode={episode} />
         <div>
           <b>
-            E{episode.episode_number} · {episode.name || `Episódio ${episode.episode_number}`}
+            E{episode.episode_number}: {episode.name || `Episódio ${episode.episode_number}`}
           </b>
 
           <small>
             {formatEpisodeDate(episode.air_date)}
-            {episode.runtime ? ` · ${episode.runtime} min` : ""}
+            {episode.runtime ? `, ${episode.runtime} min` : ""}
             {isFuture && (
               <span className="episode-future-badge">
                 <Clock size={12} aria-hidden="true" /> Futuro

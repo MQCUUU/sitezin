@@ -91,7 +91,7 @@ export function activeHero(item: HomeItem): ActiveHero {
       description: rewatching ? "Você está reassistindo este filme." : "Você marcou este filme como Assistindo.",
       href: titleHref,
       action: "Continuar",
-      meta: runtime ? `Filme · ${runtime}` : "Filme",
+      meta: runtime ? `Filme, ${runtime}` : "Filme",
       bar: null,
     };
   }
@@ -261,7 +261,7 @@ export function watchingSummaryLine(active: HomeItem[], hero: HomeItem | null): 
   const others = active.filter((item) => item !== hero);
   const withNext = others.find((item) => item.library_progress?.state === "in_progress" && item.library_progress.next);
 
-  if (withNext?.library_progress?.next) return `${withNext.title} · ${code(withNext.library_progress.next)}`;
+  if (withNext?.library_progress?.next) return `${withNext.title}, ${code(withNext.library_progress.next)}`;
   if (others[0]) return `Também: ${others[0].title}`;
 
   return "Ver na Biblioteca";

@@ -374,12 +374,12 @@ export function SmartQueue({ genres }: { genres: string[] }) {
                             {result.year ? `${result.year}` : ""}
                             {result.vote_average ? (
                               <>
-                                {result.year ? " · " : ""}
+                                {result.year ? ", " : ""}
                                 <Star size={12} fill="currentColor" aria-hidden="true" /> {Number(result.vote_average).toFixed(1)}
                               </>
                             ) : null}
-                            {duration ? ` · ${duration}` : ""}
-                            {result.next_episode ? ` · próximo: S${result.next_episode.season} E${result.next_episode.episode}` : ""}
+                            {duration ? `, ${duration}` : ""}
+                            {result.next_episode ? `, próximo: S${result.next_episode.season} E${result.next_episode.episode}` : ""}
                           </span>
 
                           {(result.services.length > 0 || (result.where_to_watch ?? []).length > 0) && (

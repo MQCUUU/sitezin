@@ -43,8 +43,8 @@ export function SearchPersonResult({ item, className, id, ariaSelected, onOpen }
         <b>{item.name}</b>
         <div className="muted">
           {isCharacter
-            ? `${item.count} ${item.count === 1 ? "título encontrado" : "títulos encontrados"} · Personagem`
-            : `${item.known_for_department || "Cinema e TV"} · Ver trabalhos`}
+            ? `${item.count} ${item.count === 1 ? "título encontrado" : "títulos encontrados"} como personagem`
+            : `${item.known_for_department || "Cinema e TV"}`}
         </div>
       </div>
     </Link>

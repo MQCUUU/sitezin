@@ -164,7 +164,7 @@ export function SeriesSchedule({ tvId, inProduction }: { tvId: number | string; 
                     <strong>{episode.name || `Episódio ${episode.episode_number}`}</strong>
                     <span>
                       {longDate(episode.air_date, today)}
-                      {episode.runtime ? ` · ${episode.runtime} min` : ""}
+                      {episode.runtime ? `, ${episode.runtime} min` : ""}
                     </span>
                   </div>
                   <div className="series-episode-when">

@@ -140,10 +140,10 @@ export function UncensoredModeSettings({ compact = false }: { compact?: boolean 
               {enabled ? (
                 <>
                   <Check size={12} aria-hidden="true" />
-                  Ativado · Botão &ldquo;Assistir agora&rdquo; visível
+                  Ativado: o botão &ldquo;Assistir agora&rdquo; aparece
                 </>
               ) : (
-                "Desativado · Botão oculto"
+                "Desativado: o botão fica oculto"
               )}
             </span>
           </div>

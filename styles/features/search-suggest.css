@@ -95,68 +95,6 @@
     font-size: var(--mc-fs-xs);
     line-height: 1.35;
 }
-.collection-card-actions {
-    position: absolute;
-    right: 8px;
-    top: 8px;
-    z-index: 8;
-    display: flex;
-    gap: 5px;
-}
-.collection-card-actions > button {
-    width: 31px;
-    height: 31px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    border: 1px solid rgba(255,255,255,.14);
-    border-radius: var(--mc-radius-pill);
-    background: rgba(4,8,15,.78);
-    color: white;
-    backdrop-filter: blur(10px);
-    cursor: pointer;
-    transition: transform .14s ease, color .14s ease, border-color .14s ease, background .14s ease;
-}
-.collection-card-actions > button:hover {
-    transform: translateY(-1px);
-    border-color: color-mix(in srgb, var(--accent) 48%, rgba(255,255,255,.14));
-    background: color-mix(in srgb, var(--accent) 18%, rgba(4,8,15,.85));
-}
-.collection-card-actions > button.active {
-    color: var(--accent);
-}
-.collection-status-badge {
-    position: absolute;
-    left: 8px;
-    bottom: 8px;
-    z-index: 7;
-    min-height: 23px;
-    padding: 0 8px;
-    display: inline-flex;
-    align-items: center;
-    border: 1px solid rgba(255,255,255,.14);
-    border-radius: var(--mc-radius-pill);
-    background: rgba(4,8,15,.82);
-    color: white;
-    backdrop-filter: blur(10px);
-    font-size: var(--mc-fs-xs);
-    font-weight: 900;
-}
-.collection-status-menu-head {
-    padding: 5px 7px 8px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--border);
-}
-.collection-status-menu-head span {
-    color: var(--muted);
-    font-size: var(--mc-fs-xs);
-}
-.collection-status-menu-head strong {
-    font-size: var(--mc-fs-xs);
-}
 .collection-status-menu > button {
     width: 100%;
     min-height: 33px;
@@ -181,11 +119,6 @@
 }
 .collection-status-menu > button.active {
     color: var(--accent);
-}
-.collection-status-divider {
-    height: 1px;
-    margin: 5px 2px;
-    background: var(--border);
 }
 .collection-status-menu > button.remove {
     justify-content: flex-start;

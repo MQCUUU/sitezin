@@ -862,7 +862,7 @@ function characterMediaResults(
     character: row.character_name,
     character_actor: row.person_name,
     reason: row.person_name
-      ? `Personagem: ${row.character_name} · ${row.person_name}`
+      ? `Personagem: ${row.character_name}, ${row.person_name}`
       : `Personagem: ${row.character_name}`,
   }));
 }
@@ -2033,7 +2033,7 @@ async function handle(
                 Boolean
               )
               .join(
-                " · "
+                ", "
               ),
         })
       );
@@ -2071,7 +2071,7 @@ async function handle(
             Boolean
           )
           .join(
-            " · "
+            ", "
           ),
 
       results,
@@ -2893,7 +2893,7 @@ async function handle(
               item.job ===
                 "Director"
                 ? `Direção de ${best.candidate.name}`
-                : `${item.job} · ${best.candidate.name}`,
+                : `${item.job}: ${best.candidate.name}`,
           }
         );
       }

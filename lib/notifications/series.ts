@@ -87,7 +87,7 @@ export function buildSeriesNotices(input: {
       event_key: `episode:${tmdbId}:${episode.season_number}:${episode.episode_number}:${episode.air_date}`,
       type: "new_episode",
       title: `Novo episódio de ${name}`,
-      message: `T${episode.season_number} E${episode.episode_number}${episode.name ? ` · ${episode.name}` : ""}`,
+      message: `T${episode.season_number} E${episode.episode_number}${episode.name ? `: ${episode.name}` : ""}`,
       href,
       release_at: dateAtNoonUtc(episode.air_date),
       release_precision: "date",

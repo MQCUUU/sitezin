@@ -31,7 +31,7 @@ export function TitleOverviewSection({
 
   const genres = (details.genres || [])
     .map((genre: any) => genreName(genre.name))
-    .join(" · ");
+    .join(", ");
 
   return (
     <section className="title-info section mc-title-overview-section">
@@ -97,7 +97,7 @@ export function TitleOverviewSection({
                   {details.number_of_seasons || 0}{" "}
                   {details.number_of_seasons === 1 ? "temporada" : "temporadas"}
 
-                  {" · "}
+                  {", "}
 
                   {details.number_of_episodes || 0} episódios
                 </strong>

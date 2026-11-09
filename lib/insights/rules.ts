@@ -120,7 +120,7 @@ function generateSummaryInsights(p: InsightsPayload, out: Out) {
           seriesShare >= 0.65
             ? `Séries ocupam ${pct(seriesShare)} do seu tempo — você é mais de maratonar do que de sessão de cinema.`
             : `Filmes ocupam ${pct(1 - seriesShare)} do seu tempo — você é mais de sessão de cinema.`,
-        evidence: `${Math.round(cur.movieMinutes / 60)} h em filmes · ${Math.round(cur.seriesMinutes / 60)} h em séries`,
+        evidence: `${Math.round(cur.movieMinutes / 60)} h em filmes e ${Math.round(cur.seriesMinutes / 60)} h em séries`,
         sample: cur.movies + cur.episodes,
       });
     }
@@ -164,7 +164,7 @@ function generateTasteInsights(p: InsightsPayload, out: Out) {
       section: "taste",
       priority: 1,
       message: `${most.name} é o gênero que você mais assiste, mas ${loved.name} é onde suas notas realmente sobem.`,
-      evidence: `${most.name}: ${most.count} títulos${most.avg !== null ? `, média ${num(most.avg)}` : ""} · ${loved.name}: média ${num(loved.avg as number)} em ${loved.rated} avaliados`,
+      evidence: `${most.name}: ${most.count} títulos${most.avg !== null ? `, média ${num(most.avg)}` : ""}; ${loved.name}: média ${num(loved.avg as number)} em ${loved.rated} avaliados`,
       sample: most.count + loved.rated,
     });
   }

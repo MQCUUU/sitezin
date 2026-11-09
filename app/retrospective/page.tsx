@@ -42,7 +42,7 @@ function Pick({ label, item, extra }: { label: string; item: RatedRef; extra?: s
         <strong>{item.title}</strong>
         <small>
           <Star size={12} fill="currentColor" aria-hidden="true" /> {dec(item.rating)}
-          {extra ? ` · ${extra}` : ""}
+          {extra ? `, ${extra}` : ""}
         </small>
       </Link>
     </div>

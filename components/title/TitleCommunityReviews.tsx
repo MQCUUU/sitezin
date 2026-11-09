@@ -87,12 +87,12 @@ export function TitleCommunityReviews({ type, tmdbId }: { type: "movie" | "tv"; 
             {data.average !== null ? (
               <>
                 <Star size={16} fill="currentColor" aria-hidden="true" />
-                <strong>{data.average.toFixed(1)}</strong> média de {data.ratingsCount} {data.ratingsCount === 1 ? "nota" : "notas"} ·{" "}
+                <strong>{data.average.toFixed(1)}</strong> média de {data.ratingsCount} {data.ratingsCount === 1 ? "nota" : "notas"},{" "}
               </>
             ) : null}
             {data.total} {data.total === 1 ? "avaliação" : "avaliações"}
-            {data.friendTotal ? ` · ${data.friendTotal} ${data.friendTotal === 1 ? "amigo" : "amigos"}` : ""}
-            {data.followingTotal ? ` · ${data.followingTotal} pessoas que você segue` : ""}
+            {data.friendTotal ? `, ${data.friendTotal} ${data.friendTotal === 1 ? "amigo" : "amigos"}` : ""}
+            {data.followingTotal ? `, ${data.followingTotal} pessoas que você segue` : ""}
           </p>
 
           {friends.length ? (

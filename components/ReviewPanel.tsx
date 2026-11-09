@@ -420,7 +420,7 @@ export function ReviewPanel({
             </span>
 
             <span>
-              Ex.: 7.7 · 8.3 · 9.5
+              Ex.: 7.7, 8.3 ou 9.5
             </span>
           </div>
 

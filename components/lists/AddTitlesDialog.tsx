@@ -151,7 +151,7 @@ export function AddTitlesDialog({
                 <b>{result.title}</b>
                 <small>
                   {result.media_type === "tv" ? "Série" : "Filme"}
-                  {result.year ? ` · ${result.year}` : ""}
+                  {result.year ? ` ${result.year}` : ""}
                 </small>
               </span>
               {inList ? (

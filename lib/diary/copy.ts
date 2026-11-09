@@ -119,7 +119,7 @@ export function detail(m: DiaryMoment): string | null {
     if (m.seasons_completed.length && !m.series_completed) parts.push(seasonsLabel(m.seasons_completed));
     if (m.rewatch_started) parts.push("Começou a reassistir");
 
-    return parts.join(" · ") || null;
+    return parts.join(", ") || null;
   }
 
   if (m.kind === "series_completed" && m.seasons_completed.length > 1) return `${plural(m.seasons_completed.length, "temporada", "temporadas")}`;
@@ -186,7 +186,7 @@ export function groupSummary(group: DiaryGroup) {
   if (removed) parts.push(plural(removed, "título removido", "títulos removidos"));
   if (other) parts.push(plural(other, "alteração de status", "alterações de status"));
 
-  return parts.join(" · ");
+  return parts.join(", ");
 }
 
 /** Frase completa para leitores de tela. */

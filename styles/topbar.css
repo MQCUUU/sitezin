@@ -58,14 +58,3 @@
   box-sizing: border-box;
 }
 
-/*
- * BUG-A2.5-03: at exactly 768px (sidebar 240px + ~528px of content), the
- * discover toolbar's row (`.discover-tabs` + `.discover-toolbar-actions`)
- * has no room in `nowrap` and overflows horizontally. The existing
- * `max-width:700px` rule already stacks it into a column, so this only
- * needs to hold above 700px: allow the row to wrap instead of overflow,
- * without touching the 700px breakpoint or any other rule in that block.
- */
-.discover-toolbar {
-  flex-wrap: wrap;
-}

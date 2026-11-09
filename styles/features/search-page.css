@@ -11,67 +11,6 @@
     font-size: var(--mc-fs-xs);
     line-height: 1.4;
 }
-.person-search-panel {
-    margin: 16px 0 8px;
-    padding: 15px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-}
-.person-search-avatar {
-    width: 64px;
-    height: 64px;
-    flex: 0 0 64px;
-    border: 1px solid var(--border);
-    border-radius: var(--mc-radius-lg);
-    overflow: hidden;
-    background: color-mix(in srgb, var(--text) 4%, var(--panel));
-    color: var(--muted);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.person-search-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-.person-search-info {
-    min-width: 0;
-}
-.person-search-info h2 {
-    margin: 3px 0 4px;
-    font-size: var(--mc-fs-2xl);
-}
-.person-search-info p {
-    margin: 0;
-    font-size: var(--mc-fs-xs);
-}
-.person-search-no-ai {
-    display: inline-flex;
-    align-items: center;
-    margin-top: 8px;
-    min-height: 22px;
-    padding: 0 8px;
-    border: 1px solid var(--border);
-    border-radius: var(--mc-radius-pill);
-    color: var(--muted);
-    font-size: var(--mc-fs-xs);
-    font-weight: 700;
-}
-@media (max-width: 520px) {
-    .person-search-avatar {
-        width: 54px;
-        height: 54px;
-        flex-basis: 54px;
-    }
-}
-@media (max-width: 520px) {
-    .person-search-info h2 {
-        font-size: var(--mc-fs-xl);
-    }
-}
 .mc-search-page-user-skeleton {
     display: flex;
     gap: var(--mc-space-12);

@@ -36,7 +36,7 @@ export function SearchUserResult({ item, className, id, ariaSelected, onOpen }: 
 
       <div className="search-result-info">
         <b>{item.name}</b>
-        <div className="muted">@{item.username} · Ver perfil</div>
+        <div className="muted">@{item.username}</div>
       </div>
 
       <ArrowRight size={14} />

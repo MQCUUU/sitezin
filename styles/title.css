@@ -40,16 +40,3 @@
   }
 }
 
-/* =====================================================================
-   Fase 3 — "Remover da biblioteca" no hero: ação reversível (há
-   "Desfazer"), não o CTA principal. Mesma posição e tamanho, sem o
-   peso visual: fundo transparente, texto secundário; vermelho só no
-   hover/foco, para sinalizar o efeito antes do clique.
-   ===================================================================== */
-
-.title-remove-btn {
-  background: transparent;
-  border-color: var(--mc-color-border);
-  color: var(--mc-color-text-secondary);
-  font-weight: 650;
-}
