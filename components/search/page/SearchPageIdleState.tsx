@@ -2,8 +2,9 @@
 
 
 import "@/styles/features/search-page.css";
+import "@/styles/features/screen-kit.css";
 import { useEffect, useRef, useState } from "react";
-import { Clock, Search as SearchIcon, X } from "lucide-react";
+import { X } from "lucide-react";
 
 import {
   clearRecentSearches,
@@ -51,7 +52,7 @@ export function SearchPageIdleState() {
     const index = pendingRemoveIndexRef.current;
     pendingRemoveIndexRef.current = null;
 
-    const buttons = chipsRef.current?.querySelectorAll<HTMLElement>(".mc-search-page-idle-chip button");
+    const buttons = chipsRef.current?.querySelectorAll<HTMLElement>(".sp-recent-item button");
 
     if (buttons && buttons.length > 0) {
       buttons[Math.min(index, buttons.length - 1)]?.focus();
@@ -71,27 +72,22 @@ export function SearchPageIdleState() {
   }
 
   return (
-    <div className="mc-search-page-idle">
-      <SearchIcon size={28} />
-      <p>Comece buscando por filme, série, pessoa, personagem ou usuário.</p>
+    <div className="sp-idle">
+      <p className="sp-idle-lead">Busque um filme, série, pessoa, personagem ou usuário.</p>
 
       {entries.length > 0 && (
-        <div className="mc-search-page-idle-recent">
-          <div className="mc-search-page-idle-recent-head">
-            <span>
-              <Clock size={14} />
-              Buscas recentes
-            </span>
-
-            <button type="button" onClick={handleClear}>
+        <section className="sk-section" aria-labelledby="search-recent-title">
+          <div className="sk-section-head">
+            <h2 id="search-recent-title">Buscas recentes</h2>
+            <button type="button" className="sk-link" onClick={handleClear}>
               Limpar
             </button>
           </div>
 
-          <div className="mc-search-page-idle-chips" ref={chipsRef}>
+          <div className="sk-chips" ref={chipsRef}>
             {entries.map((entry, index) => (
-              <span key={entry.query} className="mc-search-page-idle-chip">
-                <a href={entry.href || `/search?q=${encodeURIComponent(entry.query)}`}>
+              <span key={entry.query} className="sp-recent-item">
+                <a className="sk-chip" href={entry.href || `/search?q=${encodeURIComponent(entry.query)}`}>
                   {entry.label || entry.query}
                 </a>
 
@@ -100,12 +96,12 @@ export function SearchPageIdleState() {
                   aria-label={`Remover “${entry.label || entry.query}” dos recentes`}
                   onClick={() => handleRemove(entry.query, index)}
                 >
-                  <X size={12} />
+                  <X size={14} />
                 </button>
               </span>
             ))}
           </div>
-        </div>
+        </section>
       )}
     </div>
   );

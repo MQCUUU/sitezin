@@ -20,7 +20,7 @@ const loadPickForMe = () => import("@/components/PickForMe");
 
 const PickForMe = dynamic(() => loadPickForMe().then((module) => module.PickForMe), { ssr: false });
 
-export function PickForMeLauncher({ inherit }: { inherit?: PickInherit } = {}) {
+export function PickForMeLauncher({ inherit, className }: { inherit?: PickInherit; className?: string } = {}) {
   const [openRequest, setOpenRequest] = useState(0);
   const [ready, setReady] = useState(false);
   const loading = openRequest > 0 && !ready;
@@ -29,7 +29,7 @@ export function PickForMeLauncher({ inherit }: { inherit?: PickInherit } = {}) {
     <>
       <button
         type="button"
-        className="btn pick-trigger"
+        className={"btn pick-trigger" + (className ? ` ${className}` : "")}
         aria-busy={loading || undefined}
         onPointerEnter={() => void loadPickForMe()}
         onFocus={() => void loadPickForMe()}

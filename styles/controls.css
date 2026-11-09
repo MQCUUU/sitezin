@@ -31,16 +31,6 @@
 }
 
 /* ---------------------------------------------------------------------------
- * Chips de filtro (Descobrir): 34px, 13px, pílula.
- * (A Biblioteca passou a usar as fichinhas `lb-option` na Fase 4.)
- * ------------------------------------------------------------------------- */
-.mc-discover-shortcut {
-  min-height: var(--mc-control-sm);
-  font-size: var(--mc-fs-sm);
-  border-radius: var(--mc-radius-pill);
-}
-
-/* ---------------------------------------------------------------------------
  * Ícones da barra do topo (notificações, conta): 40px, lado a lado iguais.
  * Antes: sino 42px e avatar 40px.
  * ------------------------------------------------------------------------- */
@@ -140,12 +130,6 @@
     padding: 0 9px;
     font-size: var(--mc-fs-xs);
     line-height: 1.2;
-  }
-
-  .main .person-kicker svg,
-  .main .collection-kicker svg {
-    width: 13px;
-    height: 13px;
   }
 
   /* Tags sobre pôster */

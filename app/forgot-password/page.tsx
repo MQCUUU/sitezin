@@ -124,10 +124,6 @@ export default function ForgotPasswordPage() {
           Voltar
         </Link>
 
-        <div className="eyebrow">
-          RECUPERAR ACESSO
-        </div>
-
         <h1>
           Esqueceu sua senha?
         </h1>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Filter } from "lucide-react";
+import "@/styles/features/screen-kit.css";
 
 export type SearchPageEmptyStateProps = {
   query: string;
@@ -9,10 +9,9 @@ export type SearchPageEmptyStateProps = {
  * the search ran and genuinely found nothing for this query. */
 export function SearchPageEmptyState({ query }: SearchPageEmptyStateProps) {
   return (
-    <div className="empty mc-discover-empty">
-      <Filter size={28} />
-      <span>Nenhum resultado para “{query}”.</span>
-      <p className="muted">Revise a grafia ou tente um termo mais genérico.</p>
+    <div className="sk-empty">
+      <h2>Nenhum resultado para “{query}”</h2>
+      <p>Revise a grafia ou tente um termo mais genérico.</p>
       <Link href="/discover" className="btn">
         Explorar o catálogo
       </Link>

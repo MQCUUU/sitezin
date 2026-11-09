@@ -821,12 +821,7 @@ select:disabled {
     display: block;
     object-fit: cover;
 }
-/* ==========================================
-   PESQUISA — AÇÕES COMPLETAS
-   ========================================== */
-.search-results-section .poster {
-    overflow: hidden;
-}
+
 /* =========================================================
    MYCATALOG — PARA VOCÊ V2
    ========================================================= */
@@ -860,28 +855,6 @@ select:disabled {
     }
 }
 
-/* ==========================================
-   PESQUISA AVANÇADA — TMDB, SEM IA
-   ========================================== */
-.search-advanced-panel {
-    position: relative;
-    margin: 16px 0 10px;
-    padding: 16px;
-    display: flex;
-    align-items: center;
-    gap: 13px;
-    overflow: hidden;
-    border-color: color-mix(in srgb, var(--accent) 20%, var(--border));
-    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 6%, var(--panel)), var(--panel));
-}
-/* =========================================================
-   MYCATALOG — PÁGINA DE COLEÇÃO / FRANQUIA
-   ========================================================= */
-.collection-tabs button.active {
-    color: var(--on-accent, #fff);
-    /* Fase 3: aba selecionada = destaque sólido + texto pelo contraste (igual às demais abas). */
-    background: var(--accent);
-}
 /* STATUS MENU */
 .collection-status-menu {
     position: absolute;
@@ -1329,15 +1302,6 @@ button:disabled,input:disabled,select:disabled,textarea:disabled {
     background: color-mix(in srgb,var(--panel) 94%,transparent);
     box-shadow: 0 8px 30px rgba(0,0,0,.14)
 }
-.discover-tabs .btn {
-    border: 0;
-    background: transparent;
-    color: var(--muted)
-}
-.discover-tabs .btn.primary {
-    background: var(--accent);
-    color: var(--on-accent, #fff)
-}
 .panel,.card .poster,.review-panel {
     border-color: var(--control-border)
 }
@@ -1380,12 +1344,6 @@ button:disabled,input:disabled,select:disabled,textarea:disabled {
     background: var(--bg);
     color: var(--text);
     padding: 10px
-}
-.episode-detail-hero {
-    padding: 0;
-    overflow: hidden;
-    display: grid;
-    grid-template-columns: minmax(320px,1.25fr) minmax(300px,1fr)
 }
 .episode-future-badge {
     display: inline-flex;
@@ -1447,15 +1405,6 @@ button:disabled,input:disabled,select:disabled,textarea:disabled {
     display: flex;
     justify-content: flex-end;
     gap: 10px
-}
-.profile-tabs {
-    display: flex;
-    gap: 4px;
-    overflow-x: auto;
-    padding: 5px;
-    border: 1px solid var(--border);
-    border-radius: var(--mc-radius-md);
-    background: var(--panel)
 }
 .profile-media-row>a {
     min-width: 0
@@ -1556,16 +1505,8 @@ html,body {
         grid-template-columns: repeat(4,minmax(110px,1fr))
     }
 }
-.collection-content-tabs,.episode-content-tabs {
-    grid-template-columns: repeat(2,1fr)
-}
 [hidden] {
     display: none!important
-}
-@media(max-width:600px) {
-    .collection-content-tabs,.episode-content-tabs {
-        grid-template-columns: repeat(2,minmax(150px,1fr))
-    }
 }
 /* Alinhamento universal de ícones e conteúdo dos cards. */
 svg {
@@ -1746,9 +1687,4 @@ label:has(>input[type=checkbox]),label:has(>input[type=radio]) {
         transition: none;
     }
 }
-/* V3.3 — texto sobre a cor de destaque escolhida: branco ou quase-preto, o que tiver
-   mais contraste (lib/preferences.ts → --on-accent). Ciano/Verde/Laranja com texto
-   branco ficavam abaixo de 3:1 no tema Escuro/OLED. */
-.discover-tabs .btn.primary {
-    color: var(--on-accent, #fff);
-}
+

@@ -1,4 +1,5 @@
 import "@/styles/features/search-page.css";
+import "@/styles/features/screen-kit.css";
 import Link from "next/link";
 import { UserRound } from "lucide-react";
 
@@ -12,32 +13,32 @@ export function SearchUserSection({ users }: SearchUserSectionProps) {
   if (users.length === 0) return null;
 
   return (
-    <section className="search-users-section" aria-labelledby="search-users-title">
-      <div className="section-title-row">
-        <h2 id="search-users-title">Usuários</h2>
-        <span className="muted">{users.length} encontrados</span>
+    <section className="sk-section sp-section" aria-labelledby="search-users-title">
+      <div className="sk-section-head">
+        <h2 id="search-users-title">
+          Pessoas no MyCatalog <span className="sp-count">{users.length}</span>
+        </h2>
       </div>
 
-      <div className="search-users-grid">
+      <div className="sp-users">
         {users.map((user) => (
-          <Link className="search-user-card panel" href={`/u/${user.username}`} key={user.username}>
-            <div className="search-user-avatar">
+          <Link className="sp-user" href={`/u/${user.username}`} key={user.username}>
+            <div className="sp-user-avatar">
               {user.avatar_url ? (
                 <img
                   loading="lazy"
                   decoding="async"
                   src={user.avatar_url}
-                  alt={user.display_name || user.username}
+                  alt=""
                 />
               ) : (
-                <UserRound size={24} />
+                <UserRound size={22} />
               )}
             </div>
-            <div className="search-user-copy">
+            <div className="sp-user-copy">
               <strong>{user.display_name || user.username}</strong>
               <span>@{user.username}</span>
             </div>
-            <span className="search-user-open">Ver perfil</span>
           </Link>
         ))}
       </div>

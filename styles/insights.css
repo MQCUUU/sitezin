@@ -83,11 +83,6 @@
   }
 }
 
-.ins-h1-soft {
-  color: var(--muted);
-  font-weight: 700;
-}
-
 .ins-header .ins-muted {
   margin-top: 6px;
 }
@@ -2125,4 +2120,28 @@
 .ins-retro-pick-text {
   color: inherit;
   text-decoration: none;
+}
+
+/* Fase 4b — Ranking e Retrospectiva: posição em superfície neutra (o 1º lugar
+ * se distingue pela posição no pódio, não por brilho); sem palavra do título
+ * em outra cor; destaques como frases, sem ícone na cor de destaque. */
+.ins-podium li.is-1 .ins-podium-poster {
+  border-color: color-mix(in srgb, var(--text) 12%, transparent);
+  box-shadow: none;
+}
+.ins-podium-rank,
+.ins-podium li.is-1 .ins-podium-rank {
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: none;
+}
+.ins-top li:nth-child(-n + 3) .ins-top-rank {
+  color: var(--text);
+}
+.ins-headlines li {
+  border-color: transparent;
+  background: var(--panel);
+}
+.ins-headlines li > span:only-child {
+  grid-column: 1 / -1;
 }

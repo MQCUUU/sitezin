@@ -437,37 +437,8 @@
 .profile-v2-counts strong {
     color: var(--text)
 }
-.profile-mutual-friends {
-    align-self: flex-end;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    margin: 0 0 4px;
-    color: var(--accent);
-    font-size: var(--mc-fs-xs);
-    font-weight: 700;
-}
 .profile-v2-action {
     flex: 0 0 auto
-}
-.profile-tabs button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    min-width: 120px;
-    flex: 1;
-    padding: 11px;
-    border: 0;
-    border-radius: var(--mc-radius-sm);
-    background: transparent;
-    color: var(--muted);
-    font-weight: 800;
-    cursor: pointer
-}
-.profile-tabs button.active {
-    background: var(--accent);
-    color: var(--on-accent,#07110d)
 }
 .profile-tab-content {
     min-height: 330px;
@@ -842,11 +813,6 @@
     border-radius: var(--mc-radius-md);
     background: var(--bg);
     color: var(--text)
-}
-.profile-connection-actions {
-    display: flex;
-    gap: 9px;
-    flex-wrap: wrap
 }
 @media (max-width:700px) {
     .profile-list-create {
@@ -1408,4 +1374,92 @@
 }
 .banner-upload-actions label {
     position: relative;
+}
+
+/* ===========================================================================
+ * Fase 4b — Perfil público na direção "Tela 2.39:1": nome grande, @usuário em
+ * texto neutro, avatar sem anel colorido, abas com traço (screen-kit.css),
+ * conteúdo sem painel; atividade com ícones neutros; sem rótulos em caixa alta.
+ * ======================================================================== */
+.profile-v2-hero {
+    padding: 24px 0 28px;
+    border: 0;
+    background: none;
+    box-shadow: none;
+}
+.profile-v2-hero > img,
+.profile-v2-hero > .public-profile-avatar {
+    border: 0;
+}
+.profile-v2-copy > span {
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 500;
+}
+.profile-v2-copy h1 {
+    margin: 4px 0 8px;
+    font-size: clamp(36px, 4.6vw, 60px);
+    font-weight: 800;
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+}
+.profile-v2-copy p {
+    font-size: 16px;
+}
+.profile-v2-counts {
+    gap: 20px;
+    font-size: 15px;
+}
+.profile-top5-fold {
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+}
+.pf-subhead {
+    margin: 0 0 12px;
+    font-size: 20px;
+    font-weight: 700;
+}
+.pf-tabs {
+    margin: 28px 0 0;
+}
+.profile-tab-content {
+    min-height: 240px;
+    padding: 24px 0 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+}
+.profile-tab-heading h2 {
+    margin: 0 0 16px;
+    font-size: 22px;
+    font-weight: 700;
+}
+.profile-tab-total {
+    border: 0;
+    background: none;
+    color: var(--muted);
+    font-size: 16px;
+}
+.profile-activity-icon {
+    background: var(--panel);
+    color: var(--mc-color-text-secondary);
+}
+.profile-activity-row strong {
+    font-size: 15px;
+}
+.profile-activity-row small {
+    font-size: 14px;
+}
+.profile-tab-empty {
+    border: 0;
+    background: none;
+    padding: 24px 0;
+    color: var(--muted);
+}
+@media (max-width: 640px) {
+    .profile-v2-copy h1 {
+        font-size: 34px;
+    }
 }

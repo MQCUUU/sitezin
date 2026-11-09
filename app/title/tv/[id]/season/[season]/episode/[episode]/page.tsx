@@ -3,10 +3,11 @@
 
 import { Poster } from "@/components/Poster";
 import "@/styles/features/episode.css";
+import "@/styles/features/screen-kit.css";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Check, Clock, Eye, Loader2, RotateCcw, Save, SkipForward, Star } from "lucide-react";
+import { ArrowLeft, Check, Clock, Eye, Loader2, Save, SkipForward, Star } from "lucide-react";
 
 import { Search } from "@/components/Search";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
@@ -59,7 +60,6 @@ export default function EpisodePage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const { handleError, state: authState } = useLibraryAuth();
   const [releasedCount, setReleasedCount] = useState(0);
-  const [contentTab, setContentTab] = useState<"details" | "journal">("details");
   const [spoilerRevealed, setSpoilerRevealed] = useState(false);
   const [nextEpisode, setNextEpisode] = useState<{ season: number; episode: number } | null>(null);
 
@@ -197,87 +197,101 @@ export default function EpisodePage() {
     .filter((name, index, all) => all.indexOf(name) === index)
     .join(", ");
 
+  const airLabel = episode.air_date
+    ? new Date(`${episode.air_date}T12:00:00`).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" })
+    : "Sem data de estreia";
+
+  /* Fase 4b: uma página só (antes, duas abas) — imagem panorâmica, o episódio
+     e, logo abaixo, o registro (data, reassistida, comentário). */
   return <>
     <div className="topbar">
       <Search />
     </div>
-    <div className="section episode-detail">
-      <Link className="episode-back" href={`/title/tv/${params.id}`}><ArrowLeft size={16} /> Voltar para {show?.name || "a série"}</Link>
-      <nav className="title-content-tabs episode-content-tabs" aria-label="Seções do episódio"><button className={contentTab === "details" ? "active" : ""} onClick={() => setContentTab("details")}>Sinopse e detalhes</button><button className={contentTab === "journal" ? "active" : ""} onClick={() => setContentTab("journal")}>Progresso e diário</button></nav>
-      {contentTab === "details" &&
-      <div className="episode-detail-hero panel">
-        <div className="episode-detail-image">
-          {episode.still_path
-            ? <Poster path={episode.still_path} alt="" sizes="(max-width: 760px) 100vw, 640px" tmdbSize="w780" priority />
-            : <span className="episode-detail-image-fallback" aria-hidden="true">E{episode.episode_number}</span>}
-        </div>
-        <div className="episode-detail-copy">
-          <span className="eyebrow">TEMPORADA {seasonNumber} · EPISÓDIO {episodeNumber}</span>
-          <h1>{episode.name || `Episódio ${episodeNumber}`}</h1>
-          <div className="episode-detail-meta">
-            {episode.air_date || "Sem data"}
-            {episode.runtime ? ` · ${episode.runtime} min` : ""}
-            {episode.vote_average ? <span><Star size={14} /> {Number(episode.vote_average).toFixed(1)}</span> : null}
-            {isFuture && <span className="episode-future-badge"><Clock size={12} aria-hidden="true" /> Futuro</span>}
-          </div>
-          <div className="episode-detail-actions">
-            <WatchNowButton
-              type="tv"
-              id={params.id}
-              title={show?.name || ""}
-              year={show?.first_air_date ? show.first_air_date.slice(0, 4) : undefined}
-              season={seasonNumber}
-              episode={episodeNumber}
-              className="btn primary episode-action-btn"
-            >
-              Assistir agora
-            </WatchNowButton>
+    <div className="ep-page">
+      <Link className="sk-link ep-back" href={`/title/tv/${params.id}`}><ArrowLeft size={16} aria-hidden="true" /> {show?.name || "Voltar para a série"}</Link>
 
-            {nextEpisode && (
-              <Link
-                href={`/title/tv/${params.id}/season/${nextEpisode.season}/episode/${nextEpisode.episode}`}
-                className="btn episode-action-btn episode-next-btn"
-                title={`Ir para o episódio ${nextEpisode.episode} da temporada ${nextEpisode.season}`}
-              >
-                <span>Próximo episódio</span>
-                <SkipForward size={16} aria-hidden="true" />
-              </Link>
-            )}
-          </div>
-          {hideOverview ? (
-            <p className="episode-spoiler-hidden">
-              Sinopse oculta até o lançamento.{" "}
-              <button type="button" className="episode-spoiler-toggle" onClick={() => setSpoilerRevealed(true)}>
-                <Eye size={12} aria-hidden="true" /> Mostrar sinopse
-              </button>
-            </p>
-          ) : (
-            <p>{episode.overview || "Sinopse indisponível."}</p>
-          )}
-          {crewNames && <small>Direção/roteiro: {crewNames}</small>}
-        </div>
-      </div>}
+      <div className="ep-still">
+        {episode.still_path
+          ? <Poster path={episode.still_path} alt="" sizes="(max-width: 760px) 100vw, 1100px" tmdbSize="w1280" priority />
+          : <span className="ep-still-fallback" aria-hidden="true">E{episode.episode_number}</span>}
+      </div>
 
-      {contentTab === "journal" && (library ? <div className="episode-journal panel">
-        <h2>Seu progresso</h2>
-        <label>Data assistida<input type="date" value={watchedAt} onChange={(event) => setWatchedAt(event.target.value)} /></label>
-        <label className="episode-rewatch"><input type="checkbox" checked={rewatch} onChange={(event) => setRewatch(event.target.checked)} /><RotateCcw size={16} /> Foi uma reassistida</label>
-        <label>Comentário<textarea maxLength={4000} value={comment} onChange={(event) => setComment(event.target.value)} placeholder="O que achou deste episódio?" /></label>
-        {watchActionDisabled && !progress?.watched && (
-          <p className="episode-journal-locked">{watchDisabledReason} — ainda não é possível marcar este episódio como assistido.</p>
-        )}
-        <div className="episode-journal-actions">
-          {progress?.watched && <button className="btn" disabled={saving} onClick={() => save(false)}>Desmarcar assistido</button>}
-          <button
-            className="btn primary"
-            disabled={saving || (watchActionDisabled && !progress?.watched)}
-            title={watchActionDisabled && !progress?.watched ? watchDisabledReason || undefined : undefined}
-            onClick={() => save(true)}
+      <div className="ep-copy">
+        <p className="ep-kicker">Temporada {seasonNumber}, episódio {episodeNumber}</p>
+        <h1>{episode.name || `Episódio ${episodeNumber}`}</h1>
+        <p className="ep-meta">
+          <span>{airLabel}</span>
+          {episode.runtime ? <span>{episode.runtime} min</span> : null}
+          {episode.vote_average ? <span className="ep-rating"><Star size={14} fill="currentColor" aria-hidden="true" /> {Number(episode.vote_average).toFixed(1).replace(".", ",")}</span> : null}
+          {isFuture && <span className="ep-future"><Clock size={14} aria-hidden="true" /> Ainda não lançado</span>}
+        </p>
+
+        <div className="ep-actions">
+          <WatchNowButton
+            type="tv"
+            id={params.id}
+            title={show?.name || ""}
+            year={show?.first_air_date ? show.first_air_date.slice(0, 4) : undefined}
+            season={seasonNumber}
+            episode={episodeNumber}
+            className="btn primary episode-action-btn"
           >
-            {saving ? <Loader2 className="spin" size={16} /> : progress?.watched ? <Save size={16} /> : <Check size={16} />} {progress?.watched ? "Salvar alterações" : "Marcar como assistido"}
-          </button>
+            Assistir agora
+          </WatchNowButton>
+
+          {nextEpisode && (
+            <Link
+              href={`/title/tv/${params.id}/season/${nextEpisode.season}/episode/${nextEpisode.episode}`}
+              className="btn sk-btn episode-action-btn"
+              title={`Ir para o episódio ${nextEpisode.episode} da temporada ${nextEpisode.season}`}
+            >
+              Próximo episódio
+              <SkipForward size={16} aria-hidden="true" />
+            </Link>
+          )}
         </div>
-      </div> : <div className="panel episode-journal">Adicione a série à biblioteca para registrar este episódio.</div>)}
+
+        {hideOverview ? (
+          <p className="ep-overview ep-muted">
+            Sinopse oculta até o lançamento.{" "}
+            <button type="button" className="sk-link" onClick={() => setSpoilerRevealed(true)}>
+              <Eye size={14} aria-hidden="true" /> Mostrar sinopse
+            </button>
+          </p>
+        ) : (
+          <p className="ep-overview">{episode.overview || "Sinopse indisponível."}</p>
+        )}
+        {crewNames && <p className="ep-crew">Direção e roteiro: {crewNames}</p>}
+      </div>
+
+      <section className="ep-journal" aria-labelledby="episode-journal-title">
+        <h2 id="episode-journal-title">Seu registro</h2>
+        {library ? (
+          <>
+            <div className="ep-journal-fields">
+              <label className="sk-field">Data assistida<input type="date" value={watchedAt} onChange={(event) => setWatchedAt(event.target.value)} /></label>
+              <label className="ep-rewatch"><input type="checkbox" checked={rewatch} onChange={(event) => setRewatch(event.target.checked)} /> Foi uma reassistida</label>
+            </div>
+            <label className="sk-field ep-comment">Comentário<textarea maxLength={4000} value={comment} onChange={(event) => setComment(event.target.value)} placeholder="O que achou deste episódio?" /></label>
+            {watchActionDisabled && !progress?.watched && (
+              <p className="ep-muted">{watchDisabledReason}: ainda não é possível marcar este episódio como assistido.</p>
+            )}
+            <div className="ep-actions">
+              <button
+                className="btn primary"
+                disabled={saving || (watchActionDisabled && !progress?.watched)}
+                title={watchActionDisabled && !progress?.watched ? watchDisabledReason || undefined : undefined}
+                onClick={() => save(true)}
+              >
+                {saving ? <Loader2 className="spin" size={16} /> : progress?.watched ? <Save size={16} /> : <Check size={16} />} {progress?.watched ? "Salvar alterações" : "Marcar como assistido"}
+              </button>
+              {progress?.watched && <button className="btn ghost" disabled={saving} onClick={() => save(false)}>Desmarcar assistido</button>}
+            </div>
+          </>
+        ) : (
+          <p className="ep-muted">Adicione a série à biblioteca para registrar este episódio.</p>
+        )}
+      </section>
     </div>
   </>;
 }

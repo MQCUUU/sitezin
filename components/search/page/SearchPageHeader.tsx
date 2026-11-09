@@ -1,14 +1,17 @@
+import "@/styles/features/screen-kit.css";
+
 export type SearchPageHeaderProps = {
   query: string;
   isPerson: boolean;
 };
 
-/** Compact editorial header — no hero, this is a tool (B3 §15). */
-export function SearchPageHeader({ query, isPerson }: SearchPageHeaderProps) {
+/** Fase 4b: só o título grande; a contagem vem logo abaixo (resumo da página). */
+export function SearchPageHeader({ query }: SearchPageHeaderProps) {
   return (
-    <>
-      <div className="eyebrow">{isPerson ? "Pessoa" : "Pesquisa"}</div>
-      <h1>Resultados para “{query}”</h1>
-    </>
+    <header className="sk-head sp-head">
+      <div className="sk-head-text">
+        <h1>Resultados para “{query}”</h1>
+      </div>
+    </header>
   );
 }

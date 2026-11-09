@@ -7,7 +7,7 @@ import "@/styles/insights.css";
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowRight, Sparkles, Star } from "lucide-react";
+import { ArrowLeft, Star } from "lucide-react";
 
 import { Search } from "@/components/Search";
 import { Poster } from "@/components/Poster";
@@ -108,7 +108,7 @@ function RetrospectiveContent() {
           <span className="ins-eyebrow">Retrospectiva</span>
           <h1>
             Seu {year}
-            {isCurrent ? <span className="ins-h1-soft"> até agora</span> : null}
+            {isCurrent ? " até agora" : null}
           </h1>
         </div>
         <label className="ins-year-select is-standalone">
@@ -247,7 +247,6 @@ function RetrospectiveContent() {
               <ul className="ins-headlines">
                 {yearInsights.map((i) => (
                   <li key={i.id}>
-                    <Sparkles size={16} aria-hidden="true" />
                     <span>{i.message}</span>
                   </li>
                 ))}
@@ -334,7 +333,7 @@ function RetrospectiveContent() {
             {c.movies + c.series ? `; ${pct(c.movieMinutes / Math.max(1, c.minutes))} em filmes` : ""}). O registro dia a dia está no{" "}
             <Link href="/diary">Diário</Link>.{" "}
             <Link href={`/insights?period=${year}`} className="ins-link">
-              Ver {year} no Insights <ArrowRight size={14} aria-hidden="true" />
+              Ver {year} no Insights
             </Link>
           </p>
         </div>

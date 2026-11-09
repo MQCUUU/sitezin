@@ -1,4 +1,5 @@
 import "@/styles/features/search-page.css";
+import "@/styles/features/screen-kit.css";
 import { SearchMediaCard } from "./SearchMediaCard";
 import type { LibraryState, SearchItem } from "./types";
 
@@ -33,13 +34,11 @@ export function SearchMediaSection({
   priority = false,
 }: SearchMediaSectionProps) {
   return (
-    <section className="section search-results-section">
-      <div className="section-head">
-        <div>
-          <h2>{title}</h2>
-        </div>
-
-        <span className="muted">{items.length} resultados</span>
+    <section className="sk-section sp-section">
+      <div className="sk-section-head">
+        <h2>
+          {title} <span className="sp-count">{items.length}</span>
+        </h2>
       </div>
 
       <div className="discover-grid mc-media-grid">

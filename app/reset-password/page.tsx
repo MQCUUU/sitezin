@@ -125,10 +125,6 @@ export default function ResetPasswordPage() {
           <BrandLogo size={26} />
         </Link>
 
-        <div className="eyebrow">
-          NOVA SENHA
-        </div>
-
         <h1>
           Crie uma nova senha
         </h1>

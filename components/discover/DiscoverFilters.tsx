@@ -1,5 +1,7 @@
 import "@/styles/features/discover.css";
-import { Check, Plus, RotateCcw, X } from "lucide-react";
+import "@/styles/features/screen-kit.css";
+import { motion } from "motion/react";
+import { X } from "lucide-react";
 
 import { COUNTRIES, type FilterResponse } from "./types";
 import type { DiscoverParams } from "@/lib/discover/params";
@@ -16,11 +18,9 @@ export type DiscoverFiltersProps = {
 };
 
 /**
- * The filter panel itself. Same underlying fields as B1 (5 selects + 2
- * personal toggles) — grouped now under labelled `fieldset`s so the
- * relationship between a group's controls is announced, and the layout
- * scales from a dense desktop grid down to a single stacked column on
- * mobile via CSS alone (no separate mobile markup to keep in sync).
+ * Fase 4b: painel liso (sem borda, sombra nem rótulo em caixa alta). Os mesmos
+ * campos de antes — 5 seletores + 2 preferências pessoais, agora fichinhas
+ * com aria-pressed. Entra e sai com um fade curto (AnimatePresence na página).
  */
 export function DiscoverFilters({
   params,
@@ -33,151 +33,124 @@ export function DiscoverFilters({
   onClose,
 }: DiscoverFiltersProps) {
   return (
-    <section className="section">
-      <div className="mc-discover-filters">
-        <div className="mc-discover-filters-header">
-          <div>
-            <div className="eyebrow">Descoberta avançada</div>
-            <h2>Filtrar títulos</h2>
+    <motion.section
+      className="sk-panel"
+      id="discover-filters-panel"
+      aria-label="Filtros do Descobrir"
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -6, transition: { duration: 0.12 } }}
+      transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+    >
+      <div className="sk-panel-head">
+        <h2>Filtros</h2>
+        <button type="button" className="sk-close" onClick={onClose} title="Fechar filtros" aria-label="Fechar filtros">
+          <X size={18} />
+        </button>
+      </div>
+
+      <fieldset className="sk-fields">
+        <legend className="mc-visually-hidden">Filtros de catálogo</legend>
+
+        <label className="sk-field">
+          Gênero
+          <select
+            value={params.genre}
+            disabled={filtersLoading}
+            onChange={(event) => onChange({ genre: event.target.value })}
+          >
+            <option value="">Todos os gêneros</option>
+            {filters.genres.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="sk-field">
+          Ano
+          <select value={params.year} onChange={(event) => onChange({ year: event.target.value })}>
+            <option value="">Todos os anos</option>
+            {years.map((itemYear) => (
+              <option key={itemYear} value={itemYear}>
+                {itemYear}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="sk-field">
+          Nota mínima
+          <select value={params.rating} onChange={(event) => onChange({ rating: event.target.value })}>
+            <option value="">Qualquer nota</option>
+            {[5, 6, 7, 8, 9].map((value) => (
+              <option key={value} value={value}>
+                {value}+
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="sk-field">
+          País de origem
+          <select value={params.country} onChange={(event) => onChange({ country: event.target.value })}>
+            <option value="">Todos os países</option>
+            {COUNTRIES.map(([code, name]) => (
+              <option key={code} value={code}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="sk-field">
+          Onde assistir no Brasil
+          <select
+            value={params.provider}
+            disabled={filtersLoading}
+            onChange={(event) => onChange({ provider: event.target.value })}
+          >
+            <option value="">Qualquer streaming</option>
+            <option value="mine">Nos meus serviços</option>
+            {filters.providers.map((item) => (
+              <option key={item.provider_id} value={item.provider_id}>
+                {item.provider_name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </fieldset>
+
+      <div className="sk-panel-foot">
+        <fieldset className="sk-field">
+          <legend>Na sua biblioteca</legend>
+          <div className="sk-chips">
+            <button
+              type="button"
+              className="sk-chip"
+              aria-pressed={params.hideWatched}
+              onClick={() => onChange({ hideWatched: !params.hideWatched })}
+            >
+              Ocultar assistidos
+            </button>
+            <button
+              type="button"
+              className="sk-chip"
+              aria-pressed={params.onlyNew}
+              onClick={() => onChange({ onlyNew: !params.onlyNew })}
+            >
+              Só títulos fora da biblioteca
+            </button>
           </div>
-
-          <button type="button" className="btn ghost" onClick={onClose}>
-            <X size={16} />
-            Fechar
-          </button>
-        </div>
-
-        <fieldset className="mc-discover-filters-grid">
-          <legend className="mc-visually-hidden">Filtros de catálogo</legend>
-
-          <label>
-            <span>Gênero</span>
-            <select
-              value={params.genre}
-              disabled={filtersLoading}
-              onChange={(event) => onChange({ genre: event.target.value })}
-            >
-              <option value="">Todos os gêneros</option>
-              {filters.genres.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            <span>Ano</span>
-            <select
-              value={params.year}
-              onChange={(event) => onChange({ year: event.target.value })}
-            >
-              <option value="">Todos os anos</option>
-              {years.map((itemYear) => (
-                <option key={itemYear} value={itemYear}>
-                  {itemYear}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            <span>Nota mínima</span>
-            <select
-              value={params.rating}
-              onChange={(event) => onChange({ rating: event.target.value })}
-            >
-              <option value="">Qualquer nota</option>
-              {[5, 6, 7, 8, 9].map((value) => (
-                <option key={value} value={value}>
-                  {value}+
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            <span>País de origem</span>
-            <select
-              value={params.country}
-              onChange={(event) => onChange({ country: event.target.value })}
-            >
-              <option value="">Todos os países</option>
-              {COUNTRIES.map(([code, name]) => (
-                <option key={code} value={code}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="discover-provider-field mc-discover-filters-provider">
-            <span>Onde assistir no Brasil</span>
-            <select
-              value={params.provider}
-              disabled={filtersLoading}
-              onChange={(event) => onChange({ provider: event.target.value })}
-            >
-              <option value="">Qualquer streaming</option>
-              <option value="mine">Nos meus serviços</option>
-              {filters.providers.map((item) => (
-                <option key={item.provider_id} value={item.provider_id}>
-                  {item.provider_name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </fieldset>
-
-        <fieldset className="mc-discover-filters-toggles">
-          <legend className="mc-visually-hidden">Preferências pessoais</legend>
-
-          <button
-            type="button"
-            className={
-              "mc-discover-toggle" +
-              (params.hideWatched ? " mc-discover-toggle--active" : "")
-            }
-            aria-pressed={params.hideWatched}
-            onClick={() => onChange({ hideWatched: !params.hideWatched })}
-          >
-            <Check size={18} />
-            <div>
-              <strong>Ocultar assistidos</strong>
-              <span>Esconde o que você já concluiu</span>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            className={
-              "mc-discover-toggle" +
-              (params.onlyNew ? " mc-discover-toggle--active" : "")
-            }
-            aria-pressed={params.onlyNew}
-            onClick={() => onChange({ onlyNew: !params.onlyNew })}
-          >
-            <Plus size={18} />
-            <div>
-              <strong>Só não adicionados</strong>
-              <span>Mostra apenas títulos fora da biblioteca</span>
-            </div>
-          </button>
         </fieldset>
 
         {activeFilters > 0 && (
-          <div className="mc-discover-filters-footer">
-            <button
-              type="button"
-              className="btn"
-              onClick={onClearFilters}
-            >
-              <RotateCcw size={16} />
-              Limpar filtros
-            </button>
-          </div>
+          <button type="button" className="btn ghost" onClick={onClearFilters}>
+            Limpar filtros
+          </button>
         )}
       </div>
-    </section>
+    </motion.section>
   );
 }

@@ -2,11 +2,12 @@
 
 
 import "@/styles/features/lists.css";
+import "@/styles/features/screen-kit.css";
 import { apiFetch, errorMessage, isApiError } from "@/lib/api-client";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bookmark, ChevronRight, Globe, Link2, List as ListIcon, Lock, Pencil, Plus, Trash2 } from "lucide-react";
+import { Bookmark, ChevronRight, Globe, Link2, Lock, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { Search } from "@/components/Search";
 import { useConfirm } from "@/components/ConfirmProvider";
@@ -139,9 +140,8 @@ export function ListsPage() {
         <Search />
       </div>
 
-      <header className="lst-head">
-        <div>
-          <span className="lst-eyebrow">Suas coleções</span>
+      <header className="sk-head">
+        <div className="sk-head-text">
           <h1>Listas</h1>
           <p>Seleções de filmes e séries feitas por você, na ordem que você escolher.</p>
         </div>
@@ -165,8 +165,8 @@ export function ListsPage() {
       {state === "loading" ? <Skeleton /> : null}
 
       {state === "auth" ? (
-        <div className="lst-state" role="alert">
-          <strong>Entre para ver suas listas.</strong>
+        <div className="sk-empty" role="alert">
+          <h2>Entre para ver suas listas</h2>
           <a className="btn primary" href="/login?reason=session&next=/lists">
             Entrar
           </a>
@@ -174,8 +174,8 @@ export function ListsPage() {
       ) : null}
 
       {state === "error" ? (
-        <div className="lst-state" role="alert">
-          <strong>Não foi possível carregar suas listas.</strong>
+        <div className="sk-empty" role="alert">
+          <h2>Não foi possível carregar suas listas</h2>
           <button type="button" className="btn primary" onClick={() => load(1)}>
             Tentar de novo
           </button>
@@ -183,13 +183,9 @@ export function ListsPage() {
       ) : null}
 
       {state === "ready" && lists.length === 0 ? (
-        <div className="lst-state">
-          <ListIcon size={28} aria-hidden="true" />
-          <strong>Suas listas aparecem aqui.</strong>
-          <span>Crie coleções para organizar filmes e séries do seu jeito.</span>
-          <button type="button" className="btn primary" onClick={() => setForm({ open: true, initial: null })}>
-            <Plus size={16} aria-hidden="true" /> Nova lista
-          </button>
+        <div className="sk-empty">
+          <h2>Nenhuma lista ainda</h2>
+          <p>Crie uma lista para juntar filmes e séries do seu jeito: uma maratona, os favoritos do ano, o que indicar a alguém.</p>
         </div>
       ) : null}
 
@@ -205,7 +201,7 @@ export function ListsPage() {
                     <strong className="lst-card-title">{list.name}</strong>
                     {list.description ? <p className="lst-card-desc">{list.description}</p> : null}
                     <p className="lst-card-meta">
-                      {plural(list.item_count, "título", "títulos")} · <Visibility isPublic={list.is_public} />
+                      <span>{plural(list.item_count, "título", "títulos")}</span> <Visibility isPublic={list.is_public} />
                     </p>
                   </div>
                 </Link>

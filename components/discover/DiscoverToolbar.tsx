@@ -1,4 +1,5 @@
 import "@/styles/features/discover.css";
+import "@/styles/features/screen-kit.css";
 import { SlidersHorizontal } from "lucide-react";
 
 // Fase 4: botão leve; o PickForMe (grande) é baixado só ao abrir.
@@ -16,6 +17,11 @@ export type DiscoverToolbarProps = {
   onToggleFilters: () => void;
 };
 
+/**
+ * Fase 4b: abas de tipo numa linha; abaixo, a ordenação em fichinhas e, à
+ * direita, os dois controles neutros (Escolha pra mim, Filtros). Nenhum deles
+ * usa a cor de destaque — o número de filtros ativos é texto.
+ */
 export function DiscoverToolbar({
   params,
   activeFilters,
@@ -24,12 +30,15 @@ export function DiscoverToolbar({
   onToggleFilters,
 }: DiscoverToolbarProps) {
   return (
-    <section className="section discover-toolbar mc-discover-toolbar">
-      <div className="mc-discover-toolbar-row">
-        <DiscoverTabs value={params.type} onChange={(type) => onChange({ type })} />
+    <section className="dc-toolbar" aria-label="Tipo, ordem e filtros">
+      <DiscoverTabs value={params.type} onChange={(type) => onChange({ type })} />
 
-        <div className="discover-toolbar-actions mc-discover-toolbar-actions">
+      <div className="sk-bar">
+        <DiscoverSortControl value={params.sort} onChange={(sort) => onChange({ sort })} />
+
+        <div className="sk-bar-end">
           <PickForMeLauncher
+            className="sk-btn"
             inherit={{
               type: params.type,
               genre: params.genre,
@@ -43,22 +52,19 @@ export function DiscoverToolbar({
 
           <button
             type="button"
-            className={
-              "btn " + (showFilters || activeFilters > 0 ? "primary" : "")
-            }
+            className="btn sk-btn"
             aria-expanded={showFilters}
+            aria-label={activeFilters > 0 ? `Filtros, ${activeFilters} ${activeFilters === 1 ? "ativo" : "ativos"}` : undefined}
             onClick={onToggleFilters}
           >
-            <SlidersHorizontal size={16} />
+            <SlidersHorizontal size={16} aria-hidden="true" />
             Filtros
             {activeFilters > 0 && (
-              <b className="discover-filter-count">{activeFilters}</b>
+              <span className="sk-btn-count" aria-hidden="true">{activeFilters}</span>
             )}
           </button>
         </div>
       </div>
-
-      <DiscoverSortControl value={params.sort} onChange={(sort) => onChange({ sort })} />
     </section>
   );
 }

@@ -1,32 +1,27 @@
 import "@/styles/features/discover.css";
+import "@/styles/features/screen-kit.css";
+
 export type DiscoverHeaderProps = {
   totalLabel: string | null;
 };
 
 /**
- * Discover's entry point. Kept small and control-forward on purpose — this
- * is a tool for exploring the catalog, not the Home hero, so hierarchy is
- * eyebrow -> title -> one-line description -> a contextual result count.
+ * Fase 4b: título grande + frase (sem rótulo em caixa alta); a contagem é
+ * texto à direita, não uma pílula.
  */
 export function DiscoverHeader({ totalLabel }: DiscoverHeaderProps) {
   return (
-    <section className="section discover-head mc-discover-head">
-      <div>
-        <div className="eyebrow">Explore o catálogo</div>
+    <header className="sk-head">
+      <div className="sk-head-text">
         <h1>Descobrir</h1>
-        <p className="muted">
-          Encontre o próximo filme ou série usando filtros do seu jeito.
-        </p>
+        <p>Encontre o próximo filme ou série com filtros do seu jeito.</p>
       </div>
 
-      <div className="discover-total mc-discover-total">
-        {totalLabel ? (
-          <>
-            <strong>{totalLabel}</strong>
-            <span>títulos encontrados</span>
-          </>
-        ) : null}
-      </div>
-    </section>
+      {totalLabel ? (
+        <p className="sk-head-aside" aria-live="polite">
+          <strong>{totalLabel}</strong> títulos
+        </p>
+      ) : null}
+    </header>
   );
 }

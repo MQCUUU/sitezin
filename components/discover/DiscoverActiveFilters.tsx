@@ -1,3 +1,4 @@
+import "@/styles/features/screen-kit.css";
 import "@/styles/features/discover.css";
 import { X } from "lucide-react";
 
@@ -52,7 +53,7 @@ function buildChips(params: DiscoverParams, filters: FilterResponse): Chip[] {
   }
 
   if (params.onlyNew) {
-    chips.push({ key: "onlyNew", label: "Só não adicionados", patch: { onlyNew: false } });
+    chips.push({ key: "onlyNew", label: "Só fora da biblioteca", patch: { onlyNew: false } });
   }
 
   return chips;
@@ -75,23 +76,24 @@ export function DiscoverActiveFilters({
   if (chips.length === 0) return null;
 
   return (
-    <div className="mc-discover-active-filters" role="group" aria-label="Filtros ativos">
+    <div className="sk-chips dc-active" role="group" aria-label="Filtros ativos">
       {chips.map((chip, index) => (
         <button
           key={chip.key}
           type="button"
-          className="mc-discover-chip"
+          className="sk-chip dc-chip"
+          aria-label={`Remover filtro: ${chip.label}`}
           onClick={() => onRemove(chip.patch, index)}
         >
           {chip.label}
-          <X size={12} />
+          <X size={14} aria-hidden="true" />
         </button>
       ))}
 
       {chips.length > 1 && (
         <button
           type="button"
-          className="mc-discover-chip mc-discover-chip--clear"
+          className="sk-link dc-clear"
           onClick={onClearAll}
         >
           Limpar tudo

@@ -1,6 +1,7 @@
 import "@/styles/features/search-page.css";
+import "@/styles/features/screen-kit.css";
 import Link from "next/link";
-import { Clapperboard, Layers3, SlidersHorizontal, UserRound } from "lucide-react";
+import { UserRound } from "lucide-react";
 
 import { img } from "@/lib/tmdb";
 
@@ -12,33 +13,31 @@ export type PersonPanelProps = {
 };
 
 /**
- * B3 §16: the page already resolves "filmes do Nolan" / "Batman com
- * Christian Bale" server-side (advanced/person resolution) — this only
- * surfaces what was already decided, visually. No new interpretation
- * logic, no change to /api/search/advanced.
+ * Fase 4b: o que a busca entendeu, numa linha quieta — foto, nome e uma frase.
+ * Sem rótulo em caixa alta, sem selo e sem caixa. A interpretação continua
+ * toda no servidor (/api/search/advanced); aqui só se mostra o que já veio.
  */
 export function SearchPersonPanel({ person, creditsCount }: PersonPanelProps) {
-  return (
-    <div className="person-search-panel panel">
-      <div className="person-search-avatar">
-        {person.profile_path ? (
-          <img loading="lazy" decoding="async" src={img(person.profile_path, "w185")} alt={person.name} />
-        ) : (
-          <UserRound size={28} />
-        )}
-      </div>
+  const role = person.known_for_department === "Acting" ? "Atuação" : person.known_for_department || "Cinema e TV";
 
-      <div className="person-search-info">
-        <div className="eyebrow">Pessoa</div>
+  return (
+    <div className="sp-found">
+      <Link href={`/person/${person.id}`} className="sp-found-thumb sp-found-thumb--round" aria-hidden="true" tabIndex={-1}>
+        {person.profile_path ? (
+          <img loading="lazy" decoding="async" src={img(person.profile_path, "w185")} alt="" />
+        ) : (
+          <UserRound size={24} />
+        )}
+      </Link>
+
+      <div className="sp-found-copy">
         <h2>{person.name}</h2>
-        <p className="muted">
-          {person.known_for_department === "Acting"
-            ? "Ator / Atriz"
-            : person.known_for_department || "Cinema e TV"}
-          {" · "}
-          {creditsCount} créditos
+        <p>
+          {role}, {creditsCount} {creditsCount === 1 ? "crédito" : "créditos"}. Resultado direto do TMDB, sem IA.
         </p>
-        <span className="person-search-no-ai">100% TMDB · sem uso de IA</span>
+        <Link href={`/person/${person.id}`} className="sk-link">
+          Ver perfil de {person.name}
+        </Link>
       </div>
     </div>
   );
@@ -49,67 +48,46 @@ export type AdvancedPanelProps = {
 };
 
 export function SearchAdvancedPanel({ meta }: AdvancedPanelProps) {
+  const thumb = meta.collection?.poster_path
+    ? { href: `/collection/${meta.collection.id}`, src: img(meta.collection.poster_path, "w185"), round: false }
+    : meta.person?.profile_path
+      ? { href: `/person/${meta.person.id}`, src: img(meta.person.profile_path, "w185"), round: true }
+      : null;
+
   return (
-    <div className="search-advanced-panel panel">
-      <div className="search-advanced-icon">
-        {meta.mode === "collection" ? (
-          <Layers3 size={18} />
-        ) : meta.mode === "filters" ? (
-          <SlidersHorizontal size={18} />
-        ) : meta.mode === "director" ? (
-          <Clapperboard size={18} />
-        ) : (
-          <UserRound size={18} />
-        )}
-      </div>
-
-      {meta.collection?.poster_path && (
+    <div className="sp-found">
+      {thumb && (
         <Link
-          href={`/collection/${meta.collection.id}`}
-          className="search-advanced-thumb"
-          title={`Abrir ${meta.collection.name || meta.title}`}
+          href={thumb.href}
+          className={"sp-found-thumb" + (thumb.round ? " sp-found-thumb--round" : "")}
+          aria-hidden="true"
+          tabIndex={-1}
         >
-          <img
-            loading="lazy"
-            decoding="async"
-            src={img(meta.collection.poster_path, "w185")}
-            alt={meta.collection.name || meta.title}
-          />
+          <img loading="lazy" decoding="async" src={thumb.src} alt="" />
         </Link>
       )}
 
-      {meta.person?.profile_path && (
-        <Link href={`/person/${meta.person.id}`} className="search-advanced-thumb">
-          <img loading="lazy" decoding="async" src={img(meta.person.profile_path, "w185")} alt={meta.person.name} />
-        </Link>
-      )}
-
-      <div className="search-advanced-copy">
-        <div className="search-advanced-head">
-          <span className="eyebrow">BUSCA AVANÇADA</span>
-          <span className="search-no-ai-badge">100% TMDB · sem IA</span>
-        </div>
-
+      <div className="sp-found-copy">
         <h2>{meta.title}</h2>
-        <p className="muted">{meta.subtitle}</p>
+        <p>
+          {meta.subtitle}
+          {meta.subtitle && !/[.!?]$/.test(meta.subtitle.trim()) ? "." : ""} Resultado direto do TMDB, sem IA.
+        </p>
 
-        <div className="search-advanced-links">
-          {meta.person && (
-            <Link href={`/person/${meta.person.id}`} className="search-advanced-profile-link">
-              Ver perfil de {meta.person.name}
-            </Link>
-          )}
-
-          {meta.collection && (
-            <Link
-              href={`/collection/${meta.collection.id}`}
-              className="search-advanced-profile-link search-advanced-collection-link"
-            >
-              <Layers3 size={14} />
-              Abrir coleção completa
-            </Link>
-          )}
-        </div>
+        {(meta.person || meta.collection) && (
+          <div className="sp-found-links">
+            {meta.person && (
+              <Link href={`/person/${meta.person.id}`} className="sk-link">
+                Ver perfil de {meta.person.name}
+              </Link>
+            )}
+            {meta.collection && (
+              <Link href={`/collection/${meta.collection.id}`} className="sk-link">
+                Abrir a coleção completa
+              </Link>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

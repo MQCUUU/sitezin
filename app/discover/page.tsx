@@ -7,6 +7,7 @@ import { removeFromLibrary } from "@/lib/library/actions";
 import { removalConfirmOptions } from "@/lib/library/remove";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { AnimatePresence } from "motion/react";
 
 import { Search } from "@/components/Search";
 import { apiFetch } from "@/lib/api-client";
@@ -351,7 +352,7 @@ function DiscoverContent() {
 
     if (intent.kind === "chip") {
       const chipButtons = document.querySelectorAll<HTMLElement>(
-        ".mc-discover-chip:not(.mc-discover-chip--clear)"
+        ".dc-chip"
       );
 
       if (chipButtons.length > 0) {
@@ -684,19 +685,10 @@ function DiscoverContent() {
         onToggleFilters={() => setShowFilters((value) => !value)}
       />
 
-      {activeFilters > 0 && (
-        <section className="section">
-          <DiscoverActiveFilters
-            params={params}
-            filters={filters}
-            onRemove={handleChipRemove}
-            onClearAll={handleClearFilters}
-          />
-        </section>
-      )}
-
+      <AnimatePresence initial={false}>
       {showFilters && (
         <DiscoverFilters
+          key="filters"
           params={params}
           filters={filters}
           filtersLoading={filtersLoading}
@@ -705,6 +697,16 @@ function DiscoverContent() {
           onChange={handleChange}
           onClearFilters={handleClearFilters}
           onClose={() => setShowFilters(false)}
+        />
+      )}
+      </AnimatePresence>
+
+      {activeFilters > 0 && !showFilters && (
+        <DiscoverActiveFilters
+          params={params}
+          filters={filters}
+          onRemove={handleChipRemove}
+          onClearAll={handleClearFilters}
         />
       )}
 

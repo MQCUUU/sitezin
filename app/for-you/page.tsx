@@ -2031,7 +2031,7 @@ function MovieCard({
       </Link>
 
       <div className="card-meta fy-card-meta">
-        <span className="mc-media-type-year">{mediaTypeLabel(type)} · {year || "—"}</span>
+        <span className="mc-media-type-year">{mediaTypeLabel(type)}{year ? ` ${year}` : ""}</span>
 
         {Number(item.vote_average || 0) > 0 && (
           <span className="rating fy-rating">

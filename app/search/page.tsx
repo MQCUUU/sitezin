@@ -3,6 +3,7 @@
 
 import { useConfirm } from "@/components/ConfirmProvider";
 import "@/styles/features/search-page.css";
+import "@/styles/features/screen-kit.css";
 import { removeFromLibrary } from "@/lib/library/actions";
 import { removalConfirmOptions } from "@/lib/library/remove";
 import { Suspense, useEffect, useRef, useState } from "react";
@@ -831,14 +832,15 @@ function SearchPageContent() {
         <Search syncedQuery={query} />
       </div>
 
-      <div className="section search-page-shell">
+      <div className="sp-page">
         {query ? (
           <SearchPageHeader query={query} isPerson={Boolean(person)} />
         ) : (
-          <>
-            <div className="eyebrow">Pesquisa</div>
-            <h1>Pesquisar</h1>
-          </>
+          <header className="sk-head">
+            <div className="sk-head-text">
+              <h1>Busca</h1>
+            </div>
+          </header>
         )}
 
         {person && <SearchPersonPanel person={person} creditsCount={personCredits.length} />}
@@ -858,8 +860,8 @@ function SearchPageContent() {
         {!query ? (
           <SearchPageIdleState />
         ) : !isSearchable(query) ? (
-          <div className="empty mc-discover-empty" role="status">
-            <span>Digite pelo menos {MIN_QUERY_LENGTH} caracteres para pesquisar.</span>
+          <div className="sk-empty" role="status">
+            <p>Digite pelo menos {MIN_QUERY_LENGTH} caracteres para buscar.</p>
           </div>
         ) : isBusy ? (
           <SearchResultsSkeleton />

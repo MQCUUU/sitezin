@@ -83,7 +83,7 @@ export function SearchMediaCard({
       </Link>
 
       <MediaCardMeta>
-        <span className="mc-media-type-year">{mediaTypeLabel(item.media_type)} · {year || "—"}</span>
+        <span className="mc-media-type-year">{mediaTypeLabel(item.media_type)}{year ? ` ${year}` : ""}</span>
 
         {Number(item.vote_average || 0) > 0 && (
           <span className="rating" title="Média TMDB (não é a sua nota)">

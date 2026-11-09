@@ -1,5 +1,5 @@
+import "@/styles/features/screen-kit.css";
 import Link from "next/link";
-import { Filter, RotateCcw, Tv } from "lucide-react";
 
 export type DiscoverEmptyStateProps = {
   hasActiveFilters: boolean;
@@ -21,36 +21,33 @@ export function DiscoverEmptyState({
 }: DiscoverEmptyStateProps) {
   if (needsStreamingSetup) {
     return (
-      <div className="empty mc-discover-empty">
-        <Tv size={28} />
-        <span>Você ainda não escolheu seus serviços de streaming.</span>
-        <p className="muted">
-          Escolha onde você assiste para ver só o que está disponível para você.
-        </p>
-        <Link className="btn primary" href="/settings?tab=general">
-          Escolher meus serviços
-        </Link>
-        <button type="button" className="btn" onClick={onClearFilters}>
-          <RotateCcw size={16} />
-          Limpar filtros
-        </button>
+      <div className="sk-empty">
+        <h2>Você ainda não escolheu seus serviços de streaming</h2>
+        <p>Escolha onde você assiste para ver só o que está disponível para você.</p>
+        <div className="sk-chips">
+          <Link className="btn primary" href="/settings?tab=general">
+            Escolher meus serviços
+          </Link>
+          <button type="button" className="btn ghost" onClick={onClearFilters}>
+            Limpar filtros
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="empty mc-discover-empty">
-      <Filter size={28} />
-      <span>Nenhum título corresponde a estes filtros.</span>
-
-      {hasActiveFilters && (
+    <div className="sk-empty">
+      <h2>Nenhum título com estes filtros</h2>
+      {hasActiveFilters ? (
         <>
-          <p className="muted">Tente reduzir ou limpar os filtros ativos.</p>
+          <p>Tente tirar um ou dois filtros, ou limpe todos.</p>
           <button type="button" className="btn" onClick={onClearFilters}>
-            <RotateCcw size={16} />
             Limpar filtros
           </button>
         </>
+      ) : (
+        <p>Tente outra combinação de tipo e ordem.</p>
       )}
     </div>
   );

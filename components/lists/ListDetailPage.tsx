@@ -3,6 +3,7 @@
 
 import { Poster } from "@/components/Poster";
 import "@/styles/features/lists.css";
+import "@/styles/features/screen-kit.css";
 import { apiFetch, errorMessage, isApiError } from "@/lib/api-client";
 import Link from "next/link";
 import { ConnectedPosterActions } from "@/components/media/ConnectedPosterActions";
@@ -260,8 +261,8 @@ function DetailContent() {
 
   if (state === "error" || !meta) {
     return (
-      <div className="lst-state" role="alert">
-        <strong>Não foi possível carregar esta lista.</strong>
+      <div className="sk-empty" role="alert">
+        <h2>Não foi possível carregar esta lista</h2>
         <button type="button" className="btn primary" onClick={() => load(1)}>
           Tentar de novo
         </button>
@@ -284,11 +285,11 @@ function DetailContent() {
       <header className="lst-detail-head">
         <ListCover posters={covers} size="lg" />
         <div className="lst-detail-text">
-          <span className="lst-eyebrow">{owner ? "Sua lista" : `Lista de ${ownerName}`}</span>
           <h1>{meta.name}</h1>
           {meta.description ? <p className="lst-detail-desc">{meta.description}</p> : null}
           <p className="lst-card-meta">
-            {plural(meta.item_count, "título", "títulos")} · <Visibility isPublic={meta.is_public} />
+            {owner ? null : <span>Lista de {ownerName}</span>}
+            <span>{plural(meta.item_count, "título", "títulos")}</span> <Visibility isPublic={meta.is_public} />
           </p>
           <div className="lst-detail-actions">
             {owner ? (
@@ -297,7 +298,7 @@ function DetailContent() {
                   <Plus size={16} aria-hidden="true" /> Adicionar títulos
                 </button>
                 {canReorder || reorder ? (
-                  <button type="button" className={`btn${reorder ? " primary-soft" : ""}`} aria-pressed={reorder} onClick={() => setReorder((v) => !v)}>
+                  <button type="button" className="btn sk-btn" aria-pressed={reorder} onClick={() => setReorder((v) => !v)}>
                     {reorder ? <Check size={16} aria-hidden="true" /> : <ListOrdered size={16} aria-hidden="true" />}
                     {reorder ? "Concluir" : "Reorganizar"}
                   </button>
@@ -341,9 +342,9 @@ function DetailContent() {
       {reorder ? <p className="lst-hint">Use as setas para mudar a ordem. A nova ordem é salva na hora.</p> : null}
 
       {meta.item_count === 0 ? (
-        <div className="lst-state">
-          <Clapperboard size={26} aria-hidden="true" />
-          <strong>Esta lista ainda está vazia.</strong>
+        <div className="sk-empty">
+          <h2>Esta lista ainda está vazia</h2>
+          {owner ? <p>Adicione filmes e séries para começar.</p> : null}
           {owner ? (
             <button type="button" className="btn primary" onClick={() => setAdding(true)}>
               <Plus size={16} aria-hidden="true" /> Adicionar títulos
@@ -351,8 +352,8 @@ function DetailContent() {
           ) : null}
         </div>
       ) : totalFiltered === 0 && q ? (
-        <div className="lst-state">
-          <strong>Nenhum título desta lista corresponde à busca.</strong>
+        <div className="sk-empty">
+          <h2>Nenhum título desta lista com essa busca</h2>
           <button type="button" className="btn" onClick={() => setSearchInput("")}>
             Limpar busca
           </button>
@@ -389,8 +390,8 @@ function DetailContent() {
                   </Link>
                   <small>
                     {item.media_type === "tv" ? "Série" : "Filme"}
-                    {year ? ` · ${year}` : ""}
-                    {owner && item.library_status ? ` · ${mediaStatusLabel(item.library_status)}` : ""}
+                    {year ? ` ${year}` : ""}
+                    {owner && item.library_status ? `, ${mediaStatusLabel(item.library_status).toLowerCase()}` : ""}
                   </small>
                 </div>
                 {owner && reorder ? (

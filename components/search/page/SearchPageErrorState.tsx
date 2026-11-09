@@ -1,4 +1,4 @@
-import { AlertTriangle, RotateCcw } from "lucide-react";
+import "@/styles/features/screen-kit.css";
 
 import { SEARCH_ERROR_COPY } from "../errorCopy";
 import type { SearchErrorKind } from "../types";
@@ -18,13 +18,11 @@ export function SearchPageErrorState({ onRetry, kind = "unavailable" }: SearchPa
   const copy = SEARCH_ERROR_COPY[kind];
 
   return (
-    <div className="empty mc-discover-empty mc-discover-empty--error" role="alert">
-      <AlertTriangle size={28} />
-      <span>{copy.title}.</span>
-      <p className="muted">{copy.hint}</p>
+    <div className="sk-empty" role="alert">
+      <h2>{copy.title}.</h2>
+      <p>{copy.hint}</p>
       <button type="button" className="btn" onClick={onRetry}>
-        <RotateCcw size={16} />
-        Tentar novamente
+        Tentar de novo
       </button>
     </div>
   );

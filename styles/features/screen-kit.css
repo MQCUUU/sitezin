@@ -1,0 +1,567 @@
+/*
+ * Fase 4b — peças comuns das páginas na direção "Tela 2.39:1".
+ *
+ * Biblioteca, Diário e Calendário nasceram com classes próprias (lb-*, dy-*,
+ * cal-*). As páginas seguintes (Descobrir, Busca, Watchlist, Listas, Pessoa,
+ * Coleção, Episódio, Perfil, Stats, entrada) usam estas — o mesmo desenho:
+ *
+ *   .sk-head      título grande + frase de apoio (sem rótulo em caixa alta)
+ *   .sk-tabs      abas de texto com traço na cor de destaque (Motion layoutId)
+ *   .sk-chips     fichinhas de borda fina; escolhida = superfície clara
+ *   .sk-bar       uma linha de controles neutros
+ *   .sk-section   seção com título h2 sem eyebrow
+ *   .sk-empty     estado vazio sem caixa tracejada
+ *
+ * Importado pelos componentes que usam (não pelo layout raiz).
+ */
+
+/* ---------------------------------------------------------------- Topo */
+.sk-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin: 24px 0 28px;
+}
+
+.sk-head-text {
+  min-width: 0;
+}
+
+.sk-head h1 {
+  margin: 0;
+  font-size: clamp(40px, 5vw, 64px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+}
+
+.sk-head p {
+  max-width: 62ch;
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.45;
+}
+
+/* Contagem ou dado curto à direita do título (texto, sem pílula). */
+.sk-head-aside {
+  color: var(--muted);
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.sk-head-aside strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- Abas */
+.sk-tabs {
+  display: flex;
+  gap: 28px;
+  min-width: 0;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+  scrollbar-width: none;
+}
+
+.sk-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.sk-tab {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  min-height: 0;
+  padding: 12px 0 14px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.sk-tab-count {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.sk-tab[aria-selected="true"],
+.sk-tab[aria-current="page"] {
+  color: var(--text);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sk-tab:hover {
+    color: var(--text);
+  }
+}
+
+.sk-tab-indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+/* ---------------------------------------------------------------- Fichinhas */
+.sk-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--mc-radius-pill);
+  background: transparent;
+  color: var(--mc-color-text-secondary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 120ms var(--mc-ease-out);
+}
+
+.sk-chip:active {
+  transform: scale(0.97);
+}
+
+.sk-chip[aria-checked="true"],
+.sk-chip[aria-pressed="true"],
+.sk-chip[aria-current="page"] {
+  border-color: transparent;
+  background: var(--text);
+  color: var(--bg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sk-chip:not([aria-checked="true"]):not([aria-pressed="true"]):not([aria-current="page"]):hover {
+    border-color: color-mix(in srgb, var(--text) 30%, var(--line));
+    color: var(--text);
+  }
+}
+
+/* ---------------------------------------------------------------- Controles */
+.sk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  margin: 18px 0 24px;
+}
+
+.sk-bar-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+/* Botão neutro: superfície lisa, sem borda; nunca a cor de destaque. */
+.sk-btn.btn {
+  min-height: var(--mc-control-md);
+  border-color: transparent;
+  background: var(--panel);
+  color: var(--text);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sk-btn.btn:hover:not(:disabled) {
+    background: var(--mc-color-surface-hover);
+  }
+}
+
+.sk-btn.btn[aria-expanded="true"],
+.sk-btn.btn[aria-pressed="true"] {
+  background: var(--mc-color-surface-active);
+}
+
+.sk-btn-count {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.sk-hint {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* ---------------------------------------------------------------- Seções */
+.sk-section {
+  margin: 40px 0 0;
+}
+
+.sk-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 16px;
+  margin-bottom: 16px;
+}
+
+.sk-section h2,
+.sk-section-head h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.sk-section-head p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.sk-link {
+  color: var(--mc-color-text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+button.sk-link {
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sk-link:hover {
+    color: var(--text);
+  }
+}
+
+/* ---------------------------------------------------------------- Painel (filtros) */
+.sk-panel {
+  margin: 0 0 28px;
+  padding: 22px 24px 24px;
+  border-radius: var(--mc-radius-lg);
+  background: var(--panel);
+}
+
+.sk-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.sk-panel-head h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.sk-panel-head span {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.sk-close {
+  width: 36px;
+  height: 36px;
+  min-height: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--mc-radius-md);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sk-close:hover {
+    background: var(--mc-color-surface-hover);
+    color: var(--text);
+  }
+}
+
+.sk-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 18px 20px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.sk-field {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sk-field legend {
+  margin-bottom: 8px;
+  padding: 0;
+}
+
+.sk-field select,
+.sk-field input {
+  width: 100%;
+  min-height: var(--mc-control-md);
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--mc-radius-md);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.sk-field select:focus-visible,
+.sk-field input:focus-visible,
+.sk-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.sk-panel-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+/* ---------------------------------------------------------------- Vazio */
+.sk-empty {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  max-width: 52ch;
+  padding: 48px 0;
+}
+
+.sk-empty h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.sk-empty p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.sk-empty .btn {
+  margin-top: 8px;
+}
+
+/* ---------------------------------------------------------------- Topo com imagem
+ * Pessoa e Coleção: retrato/pôster + nome grande + números em texto, sobre um
+ * fundo panorâmico bem apagado. */
+.sk-hero {
+    position: relative;
+    margin: 8px 0 8px;
+    padding: 28px 0 32px;
+    isolation: isolate;
+}
+.sk-hero-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: var(--mc-radius-lg);
+    background-size: cover;
+    background-position: center 30%;
+    opacity: 0.14;
+    mask-image: linear-gradient(to bottom, #000 20%, transparent 92%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 20%, transparent 92%);
+}
+.sk-hero-content {
+    display: flex;
+    align-items: flex-end;
+    gap: 32px;
+}
+.sk-hero-poster {
+    position: relative;
+    flex: none;
+    width: 200px;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border-radius: var(--mc-radius-md);
+    background: var(--panel);
+}
+.sk-hero-poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.sk-hero-poster-empty {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    color: var(--muted);
+}
+.sk-hero-copy {
+    min-width: 0;
+}
+.sk-hero-kicker {
+    margin: 0 0 8px;
+    color: var(--mc-color-text-secondary);
+    font-size: 17px;
+    font-weight: 600;
+}
+.sk-hero-copy h1 {
+    margin: 0;
+    font-size: clamp(40px, 5.6vw, 76px);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.035em;
+    overflow-wrap: anywhere;
+}
+.sk-hero-sub {
+    margin: 12px 0 0;
+    color: var(--muted);
+    font-size: 15px;
+}
+.sk-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 36px;
+    margin: 24px 0 0;
+}
+.sk-stats div {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 2px;
+}
+.sk-stats dt {
+    color: var(--muted);
+    font-size: 14px;
+}
+.sk-stats dd {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+}
+@media (max-width: 640px) {
+    .sk-hero {
+        padding: 12px 0 24px;
+    }
+    .sk-hero-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 18px;
+    }
+    .sk-hero-poster {
+        width: 120px;
+    }
+    .sk-stats {
+        gap: 12px 24px;
+    }
+    .sk-stats dd {
+        font-size: 22px;
+    }
+}
+.sk-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 24px;
+}
+
+.sk-hero-text {
+    max-width: 70ch;
+    margin: 14px 0 0;
+    color: var(--mc-color-text-secondary);
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+/* ---------------------------------------------------------------- Foco */
+.sk-tab:focus-visible,
+.sk-chip:focus-visible,
+.sk-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.sk-chip:focus-visible {
+  border-radius: var(--mc-radius-pill);
+}
+
+/* ---------------------------------------------------------------- Celular */
+@media (max-width: 640px) {
+  .sk-head {
+    margin: 12px 0 22px;
+  }
+
+  .sk-head p {
+    font-size: 16px;
+  }
+
+  .sk-tabs {
+    gap: 22px;
+  }
+
+  .sk-bar-end {
+    margin-left: 0;
+  }
+
+  .sk-panel {
+    padding: 18px 16px 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk-chip,
+  .sk-tab {
+    transition: none;
+  }
+
+  .sk-chip:active {
+    transform: none;
+  }
+}

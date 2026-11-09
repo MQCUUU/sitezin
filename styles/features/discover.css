@@ -5,23 +5,6 @@
  * Carregado pelos componentes que usam estas classes, não pelo layout raiz.
  */
 
-.discover-head {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 18px
-}
-.discover-total {
-    color: var(--muted);
-    font-size: var(--mc-fs-xs);
-    white-space: nowrap
-}
-.discover-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px
-}
 .discover-loading {
     min-height: 320px;
     display: flex;
@@ -66,239 +49,7 @@
     text-align: center;
     color: var(--muted)
 }
-@media (max-width:700px) {
-    .discover-head,.discover-toolbar {
-        align-items: stretch;
-        flex-direction: column
-    }
-}
-.discover-tabs {
-    display: inline-grid;
-    grid-template-columns: repeat(3,minmax(105px,1fr));
-    gap: 5px;
-    padding: 5px;
-    border-radius: var(--mc-radius-lg)
-}
-@media (max-width: 520px) {
-    .discover-tabs {
-        width: 100%;
-        grid-template-columns: repeat(3,1fr)
-    }
-}
-@media (max-width: 520px) {
-    .discover-tabs .btn {
-        min-width: 0;
-        padding-inline: 8px
-    }
-}
-.mc-discover-head {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: var(--mc-space-24);
-    flex-wrap: wrap;
-}
-.mc-discover-total {
-    display: flex;
-    align-items: baseline;
-    gap: var(--mc-space-6);
-    padding: var(--mc-space-8) var(--mc-space-16);
-    border-radius: var(--mc-radius-pill);
-    background: var(--mc-color-surface-muted);
-    border: var(--mc-border-subtle);
-    color: var(--mc-color-text-secondary);
-    font-size: var(--mc-text-body-small-size);
-    white-space: nowrap;
-}
-.mc-discover-total strong {
-    color: var(--mc-color-text);
-    font-size: var(--mc-text-title-size);
-    font-weight: var(--mc-text-title-weight);
-}
-@media (max-width: 700px) {
-    .mc-discover-head {
-        align-items: flex-start;
-    }
-}
-.mc-discover-toolbar {
-    display: flex;
-    flex-direction: column;
-    gap: var(--mc-space-16);
-}
-/*
- * BUG-B2.5-01 fix: the sort <select> rendered past the right edge of every
- * viewport ≤540px (clipped by an ancestor's overflow — not scrollable, so
- * scrollWidth never caught it). Root cause was two flex items in this
- * nested row/actions structure never getting a real width to shrink into,
- * so they floored at their children's combined min-content (~526px, driven
- * by the legacy `.discover-sort select{min-width:190px}`, desktop-only —
- * see the ≤700px override below which already existed for this).
- *
- * Before B2, `.discover-toolbar-actions` sat directly under
- * `.discover-toolbar`'s own mobile `flex-direction:column;align-items:
- * stretch` (globals.css), which gave it a real 100%-width box to shrink
- * into. B2's new `.mc-discover-toolbar-row` wrapper sits between them and
- * never had that; `width: 100%` restores an explicit, real width here
- * (relying on implicit stretch/min-width:auto interplay alone was not
- * enough — verified empirically), and `min-width: 0` on both this row and
- * `.mc-discover-toolbar-actions` lets them actually shrink to it instead
- * of flooring at content size.
- */
-.mc-discover-toolbar-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--mc-space-16);
-    flex-wrap: wrap;
-    width: 100%;
-    min-width: 0;
-}
-.mc-discover-toolbar-actions {
-    display: flex;
-    align-items: center;
-    gap: var(--mc-space-12);
-    flex-wrap: wrap;
-    min-width: 0;
-}
-.mc-discover-tabs {
-    display: inline-flex;
-    gap: var(--mc-space-4);
-    padding: var(--mc-space-4);
-    border-radius: var(--mc-radius-pill);
-    background: var(--mc-color-surface-muted);
-    border: var(--mc-border-subtle);
-}
-.mc-discover-tab:hover {
-    color: var(--mc-color-text);
-}
-.mc-discover-tab--active {
-    background: var(--mc-color-accent);
-    color: var(--mc-color-accent-contrast);
-}
-.mc-discover-tab:focus-visible {
-    outline: none;
-    box-shadow: var(--mc-focus-ring);
-}
-/*
- * BUG-B4.1-02 fix: same flex min-width:auto trap as BUG-B2.5-01 above.
- * `.mc-discover-toolbar` is a column flex container, so this row's cross
- * size (width) is meant to stretch to its parent's box — but a flex item's
- * default `min-width: auto` floors it at its content's min-content width
- * instead, letting it overflow the parent (and the page) at ~700-820px
- * where the toolbar box is narrower than the shortcuts' combined pill
- * width. `overflow-x: auto` here never got a chance to engage because the
- * box itself was oversized rather than clipped. As with that fix,
- * `min-width: 0` alone was not enough (verified empirically) — an explicit
- * `width: 100%` is needed too so the row actually takes the parent's real
- * width instead of floating at its stretch-fit content size, letting its
- * own scroll strip take over instead of pushing the page wider.
- */
-.mc-discover-shortcuts {
-    display: flex;
-    gap: var(--mc-space-8);
-    width: 100%;
-    min-width: 0;
-    overflow-x: auto;
-    padding-bottom: var(--mc-space-2);
-    scrollbar-width: thin;
-}
-.mc-discover-shortcut:hover {
-    color: var(--mc-color-text);
-    border-color: var(--mc-color-border-strong);
-}
-.mc-discover-shortcut--active {
-    background: var(--mc-color-accent-soft);
-    border-color: color-mix(in srgb, var(--mc-color-accent) 55%, transparent);
-    color: var(--mc-color-accent);
-}
-.mc-discover-shortcut:focus-visible {
-    outline: none;
-    box-shadow: var(--mc-focus-ring);
-}
-/* V2.9 — ordenação única (grupo de rádio) + critério ativo explicado */
-.mc-discover-sort {
-    display: grid;
-    gap: var(--mc-space-6);
-    min-width: 0;
-}
-.mc-discover-sort-short {
-    display: none;
-}
-.mc-discover-sort-hint {
-    margin: 0;
-    font-size: var(--mc-text-caption-size);
-}
-@media (max-width: 520px) {
-    .mc-discover-sort-full {
-        display: none;
-    }
-}
-@media (max-width: 520px) {
-    .mc-discover-sort-short {
-        display: inline;
-    }
-}
-@media (max-width: 520px) {
-    .mc-discover-sort .mc-discover-shortcuts {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        overflow: visible;
-    }
-}
-@media (max-width: 520px) {
-    .mc-discover-sort .mc-discover-shortcut {
-        justify-content: center;
-        padding-inline: var(--mc-space-6);
-        white-space: nowrap;
-    }
-}
-/*
- * Abaixo de 400px três colunas iguais não comportam "Bem avaliados" com
- * ícone (quebrava em duas linhas dentro da pílula). Cada opção passa a ter a
- * largura do próprio rótulo; o estado ativo continua marcado pela cor/borda.
- */
-@media (max-width: 400px) {
-    .mc-discover-sort .mc-discover-shortcuts {
-        display: flex;
-    }
-    .mc-discover-sort .mc-discover-shortcut {
-        flex: 1 1 auto;
-        padding-inline: var(--mc-space-8);
-    }
-    .mc-discover-sort .mc-discover-shortcut svg {
-        display: none;
-    }
-}
-/*
- * Celular: ~500px de controles antes do primeiro pôster. O contador ("Mais de
- * 40.000 títulos") é informativo, não um controle, e a frase da ordenação
- * repete a pílula ativa — o grupo de rádio continua descrito por ela
- * (aria-describedby funciona com o elemento oculto).
- */
-@media (max-width: 760px) {
-    .mc-discover-total,
-    .mc-discover-sort-hint {
-        display: none;
-    }
-}
-/*
- * `.mc-discover-tabs` (inline-flex) vem depois de `.discover-tabs` e anulava
- * o grid de 3 colunas do celular: os botões não encolhiam e "Séries" passava
- * da borda. Reafirma o grid aqui.
- */
-@media (max-width: 520px) {
-    .discover-tabs.mc-discover-tabs {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        width: 100%;
-    }
-    .discover-tabs .mc-discover-tab {
-        min-width: 0;
-        justify-content: center;
-        padding-inline: var(--mc-space-8);
-        white-space: nowrap;
-    }
-}
+
 /* V2.9 — grid anterior fica (esmaecido) enquanto a nova página carrega */
 .mc-discover-results.is-refreshing {
     opacity: 0.55;
@@ -313,125 +64,6 @@
 .mc-discover-depth-note {
     margin-top: var(--mc-space-8);
     text-align: center;
-}
-.mc-discover-filters {
-    display: flex;
-    flex-direction: column;
-    gap: var(--mc-space-20);
-    padding: var(--mc-space-24);
-    border-radius: var(--mc-radius-panel);
-    background: var(--mc-color-surface);
-    border: var(--mc-border-default);
-}
-.mc-discover-filters-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--mc-space-16);
-}
-.mc-discover-filters-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: var(--mc-space-16);
-    padding: 0;
-    margin: 0;
-    border: none;
-}
-.mc-discover-filters-provider {
-    grid-column: span 2;
-}
-.mc-discover-filters-toggles {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: var(--mc-space-12);
-    padding: 0;
-    margin: 0;
-    border: none;
-    border-top: var(--mc-border-subtle);
-    padding-top: var(--mc-space-16);
-}
-.mc-discover-toggle svg {
-    flex: none;
-    opacity: 0.5;
-}
-.mc-discover-toggle strong {
-    display: block;
-    color: var(--mc-color-text);
-    font-size: var(--mc-text-body-small-size);
-}
-.mc-discover-toggle span {
-    display: block;
-    font-size: var(--mc-text-caption-size);
-    color: var(--mc-color-text-muted);
-}
-.mc-discover-toggle--active {
-    border-color: color-mix(in srgb, var(--mc-color-accent) 55%, transparent);
-    background: var(--mc-color-accent-soft);
-}
-.mc-discover-toggle--active svg {
-    opacity: 1;
-    color: var(--mc-color-accent);
-}
-.mc-discover-toggle:focus-visible {
-    outline: none;
-    box-shadow: var(--mc-focus-ring);
-}
-.mc-discover-filters-footer {
-    display: flex;
-    justify-content: flex-end;
-}
-@media (max-width: 700px) {
-    .mc-discover-filters {
-        padding: var(--mc-space-16);
-    }
-}
-@media (max-width: 700px) {
-    .mc-discover-filters-grid {
-        grid-template-columns: 1fr;
-    }
-}
-@media (max-width: 700px) {
-    .mc-discover-filters-provider {
-        grid-column: span 1;
-    }
-}
-.mc-discover-active-filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--mc-space-8);
-}
-.mc-discover-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--mc-space-6);
-    padding: var(--mc-space-6) var(--mc-space-12);
-    min-height: 32px;
-    border-radius: var(--mc-radius-pill);
-    border: var(--mc-border-default);
-    background: var(--mc-color-surface-muted);
-    color: var(--mc-color-text);
-    font-size: var(--mc-text-caption-size);
-    font-weight: 600;
-    cursor: pointer;
-}
-.mc-discover-chip svg {
-    opacity: 0.6;
-}
-.mc-discover-chip:hover {
-    border-color: var(--mc-color-danger);
-    color: var(--mc-color-danger);
-}
-.mc-discover-chip:hover svg {
-    opacity: 1;
-}
-.mc-discover-chip--clear {
-    background: transparent;
-    border-style: dashed;
-    color: var(--mc-color-text-secondary);
-}
-.mc-discover-chip:focus-visible {
-    outline: none;
-    box-shadow: var(--mc-focus-ring);
 }
 .mc-discover-personal-note {
     display: flex;
@@ -463,4 +95,73 @@
 .mc-discover-page-btn:focus-visible {
     outline: none;
     box-shadow: var(--mc-focus-ring);
+}
+
+/* ===========================================================================
+ * Fase 4b — Descobrir na direção "Tela 2.39:1". Topo, abas, ordenação, filtros
+ * e vazio usam styles/features/screen-kit.css; aqui só o que é do Descobrir.
+ * ======================================================================== */
+.dc-toolbar .sk-bar {
+    align-items: flex-start;
+}
+.dc-sort {
+    min-width: 0;
+}
+.dc-sort-short {
+    display: none;
+}
+.dc-active {
+    align-items: center;
+    margin: -8px 0 22px;
+}
+.dc-chip {
+    min-height: 32px;
+    padding: 0 10px 0 12px;
+    color: var(--text);
+    font-weight: 500;
+}
+.dc-chip svg {
+    color: var(--muted);
+}
+.mc-discover-results-summary {
+    margin: 0 0 14px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 500;
+}
+.mc-discover-results-summary:focus {
+    outline: none;
+}
+/* Página atual: superfície clara, como a opção escolhida (não a cor de destaque). */
+.discover-page-btn.mc-discover-page-btn--active,
+.discover-page-btn.active {
+    border-color: transparent;
+    background: var(--text);
+    color: var(--bg);
+}
+.discover-page-btn:hover:not(:disabled) {
+    transform: none;
+    border-color: color-mix(in srgb, var(--text) 30%, var(--line));
+}
+.mc-discover-personal-note {
+    border: 0;
+    background: var(--panel);
+    color: var(--mc-color-text-secondary);
+}
+@media (max-width: 700px) {
+    .dc-sort-full {
+        display: none;
+    }
+    .dc-sort-short {
+        display: inline;
+    }
+    .dc-toolbar .sk-bar-end {
+        width: 100%;
+    }
+    .dc-toolbar .sk-bar-end .btn {
+        flex: 1 1 0;
+        justify-content: center;
+        padding-inline: 10px;
+        white-space: nowrap;
+    }
 }

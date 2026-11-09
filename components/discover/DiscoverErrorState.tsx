@@ -1,4 +1,4 @@
-import { AlertTriangle, RotateCcw } from "lucide-react";
+import "@/styles/features/screen-kit.css";
 
 export type DiscoverErrorStateProps = {
   onRetry: () => void;
@@ -13,13 +13,11 @@ export type DiscoverErrorStateProps = {
  */
 export function DiscoverErrorState({ onRetry }: DiscoverErrorStateProps) {
   return (
-    <div className="empty mc-discover-empty mc-discover-empty--error" role="alert">
-      <AlertTriangle size={28} />
-      <span>Não foi possível carregar os títulos agora.</span>
-      <p className="muted">Verifique sua conexão e tente novamente.</p>
+    <div className="sk-empty" role="alert">
+      <h2>Não foi possível carregar os títulos agora</h2>
+      <p>Verifique sua conexão e tente de novo.</p>
       <button type="button" className="btn" onClick={onRetry}>
-        <RotateCcw size={16} />
-        Tentar novamente
+        Tentar de novo
       </button>
     </div>
   );

@@ -4,6 +4,8 @@
 
 import { useConfirm } from "@/components/ConfirmProvider";
 import "@/styles/features/collection.css";
+import "@/styles/features/screen-kit.css";
+import { motion } from "motion/react";
 import { removeFromLibrary } from "@/lib/library/actions";
 import { removalConfirmOptions } from "@/lib/library/remove";
 import { apiFetch } from "@/lib/api-client";
@@ -231,7 +233,6 @@ export default function CollectionPage() {
       "rating"
     >("release");
 
-  const [contentTab, setContentTab] = useState<"overview" | "titles">("overview");
 
   const [
     openMenu,
@@ -1312,181 +1313,61 @@ export default function CollectionPage() {
         <SmartBackButton />
       </div>
 
-      <nav className="title-content-tabs collection-content-tabs" aria-label="Seções da coleção">{([['overview','Visão geral e progresso'],['titles','Filmes da coleção']] as const).map(([value,label])=><button key={value} className={contentTab===value?"active":""} onClick={()=>setContentTab(value)}>{label}</button>)}</nav>
-
-      {contentTab === "overview" && <>
-
-      {/* =====================================
-          HERO
-          ===================================== */}
-
-      <section className="collection-hero">
+      {/* Fase 4b: uma página só (antes, duas abas): topo, progresso e os filmes. */}
+      <section className="sk-hero">
         {collection.backdrop_path && (
           <div
-            className="collection-hero-backdrop"
-            style={{
-              backgroundImage:
-                `url(${img(
-                  collection.backdrop_path,
-                  "w1280"
-                )})`,
-            }}
+            className="sk-hero-backdrop"
+            aria-hidden="true"
+            style={{ backgroundImage: `url(${img(collection.backdrop_path, "w1280")})` }}
           />
         )}
 
-        <div className="collection-hero-overlay" />
-
-        <div className="collection-hero-content">
-          <div className="collection-poster-wrap">
+        <div className="sk-hero-content">
+          <div className="sk-hero-poster">
             {collection.poster_path ? (
-              <Poster
-                path={collection.poster_path}
-                alt={collection.name}
-                sizes="(max-width: 700px) 96px, 260px"
-                priority
-              />
+              <Poster path={collection.poster_path} alt={collection.name} sizes="(max-width: 700px) 120px, 220px" priority />
             ) : (
-              <div className="collection-poster-empty">
-                <Layers3
-                  size={48}
-                />
+              <div className="sk-hero-poster-empty">
+                <Layers3 size={48} aria-hidden="true" />
               </div>
             )}
           </div>
 
-          <div className="collection-hero-copy">
-            <div className="collection-kicker">
-              <Layers3
-                size={16}
-              />
+          <div className="sk-hero-copy">
+            <p className="sk-hero-kicker">Coleção</p>
+            <h1>{collection.name}</h1>
+            {collection.overview && <p className="sk-hero-text">{collection.overview}</p>}
 
-              Coleção / Franquia
-            </div>
-
-            <h1>
-              {
-                collection.name
-              }
-            </h1>
-
-            {collection.overview && (
-              <p className="collection-overview">
-                {
-                  collection.overview
-                }
-              </p>
-            )}
-
-            <div className="collection-stats">
+            <dl className="sk-stats">
               <div>
-                <strong>
-                  {
-                    movies.length
-                  }
-                </strong>
-
-                <span>
-                  Filmes
-                </span>
+                <dt>Filmes</dt>
+                <dd>{movies.length}</dd>
               </div>
-
-              <div>
-                <strong>
-                  {
-                    watchedCount
-                  }
-                </strong>
-
-                <span>
-                  Assistidos
-                </span>
-              </div>
-
-              <div>
-                <strong>
-                  {
-                    libraryCount
-                  }
-                </strong>
-
-                <span>
-                  Na biblioteca
-                </span>
-              </div>
-
-              {stats?.total_runtime >
-                0 && (
+              {stats?.total_runtime > 0 && (
                 <div>
-                  <strong>
-                    {formatRuntime(
-                      Number(
-                        stats.total_runtime
-                      )
-                    )}
-                  </strong>
-
-                  <span>
-                    Duração total
-                  </span>
+                  <dt>Duração total</dt>
+                  <dd>{formatRuntime(Number(stats.total_runtime))}</dd>
                 </div>
               )}
-
               {stats?.average_rating && (
                 <div>
-                  <strong>
-                    {Number(
-                      stats.average_rating
-                    ).toFixed(
-                      1
-                    )}
-                  </strong>
-
-                  <span>
-                    Média TMDB
-                  </span>
+                  <dt>Média no TMDB</dt>
+                  <dd>{Number(stats.average_rating).toFixed(1).replace(".", ",")}</dd>
                 </div>
               )}
-            </div>
+              <div>
+                <dt>Na biblioteca</dt>
+                <dd>{libraryCount}</dd>
+              </div>
+            </dl>
 
-            <div className="collection-hero-actions">
-              <button
-                type="button"
-                className="btn primary"
-                disabled={
-                  bulkProcessing
-                }
-                onClick={
-                  () => guardedBulk(addAll)
-                }
-              >
-                {bulkProcessing ? (
-                  <Loader2
-                    size={16}
-                    className="spin"
-                  />
-                ) : (
-                  <Plus
-                    size={16}
-                  />
-                )}
-
+            <div className="sk-hero-actions">
+              <button type="button" className="btn primary" disabled={bulkProcessing} onClick={() => guardedBulk(addAll)}>
+                {bulkProcessing ? <Loader2 size={16} className="spin" aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
                 Adicionar os que faltam
               </button>
-
-              <button
-                type="button"
-                className="btn"
-                disabled={
-                  bulkProcessing
-                }
-                onClick={
-                  () => guardedBulk(setAllWant)
-                }
-              >
-                <Sparkles
-                  size={16}
-                />
-
+              <button type="button" className="btn sk-btn" disabled={bulkProcessing} onClick={() => guardedBulk(setAllWant)}>
                 Quero assistir todos
               </button>
             </div>
@@ -1494,258 +1375,98 @@ export default function CollectionPage() {
         </div>
       </section>
 
-      {/* =====================================
-          PROGRESSO
-          ===================================== */}
-
-      <section className="section">
-        <div className="panel collection-progress-panel">
-          <div className="collection-progress-head">
-            <div>
-              <span className="eyebrow">
-                SEU PROGRESSO
-              </span>
-
-              <h2>
-                {watchedCount} de{" "}
-                {movies.length}{" "}
-                assistidos
-              </h2>
-            </div>
-
-            <strong>
-              {
-                progress
-              }%
-            </strong>
-          </div>
-
-          <div className="collection-progress-track">
-            <div
-              style={{
-                width:
-                  `${progress}%`,
-              }}
-            />
-          </div>
-
-          <p className="muted">
-            {progress ===
-            100
-              ? "Franquia concluída."
-              : progress ===
-                  0
-                ? "Você ainda não concluiu nenhum filme desta coleção."
-                : `Faltam ${
-                    movies.length -
-                    watchedCount
-                  } para concluir a coleção.`}
-          </p>
+      <section className="cl-progress" aria-label="Seu progresso na coleção">
+        <div className="cl-progress-head">
+          <h2>
+            {watchedCount} de {movies.length} assistidos
+          </h2>
+          <span>{progress}%</span>
         </div>
+        <div
+          className="cl-progress-track"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progress}
+          aria-label="Progresso da coleção"
+        >
+          <motion.div
+            className="cl-progress-fill"
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: progress / 100 }}
+            transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+          />
+        </div>
+        <p>
+          {progress === 100
+            ? "Coleção concluída."
+            : progress === 0
+              ? "Você ainda não assistiu nenhum filme desta coleção."
+              : `Faltam ${movies.length - watchedCount} para concluir a coleção.`}
+        </p>
       </section>
 
-      </>}
-
-      {contentTab === "titles" && <>
-
-      {/* =====================================
-          CONTROLES
-          ===================================== */}
-
-      <section className="section collection-toolbar">
-        <div className="collection-tabs">
-          <button
-            type="button"
-            className={
-              filter ===
-              "all"
-                ? "active"
-                : ""
-            }
-            onClick={() =>
-              setFilter(
-                "all"
-              )
-            }
-          >
-            Todos
-            <span>
-              {
-                movies.length
-              }
-            </span>
-          </button>
-
-          <button
-            type="button"
-            className={
-              filter ===
-              "watched"
-                ? "active"
-                : ""
-            }
-            onClick={() =>
-              setFilter(
-                "watched"
-              )
-            }
-          >
-            Assistidos
-            <span>
-              {
-                watchedCount
-              }
-            </span>
-          </button>
-
-          <button
-            type="button"
-            className={
-              filter ===
-              "missing"
-                ? "active"
-                : ""
-            }
-            onClick={() =>
-              setFilter(
-                "missing"
-              )
-            }
-          >
-            Faltando
-            <span>
-              {movies.length -
-                watchedCount}
-            </span>
-          </button>
+      <section className="sk-section cl-films" aria-labelledby="collection-films-title">
+        <div className="sk-section-head">
+          <h2 id="collection-films-title">Filmes</h2>
         </div>
 
-        <label className="collection-sort">
-          <span>
-            Ordenar
-          </span>
-
-          <select
-            value={
-              sort
-            }
-            onChange={(
-              event
-            ) =>
-              setSort(
-                event.target
-                  .value as
-                  | "release"
-                  | "rating"
-              )
-            }
-          >
-            <option value="release">
-              Ordem de lançamento
-            </option>
-
-            <option value="rating">
-              Melhor avaliados
-            </option>
-          </select>
-        </label>
-      </section>
-
-      {/* =====================================
-          FILMES
-          ===================================== */}
-
-      <section className="section">
-        <div className="section-head">
-          <div>
-            <div className="eyebrow">
-              FILMOGRAFIA DA FRANQUIA
-            </div>
-
-            <h2>
-              {
-                filter ===
-                "all"
-                  ? "Todos os filmes"
-                  : filter ===
-                      "watched"
-                    ? "Já assistidos"
-                    : "Ainda faltam"
-              }
-            </h2>
+        <div className="sk-bar cl-bar">
+          <div className="sk-chips" role="radiogroup" aria-label="Mostrar">
+            {(
+              [
+                ["all", "Todos", movies.length],
+                ["watched", "Assistidos", watchedCount],
+                ["missing", "Faltando", movies.length - watchedCount],
+              ] as const
+            ).map(([value, label, count]) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={filter === value}
+                className="sk-chip"
+                onClick={() => setFilter(value)}
+              >
+                {label} <span className="cl-chip-count">{count}</span>
+              </button>
+            ))}
           </div>
 
-          <span className="muted">
-            {
-              visibleMovies.length
-            } títulos
-          </span>
+          <label className="sk-field cl-sort">
+            <span className="mc-visually-hidden">Ordenar</span>
+            <select value={sort} onChange={(event) => setSort(event.target.value as "release" | "rating")}>
+              <option value="release">Ordem de lançamento</option>
+              <option value="rating">Mais bem avaliados</option>
+            </select>
+          </label>
         </div>
 
-        {visibleMovies.length ===
-        0 ? (
-          <div className="empty collection-filter-empty">
-            <Film
-              size={25}
-            />
-
-            Nenhum filme neste filtro.
+        {visibleMovies.length === 0 ? (
+          <div className="sk-empty">
+            <h2>{filter === "watched" ? "Nenhum filme assistido ainda" : "Você já assistiu todos"}</h2>
           </div>
         ) : (
           <div className="collection-grid">
-            {visibleMovies.map(
-              (
-                movie,
-                index
-              ) => (
-                <CollectionCard
-                  key={
-                    movie.id
-                  }
-                  movie={
-                    movie
-                  }
-                  index={
-                    index
-                  }
-                  libraryItem={
-                    getLibraryItem(
-                      movie
-                    )
-                  }
-                  processing={
-                    processing
-                  }
-                  menuOpen={
-                    openMenu ===
-                    `movie-${movie.id}`
-                  }
-                  setOpenMenu={
-                    setOpenMenu
-                  }
-                  setPreviewItem={
-                    setPreviewItem
-                  }
-                  addToLibrary={
-                    guardedAdd
-                  }
-                  updateStatus={
-                    guardedUpdateStatus
-                  }
-                  toggleFavorite={
-                    guardedToggleFavorite
-                  }
-                  requestRemove={
-                    requestRemove
-                  }
-                />
-              )
-            )}
+            {visibleMovies.map((movie, index) => (
+              <CollectionCard
+                key={movie.id}
+                movie={movie}
+                index={index}
+                libraryItem={getLibraryItem(movie)}
+                processing={processing}
+                menuOpen={openMenu === `movie-${movie.id}`}
+                setOpenMenu={setOpenMenu}
+                setPreviewItem={setPreviewItem}
+                addToLibrary={guardedAdd}
+                updateStatus={guardedUpdateStatus}
+                toggleFavorite={guardedToggleFavorite}
+                requestRemove={requestRemove}
+              />
+            ))}
           </div>
         )}
       </section>
-
-      </>}
 
       {/* PREVIEW */}
 
@@ -1849,7 +1570,7 @@ function CollectionCard({
 
         <div className="collection-card-meta">
           <span className="mc-media-type-year">
-            {mediaTypeLabel("movie")} · {year || "Sem data"}
+            {mediaTypeLabel("movie")} {year || "sem data"}
           </span>
 
           {Number(

@@ -5,67 +5,6 @@
  * Carregado pelos componentes que usam estas classes, não pelo layout raiz.
  */
 
-.episode-back {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    margin-bottom: 16px;
-    color: var(--muted)
-}
-.episode-detail-image {
-    min-height: 350px;
-    background: var(--bg)
-}
-.episode-detail-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover
-}
-.episode-detail-image-fallback {
-    width: 100%;
-    height: 100%;
-    min-height: 350px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--muted);
-    font-weight: 800;
-    font-size: var(--mc-fs-2xl)
-}
-.episode-detail-copy {
-    padding: 34px;
-    align-self: center
-}
-.episode-detail-copy h1 {
-    margin: 8px 0 12px;
-    font-size: clamp(28px,4vw,44px)
-}
-.episode-detail-copy p {
-    color: var(--muted);
-    line-height: 1.7
-}
-.episode-detail-meta {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    color: var(--muted);
-    font-size: var(--mc-fs-xs)
-}
-.episode-detail-meta span {
-    display: inline-flex;
-    gap: 4px;
-    align-items: center
-}
-.episode-detail-copy small {
-    color: var(--muted)
-}
-.episode-detail-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin: 18px 0 12px;
-    flex-wrap: wrap;
-}
 .episode-action-btn {
     min-height: 44px;
     padding: 0 20px;
@@ -80,77 +19,182 @@
     cursor: pointer;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
-.episode-next-btn {
-    background: color-mix(in srgb, var(--panel2) 90%, transparent);
-    border: 1px solid var(--line);
-    color: var(--text, #fff);
-}
-.episode-next-btn:hover {
-    background: color-mix(in srgb, var(--panel2) 60%, var(--accent));
-    border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
-    color: #fff;
-}
 @media (max-width: 600px) {
-    .episode-detail-actions {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 10px;
-    }
     .episode-action-btn {
         width: 100%;
     }
 }
-.episode-journal {
-    margin-top: 18px;
+
+/* ===========================================================================
+ * Fase 4b — Episódio na direção "Tela 2.39:1": imagem panorâmica no topo,
+ * título grande, meta em texto (sem "·" nem rótulo em caixa alta), uma ação
+ * principal clara; o registro fica logo abaixo, sem caixa.
+ * ======================================================================== */
+.ep-page {
+    max-width: 1100px;
+}
+.ep-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 0 18px;
+}
+.ep-still {
+    position: relative;
+    aspect-ratio: 2.39 / 1;
+    overflow: hidden;
+    border-radius: var(--mc-radius-lg);
+    background: var(--panel);
+}
+.ep-still img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 25%;
+}
+.ep-still-fallback {
+    position: absolute;
+    inset: 0;
     display: grid;
-    gap: 14px
-}
-.episode-journal h2 {
-    margin: 0
-}
-.episode-journal label {
-    display: grid;
-    gap: 7px;
-    font-size: var(--mc-fs-xs);
-    font-weight: 700
-}
-.episode-journal textarea {
-    min-height: 120px;
-    resize: vertical
-}
-.episode-journal .episode-rewatch {
-    display: flex;
-    align-items: center
-}
-.episode-journal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px
-}
-.episode-journal-locked {
-    padding: 10px 12px;
-    border-radius: var(--mc-radius-md);
-    background: color-mix(in srgb,var(--muted) 12%,var(--panel));
+    place-items: center;
     color: var(--muted);
-    font-size: var(--mc-fs-xs)
+    font-size: 48px;
+    font-weight: 800;
 }
-@media (max-width:700px) {
-    .episode-detail-hero {
-        grid-template-columns: 1fr
+.ep-copy {
+    max-width: 760px;
+    margin-top: 28px;
+}
+.ep-kicker {
+    margin: 0 0 8px;
+    color: var(--mc-color-text-secondary);
+    font-size: 17px;
+    font-weight: 600;
+}
+.ep-copy h1 {
+    margin: 0;
+    font-size: clamp(36px, 4.6vw, 60px);
+    font-weight: 800;
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+    overflow-wrap: anywhere;
+}
+.ep-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 16px;
+    margin: 14px 0 0;
+    color: var(--muted);
+    font-size: 15px;
+}
+.ep-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.ep-rating svg {
+    color: var(--mc-color-rating, #f5c451);
+}
+.ep-future {
+    color: var(--text);
+}
+.ep-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 22px;
+}
+.ep-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.ep-overview {
+    margin: 26px 0 0;
+    color: var(--mc-color-text-secondary);
+    font-size: 17px;
+    line-height: 1.65;
+}
+.ep-overview .sk-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.ep-crew {
+    margin: 14px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+}
+.ep-muted {
+    color: var(--muted);
+}
+.ep-journal {
+    max-width: 760px;
+    margin-top: 44px;
+    padding-top: 28px;
+    border-top: 1px solid var(--line);
+}
+.ep-journal h2 {
+    margin: 0 0 18px;
+    font-size: 22px;
+    font-weight: 700;
+}
+.ep-journal-fields {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 16px 28px;
+}
+.ep-journal-fields .sk-field {
+    width: 220px;
+}
+.ep-rewatch {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: var(--mc-control-md);
+    font-size: 15px;
+    cursor: pointer;
+}
+.ep-rewatch input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+}
+.ep-journal .ep-comment {
+    margin-top: 20px;
+}
+.ep-comment textarea {
+    width: 100%;
+    min-height: 110px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--mc-radius-md);
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 400;
+    resize: vertical;
+}
+.ep-comment textarea:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+@media (max-width: 640px) {
+    .ep-still {
+        aspect-ratio: 16 / 9;
+        margin-inline: -14px;
+        border-radius: 0;
     }
-}
-@media (max-width:700px) {
-    .episode-detail-image {
-        min-height: 210px
+    .ep-copy {
+        margin-top: 20px;
     }
-}
-@media (max-width:700px) {
-    .episode-detail-copy {
-        padding: 22px
+    .ep-overview {
+        font-size: 16px;
     }
-}
-@media (max-width:700px) {
-    .episode-journal-actions {
-        flex-direction: column
+    .ep-journal-fields .sk-field {
+        width: 100%;
     }
 }

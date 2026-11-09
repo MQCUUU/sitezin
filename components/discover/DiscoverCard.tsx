@@ -78,7 +78,7 @@ export function DiscoverCard({
       </Link>
 
       <MediaCardMeta>
-        <span className="mc-media-type-year">{mediaTypeLabel(item.media_type)} · {itemYear || "—"}</span>
+        <span className="mc-media-type-year">{mediaTypeLabel(item.media_type)}{itemYear ? ` ${itemYear}` : ""}</span>
 
         {item.vote_average > 0 && (
           <span className="rating">

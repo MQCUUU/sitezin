@@ -93,22 +93,6 @@
     white-space: nowrap;
     border: 0;
 }
-.lst-head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 14px;
-    margin: 6px 0 18px;
-}
-.lst-eyebrow {
-    display: block;
-    font-size: var(--mc-fs-xs);
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--accent);
-}
 .lst-head h1,
 .lst-detail-text h1 {
     margin: 6px 0 4px;
@@ -116,11 +100,6 @@
     font-weight: 800;
     letter-spacing: -0.03em;
     overflow-wrap: anywhere;
-}
-.lst-head p {
-    margin: 0;
-    color: var(--muted);
-    font-size: var(--mc-fs-base);
 }
 .lst-new {
     display: inline-flex;
@@ -369,10 +348,6 @@
     align-items: center;
     gap: 7px;
     width: auto;
-}
-.btn.primary-soft {
-    border-color: var(--accent);
-    color: var(--accent);
 }
 .lst-hint {
     margin: 8px 0 0;
@@ -854,4 +829,138 @@
 }
 .lst-watchlist-card:hover {
     border-color: var(--accent);
+}
+
+/* ===========================================================================
+ * Fase 4b — Listas na direção "Tela 2.39:1". Topo e vazio vêm de
+ * screen-kit.css. Cartões sem caixa (a capa de pôsteres é a moldura), meta
+ * sem "·", Watchlist como uma linha entre fios, nada de cor de destaque em
+ * superfícies. Lista: título grande, sem rótulo em caixa alta.
+ * ======================================================================== */
+.lst-watchlist-card {
+    margin: 0 0 32px;
+    padding: 16px 0;
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    background: none;
+}
+.lst-watchlist-card > svg:first-child {
+    color: var(--muted);
+}
+.lst-watchlist-card strong {
+    font-size: 17px;
+}
+.lst-watchlist-card small {
+    font-size: 14px;
+}
+.lst-watchlist-card > svg:last-child {
+    color: var(--muted);
+}
+@media (hover: hover) and (pointer: fine) {
+    .lst-watchlist-card:hover {
+        border-color: var(--line);
+    }
+    .lst-watchlist-card:hover strong {
+        text-decoration: underline;
+        text-underline-offset: 3px;
+    }
+}
+.lst-watchlist-card:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+.lst-count {
+    margin: 0 0 14px;
+    color: var(--muted);
+    font-size: 15px;
+}
+.lst-grid {
+    gap: 28px 20px;
+}
+.lst-card-link {
+    gap: 12px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    transition: none;
+}
+.lst-card-link:hover {
+    transform: none;
+}
+@media (hover: hover) and (pointer: fine) {
+    .lst-card-link:hover .lst-card-title {
+        text-decoration: underline;
+        text-underline-offset: 3px;
+    }
+}
+.lst-card-body {
+    padding: 0;
+}
+.lst-card-title {
+    font-size: 18px;
+    font-weight: 700;
+}
+.lst-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+    color: var(--muted);
+    font-size: 14px;
+}
+.lst-card .lst-card-menu {
+    top: 8px;
+    right: 8px;
+}
+.lst-menu-btn,
+.lst-icon-btn {
+    border: 0;
+    background: color-mix(in srgb, var(--bg) 72%, transparent);
+}
+.lst-cover--empty {
+    color: var(--muted);
+    background: var(--panel);
+}
+/* Lista aberta */
+.lst-detail-head {
+    gap: 28px;
+    margin: 12px 0 28px;
+}
+.lst-detail-text h1 {
+    margin: 0 0 6px;
+    font-size: clamp(36px, 4.6vw, 60px);
+    font-weight: 800;
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+    overflow-wrap: anywhere;
+}
+.lst-detail-desc {
+    color: var(--mc-color-text-secondary);
+    font-size: 17px;
+}
+.lst-detail-actions {
+    margin-top: 16px;
+}
+.lst-search {
+    border: 0;
+}
+.lst-search:focus-within {
+    border-color: transparent;
+    box-shadow: none;
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+.lst-item-text small {
+    color: var(--muted);
+}
+@media (max-width: 700px) {
+    .lst-detail-text h1 {
+        font-size: 36px;
+    }
+}
+.lst-items {
+    align-items: start;
 }

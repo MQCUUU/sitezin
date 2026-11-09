@@ -23,12 +23,9 @@ import {
   Check,
   Eye,
   EyeOff,
-  Film,
   Loader2,
   LockKeyhole,
   Mail,
-  ShieldCheck,
-  Sparkles,
   User,
 } from "lucide-react";
 
@@ -495,13 +492,6 @@ export function AuthPage({
 
       <div className="auth-shell">
         <section className="auth-visual">
-          <div className="auth-visual-badge">
-            <Sparkles
-              size={14}
-            />
-
-            SEU CATÁLOGO, DO SEU JEITO
-          </div>
 
           <h1>
             {isSignup
@@ -515,12 +505,6 @@ export function AuthPage({
 
           <div className="auth-feature-list">
             <div>
-              <span>
-                <Film
-                  size={18}
-                />
-              </span>
-
               <div>
                 <strong>
                   Biblioteca pessoal
@@ -533,12 +517,6 @@ export function AuthPage({
             </div>
 
             <div>
-              <span>
-                <Sparkles
-                  size={18}
-                />
-              </span>
-
               <div>
                 <strong>
                   Descobertas melhores
@@ -551,12 +529,6 @@ export function AuthPage({
             </div>
 
             <div>
-              <span>
-                <ShieldCheck
-                  size={18}
-                />
-              </span>
-
               <div>
                 <strong>
                   Seus dados são seus

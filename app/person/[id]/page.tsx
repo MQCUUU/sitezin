@@ -2,6 +2,8 @@
 
 
 import "@/styles/features/person.css";
+import "@/styles/features/screen-kit.css";
+import { motion } from "motion/react";
 import { mediaTypeLabel } from "@/components/media/MediaBadges";
 import { MediaCard, MediaCardImage, MediaCardMeta } from "@/components/media";
 import { Poster } from "@/components/Poster";
@@ -21,14 +23,8 @@ import {
 import Link from "next/link";
 
 import {
-  BriefcaseBusiness,
-  Cake,
-  CalendarDays,
-  Clapperboard,
   Film,
   Loader2,
-  MapPin,
-  Sparkles,
   Star,
   Tv,
   UserRound,
@@ -613,472 +609,212 @@ export default function PersonPage() {
         <SmartBackButton />
       </div>
 
-      <nav className="title-content-tabs person-content-tabs" aria-label="Seções da pessoa">{([['bio','Biografia e detalhes'],['acting','Filmografia como ator'],['other','Outros trabalhos']] as const).map(([value,label])=><button key={value} className={contentTab===value?"active":""} onClick={()=>setContentTab(value)}>{label}</button>)}</nav>
-
-      {contentTab === "bio" && <>
-
-      {/* ======================================
-          HERO
-          ====================================== */}
-
-      <section className="person-hero">
+      {/* Fase 4b: o topo fica sempre à vista; as abas trocam só o conteúdo abaixo. */}
+      <section className="sk-hero">
         {backdrop && (
-          <div
-            className="person-hero-backdrop"
-            style={{
-              backgroundImage:
-                `url(${img(
-                  backdrop,
-                  "w1280"
-                )})`,
-            }}
-          />
+          <div className="sk-hero-backdrop" aria-hidden="true" style={{ backgroundImage: `url(${img(backdrop, "w1280")})` }} />
         )}
 
-        <div className="person-hero-overlay" />
-
-        <div className="person-hero-content">
-          <div className="person-portrait-wrap">
+        <div className="sk-hero-content">
+          <div className="sk-hero-poster">
             {person.profile_path ? (
-              <Poster
-                path={person.profile_path}
-                alt={person.name}
-                sizes="(max-width: 700px) 140px, 260px"
-                className="person-portrait"
-                priority
-              />
+              <Poster path={person.profile_path} alt={person.name} sizes="(max-width: 700px) 120px, 220px" priority />
             ) : (
-              <div className="person-portrait person-portrait-empty">
-                <UserRound
-                  size={56}
-                />
+              <div className="sk-hero-poster-empty">
+                <UserRound size={48} aria-hidden="true" />
               </div>
             )}
           </div>
 
-          <div className="person-hero-copy">
-            <div className="person-kicker">
-              <Sparkles
-                size={16}
-              />
+          <div className="sk-hero-copy">
+            <p className="sk-hero-kicker">{translateDepartment(person.known_for_department)}</p>
+            <h1>{person.name}</h1>
+            {person.also_known_as && person.also_known_as.length > 0 && person.also_known_as[0] !== person.name ? (
+              <p className="sk-hero-sub">Também conhecido(a) como {person.also_known_as[0]}</p>
+            ) : null}
 
-              {translateDepartment(
-                person.known_for_department
-              )}
-            </div>
-
-            <h1>
-              {
-                person.name
-              }
-            </h1>
-
-            {person.also_known_as &&
-              person.also_known_as.length >
-                0 && (
-              <p className="person-alias">
-                Também conhecido(a) como{" "}
-                {
-                  person.also_known_as[
-                    0
-                  ]
-                }
-              </p>
-            )}
-
-            <div className="person-hero-stats">
+            <dl className="sk-stats">
               <div>
-                <strong>
-                  {
-                    credits.length
-                  }
-                </strong>
-
-                <span>
-                  Trabalhos
-                </span>
+                <dt>Trabalhos</dt>
+                <dd>{credits.length}</dd>
               </div>
-
               <div>
-                <strong>
-                  {
-                    movies.length
-                  }
-                </strong>
-
-                <span>
-                  Filmes
-                </span>
+                <dt>Filmes</dt>
+                <dd>{movies.length}</dd>
               </div>
-
               <div>
-                <strong>
-                  {
-                    series.length
-                  }
-                </strong>
-
-                <span>
-                  Séries
-                </span>
+                <dt>Séries</dt>
+                <dd>{series.length}</dd>
               </div>
-
-              {averageRating !==
-                null && (
+              {averageRating !== null && (
                 <div>
-                  <strong>
-                    {averageRating.toFixed(
-                      1
-                    )}
-                  </strong>
-
-                  <span>
-                    Média TMDB
-                  </span>
+                  <dt>Média no TMDB</dt>
+                  <dd>{averageRating.toFixed(1).replace(".", ",")}</dd>
                 </div>
               )}
-            </div>
+            </dl>
           </div>
         </div>
       </section>
 
-      {/* ======================================
-          SOBRE + FICHA
-          ====================================== */}
-
-      <section className="section person-about-grid">
-        <div className="panel person-biography-panel">
-          <div className="person-section-heading">
-            <div>
-              <span>
-                Sobre
-              </span>
-
-              <h2>
-                Biografia
-              </h2>
-            </div>
-          </div>
-
-          {person.biography ? (
-            <p>
-              {
-                person.biography
-              }
-            </p>
-          ) : (
-            <div className="person-no-biography">
-              <UserRound
-                size={24}
+      <div className="sk-tabs pp-tabs" role="tablist" aria-label="Seções da pessoa">
+        {(
+          [
+            ["bio", "Biografia"],
+            ["acting", "Atuação"],
+            ["other", "Outros trabalhos"],
+          ] as const
+        ).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            aria-selected={contentTab === value}
+            className="sk-tab"
+            onClick={() => setContentTab(value)}
+          >
+            {label}
+            {contentTab === value && (
+              <motion.span
+                layoutId="person-tab-indicator"
+                className="sk-tab-indicator"
+                transition={{ type: "spring", duration: 0.32, bounce: 0 }}
+                aria-hidden="true"
               />
+            )}
+          </button>
+        ))}
+      </div>
 
-              <span>
-                O TMDB ainda não possui uma biografia em português para esta pessoa.
-              </span>
-            </div>
-          )}
-        </div>
-
-        <aside className="panel person-info-panel">
-          <div className="person-section-heading">
-            <div>
-              <span>
-                Perfil
-              </span>
-
-              <h2>
-                Informações
-              </h2>
-            </div>
+      {contentTab === "bio" && (
+        <section className="pp-about">
+          <div className="pp-bio">
+            <h2>Biografia</h2>
+            {person.biography ? (
+              <p>{person.biography}</p>
+            ) : (
+              <p className="pp-muted">O TMDB ainda não tem uma biografia em português para esta pessoa.</p>
+            )}
           </div>
 
-          <div className="person-info-list">
+          <dl className="pp-facts">
             {person.birthday && (
-              <div className="person-info-row">
-                <Cake
-                  size={18}
-                />
-
-                <div>
-                  <span>
-                    Nascimento
-                  </span>
-
-                  <strong>
-                    {formatDate(
-                      person.birthday
-                    )}
-                  </strong>
-                </div>
-              </div>
-            )}
-
-            {person.deathday && (
-              <div className="person-info-row">
-                <CalendarDays
-                  size={18}
-                />
-
-                <div>
-                  <span>
-                    Falecimento
-                  </span>
-
-                  <strong>
-                    {formatDate(
-                      person.deathday
-                    )}
-                  </strong>
-                </div>
-              </div>
-            )}
-
-            {person.place_of_birth && (
-              <div className="person-info-row">
-                <MapPin
-                  size={18}
-                />
-
-                <div>
-                  <span>
-                    Local
-                  </span>
-
-                  <strong>
-                    {
-                      person.place_of_birth
-                    }
-                  </strong>
-                </div>
-              </div>
-            )}
-
-            <div className="person-info-row">
-              <BriefcaseBusiness
-                size={18}
-              />
-
               <div>
-                <span>
-                  Área principal
-                </span>
-
-                <strong>
-                  {translateDepartment(
-                    person.known_for_department
-                  )}
-                </strong>
-              </div>
-            </div>
-
-            {careerYears && (
-              <div className="person-info-row">
-                <Clapperboard
-                  size={18}
-                />
-
-                <div>
-                  <span>
-                    Carreira no catálogo
-                  </span>
-
-                  <strong>
-                    {careerYears.first}
-                    {" — "}
-                    {careerYears.last}
-                  </strong>
-                </div>
+                <dt>Nascimento</dt>
+                <dd>{formatDate(person.birthday)}</dd>
               </div>
             )}
-          </div>
-        </aside>
-      </section>
-
-      </>}
-
-      {/* ======================================
-          MAIS CONHECIDO
-          ====================================== */}
-
-      {contentTab === "other" && knownFor.length >
-        0 && (
-        <section className="section">
-          <div className="person-section-heading person-section-heading-row">
+            {person.deathday && (
+              <div>
+                <dt>Falecimento</dt>
+                <dd>{formatDate(person.deathday)}</dd>
+              </div>
+            )}
+            {person.place_of_birth && (
+              <div>
+                <dt>Local de nascimento</dt>
+                <dd>{person.place_of_birth}</dd>
+              </div>
+            )}
             <div>
-              <span>
-                Destaques
-              </span>
-
-              <h2>
-                Mais conhecido por
-              </h2>
+              <dt>Área principal</dt>
+              <dd>{translateDepartment(person.known_for_department)}</dd>
             </div>
+            {careerYears && (
+              <div>
+                <dt>Carreira no catálogo</dt>
+                <dd>
+                  {careerYears.first} a {careerYears.last}
+                </dd>
+              </div>
+            )}
+          </dl>
+        </section>
+      )}
 
-            <span className="muted">
-              Trabalhos mais populares
-            </span>
+      {contentTab === "other" && knownFor.length > 0 && (
+        <section className="sk-section pp-section">
+          <div className="sk-section-head">
+            <div>
+              <h2>Mais conhecido por</h2>
+              <p>Os trabalhos mais populares, em qualquer função.</p>
+            </div>
           </div>
 
           <div className="person-known-grid">
-            {knownFor.map(
-              (
-                item
-              ) => (
-                <PersonCreditCard
-                  key={`${item.media_type}-${item.id}`}
-                  item={
-                    item
-                  }
-                  featured
-                />
-              )
-            )}
+            {knownFor.map((item) => (
+              <PersonCreditCard key={`${item.media_type}-${item.id}`} item={item} featured />
+            ))}
           </div>
         </section>
       )}
 
-      {/* ======================================
-          FILMES
-          ====================================== */}
-
-      {contentTab === "acting" && movies.length >
-        0 && (
+      {contentTab === "acting" && movies.length > 0 && (
         <PersonCreditsSection
           title="Filmes"
-          subtitle={`${movies.length} trabalhos no cinema`}
-          items={
-            visibleMovies
-          }
-          total={
-            movies.length
-          }
-          icon="movie"
-          expanded={
-            showAllMovies
-          }
+          total={movies.length}
+          items={visibleMovies}
+          expanded={showAllMovies}
           onToggle={() => toggleExpanded("filmes")}
         />
       )}
 
-      {/* ======================================
-          SÉRIES
-          ====================================== */}
-
-      {contentTab === "acting" && series.length >
-        0 && (
+      {contentTab === "acting" && series.length > 0 && (
         <PersonCreditsSection
           title="Séries"
-          subtitle={`${series.length} trabalhos em televisão`}
-          items={
-            visibleSeries
-          }
-          total={
-            series.length
-          }
-          icon="tv"
-          expanded={
-            showAllSeries
-          }
+          total={series.length}
+          items={visibleSeries}
+          expanded={showAllSeries}
           onToggle={() => toggleExpanded("series")}
         />
       )}
-      {contentTab === "acting" && movies.length === 0 && series.length === 0 && <div className="empty">Nenhum trabalho como ator encontrado.</div>}
-      {contentTab === "other" && knownFor.length === 0 && <div className="empty">Nenhum trabalho adicional encontrado.</div>}
+
+      {contentTab === "acting" && movies.length === 0 && series.length === 0 && (
+        <div className="sk-empty">
+          <h2>Nenhum trabalho como ator ou atriz</h2>
+          <p>Veja a aba Outros trabalhos.</p>
+        </div>
+      )}
+      {contentTab === "other" && knownFor.length === 0 && (
+        <div className="sk-empty">
+          <h2>Nenhum outro trabalho encontrado</h2>
+        </div>
+      )}
     </>
   );
 }
 
 function PersonCreditsSection({
   title,
-  subtitle,
   items,
   total,
-  icon,
   expanded,
   onToggle,
 }: {
-  title:
-    string;
-  subtitle:
-    string;
-  items:
-    Credit[];
-  total:
-    number;
-  icon:
-    "movie" |
-    "tv";
-  expanded:
-    boolean;
-  onToggle:
-    () =>
-      void;
+  title: string;
+  items: Credit[];
+  total: number;
+  expanded: boolean;
+  onToggle: () => void;
 }) {
   return (
-    <section className="section">
-      <div className="person-section-heading person-section-heading-row">
-        <div className="person-credit-heading">
-          <div className="person-credit-heading-icon">
-            {icon ===
-            "movie" ? (
-              <Film
-                size={18}
-              />
-            ) : (
-              <Tv
-                size={18}
-              />
-            )}
-          </div>
-
-          <div>
-            <span>
-              Filmografia
-            </span>
-
-            <h2>
-              {
-                title
-              }
-            </h2>
-
-            <small>
-              {
-                subtitle
-              }
-            </small>
-          </div>
-        </div>
+    <section className="sk-section pp-section">
+      <div className="sk-section-head">
+        <h2>
+          {title} <span className="pp-count">{total}</span>
+        </h2>
       </div>
 
       <div className="person-credit-grid">
-        {items.map(
-          (
-            item
-          ) => (
-            <PersonCreditCard
-              key={`${item.media_type}-${item.id}`}
-              item={
-                item
-              }
-            />
-          )
-        )}
+        {items.map((item) => (
+          <PersonCreditCard key={`${item.media_type}-${item.id}`} item={item} />
+        ))}
       </div>
 
-      {total >
-        12 && (
+      {total > 12 && (
         <div className="person-show-more">
-          <button
-            type="button"
-            className="btn"
-            onClick={
-              onToggle
-            }
-          >
-            {expanded
-              ? "Mostrar menos"
-              : `Ver todos (${total})`}
+          <button type="button" className="btn" onClick={onToggle}>
+            {expanded ? "Mostrar menos" : `Ver todos os ${total}`}
           </button>
         </div>
       )}
@@ -1119,7 +855,7 @@ function PersonCreditCard({
         2
       )
       .join(
-        " · "
+        ", "
       ) ||
     item.character ||
     item.job ||
@@ -1158,7 +894,7 @@ function PersonCreditCard({
       </Link>
 
       <MediaCardMeta>
-        <span className="mc-media-type-year">{mediaTypeLabel(item.media_type)} · {year || "—"}</span>
+        <span className="mc-media-type-year">{mediaTypeLabel(item.media_type)}{year ? ` ${year}` : ""}</span>
         {rating > 0 && (
           <span className="rating">
             <Star size={12} fill="currentColor" />

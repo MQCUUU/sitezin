@@ -1,8 +1,10 @@
 "use client";
 
 import "@/styles/features/watchlist.css";
+import "@/styles/features/screen-kit.css";
 import Link from "next/link";
-import { ArrowDown, ArrowDownToLine, ArrowUp, ArrowUpToLine, Bookmark, GripVertical } from "lucide-react";
+import { ArrowDown, ArrowDownToLine, ArrowUp, ArrowUpToLine, GripVertical } from "lucide-react";
+import { motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Poster } from "@/components/Poster";
@@ -111,14 +113,19 @@ export function WatchlistPage() {
       <Search />
     </div>
     <div className="wl-page">
-      <header className="wl-head">
-        <span className="eyebrow">Sua fila</span>
-        <h1>Watchlist</h1>
-        <p className="muted">
-          Tudo que você marca como <strong>Quero assistir</strong> entra aqui sozinho — e sai quando você muda o status.
-          Arraste ou use as setas para definir o que assistir primeiro.
-        </p>
-        {state === "ready" ? <p className="wl-count">{total === 1 ? "1 título na fila" : `${total} títulos na fila`}</p> : null}
+      <header className="sk-head">
+        <div className="sk-head-text">
+          <h1>Watchlist</h1>
+          <p>
+            Tudo que você marca como Quero assistir entra aqui sozinho e sai quando o status muda. Arraste ou use as
+            setas para escolher o que assistir primeiro.
+          </p>
+        </div>
+        {state === "ready" ? (
+          <p className="sk-head-aside">
+            <strong>{total}</strong> {total === 1 ? "título na fila" : "títulos na fila"}
+          </p>
+        ) : null}
       </header>
 
       <p className="wl-sr" role="status" aria-live="polite" ref={liveRef} />
@@ -128,18 +135,17 @@ export function WatchlistPage() {
           Carregando sua fila…
         </div>
       ) : state === "error" ? (
-        <div className="wl-state" role="alert">
-          <p>Não foi possível carregar sua watchlist.</p>
+        <div className="sk-empty" role="alert">
+          <h2>Não foi possível carregar sua watchlist</h2>
+          <p>Verifique sua conexão e tente de novo.</p>
           <button type="button" className="btn" onClick={() => window.location.reload()}>
             Tentar de novo
           </button>
         </div>
       ) : items.length === 0 ? (
-        <div className="wl-state wl-empty">
-          <Bookmark size={28} aria-hidden="true" />
-          <p>
-            Sua fila está vazia. Marque títulos como <strong>Quero assistir</strong> e eles aparecem aqui.
-          </p>
+        <div className="sk-empty">
+          <h2>Sua fila está vazia</h2>
+          <p>Marque títulos como Quero assistir e eles aparecem aqui, na ordem que você escolher.</p>
           <Link className="btn primary" href="/discover">
             Descobrir títulos
           </Link>
@@ -241,6 +247,7 @@ function WatchlistRow({
         dnd.onDrop();
       }}
     >
+      <motion.div layout="position" transition={{ type: "spring", duration: 0.35, bounce: 0 }} className="wl-row">
       <span className="wl-grip" aria-hidden="true">
         <GripVertical size={18} />
       </span>
@@ -269,10 +276,10 @@ function WatchlistRow({
         <Link href={href} className="wl-title">
           {media.title}
         </Link>
-        <small className="muted">
+        <small className="wl-meta">
           {media.media_type === "tv" ? "Série" : "Filme"}
-          {year ? ` · ${year}` : ""}
-          {media.runtime && media.media_type === "movie" ? ` · ${media.runtime} min` : ""}
+          {year ? ` ${year}` : ""}
+          {media.runtime && media.media_type === "movie" ? `, ${media.runtime} min` : ""}
         </small>
       </div>
       <div className="wl-controls" role="group" aria-label={`Prioridade de ${media.title}`}>
@@ -289,6 +296,7 @@ function WatchlistRow({
           <ArrowDownToLine size={16} />
         </button>
       </div>
+      </motion.div>
     </li>
   );
 }
