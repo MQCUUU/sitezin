@@ -55,12 +55,12 @@ export function ActionButtons({
   );
 }
 
-export function Card({ item, position, ...actionProps }: CardActionProps & { item: LibraryItem; position?: number }) {
+export function Card({ item, position, leaving = false, ...actionProps }: CardActionProps & { item: LibraryItem; position?: number; leaving?: boolean }) {
   const date = item.media_type === "tv" ? item.first_air_date : item.release_date;
   const year = date ? new Date(date).getFullYear() : null;
 
   return (
-    <MediaCard>
+    <MediaCard data-leaving={leaving || undefined} aria-hidden={leaving || undefined}>
       <MediaCardImage>
         <Link href={`/title/${item.media_type}/${item.tmdb_id}`} className="poster-link">
           <Poster path={item.poster_path} alt={item.title} sizes="(max-width:700px) 46vw, (max-width:1100px) 24vw, 170px" {...posterLoading(position)} />
@@ -109,12 +109,12 @@ export function genreNames(genres: unknown): string[] {
   return [...new Set(genres.map((g) => genreName((typeof g === "string" ? g : (g as { name?: string })?.name || "").trim())).filter(Boolean))];
 }
 
-export function ListItem({ item, ...actionProps }: CardActionProps & { item: LibraryItem }) {
+export function ListItem({ item, leaving = false, ...actionProps }: CardActionProps & { item: LibraryItem; leaving?: boolean }) {
   const date = item.media_type === "tv" ? item.first_air_date : item.release_date;
   const year = date ? new Date(date).getFullYear() : null;
 
   return (
-    <div className="library-list-item">
+    <div className="library-list-item" data-leaving={leaving || undefined} aria-hidden={leaving || undefined}>
       <Link href={`/title/${item.media_type}/${item.tmdb_id}`} className="library-list-poster">
         <Poster path={item.poster_path} alt={item.title} sizes="80px" tmdbSize="w342" />
       </Link>

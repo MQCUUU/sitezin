@@ -2,6 +2,7 @@ import "@/styles/features/media.css";
 import { Bookmark, Check, CheckCheck, Pause, Play, Repeat, X as XIcon } from "lucide-react";
 
 import { mediaStatusGroup, mediaStatusLabel } from "@/lib/media-status";
+import { PosterStatusSlot } from "@/components/media/PosterStatusSlot";
 
 /*
  * V2.3 — tags de pôster PADRÃO do site (tipo + status). Substitui `.badge`,
@@ -65,10 +66,9 @@ export function MediaPosterTags({
   type?: "movie" | "tv" | string;
   status?: string | null;
 }) {
-  if (!status) return null;
   return (
-    <span className="mc-tag-slot mc-tag-slot--bottom">
-      <MediaPosterStatusChip status={status} />
-    </span>
+    <PosterStatusSlot statusKey={status || null}>
+      {status ? <MediaPosterStatusChip status={status} /> : null}
+    </PosterStatusSlot>
   );
 }

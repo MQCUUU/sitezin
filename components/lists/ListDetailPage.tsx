@@ -68,6 +68,7 @@ function DetailContent() {
   const confirmAction = useConfirm();
 
   const [meta, setMeta] = useState<Meta | null>(null);
+  const [leavingId, setLeavingId] = useState<Item["media_id"] | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [members, setMembers] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
@@ -168,6 +169,11 @@ function DetailContent() {
 
   async function removeItem(item: Item) {
     const previous = items;
+
+    // Fase 5: some com um fade curto (180ms, .lst-item[data-leaving]) antes de sair da grade.
+    setLeavingId(item.media_id);
+    await new Promise((resolve) => window.setTimeout(resolve, 180));
+    setLeavingId(null);
 
     setItems((current) => current.filter((row) => row.media_id !== item.media_id).map((row, i) => ({ ...row, rank: i + 1 })));
     setMeta((current) => (current ? { ...current, item_count: current.item_count - 1 } : current));
@@ -366,7 +372,7 @@ function DetailContent() {
             const href = `/title/${item.media_type}/${item.tmdb_id}`;
 
             return (
-              <li key={item.media_id} className="lst-item">
+              <li key={item.media_id} className="lst-item" data-leaving={leavingId === item.media_id || undefined}>
                 <div className="lst-item-media mc-pa-host">
                 <Link href={href} className="lst-item-poster" tabIndex={reorder ? -1 : 0} aria-label={`${item.title}${year ? `, ${year}` : ""}`}>
                   {item.poster_path ? (

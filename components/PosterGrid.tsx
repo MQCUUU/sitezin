@@ -24,6 +24,9 @@ type ViewMode =
   | "compact"
   | "list";
 
+/** Duração do fade de saída de um título removido (igual a .card[data-leaving] em media.css). */
+const LEAVE_MS = 180;
+
 export function PosterGrid({
   items,
   onChanged,
@@ -67,6 +70,8 @@ export function PosterGrid({
   const [previewDetailsLoading, setPreviewDetailsLoading] =
     useState(false);
 
+  /* Fase 5: título removido some com um fade curto antes de sair da grade (antes sumia de uma vez). */
+  const [leavingId, setLeavingId] = useState<LibraryItem["library_id"] | null>(null);
   const [localItems, setLocalItems] =
     useState<LibraryItem[]>(items);
 
@@ -493,6 +498,10 @@ export function PosterGrid({
 
       await removeFromLibrary(item.library_id);
 
+      setLeavingId(item.library_id);
+      await new Promise((resolve) => window.setTimeout(resolve, LEAVE_MS));
+      setLeavingId(null);
+
       setLocalItems(
         (
           current
@@ -737,7 +746,7 @@ export function PosterGrid({
       {carousel && viewMode !== "list" ? (
         <CarouselRail className="library-carousel">
           {localItems.map((item) => (
-            <Card key={item.library_id} item={item} {...cardActionProps} />
+            <Card key={item.library_id} item={item} leaving={leavingId === item.library_id} {...cardActionProps} />
           ))}
         </CarouselRail>
       ) : viewMode === "list" ? (
@@ -746,6 +755,7 @@ export function PosterGrid({
             <ListItem
               key={item.library_id}
               item={item}
+              leaving={leavingId === item.library_id}
               {...cardActionProps}
             />
           ))}
@@ -763,6 +773,7 @@ export function PosterGrid({
               key={item.library_id}
               item={item}
               position={position}
+              leaving={leavingId === item.library_id}
               {...cardActionProps}
             />
           ))}

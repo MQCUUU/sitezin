@@ -82,8 +82,20 @@ export function TitleStatusMenu({
       aria-label={!inLibrary && !pending ? "Adicionar à biblioteca" : undefined}
       onClick={() => setOpen((value) => !value)}
     >
-      {inLibrary ? <MediaStatusIcon status={status} size={18} /> : <Plus size={18} aria-hidden="true" />}
-      <span className="tt-primary-label">{label}</span>
+      {/* Fase 5: ao mudar o status, ícone e rótulo trocam com um fade curto e
+          sobem 4px — confirma a mudança no próprio botão. Na carga, nada anima. */}
+      <AnimatePresence initial={false} mode="wait">
+        <motion.span
+          key={inLibrary ? `status-${status}` : pending ? "pending" : "add"}
+          className="tt-primary-swap"
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0, transition: { duration: 0.16, ease: [0.23, 1, 0.32, 1] } }}
+          exit={{ opacity: 0, y: -4, transition: { duration: 0.1, ease: [0.23, 1, 0.32, 1] } }}
+        >
+          {inLibrary ? <MediaStatusIcon status={status} size={18} /> : <Plus size={18} aria-hidden="true" />}
+          <span className="tt-primary-label">{label}</span>
+        </motion.span>
+      </AnimatePresence>
       <ChevronDown size={16} aria-hidden="true" className="tt-primary-chevron" />
     </Button>
   );

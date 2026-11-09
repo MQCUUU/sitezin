@@ -181,3 +181,10 @@
 .mc-tag--info {
   --tag: var(--mc-color-info, #4ea8de);
 }
+
+/* Fase 5: invólucro animado do selo de status (components/media/PosterStatusSlot.tsx). */
+.mc-status-anim {
+  display: inline-flex;
+  max-width: 100%;
+  transform-origin: left bottom;
+}

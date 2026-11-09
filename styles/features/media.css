@@ -706,3 +706,21 @@
 .mc-pa-host {
     position: relative;
 }
+
+/*
+ * Fase 5: título removido da grade/lista — some com um fade curto (180ms,
+ * igual a LEAVE_MS em components/PosterGrid.tsx) antes de sair do layout.
+ * Sem cliques nesse intervalo. Redução de movimento: os tokens zeram a duração.
+ */
+.card,
+.library-list-item {
+    transition-property: opacity, transform;
+    transition-duration: var(--mc-duration-normal);
+    transition-timing-function: var(--mc-ease-out);
+}
+.card[data-leaving],
+.library-list-item[data-leaving] {
+    opacity: 0;
+    transform: scale(0.96);
+    pointer-events: none;
+}

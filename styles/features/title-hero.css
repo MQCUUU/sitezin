@@ -470,3 +470,11 @@
     padding-bottom: calc(88px + 72px + env(safe-area-inset-bottom));
   }
 }
+
+/* Fase 5: ícone + rótulo do status trocam juntos (TitleStatusMenu.tsx). */
+.tt-primary-swap {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}

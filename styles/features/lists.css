@@ -963,3 +963,12 @@
 .lst-items {
     align-items: start;
 }
+/* Fase 5: título removido some com um fade curto antes de sair da grade. */
+.lst-item {
+    transition: opacity var(--mc-duration-normal) var(--mc-ease-out), transform var(--mc-duration-normal) var(--mc-ease-out);
+}
+.lst-item[data-leaving] {
+    opacity: 0;
+    transform: scale(0.96);
+    pointer-events: none;
+}
