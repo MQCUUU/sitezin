@@ -231,11 +231,10 @@ function InsightsContent() {
         <Search />
       </div>
 
+      {/* Fase 4: o nome da página é o título; a promessa vira a frase de apoio. */}
       <header className="ins-header">
-        <div>
-          <span className="ins-eyebrow">Insights</span>
-          <h1>Entenda seu jeito de assistir</h1>
-        </div>
+        <h1>Insights</h1>
+        <p className="ins-header-text">Entenda seu jeito de assistir: quanto, quando e do que você realmente gosta.</p>
 
         <div className="ins-filters" role="group" aria-label="Filtros">
           <div className="ins-seg ins-seg--lg" role="radiogroup" aria-label="Período">

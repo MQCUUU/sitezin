@@ -35,9 +35,9 @@ export function detailLabel(e: CalendarEvent): string | null {
         ? `T${s}:E${pad(e.episode_from)}–E${pad(e.episode_to)}`
         : `T${s}:E${pad(e.episode_from)}`;
     case "season_premiere":
-      return s ? `Temporada ${s}${e.episode_count > 1 ? ` · ${e.episode_count} episódios` : ""}` : null;
+      return s ? `Temporada ${s}${e.episode_count > 1 ? `, ${e.episode_count} episódios` : ""}` : null;
     case "season_release":
-      return s ? `Temporada ${s} · ${e.episode_count} episódios` : null;
+      return s ? `Temporada ${s}, ${e.episode_count} episódios` : null;
     case "movie_release":
       return e.release_label;
     default:

@@ -6,10 +6,9 @@ import { apiFetch, errorMessage } from "@/lib/api-client";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, Clock3, EyeOff, Loader2, Play, Plus, Shuffle, Sparkles, Star, X } from "lucide-react";
+import { Check, EyeOff, Loader2, Play, Plus, Shuffle, Sparkles, Star, X } from "lucide-react";
 import { useModal } from "@/hooks/useModal";
 import { Poster } from "@/components/Poster";
-import { useSpotlight } from "@/components/ui/premium";
 import { MediaStatusTag, MediaTypeTag } from "@/components/media/MediaBadges";
 import { useToast } from "@/components/ToastProvider";
 
@@ -99,7 +98,6 @@ export function SmartQueue({ genres }: { genres: string[] }) {
   const [acting, setActing] = useState<string | null>(null);
   const [added, setAdded] = useState<Record<string, string>>({});
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-  const { ref: spotRef, onPointerMove: spotMove } = useSpotlight<HTMLElement>();
   const ref = useModal(open, () => setOpen(false));
 
   /*
@@ -220,17 +218,14 @@ export function SmartQueue({ genres }: { genres: string[] }) {
 
   return (
     <>
-      <section className="fy-smart-queue-cta panel mc-spot" ref={spotRef} onPointerMove={spotMove}>
-        <div className="fy-assistant-cta-icon">
-          <Clock3 size={22} strokeWidth={2} aria-hidden="true" />
-        </div>
-
+      {/* Fase 4: linha simples (sem caixa, ícone ou brilho que segue o ponteiro); ação discreta. */}
+      <section className="fy-smart-queue-cta">
         <div>
-          <strong>O que assistir agora?</strong>
+          <h2 className="fy-smart-queue-title">O que assistir agora?</h2>
           <p className="muted">Diga quanto tempo você tem e receba até 3 sugestões feitas para o seu gosto.</p>
         </div>
 
-        <button type="button" className="btn primary" onClick={() => setOpen(true)}>
+        <button type="button" className="btn fy-smart-queue-btn" onClick={() => setOpen(true)}>
           Sugerir agora
         </button>
       </section>

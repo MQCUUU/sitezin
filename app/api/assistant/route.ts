@@ -18,6 +18,7 @@ import {
   type AssistantIntent,
 } from "@/lib/assistant-intent";
 import { buildTasteProfile, genreFit, type TasteRow } from "@/lib/taste-profile";
+import { fitAnswerCount } from "@/lib/assistant/answer";
 
 const TMDB_BASE =
   "https://api.themoviedb.org/3";
@@ -873,7 +874,7 @@ export async function POST(
         cache_hit: true,
         cache_scope: scope,
         cache_hit_count: hitCount,
-        answer: cached.answer,
+        answer: fitAnswerCount(cached.answer, kept.length),
         results: decorate(kept),
         applied: describeIntent(intent, excludedStatuses),
       });
@@ -957,7 +958,7 @@ export async function POST(
       cache_hit: false,
       cache_scope: scope,
       cache_hit_count: 0,
-      answer,
+      answer: fitAnswerCount(answer, Math.min(kept.length, 6)),
       results: decorate(kept.slice(0, 6)),
       applied: describeIntent(intent, excludedStatuses),
     });
@@ -1035,6 +1036,7 @@ Regras:
 - Não invente títulos nem IDs do TMDB. Use o título oficial mais conhecido.
 - "media_type" apenas "movie" ou "tv".
 - "reason" em PT-BR, até 140 caracteres, citando por que combina com o pedido E com o gosto do usuário quando fizer sentido.
+- No "answer", NÃO cite quantidade de títulos (a tela pode mostrar menos depois dos filtros).
 - Responda SOMENTE JSON válido.
 Formato:
 {
@@ -1173,7 +1175,7 @@ Formato:
       cache_hit: false,
       cache_scope: scope,
       cache_hit_count: 0,
-      answer,
+      answer: fitAnswerCount(answer, finalResults.length),
       results: decorate(finalResults),
       applied: describeIntent(intent, excludedStatuses),
     });

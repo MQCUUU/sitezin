@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { naoAutenticado, respostaDeErro } from "@/lib/api-error";
 import { calendarTMDB, lightweightDetailsTMDB, seasonTMDB, upcomingMoviesTMDB, upcomingSeriesTMDB } from "@/lib/tmdb";
-import { addDays, daysBetween, isDay, todayIn } from "@/lib/calendar/dates";
+import { addDays, daysBetween, isDay, todayIn, weekWindows } from "@/lib/calendar/dates";
 import { buildEvents, type DiscoveryInput, type LibraryEntry, type MovieInput, type SeriesInput } from "@/lib/calendar/build";
 import type { CalendarResponse } from "@/lib/calendar/types";
 
@@ -27,6 +27,7 @@ import type { CalendarResponse } from "@/lib/calendar/types";
 const MAX_SPAN = 75;
 const CONCURRENCY = 6;
 const DISCOVERY_MOVIES_CHECKED = 24;
+const DISCOVERY_WEEKS_PARALLEL = 3;
 
 type Row = Record<string, any>;
 
@@ -205,11 +206,17 @@ export async function GET(request: NextRequest) {
     const movies = (await mapLimited(movieRows.map((r) => Number(r.tmdb_id)), toMovie(true))).filter((m): m is MovieInput => Boolean(m));
 
     /* ---------- descobertas (lançamentos gerais) ---------- */
-    let discoveries: DiscoveryInput[] = [];
+    const discoveries: DiscoveryInput[] = [];
 
     if (!libraryOnly) {
-      try {
-        const range = { start: from, end: to };
+      /*
+       * Uma semana (domingo a sábado) por vez, alinhada à visão Semana: antes
+       * eram 2 páginas do TMDB para o período inteiro, e no Mês esses ~80
+       * títulos se espalhavam por 35 dias (dia 12: 8 no Mês × 29 na Semana).
+       * Cada semana faz exatamente a consulta que a visão Semana faria (mesmo
+       * cache de 6 h), então os dois mostram o mesmo para cada dia.
+       */
+      const discoverWeek = async (range: { start: string; end: string }): Promise<DiscoveryInput[]> => {
         const settled = await Promise.allSettled([
           upcomingMoviesTMDB(0, 1, range),
           upcomingMoviesTMDB(0, 2, range),
@@ -221,16 +228,18 @@ export async function GET(request: NextRequest) {
 
         const raw = settled.flatMap((s) => (s.status === "fulfilled" ? s.value : []));
         const seen = new Set<string>();
+        const found: DiscoveryInput[] = [];
 
         for (const d of raw) {
           const key = `${d.media_type}-${d.tmdb_id}`;
 
           // Itens da biblioteca vêm pelo caminho pessoal; exceção: filme já assistido
           // (não buscado acima) entra pela descoberta para aparecer como "Assistido".
-          if (!d.date || seen.has(key) || (library.has(key) && !(d.media_type === "movie" && watchedMovies.has(d.tmdb_id)))) continue;
+          // Lançamento geral sem pôster é título obscuro (virava um quadrado vazio na grade): fica de fora.
+          if (!d.date || !d.poster_path || seen.has(key) || (library.has(key) && !(d.media_type === "movie" && watchedMovies.has(d.tmdb_id)))) continue;
 
           seen.add(key);
-          discoveries.push({
+          found.push({
             tmdb_id: d.tmdb_id,
             media_type: d.media_type,
             title: d.title,
@@ -242,23 +251,51 @@ export async function GET(request: NextRequest) {
         }
 
         // Filmes populares: confere a data BR/US (a do discover é a primária).
-        const topMovies = discoveries
+        const topMovies = found
           .filter((d) => d.media_type === "movie")
-          .sort((a, b) => b.popularity - a.popularity)
+          .sort((x, y) => y.popularity - x.popularity)
           .slice(0, DISCOVERY_MOVIES_CHECKED);
         const checked = await mapLimited(topMovies.map((d) => d.tmdb_id), toMovie(false));
         const checkedById = new Map(checked.filter((m): m is MovieInput => Boolean(m)).map((m) => [m.tmdb_id, m]));
 
-        discoveries = discoveries
+        return found
           .map((d) => {
             const c = d.media_type === "movie" ? checkedById.get(d.tmdb_id) : undefined;
 
             return c ? { ...d, date: c.date } : d;
           })
           .filter((d) => d.media_type === "tv" || checkedById.has(d.tmdb_id) || !topMovies.some((t) => t.tmdb_id === d.tmdb_id));
-      } catch (error) {
-        console.error("[calendar] descobertas falharam:", (error as Error)?.message);
-        partial.push("discoveries");
+      };
+
+      const windows = weekWindows(from, to);
+      const perWeek: (DiscoveryInput[] | null)[] = [];
+
+      // 3 semanas por vez: cada uma faz até 4 + 24 pedidos ao TMDB (6 simultâneos) — fica abaixo do limite de taxa.
+      for (let i = 0; i < windows.length; i += DISCOVERY_WEEKS_PARALLEL) {
+        const batch = await Promise.allSettled(windows.slice(i, i + DISCOVERY_WEEKS_PARALLEL).map(discoverWeek));
+
+        for (const result of batch) {
+          if (result.status === "fulfilled") perWeek.push(result.value);
+          else {
+            console.error("[calendar] descobertas da semana falharam:", (result.reason as Error)?.message);
+            perWeek.push(null);
+          }
+        }
+      }
+
+      if (perWeek.some((week) => week === null)) partial.push("discoveries");
+
+      const seenAll = new Set<string>();
+
+      for (const week of perWeek) {
+        for (const d of week ?? []) {
+          const key = `${d.media_type}-${d.tmdb_id}`;
+
+          if (seenAll.has(key)) continue;
+
+          seenAll.add(key);
+          discoveries.push(d);
+        }
       }
     }
 

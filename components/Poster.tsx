@@ -63,6 +63,8 @@ type PosterProps = {
   /** Fase 4: posição na grade decide eager/lazy (lib/poster-loading.ts). */
   loading?: "eager" | "lazy";
   fetchPriority?: "high";
+  /** Fase 4: avisa quando a imagem terminou de carregar (ou já estava em cache, ou falhou). */
+  onLoadComplete?: () => void;
 };
 
 export function Poster({
@@ -74,6 +76,7 @@ export function Poster({
   priority = false,
   loading,
   fetchPriority,
+  onLoadComplete,
 }: PosterProps) {
   const imageRef = useRef<HTMLImageElement>(null);
   const [loaded, setLoaded] = useState(false);
@@ -89,7 +92,11 @@ export function Poster({
   useEffect(() => {
     const element = imageRef.current;
 
-    if (element?.complete && element.naturalWidth > 0) setLoaded(true);
+    if (element?.complete && element.naturalWidth > 0) {
+      setLoaded(true);
+      onLoadComplete?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só no início de cada imagem
   }, [path]);
 
   /*
@@ -117,8 +124,14 @@ export function Poster({
       fetchPriority={priority ? undefined : fetchPriority}
       // O TMDB já fornece tamanhos adequados; evita o limite da otimização da Vercel.
       unoptimized
-      onLoad={() => setLoaded(true)}
-      onError={() => setFailed(true)}
+      onLoad={() => {
+        setLoaded(true);
+        onLoadComplete?.();
+      }}
+      onError={() => {
+        setFailed(true);
+        onLoadComplete?.();
+      }}
       // Fase 4: o candidato a LCP não espera o fade (opacidade 0 adiaria a pintura).
       style={{ objectFit: "cover", opacity: loaded || usePlaceholder || priority || fetchPriority === "high" ? 1 : 0 }}
     />

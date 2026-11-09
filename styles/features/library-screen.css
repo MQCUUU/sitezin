@@ -1,0 +1,622 @@
+/*
+ * Fase 4 — Biblioteca na direção "Tela 2.39:1" (components/library/LibraryPage.tsx).
+ *
+ * Título grande + contagem (sem rótulo em caixa alta); status em abas de texto
+ * com um traço na cor de destaque (o destaque fica só nesse detalhe); uma linha
+ * de controles neutros; filtros num painel liso, sem borda, sombra ou gradiente.
+ */
+
+/* ---------------------------------------------------------------- Topo */
+.lb-head {
+  margin: 24px 0 28px;
+}
+
+.lb-head h1 {
+  margin: 0;
+  font-size: clamp(40px, 5vw, 64px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
+.lb-head p {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 18px;
+}
+
+/* ---------------------------------------------------------------- Abas de status */
+.lb-tabs-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.lb-tabs {
+  display: flex;
+  gap: 28px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-padding-inline: 32px;
+  scroll-behavior: smooth;
+}
+
+.lb-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.lb-tab {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 12px 0 14px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.lb-tab-count {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.lb-tab[aria-selected="true"] {
+  color: var(--text);
+}
+
+.lb-tab[aria-selected="true"] .lb-tab-count {
+  color: var(--mc-color-text-secondary);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lb-tab:hover {
+    color: var(--text);
+  }
+}
+
+.lb-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* O traço da aba ativa: 2px na cor de destaque, sobre a linha do trilho. */
+.lb-tab-indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+/* Setas só quando o trilho não cabe; neutras, sobre um esmaecido do fundo. */
+.lb-tabs-arrow {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.lb-tabs-arrow-left {
+  left: 0;
+  justify-content: flex-start;
+  background: linear-gradient(to right, var(--bg) 55%, transparent);
+}
+
+.lb-tabs-arrow-right {
+  right: 0;
+  justify-content: flex-end;
+  background: linear-gradient(to left, var(--bg) 55%, transparent);
+}
+
+.lb-tabs-arrow:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* ---------------------------------------------------------------- Controles */
+.lb-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  margin: 18px 0 24px;
+}
+
+.lb-controls .btn {
+  min-height: var(--mc-control-md);
+  background: var(--panel);
+  border-color: transparent;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lb-controls .btn:hover {
+    background: var(--mc-color-surface-hover);
+  }
+}
+
+.lb-liked[aria-pressed="true"] {
+  color: var(--mc-color-favorite);
+}
+
+.lb-control-count {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.lb-filters-btn[aria-expanded="true"] {
+  background: var(--mc-color-surface-active);
+}
+
+.lb-controls-end {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  min-width: 0;
+}
+
+.lb-sort {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: var(--mc-control-md);
+  padding: 0 4px 0 14px;
+  border-radius: var(--mc-radius-md);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.lb-sort-label {
+  white-space: nowrap;
+}
+
+.lb-sort select {
+  min-width: 0;
+  max-width: 240px;
+  min-height: 38px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.lb-sort select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.lb-sort option {
+  background: var(--panel);
+  color: var(--text);
+}
+
+/* Grade, compacta ou lista: três ícones num trilho; o ativo é a superfície mais clara. */
+.lb-view {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--mc-radius-md);
+  background: var(--panel);
+}
+
+.lb-view button {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--mc-radius-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.lb-view button[aria-pressed="true"] {
+  background: var(--mc-color-surface-active);
+  color: var(--text);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lb-view button:hover {
+    color: var(--text);
+  }
+}
+
+.lb-view button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ---------------------------------------------------------------- Filtros */
+.lb-filters {
+  margin: 0 0 28px;
+  padding: 22px 24px 24px;
+  border-radius: var(--mc-radius-lg);
+  background: var(--panel);
+}
+
+.lb-filters-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.lb-filters-head h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.lb-filters-head span {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.lb-filters-close {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--mc-radius-md);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lb-filters-close:hover {
+    background: var(--mc-color-surface-hover);
+    color: var(--text);
+  }
+}
+
+/* Tipo, gênero e ano numa linha (2 colunas cada); as duas notas dividem a linha de baixo. */
+.lb-filters-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 20px 24px;
+}
+
+.lb-filters-grid > .lb-field {
+  grid-column: span 2;
+}
+
+.lb-filters-grid > .lb-field-wide {
+  grid-column: span 3;
+}
+
+.lb-field {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.lb-field legend,
+.lb-legend {
+  margin-bottom: 10px;
+  padding: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.lb-legend {
+  margin: 0;
+}
+
+.lb-field legend span {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.lb-field select {
+  width: 100%;
+  min-height: var(--mc-control-md);
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--mc-radius-md);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+}
+
+.lb-field select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.lb-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.lb-option {
+  min-width: 44px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--mc-radius-pill);
+  background: transparent;
+  color: var(--mc-color-text-secondary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 120ms var(--mc-ease-out);
+}
+
+.lb-option:active {
+  transform: scale(0.97);
+}
+
+/* Escolhido: superfície clara, sem cor de destaque (o destaque fica só nos detalhes). */
+.lb-option[aria-pressed="true"] {
+  border-color: transparent;
+  background: var(--text);
+  color: var(--bg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lb-option:not([aria-pressed="true"]):hover {
+    border-color: color-mix(in srgb, var(--text) 30%, var(--line));
+    color: var(--text);
+  }
+}
+
+.lb-option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.lb-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 20px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lb-clear:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+/* ---------------------------------------------------------------- Vazio e erro */
+.lb-empty {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  max-width: 34em;
+  padding: 40px 0;
+}
+
+.lb-empty strong {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.lb-empty p {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* ---------------------------------------------------------------- Paginação */
+.lb-pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 32px 0 8px;
+}
+
+.lb-page {
+  min-width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--mc-radius-md);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.lb-page[aria-current="page"] {
+  background: var(--panel);
+  color: var(--text);
+  font-weight: 700;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lb-page:not(:disabled):hover {
+    background: var(--mc-color-surface-hover);
+    color: var(--text);
+  }
+}
+
+.lb-page:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.lb-page:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.lb-page-gap {
+  min-width: 24px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/*
+ * Até 1100px a linha não comporta tudo: Curtidos, Filtros e a visualização
+ * ficam em cima; a ordenação (o rótulo mais longo) ganha a linha de baixo.
+ */
+@media (max-width: 1100px) {
+  .lb-controls-end {
+    display: contents;
+  }
+
+  .lb-liked {
+    order: 1;
+  }
+
+  .lb-filters-btn {
+    order: 2;
+  }
+
+  .lb-view {
+    order: 3;
+    margin-left: auto;
+  }
+
+  .lb-sort {
+    order: 4;
+    flex: 1 1 100%;
+  }
+
+  .lb-sort select {
+    flex: 1;
+    max-width: none;
+  }
+}
+
+/* Celular estreito: a visualização desce para a linha da ordenação. */
+@media (max-width: 420px) {
+  .lb-filters-btn {
+    margin-left: auto;
+  }
+
+  .lb-view {
+    order: 5;
+    margin-left: 0;
+  }
+
+  /* Base de 150px: obriga a ordenação a descer (não espreme na 1ª linha). */
+  .lb-sort {
+    flex: 1 1 150px;
+    padding-left: 10px;
+  }
+
+  .lb-sort-label {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- Celular */
+@media (max-width: 760px) {
+  .lb-head {
+    margin: 12px 0 20px;
+  }
+
+  .lb-head h1 {
+    font-size: clamp(32px, 10vw, 44px);
+  }
+
+  .lb-head p {
+    margin-top: 8px;
+    font-size: 16px;
+  }
+
+  .lb-tabs {
+    gap: 22px;
+  }
+
+  .lb-tab {
+    font-size: 15px;
+  }
+
+  .lb-filters {
+    padding: 18px 16px 20px;
+  }
+
+  .lb-filters-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lb-filters-grid > .lb-field,
+  .lb-filters-grid > .lb-field-wide {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 380px) {
+  .lb-view button {
+    width: 30px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lb-tabs {
+    scroll-behavior: auto;
+  }
+
+  .lb-option:active {
+    transform: none;
+  }
+}

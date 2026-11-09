@@ -72,7 +72,8 @@ export default function TitlePage({
   const [rating, setRating] =
     useState("");
 
-  const [review, setReview] =
+  // A resenha é salva pelo ReviewPanel; aqui só acompanhamos a última versão.
+  const [, setReview] =
     useState("");
 
   const [favorite, setFavorite] =
@@ -274,202 +275,6 @@ export default function TitlePage({
 
     void retryLibraryLookup();
   }, [libraryAuth.state, applyLibraryResult, retryLibraryLookup]);
-  async function addToLibrary() {
-    // Fase 0: só adiciona com o estado confirmado (nunca durante/depois de uma falha de leitura).
-    if (
-      !details ||
-      saving ||
-      libraryLookup !== "ready" ||
-      libraryItem
-    ) {
-      return;
-    }
-
-    // Fase 1: visitante confirmado é convidado a entrar (a intenção é preservada).
-    if (!libraryAuth.requireUser(intentFor("add"))) return;
-
-    try {
-      setSaving(
-        true
-      );
-
-      const mediaTitle =
-        details.title ||
-        details.name ||
-        "Título";
-
-      const payload = {
-        media: {
-          ...details,
-
-          id:
-            details.id,
-
-          media_type:
-            type,
-
-          title:
-            mediaTitle,
-
-          original_title:
-            details.original_title ||
-            details.original_name ||
-            mediaTitle,
-
-          genres:
-            details.genres ||
-            [],
-
-          creator_names:
-            (
-              details.created_by ||
-              []
-            ).map(
-              (
-                person:
-                  PersonCredit
-              ) =>
-                person.name
-            ),
-
-          cast_names:
-            (
-              details.credits
-                ?.cast ||
-              []
-            )
-              .slice(
-                0,
-                10
-              )
-              .map(
-                (
-                  person:
-                    CastCredit
-                ) =>
-                  person.name
-              ),
-
-          number_of_seasons:
-            details.number_of_seasons ||
-            null,
-
-          number_of_episodes:
-            details.number_of_episodes ||
-            null,
-
-          runtime:
-            details.runtime ||
-            null,
-
-          vote_average:
-            details.vote_average ||
-            null,
-
-          vote_count:
-            details.vote_count ||
-            null,
-        },
-
-        status,
-
-        favorite,
-
-        personal_rating:
-          rating ===
-            ""
-            ? null
-            : Number(
-                rating
-              ),
-
-        review,
-      };
-
-      // Fase 1: apiFetch devolve o status HTTP no erro (401 = precisa entrar).
-      const result =
-        await apiFetch(
-          "/api/library",
-          {
-            method:
-              "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify(
-                payload
-              ),
-          }
-        );
-
-      /*
-       * Fase 0: o servidor nunca altera um item que já existe (adicionado em
-       * outra aba, por exemplo). A tela passa a mostrar o que está salvo.
-       */
-      if (result?.created === false) {
-        applyLibraryResult(result);
-        void reloadLibraryItem();
-
-        toast.info(
-          `${mediaTitle} já estava na sua biblioteca`,
-          {
-            description:
-              "Nada foi alterado: status, curtida, nota e resenha continuam como estavam.",
-          }
-        );
-
-        return;
-      }
-
-      setLibraryItem(
-        result
-      );
-      void reloadLibraryItem();
-
-      toast.success(
-        `${mediaTitle} adicionado à biblioteca`,
-        {
-          // Fase 3: diz o que de fato aconteceu (antes: "Status, curtida e nota foram salvos" ao só adicionar).
-          description:
-            `Entrou como ${mediaStatusLabel(result.status)}.`,
-
-          // A ação REMOVE (e apaga o histórico do título, que acabou de ser criado) — não é "desfazer".
-          actionLabel:
-            LIBRARY_ACTION_COPY.addedRemoveLabel,
-
-          onAction:
-            async () => {
-              await deleteLibraryItem(result.id);
-
-              setLibraryItem(
-                null
-              );
-
-              toast.info(
-                LIBRARY_ACTION_COPY.addedRemoved
-              );
-            },
-        }
-      );
-    } catch (
-      error
-    ) {
-      console.error(
-        error
-      );
-
-      libraryAuth.handleError(error, intentFor("add"), "Erro ao adicionar");
-    } finally {
-      setSaving(
-        false
-      );
-    }
-  }
-
   async function removeFromLibrary() {
     if (
       !libraryItem ||
@@ -1062,6 +867,13 @@ export default function TitlePage({
     void enqueueMutation(() => updateLibrary("status", value));
   }
 
+  /* Fase 4: nota rápida de 1 a 10 no topo (a resenha completa segue na aba Avaliações). */
+  function handleRatingChange(value: number | null) {
+    if (!libraryItem) return;
+    setRating(value === null ? "" : String(value));
+    void enqueueMutation(() => updateLibrary("personal_rating", value));
+  }
+
   /*
    * Usado por SeasonProgress e EpisodeBrowser: ambos só precisam
    * mesclar o item retornado e, se ele trouxer `status`, sincronizar
@@ -1189,13 +1001,16 @@ export default function TitlePage({
         type={type}
         details={details}
         libraryItem={libraryItem}
+        status={status}
+        rating={rating === "" ? null : Number(rating)}
         favorite={favorite}
         saving={saving}
         libraryLookup={libraryLookup}
         onRetryLibraryLookup={retryLibraryLookup}
-        onAddToLibrary={addToLibrary}
+        onStatusChange={handleStatusChange}
         onRemoveFromLibrary={removeFromLibrary}
         onToggleFavorite={handleToggleFavorite}
+        onRatingChange={handleRatingChange}
       />
 
       <TitleContentTabs
@@ -1213,10 +1028,7 @@ export default function TitlePage({
           <TitleOverviewSection
             type={type}
             details={details}
-            status={status}
             libraryItem={libraryItem}
-            libraryLookup={libraryLookup}
-            onStatusChange={handleStatusChange}
           />
 
           {type === "tv" && (

@@ -4,137 +4,200 @@
  * var(--text) (funciona nos temas Escuro, Claro e OLED). Sem cor por tipo.
  */
 
-/* ---------- cabeçalho ---------- */
+/* ---------- cabeçalho (Fase 4: título grande, sem rótulo em caixa alta) ---------- */
 .cal-header {
-  display: grid;
-  gap: 16px;
-  margin: 6px 0 22px;
+  margin: 24px 0 28px;
 }
 
-.cal-eyebrow,
-.cal-kicker {
-  display: block;
-  font-size: var(--mc-fs-xs);
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-
-.cal-title h1 {
-  margin: 6px 0 4px;
-  font-size: clamp(1.75rem, 3.4vw, 2.5rem);
-  font-weight: 800;
-  letter-spacing: -0.03em;
-}
-
-.cal-title p {
+.cal-header h1 {
   margin: 0;
-  color: var(--muted);
-  font-size: var(--mc-fs-base);
+  font-size: clamp(40px, 5vw, 64px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.035em;
 }
 
-.cal-controls {
+.cal-header p {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+/* Visualização: abas de texto sobre uma linha; a escolhida ganha o traço de destaque. */
+.cal-views {
+  display: flex;
+  gap: 28px;
+  border-bottom: 1px solid var(--line);
+}
+
+.cal-view {
+  position: relative;
+  padding: 12px 0 14px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.cal-view[aria-checked="true"] {
+  color: var(--text);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cal-view:hover {
+    color: var(--text);
+  }
+}
+
+.cal-view-indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+/* Período (Semana/Mês) à esquerda, em tipo grande; filtros em fichinhas à direita. */
+.cal-tools {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px 14px;
-}
-
-.cal-filters {
-  margin-left: auto;
-}
-
-.cal-seg {
-  display: inline-flex;
-  gap: 2px;
-  padding: 4px;
-  border-radius: var(--mc-radius-lg);
-  background: color-mix(in srgb, var(--text) 7%, var(--panel));
-  border: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
-}
-
-.cal-seg button {
-  min-height: 36px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: var(--mc-radius-md);
-  background: transparent;
-  color: color-mix(in srgb, var(--text) 80%, transparent);
-  font-size: var(--mc-fs-md);
-  font-weight: 650;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.cal-seg button:hover {
-  color: var(--text);
-  background: color-mix(in srgb, var(--text) 8%, transparent);
-}
-
-.cal-seg button.is-active {
-  color: var(--on-accent, #fff);
-  background: var(--accent);
+  gap: 12px 20px;
+  margin: 18px 0 26px;
 }
 
 .cal-nav {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
+  min-width: 0;
 }
 
 .cal-period {
-  min-width: 150px;
-  text-align: center;
-  font-size: var(--mc-fs-base);
-  font-weight: 750;
+  min-width: 0;
+  padding: 0 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 
-.cal-icon-btn {
+.cal-nav {
+  max-width: 100%;
+}
+
+.cal-icon-btn,
+.cal-today-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
   height: 36px;
+  border: 0;
   border-radius: var(--mc-radius-md);
-  border: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
   background: transparent;
   color: var(--text);
+  font: inherit;
   cursor: pointer;
+  transition: background-color 150ms ease, transform 120ms var(--mc-ease-out);
 }
 
-.cal-icon-btn:hover {
-  background: color-mix(in srgb, var(--text) 8%, transparent);
+.cal-icon-btn {
+  width: 36px;
+  flex: none;
 }
 
 .cal-today-btn {
-  min-height: 36px;
-  padding: 0 14px;
-  border-radius: var(--mc-radius-md);
-  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
-  background: transparent;
-  color: var(--text);
-  font-size: var(--mc-fs-md);
-  font-weight: 650;
-  cursor: pointer;
+  margin-left: 6px;
+  padding: 0 12px;
+  background: var(--panel);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cal-icon-btn:hover:not(:disabled),
+  .cal-today-btn:hover:not(:disabled) {
+    background: var(--mc-color-surface-hover);
+  }
+}
+
+.cal-icon-btn:active:not(:disabled),
+.cal-today-btn:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .cal-today-btn:disabled {
-  opacity: 0.45;
+  opacity: 0.35;
   cursor: default;
 }
 
-.cal-seg button:focus-visible,
+.cal-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+
+/* Agenda (sem período): as fichinhas começam na margem, logo abaixo das abas. */
+.cal-tools > .cal-filters:only-child {
+  margin-left: 0;
+}
+
+/* Mesmo desenho das opções de filtro da Biblioteca: contorno fino; escolhida = superfície clara. */
+.cal-chip {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--mc-radius-pill);
+  background: transparent;
+  color: var(--mc-color-text-secondary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 120ms var(--mc-ease-out);
+}
+
+.cal-chip:active {
+  transform: scale(0.97);
+}
+
+.cal-chip[aria-checked="true"] {
+  border-color: transparent;
+  background: var(--text);
+  color: var(--bg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cal-chip:not([aria-checked="true"]):hover {
+    border-color: color-mix(in srgb, var(--text) 30%, var(--line));
+    color: var(--text);
+  }
+}
+
+.cal-view:focus-visible,
+.cal-chip:focus-visible,
 .cal-icon-btn:focus-visible,
 .cal-today-btn:focus-visible,
 .cal-card:focus-visible,
-.cal-hero:focus-visible,
+.cal-feature a:focus-visible,
 .cal-cell:focus-visible,
 .cal-week-head:focus-visible,
 .cal-more:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
 
 /* ---------- corpo ---------- */
 .cal-body {
@@ -153,85 +216,91 @@
   color: var(--muted);
 }
 
+/* Resumo da semana: uma frase, sem caixa. */
 .cal-summary {
   margin: 0;
-  padding: 12px 16px;
-  border-radius: var(--mc-radius-lg);
-  font-size: var(--mc-fs-md);
-  color: color-mix(in srgb, var(--text) 85%, transparent);
-  background: color-mix(in srgb, var(--text) 5%, transparent);
+  font-size: 16px;
+  color: var(--muted);
 }
 
-.cal-summary strong {
+/* ---------- destaque: faixa panorâmica (Fase 4) ---------- */
+.cal-feature {
+  margin-bottom: 8px;
+}
+
+.cal-feature-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px 40px;
+  margin-top: 28px;
+}
+
+.cal-feature-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  max-width: 44em;
+}
+
+.cal-feature-when {
+  margin: 0;
+  color: var(--muted);
+  font-size: 17px;
+}
+
+.cal-feature-when strong {
   color: var(--text);
+  font-weight: 700;
 }
 
-/* ---------- hero (preserva a linguagem com backdrop) ---------- */
-.cal-hero {
-  position: relative;
-  display: block;
-  min-height: 250px;
-  border-radius: var(--mc-radius-xl);
-  overflow: hidden;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 28%, var(--panel)), var(--panel));
-  border: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
-}
-
-.cal-hero-bg {
-  position: absolute;
-  inset: 0;
-  background-size: cover;
-  background-position: center 30%;
-  transition: transform 0.5s ease;
-}
-
-.cal-hero-shade {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, rgba(5, 6, 10, 0.92) 0%, rgba(5, 6, 10, 0.72) 45%, rgba(5, 6, 10, 0.2) 100%);
-}
-
-.cal-hero-content {
-  position: relative;
-  display: grid;
-  gap: 6px;
-  max-width: 560px;
-  padding: 34px 32px;
-  color: #f6f7fb;
-}
-
-.cal-hero-title {
-  font-size: clamp(1.8rem, 4vw, 2.8rem);
-  font-weight: 850;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
-}
-
-.cal-hero-meta {
-  font-size: var(--mc-fs-base);
-  color: rgba(246, 247, 251, 0.82);
-}
-
-.cal-hero-when {
-  margin-top: 8px;
-  font-size: 1.35rem;
+.cal-feature-title {
+  margin: 0;
+  font-size: clamp(30px, 3.6vw, 48px);
   font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 
-.cal-hero-personal {
-  width: fit-content;
-  padding: 5px 12px;
-  border-radius: var(--mc-radius-pill);
-  font-size: var(--mc-fs-sm);
-  font-weight: 650;
-  background: color-mix(in srgb, var(--accent) 45%, rgba(0, 0, 0, 0.3));
+.cal-feature-title a {
+  color: inherit;
+  text-decoration: none;
 }
 
-@media (hover: hover) and (prefers-reduced-motion: no-preference) {
-  .cal-hero:hover .cal-hero-bg {
-    transform: scale(1.03);
+@media (hover: hover) and (pointer: fine) {
+  .cal-feature-title a:hover {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 6px;
   }
 }
+
+.cal-feature-what {
+  margin: 0;
+  color: color-mix(in srgb, var(--text) 85%, var(--muted));
+  font-size: 17px;
+}
+
+.cal-feature-personal {
+  margin: 0;
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.cal-feature-action {
+  min-height: 52px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: var(--mc-radius-md);
+  font-size: 16px;
+  font-weight: 700;
+}
+
 
 /* ---------- agenda ---------- */
 .cal-agenda {
@@ -245,16 +314,16 @@
   scroll-margin-top: 20px;
 }
 
+/* O dia é o título da seção (mesmo tamanho do Diário). */
 .cal-agenda-head {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 4px 12px;
   margin: 0;
-  padding-bottom: 8px;
-  border-bottom: 1px solid color-mix(in srgb, var(--text) 9%, transparent);
-  font-size: 1.05rem;
-  font-weight: 800;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .cal-agenda-day.is-today .cal-agenda-head span {
@@ -262,79 +331,56 @@
 }
 
 .cal-agenda-head small {
-  font-size: var(--mc-fs-sm);
+  font-size: 15px;
   font-weight: 500;
   color: var(--muted);
 }
 
 .cal-day-events {
   display: grid;
-  gap: 8px;
 }
 
 .cal-divider {
-  margin-top: 6px;
-  font-size: var(--mc-fs-xs);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  margin-top: 14px;
+  padding-bottom: 4px;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--muted);
 }
 
-/* ---------- card ---------- */
+/*
+ * ---------- linha do evento (Fase 4) ----------
+ * Em todas as larguras uma lista, como no Diário: linhas separadas por um fio,
+ * sem caixa, borda ou degradê. "É seu" = contorno no pôster + a linha pessoal.
+ */
 .cal-card {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) auto;
+  grid-template-columns: 56px minmax(0, 1fr);
   align-items: center;
-  gap: 14px;
-  padding: 10px 12px;
-  border-radius: var(--mc-radius-lg);
-  border: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--text) 3%, var(--panel)), var(--panel));
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--text) 6%, transparent);
+  color: var(--text);
+  transition: background-color 150ms ease;
 }
 
-.cal-card.is-personal {
-  box-shadow: inset 3px 0 0 var(--accent);
+.cal-card:last-child {
+  border-bottom: 0;
 }
 
-.cal-card:hover {
-  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .cal-card:hover .cal-card-title {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+.cal-card.is-personal .cal-card-poster {
+  box-shadow: 0 0 0 2px var(--accent);
 }
 
 .cal-card.is-watched {
   opacity: 0.72;
-}
-
-/*
- * Celular: a agenda empilhava dezenas de cartões com borda e degradê (76 no
- * dia de hoje), o que deixava a tela pesada. Vira lista: linhas separadas por
- * divisória. "É seu" continua marcado — texto próprio + contorno no pôster.
- */
-@media (max-width: 760px) {
-  .cal-card {
-    padding: 10px 0;
-    border: 0;
-    border-bottom: 1px solid color-mix(in srgb, var(--text) 7%, transparent);
-    border-radius: 0;
-    background: none;
-  }
-
-  .cal-card:last-child {
-    border-bottom: 0;
-  }
-
-  .cal-card:hover {
-    border-color: color-mix(in srgb, var(--text) 7%, transparent);
-  }
-
-  .cal-card.is-personal {
-    box-shadow: none;
-  }
-
-  .cal-card.is-personal .cal-card-poster {
-    box-shadow: 0 0 0 2px var(--accent);
-  }
 }
 
 .cal-card-poster {
@@ -353,30 +399,29 @@
   min-width: 0;
 }
 
+/* Tipo do evento em texto normal (sem caixa alta); o detalhe (T3:E04) logo depois, em destaque de peso. */
 .cal-card-type {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: var(--mc-fs-xs);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--text) 70%, transparent);
+  font-size: 14px;
+  color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .cal-card-type em {
+  margin-left: 2px;
   font-style: normal;
-  letter-spacing: 0;
-  text-transform: none;
+  font-weight: 600;
   color: var(--text);
 }
 
 .cal-card-title {
+  order: -1;
   font-size: var(--mc-fs-lg);
-  font-weight: 750;
+  font-weight: 700;
   line-height: 1.25;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -393,15 +438,15 @@
   color: color-mix(in srgb, var(--text) 75%, transparent);
 }
 
+/* A linha inteira é o link: a seta era redundante. */
 .cal-card-arrow {
-  color: var(--muted);
+  display: none;
 }
 
 .cal-card.is-compact {
   grid-template-columns: 34px minmax(0, 1fr);
   gap: 8px;
-  padding: 6px;
-  border-radius: var(--mc-radius-md);
+  padding: 8px 0;
 }
 
 .cal-card.is-compact .cal-card-poster {
@@ -443,18 +488,18 @@
   gap: 12px;
 }
 
+/* Vazio e erro: texto e uma ação, sem moldura tracejada. */
 .cal-empty {
   display: grid;
   gap: 12px;
   justify-items: start;
-  padding: 26px 24px;
-  border-radius: var(--mc-radius-lg);
-  border: 1px dashed color-mix(in srgb, var(--text) 16%, transparent);
-  background: color-mix(in srgb, var(--text) 3%, transparent);
+  max-width: 34em;
+  padding: 32px 0;
 }
 
 .cal-empty strong {
-  font-size: var(--mc-fs-lg);
+  font-size: 22px;
+  font-weight: 700;
 }
 
 .cal-empty-inline {
@@ -472,19 +517,20 @@
   list-style: none;
 }
 
+/* Semana: colunas sem caixa, abertas por um fio no topo; hoje = fio e número na cor de destaque. */
 .cal-week-day {
+  position: relative;
   display: grid;
   align-content: start;
-  gap: 8px;
+  gap: 4px;
   min-height: 220px;
-  padding: 10px;
-  border-radius: var(--mc-radius-lg);
-  border: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
-  background: color-mix(in srgb, var(--text) 2%, var(--panel));
+  padding: 10px 0 0;
+  border-top: 1px solid var(--line);
 }
 
 .cal-week-day.is-today {
-  border-color: var(--accent);
+  border-top: 2px solid var(--accent);
+  padding-top: 9px;
 }
 
 .cal-week-head {
@@ -504,35 +550,32 @@
 }
 
 .cal-week-wd {
-  font-size: var(--mc-fs-xs);
-  font-weight: 700;
-  text-transform: uppercase;
+  text-transform: capitalize;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--muted);
 }
 
 .cal-week-num {
-  font-size: 1.3rem;
-  font-weight: 800;
+  font-size: 22px;
+  font-weight: 700;
 }
 
-.cal-week-day.is-today .cal-week-num {
+.cal-week-day.is-today .cal-week-num,
+.cal-week-day.is-today .cal-week-wd {
   color: var(--accent);
 }
 
+/* Quantidade do dia: número discreto, sem pílula. */
 .cal-count {
   margin-left: auto;
-  min-width: 22px;
-  padding: 1px 7px;
-  border-radius: var(--mc-radius-pill);
-  font-size: var(--mc-fs-xs);
-  font-weight: 700;
-  text-align: center;
-  background: color-mix(in srgb, var(--text) 9%, transparent);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
 }
 
 .cal-week-list {
   display: grid;
-  gap: 6px;
 }
 
 .cal-week-empty {
@@ -542,14 +585,22 @@
 
 .cal-more {
   width: fit-content;
-  padding: 4px 8px;
+  margin-top: 4px;
+  padding: 4px 0;
   border: 0;
-  border-radius: var(--mc-radius-sm);
   background: transparent;
   color: var(--accent);
-  font-size: var(--mc-fs-sm);
-  font-weight: 700;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cal-more:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
 }
 
 /* ---------- mês ---------- */
@@ -566,13 +617,14 @@
 }
 
 .cal-month-wd span {
-  padding: 0 6px;
-  font-size: var(--mc-fs-xs);
-  font-weight: 700;
-  text-transform: uppercase;
+  text-transform: capitalize;
+  padding: 0 8px;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--muted);
 }
 
+/* Mês: células lisas (superfície, sem borda); hoje = número num círculo da cor de destaque. */
 .cal-cell {
   position: relative;
   display: grid;
@@ -580,40 +632,48 @@
   gap: 6px;
   min-height: 112px;
   padding: 8px;
-  border-radius: var(--mc-radius-lg);
-  border: 1px solid color-mix(in srgb, var(--text) 7%, transparent);
-  background: color-mix(in srgb, var(--text) 2%, var(--panel));
+  border: 0;
+  border-radius: var(--mc-radius-md);
+  background: var(--panel);
   color: var(--text);
+  font: inherit;
   text-align: left;
   cursor: default;
+  transition: background-color 150ms ease;
 }
 
 .cal-cell.has-events {
   cursor: pointer;
 }
 
-.cal-cell.has-events:hover {
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .cal-cell.has-events:hover {
+    background: var(--mc-color-surface-hover);
+  }
 }
 
 .cal-cell.is-outside {
-  opacity: 0.4;
-}
-
-.cal-cell.is-today {
-  border-color: var(--accent);
+  background: transparent;
+  opacity: 0.5;
 }
 
 .cal-cell-num {
+  justify-self: start;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: var(--mc-fs-md);
-  font-weight: 750;
+  font-size: 15px;
+  font-weight: 700;
 }
 
 .cal-cell.is-today .cal-cell-num {
-  color: var(--accent);
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent, #fff);
 }
 
 .cal-dot {
@@ -689,13 +749,23 @@
   font-size: 1.3rem;
 }
 
-.cal-sheet-sub {
-  margin: 0 0 8px;
-  font-size: var(--mc-fs-xs);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.cal-sheet-kicker {
+  display: block;
   color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.cal-sheet-sub {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.cal-sheet-sub span {
+  margin-left: 4px;
+  color: var(--muted);
+  font-weight: 500;
 }
 
 /* ---------- skeleton ---------- */
@@ -739,6 +809,8 @@
     grid-template-columns: repeat(7, minmax(150px, 1fr));
     overflow-x: auto;
     scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--text) 25%, transparent) transparent;
     padding-bottom: 6px;
   }
 
@@ -747,41 +819,49 @@
   }
 }
 
+@media (max-width: 760px) {
+  .cal-header {
+    margin: 12px 0 20px;
+  }
+
+  .cal-header h1 {
+    font-size: clamp(32px, 10vw, 44px);
+  }
+
+  .cal-header p {
+    margin-top: 8px;
+    font-size: 16px;
+  }
+
+  .cal-feature-body {
+    margin-top: 18px;
+  }
+
+  .cal-feature-action {
+    flex: 1 1 auto;
+  }
+
+  .cal-agenda-head {
+    font-size: 19px;
+  }
+}
+
 @media (max-width: 620px) {
-  .cal-controls {
-    gap: 10px;
-  }
-
-  .cal-controls > .cal-seg {
-    width: 100%;
-  }
-
-  .cal-controls > .cal-seg button {
-    flex: 1 1 0;
-    padding: 0 8px;
-  }
-
+  /* Período ocupa a linha (← mês → Hoje); fichinhas embaixo, à esquerda. */
   .cal-nav {
     width: 100%;
-    justify-content: space-between;
   }
 
   .cal-period {
     min-width: 0;
     flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 18px;
   }
 
-  .cal-hero {
-    min-height: 220px;
-    border-radius: var(--mc-radius-xl);
-  }
-
-  .cal-hero-content {
-    padding: 24px 20px;
-  }
-
-  .cal-hero-shade {
-    background: linear-gradient(0deg, rgba(5, 6, 10, 0.94) 10%, rgba(5, 6, 10, 0.55) 100%);
+  .cal-filters {
+    margin-left: 0;
   }
 
   .cal-card {
@@ -791,10 +871,6 @@
 
   .cal-card-poster {
     width: 48px;
-  }
-
-  .cal-card-arrow {
-    display: none;
   }
 
   .cal-card-type {
@@ -871,9 +947,15 @@
 
 @media (prefers-reduced-motion: reduce) {
   .cal-body,
-  .cal-hero-bg,
+  .cal-today-btn,
   .cal-card {
     transition: none;
+  }
+
+  .cal-icon-btn:active:not(:disabled),
+  .cal-today-btn:active:not(:disabled),
+  .cal-chip:active {
+    transform: none;
   }
 }
 
@@ -891,4 +973,21 @@
 
 .cal-diary-link:hover {
   text-decoration: underline;
+}
+
+/* Celular estreito: o período ("8 a 14 de novembro") cabe entre as setas e "Hoje". */
+@media (max-width: 400px) {
+  .cal-period {
+    padding: 0 2px;
+    font-size: 16px;
+  }
+
+  .cal-icon-btn {
+    width: 30px;
+  }
+
+  .cal-today-btn {
+    margin-left: 2px;
+    padding: 0 8px;
+  }
 }

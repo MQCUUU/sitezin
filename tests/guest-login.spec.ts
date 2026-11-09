@@ -1,3 +1,4 @@
+import { chooseTitleStatus, expectTitleStatus } from "./helpers";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
 /*
@@ -127,7 +128,7 @@ test.describe("Fase 1 — visitante", () => {
     await fillLogin(page);
     await expect(page).toHaveURL(new RegExp(`${TITLE_URL}$`));
     await expect(page.getByRole("button", { name: "Curtido" })).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByRole("button", { name: /Remover da biblioteca/ })).toBeVisible();
+    await expectTitleStatus(page, "want");
 
     await page.reload();
     await expect(page.getByRole("button", { name: "Curtido" })).toHaveAttribute("aria-pressed", "true");
@@ -141,17 +142,17 @@ test.describe("Fase 1 — visitante", () => {
 
   test("status como visitante: login conclui e o título fica com o status escolhido", async ({ page }) => {
     await page.goto(TITLE_URL);
-    await page.getByLabel("Status na sua biblioteca").selectOption("watched");
+    await chooseTitleStatus(page, "watched");
 
     const prompt = toast(page, "Entre para salvar");
     await expect(prompt).toContainText("marcar “Matrix” como Assistido");
-    await expect(page.getByLabel("Status na sua biblioteca")).toHaveValue("want");
+    await expectTitleStatus(page, "none");
 
     await prompt.getByRole("button", { name: "Entrar" }).click();
     await fillLogin(page);
 
     await expect(page).toHaveURL(new RegExp(`${TITLE_URL}$`));
-    await expect(page.getByLabel("Status na sua biblioteca")).toHaveValue("watched");
+    await expectTitleStatus(page, "watched");
     expect(await (await page.request.get(LOOKUP)).json()).toMatchObject({ status: "watched", favorite: false });
   });
 

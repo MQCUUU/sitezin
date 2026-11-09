@@ -172,7 +172,9 @@ test("elegibilidade: só Assistindo e Reassistindo (Pausado/Abandonado/fila/conc
 test("hero: série sem episodes_progress → 'Ainda não começou', começa em T1:E01, barra 0 de N", async () => {
   const item = await one(tvRow({ title: "Nova" }));
   const h = activeHero(item);
-  assert.equal(h.description, "Ainda não começou · começa em T1:E01");
+  // Fase 4: frase completa (sem "·") e sem o "Continue de onde parou" — ainda não há de onde continuar.
+  assert.equal(h.description, "Você ainda não começou. O primeiro episódio é o T1:E01.");
+  assert.equal(h.eyebrow, "");
   assert.equal(h.action, "Começar");
   assert.equal(h.bar.percent, 0);
   assert.equal(h.bar.label, "0 de 20 episódios exibidos");
@@ -235,7 +237,7 @@ test("barra: duração por episódio entra como complemento explícito, não com
   const item = await one(spec);
   item.episode_runtime = 45;
   const h = activeHero(item);
-  assert.equal(h.meta, `${h.bar.label} · ~45 min por episódio`);
+  assert.equal(h.meta, `${h.bar.label}, cerca de 45 min cada`);
 });
 
 /* ================================================================ HOME × LIBRARY */

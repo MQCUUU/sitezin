@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { BookOpenText, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { motion } from "motion/react";
 
 import { Search } from "@/components/Search";
 import { CALENDAR_TZ, addMonths, capitalize, isDay, longDate, monthLabel, todayIn } from "@/lib/calendar/dates";
@@ -189,51 +190,73 @@ function DiaryContent() {
 
   const goMonth = (target: string) => update({ month: target });
 
+  // Grupo de rádio: setas escolhem o filtro vizinho (e levam o foco junto).
+  function onFilterKey(event: KeyboardEvent<HTMLDivElement>) {
+    const keys = ["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"];
+
+    if (!keys.includes(event.key)) return;
+
+    event.preventDefault();
+
+    const step = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : -1;
+    const index = FILTERS.findIndex(([f]) => f === filter);
+    const next = (index + step + FILTERS.length) % FILTERS.length;
+
+    update({ filter: FILTERS[next][0] }, "replace");
+    event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]')[next]?.focus();
+  }
+
   return (
     <>
       <div className="topbar">
         <Search />
       </div>
 
+      {/* Fase 4: sem rótulo em caixa alta; título, uma frase e, embaixo, o mês e os filtros numa barra só. */}
       <header className="dy-header">
-        <div>
-          <span className="dy-eyebrow">Sua história</span>
-          <h1>Diário</h1>
-          <p>Tudo que você assistiu, reassistiu e marcou pelo caminho.</p>
-        </div>
-
-        <div className="dy-controls">
-          <div className="dy-nav" role="group" aria-label="Período">
-            <button type="button" className="dy-icon-btn" aria-label="Mês anterior" onClick={() => goMonth(addMonths(`${month}-01`, -1).slice(0, 7))}>
-              <ChevronLeft size={18} />
-            </button>
-            <label className="dy-month">
-              <span className="dy-sr">Escolher mês</span>
-              <select value={month} onChange={(e) => goMonth(e.target.value)}>
-                {months.map((m) => (
-                  <option key={m} value={m}>
-                    {capitalize(monthName(m))}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="button" className="dy-icon-btn" aria-label="Próximo mês" disabled={month >= currentMonth} onClick={() => goMonth(addMonths(`${month}-01`, 1).slice(0, 7))}>
-              <ChevronRight size={18} />
-            </button>
-            <button type="button" className="dy-today-btn" disabled={month === currentMonth && !focusDay} onClick={() => update({ month: currentMonth })}>
-              Hoje
-            </button>
-          </div>
-
-          <div className="dy-seg" role="radiogroup" aria-label="Filtrar momentos">
-            {FILTERS.map(([value, label]) => (
-              <button key={value} type="button" role="radio" aria-checked={filter === value} className={filter === value ? "is-active" : ""} onClick={() => update({ filter: value }, "replace")}>
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <h1>Diário</h1>
+        <p>Tudo que você assistiu, reassistiu e marcou pelo caminho.</p>
       </header>
+
+      <div className="dy-bar">
+        <div className="dy-nav" role="group" aria-label="Período">
+          <button type="button" className="dy-icon-btn" aria-label="Mês anterior" onClick={() => goMonth(addMonths(`${month}-01`, -1).slice(0, 7))}>
+            <ChevronLeft size={20} />
+          </button>
+          <label className="dy-month">
+            <span className="dy-sr">Escolher mês</span>
+            <select value={month} onChange={(e) => goMonth(e.target.value)}>
+              {months.map((m) => (
+                <option key={m} value={m}>
+                  {capitalize(monthName(m))}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="button" className="dy-icon-btn" aria-label="Próximo mês" disabled={month >= currentMonth} onClick={() => goMonth(addMonths(`${month}-01`, 1).slice(0, 7))}>
+            <ChevronRight size={20} />
+          </button>
+          <button type="button" className="dy-today-btn" disabled={month === currentMonth && !focusDay} onClick={() => update({ month: currentMonth })}>
+            Hoje
+          </button>
+        </div>
+
+        {/* Filtros: texto com o traço da cor de destaque sob o escolhido (mesmo padrão das abas da Biblioteca). */}
+        <div className="dy-filters" role="radiogroup" aria-label="Filtrar momentos" onKeyDown={onFilterKey}>
+          {FILTERS.map(([value, label]) => {
+            const checked = filter === value;
+
+            return (
+              <button key={value} type="button" role="radio" aria-checked={checked} tabIndex={checked ? 0 : -1} className="dy-filter" onClick={() => update({ filter: value }, "replace")}>
+                {label}
+                {checked ? (
+                  <motion.span layoutId="dy-filter-indicator" className="dy-filter-indicator" transition={{ type: "spring", duration: 0.32, bounce: 0 }} aria-hidden="true" />
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {error ? (
         <div className="dy-state" role="alert">
@@ -246,10 +269,9 @@ function DiaryContent() {
         <Skeleton />
       ) : !data.months.length && filter === "all" ? (
         <div className="dy-state dy-empty">
-          <BookOpenText size={30} aria-hidden="true" />
           <strong>Seu Diário ainda está vazio.</strong>
           <span>Quando você assistir filmes e séries, seus momentos aparecem aqui.</span>
-          <Link href="/discover" className="btn">
+          <Link href="/discover" className="btn primary">
             Explorar títulos
           </Link>
         </div>

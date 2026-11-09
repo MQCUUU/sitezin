@@ -1,3 +1,4 @@
+import { chooseTitleStatus, expectTitleStatus, titleStatusButton } from "./helpers";
 import { expect, test, type APIRequestContext } from "@playwright/test";
 
 /*
@@ -163,23 +164,22 @@ test.describe("P0-01 — biblioteca: adicionar nunca apaga dados", () => {
       await expect(page.getByText("Não foi possível verificar se este título está na sua biblioteca.")).toBeVisible();
       await expect(page.getByRole("button", { name: /Adicionar à biblioteca/ })).toHaveCount(0);
       await expect(page.getByRole("button", { name: /^(Curtir|Curtido)$/ })).toBeDisabled();
-      await expect(page.getByLabel("Status na sua biblioteca")).toBeDisabled();
+      await expect(titleStatusButton(page)).toHaveText(/Tentar de novo/);
 
       await page.unroute(LOOKUP);
     }
 
     // Tentar de novo com a API de volta: o estado real aparece.
     await page.getByRole("button", { name: "Tentar de novo" }).click();
-    await expect(page.getByRole("button", { name: /Remover da biblioteca/ })).toBeVisible();
+    await expectTitleStatus(page, "watched");
     await expect(page.getByRole("button", { name: "Curtido" })).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByLabel("Status na sua biblioteca")).toHaveValue("watched");
 
     expect(posts, "nenhum 'Adicionar' foi enviado").toEqual([]);
     expectSaved(await current(page.request));
 
     // Refresh depois das operações: o estado continua o mesmo.
     await page.reload();
-    await expect(page.getByRole("button", { name: /Remover da biblioteca/ })).toBeVisible();
+    await expectTitleStatus(page, "watched");
     expectSaved(await current(page.request));
   });
 
@@ -208,11 +208,12 @@ test.describe("P0-01 — biblioteca: adicionar nunca apaga dados", () => {
     await removeIfPresent(page.request);
     await page.goto(TITLE_URL);
 
-    await page.getByRole("button", { name: /Adicionar à biblioteca/ }).click();
-    await expect(page.getByRole("button", { name: /Remover da biblioteca/ })).toBeVisible();
+    // Fase 4: "Adicionar à biblioteca" abre os status; "Quero assistir" adiciona.
+    await chooseTitleStatus(page, "want");
+    await expectTitleStatus(page, "want");
 
     await page.reload();
-    await expect(page.getByRole("button", { name: /Remover da biblioteca/ })).toBeVisible();
+    await expectTitleStatus(page, "want");
     expect((await current(page.request))?.status).toBe("want");
   });
 });

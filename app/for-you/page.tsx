@@ -14,6 +14,8 @@ import { getLibraryVersion } from "@/lib/library-cache";
 import { authClient } from "@/lib/auth/client";
 import { Poster } from "@/components/Poster";
 import { SmartQueue } from "@/components/SmartQueue";
+import { TitleBand } from "@/components/title/hero/TitleBand";
+import { TitleMeta } from "@/components/title/hero/TitleMeta";
 import {
   Fragment,
   useEffect,
@@ -25,19 +27,15 @@ import { DEFAULT_FOR_YOU_QUERY, parseForYouQuery, serializeForYouQuery, type For
 
 import {
   Bot,
-  CalendarDays,
   ChevronDown,
   Film,
   Filter,
-  Gem,
   Loader2,
   RotateCcw,
   Sparkles,
   Star,
   Trash2,
-  TrendingUp,
   Tv,
-  Users,
   X,
 } from "lucide-react";
 import { CarouselRail } from "@/components/CarouselRail";
@@ -1207,6 +1205,13 @@ export default function ForYouPage() {
     changeQuery({ ...DEFAULT_FOR_YOU_QUERY, type });
   }
 
+  /* Fase 4: a melhor aposta = primeira sugestão (com imagem de fundo) da primeira prateleira. */
+  const featured = (() => {
+    const shelf = shelves[0];
+    const item = shelf?.results?.find((result: any) => result?.backdrop_path);
+    return item ? { item, reason: `A primeira sugestão de “${shelf.title}”.` } : null;
+  })();
+
   return (
     <>
       <div className="topbar">
@@ -1216,63 +1221,30 @@ export default function ForYouPage() {
       {/* Fase 5 (P2-10): <div> — o <main> é do layout raiz (antes havia um main dentro do outro). */}
       <div className="fy-page" data-rec-tool="for_you">
 
-        <section className="fy-hero">
-          <div className="fy-hero-glow" />
+        {/*
+         * Fase 4 — cabeçalho sem caixa, brilho nem rótulo: o título da página e
+         * uma frase. Logo abaixo, a melhor aposta do momento na faixa panorâmica.
+         */}
+        <header className="fy-head">
+          <h1 className="fy-head-title">Para você</h1>
+          <p className="fy-head-text">
+            {profileLevel === "cold"
+              ? "Ainda estamos conhecendo seu gosto. Avalie, curta ou marque o que já assistiu e as sugestões se ajustam a você."
+              : "Recomendações que aprendem com suas notas, curtidos e com o que você já assistiu."}
+            {basedOn.length > 0 ? ` Baseado em ${joinNames(basedOn.slice(0, 4))}.` : ""}
+          </p>
+        </header>
 
-          <div className="fy-hero-copy">
-            <div className="eyebrow">
-              PERSONALIZADO
-            </div>
-
-            <h1>
-              Para você
-            </h1>
-
-            <p>
-              {profileLevel === "cold"
-                ? "Ainda estamos conhecendo seu gosto. Avalie, curta ou marque o que já assistiu e o feed se ajusta a você."
-                : "Recomendações que aprendem com suas notas, curtidos e com o que você já assistiu."}
-            </p>
-
-            {basedOn.length >
-              0 && (
-              <div className="fy-based-on">
-                <span>
-                  Baseado em
-                </span>
-
-                <strong>
-                  {basedOn
-                    .slice(
-                      0,
-                      4
-                    )
-                    .join(
-                      " · "
-                    )}
-                </strong>
-              </div>
-            )}
-          </div>
-
-          <div className="fy-profile-card">
-            <div className="fy-profile-icon">
-              <Sparkles
-                size={22}
-              />
-            </div>
-
-            <div>
-              <strong>
-                Seu feed
-              </strong>
-
-              <span>
-                Muda conforme você usa o MyCatalog
-              </span>
-            </div>
-          </div>
-        </section>
+        {featured && (
+          <FeaturedPick
+            item={featured.item}
+            reason={featured.reason}
+            inLibrary={Boolean(getLibraryItem(featured.item))}
+            busy={processing === `${featured.item.media_type}-${featured.item.id}`}
+            onAdd={() => addToLibrary(featured.item)}
+            onPreview={() => setPreviewItem(featured.item)}
+          />
+        )}
 
         {profileGenres.length >
           0 && (
@@ -1851,55 +1823,23 @@ export default function ForYouPage() {
             </div>
 
             {hasMore && (
-              <section className="fy-load-more">
-                <div>
-                  <Sparkles
-                    size={18}
-                  />
-
-                  <div>
-                    <strong>
-                      Quer continuar descobrindo?
-                    </strong>
-
-                    <span>
-                      Carregamos outras partes do seu perfil sem apagar o que já apareceu.
-                    </span>
-                  </div>
-                </div>
-
+              <div className="fy-load-more">
                 <button
                   type="button"
-                  className="btn primary"
-                  disabled={
-                    loadingMore
-                  }
-                  onClick={() =>
-                    load(
-                      page +
-                        1,
-                      true
-                    )
-                  }
+                  className="btn fy-load-more-btn"
+                  disabled={loadingMore}
+                  onClick={() => load(page + 1, true)}
                 >
                   {loadingMore ? (
                     <>
-                      <Loader2
-                        size={16}
-                        className="spin"
-                      />
-                      Carregando...
+                      <Loader2 size={16} className="spin" aria-hidden="true" />
+                      Carregando…
                     </>
                   ) : (
-                    <>
-                      <Sparkles
-                        size={16}
-                      />
-                      Mais recomendações
-                    </>
+                    "Mais recomendações"
                   )}
                 </button>
-              </section>
+              </div>
             )}
           </>
         )}
@@ -1941,39 +1881,10 @@ function ShelfRow({
 }: any) {
   return (
     <section className="fy-shelf" data-rec-shelf={shelf.kind || undefined}>
+      {/* Fase 4: título e o motivo da prateleira; sem ícone em caixa nem contador. */}
       <div className="fy-shelf-head">
-        <div className="fy-shelf-title">
-          <div className="fy-shelf-icon">
-            <IconForShelf
-              icon={
-                shelf.icon
-              }
-            />
-          </div>
-
-          <div>
-            <h2>
-              {
-                shelf.title
-              }
-            </h2>
-
-            {shelf.subtitle && (
-              <p>
-                {
-                  shelf.subtitle
-                }
-              </p>
-            )}
-          </div>
-        </div>
-
-        <span className="fy-shelf-count">
-          {
-            shelf.results
-              .length
-          } sugestões
-        </span>
+        <h2>{shelf.title}</h2>
+        {shelf.subtitle && <p>{shelf.subtitle}</p>}
       </div>
 
       <CarouselRail className="fy-row" label={shelf.title}>
@@ -2135,22 +2046,6 @@ function MovieCard({
   );
 }
 
-function IconForShelf({
-  icon,
-}: {
-  icon:
-    Shelf["icon"];
-}) {
-  if (icon === "star") return <Star size={18} />;
-  if (icon === "film") return <Film size={18} />;
-  if (icon === "tv") return <Tv size={18} />;
-  if (icon === "gem") return <Gem size={18} />;
-  if (icon === "trending") return <TrendingUp size={18} />;
-  if (icon === "calendar") return <CalendarDays size={18} />;
-  if (icon === "users") return <Users size={18} />;
-  return <Sparkles size={18} />;
-}
-
 function FeedSkeleton() {
   return (
     <div className="fy-feed">
@@ -2188,5 +2083,68 @@ function FeedSkeleton() {
         )
       )}
     </div>
+  );
+}
+
+/* "A, B, C e D" */
+function joinNames(names: string[]) {
+  if (names.length <= 1) return names.join("");
+  return `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
+}
+
+/**
+ * Fase 4 — a melhor aposta do momento: faixa panorâmica, nome grande, o motivo
+ * e uma ação clara ("Quero assistir"). Já na biblioteca, a ação vira abrir o título.
+ */
+function FeaturedPick({
+  item,
+  reason,
+  inLibrary,
+  busy,
+  onAdd,
+  onPreview,
+}: {
+  item: any;
+  reason: string;
+  inLibrary: boolean;
+  busy: boolean;
+  onAdd: () => void;
+  onPreview: () => void;
+}) {
+  const title = item.title || item.name || "Sem título";
+  const href = `/title/${item.media_type}/${item.id}`;
+  const year = String(item.release_date || item.first_air_date || "").slice(0, 4);
+
+  return (
+    <section className="fy-feature" aria-labelledby="fy-feature-title">
+      <TitleBand path={item.backdrop_path} />
+      <div className="fy-feature-body">
+        <div className="fy-feature-copy">
+          <h2 id="fy-feature-title" className="fy-feature-title">
+            <Link href={href}>{title}</Link>
+          </h2>
+          <TitleMeta
+            lead={[mediaTypeLabel(item.media_type), year || null]}
+            rating={Number(item.vote_average || 0)}
+            votes={Number(item.vote_count || 1)}
+          />
+          <p className="fy-feature-text">{reason}</p>
+        </div>
+        <div className="fy-feature-actions">
+          {inLibrary ? (
+            <Link href={href} className="btn primary fy-feature-action">
+              Abrir o título
+            </Link>
+          ) : (
+            <button type="button" className="btn primary fy-feature-action" onClick={onAdd} disabled={busy}>
+              {busy ? "Adicionando…" : "Quero assistir"}
+            </button>
+          )}
+          <button type="button" className="btn fy-feature-action fy-feature-action--quiet" onClick={onPreview}>
+            Ver detalhes
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }

@@ -31,12 +31,10 @@
 }
 
 /* ---------------------------------------------------------------------------
- * Chips de filtro (Descobrir, Biblioteca): 34px, 13px, pílula.
- * Antes: Descobrir 34px/12px e Biblioteca 38px/16px para o mesmo papel.
+ * Chips de filtro (Descobrir): 34px, 13px, pílula.
+ * (A Biblioteca passou a usar as fichinhas `lb-option` na Fase 4.)
  * ------------------------------------------------------------------------- */
-.mc-discover-shortcut,
-.library-quick-filter,
-.lib-liked {
+.mc-discover-shortcut {
   min-height: var(--mc-control-sm);
   font-size: var(--mc-fs-sm);
   border-radius: var(--mc-radius-pill);

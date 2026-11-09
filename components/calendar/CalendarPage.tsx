@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { motion } from "motion/react";
 
 import { Search } from "@/components/Search";
-import { CALENDAR_TZ, addDays, addMonths, capitalize, firstOfMonth, isDay, longDate, monthGrid, monthLabel, startOfWeek, todayIn } from "@/lib/calendar/dates";
+import { CALENDAR_TZ, addDays, addMonths, capitalize, firstOfMonth, isDay, longDate, monthGrid, monthKey, monthLabel, startOfWeek, todayIn } from "@/lib/calendar/dates";
 import { pickHero, summarize } from "@/lib/calendar/build";
 import type { CalendarEvent, CalendarResponse } from "@/lib/calendar/types";
 
@@ -80,6 +81,24 @@ function Skeleton() {
       ))}
     </div>
   );
+}
+
+/** "a, b e c" — a frase do resumo, sem "·". */
+function joinParts(parts: string[]) {
+  return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} e ${parts[parts.length - 1]}` : parts[0];
+}
+
+/** Grupo de rádio: setas escolhem a opção vizinha e levam o foco junto. */
+function onRadioKey<T extends string>(event: KeyboardEvent<HTMLDivElement>, values: T[], current: T, choose: (value: T) => void) {
+  if (!["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(event.key)) return;
+
+  event.preventDefault();
+
+  const step = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : -1;
+  const next = (values.indexOf(current) + step + values.length) % values.length;
+
+  choose(values[next]);
+  event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]')[next]?.focus();
 }
 
 function CalendarContent() {
@@ -194,12 +213,13 @@ function CalendarContent() {
       ? capitalize(monthLabel(anchor))
       : view === "week"
         ? (() => {
+            // Fase 4: "8 a 14 de novembro" (mesmo mês) ou "29 de novembro a 5 de dezembro" — cabe no celular.
             const from = startOfWeek(anchor);
             const to = addDays(from, 6);
             const f = longDate(from, today).split(", ")[1];
             const t = longDate(to, today).split(", ")[1];
 
-            return `${f} – ${t}`;
+            return monthKey(from) === monthKey(to) ? `${Number(from.slice(8))} a ${t}` : `${f} a ${t}`;
           })()
         : "";
   const isCurrentPeriod = view === "week" ? startOfWeek(anchor) === startOfWeek(today) : firstOfMonth(anchor) === firstOfMonth(today);
@@ -216,51 +236,55 @@ function CalendarContent() {
         <Search />
       </div>
 
+      {/* Fase 4: sem rótulo em caixa alta — título e uma frase. */}
       <header className="cal-header">
-        <div className="cal-title">
-          <span className="cal-eyebrow">O que vem por aí</span>
-          <h1>Calendário</h1>
-          <p>Seus próximos episódios, estreias e tudo que vale acompanhar.</p>
-        </div>
-
-        <div className="cal-controls">
-          <div className="cal-seg" role="radiogroup" aria-label="Visualização">
-            {VIEWS.map(([value, label]) => (
-              <button key={value} type="button" role="radio" aria-checked={view === value} className={view === value ? "is-active" : ""} onClick={() => update({ view: value === "agenda" ? null : value, date: null })}>
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {view !== "agenda" ? (
-            <div className="cal-nav" aria-label="Navegar no período">
-              <button type="button" className="cal-icon-btn" onClick={() => step(-1)} aria-label={view === "week" ? "Semana anterior" : "Mês anterior"}>
-                <ChevronLeft size={18} />
-              </button>
-              <strong className="cal-period" aria-live="polite">
-                {periodLabel}
-              </strong>
-              <button type="button" className="cal-icon-btn" onClick={() => step(1)} aria-label={view === "week" ? "Próxima semana" : "Próximo mês"}>
-                <ChevronRight size={18} />
-              </button>
-              <button type="button" className="cal-today-btn" onClick={() => update({ date: null })} disabled={isCurrentPeriod}>
-                Hoje
-              </button>
-            </div>
-          ) : null}
-
-          <div className="cal-seg cal-filters" role="radiogroup" aria-label="Filtrar">
-            {FILTERS.map(([value, label, hint]) => (
-              <button key={value} type="button" role="radio" aria-checked={filter === value} title={hint} className={filter === value ? "is-active" : ""} onClick={() => update({ filter: value === "all" ? null : value }, "replace")}>
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <h1>Calendário</h1>
+        <p>Seus próximos episódios, estreias e tudo que vale acompanhar.</p>
       </header>
 
+      {/* Visualização: abas de texto; a escolhida ganha o traço na cor de destaque (mesmo padrão da Biblioteca e do Diário). */}
+      <div className="cal-views" role="radiogroup" aria-label="Visualização" onKeyDown={(event) => onRadioKey(event, VIEWS.map(([v]) => v), view, (v) => update({ view: v === "agenda" ? null : v, date: null }))}>
+        {VIEWS.map(([value, label]) => {
+          const checked = view === value;
+
+          return (
+            <button key={value} type="button" role="radio" aria-checked={checked} tabIndex={checked ? 0 : -1} className="cal-view" onClick={() => update({ view: value === "agenda" ? null : value, date: null })}>
+              {label}
+              {checked ? <motion.span layoutId="cal-view-indicator" className="cal-view-indicator" transition={{ type: "spring", duration: 0.32, bounce: 0 }} aria-hidden="true" /> : null}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="cal-tools">
+        {view !== "agenda" ? (
+          <div className="cal-nav" role="group" aria-label="Navegar no período">
+            <button type="button" className="cal-icon-btn" onClick={() => step(-1)} aria-label={view === "week" ? "Semana anterior" : "Mês anterior"}>
+              <ChevronLeft size={20} />
+            </button>
+            <strong className="cal-period" aria-live="polite">
+              {periodLabel}
+            </strong>
+            <button type="button" className="cal-icon-btn" onClick={() => step(1)} aria-label={view === "week" ? "Próxima semana" : "Próximo mês"}>
+              <ChevronRight size={20} />
+            </button>
+            <button type="button" className="cal-today-btn" onClick={() => update({ date: null })} disabled={isCurrentPeriod}>
+              Hoje
+            </button>
+          </div>
+        ) : null}
+
+        <div className="cal-filters" role="radiogroup" aria-label="Filtrar" onKeyDown={(event) => onRadioKey(event, FILTERS.map(([v]) => v), filter, (v) => update({ filter: v === "all" ? null : v }, "replace"))}>
+          {FILTERS.map(([value, label, hint]) => (
+            <button key={value} type="button" role="radio" aria-checked={filter === value} tabIndex={filter === value ? 0 : -1} title={hint} className="cal-chip" onClick={() => update({ filter: value === "all" ? null : value }, "replace")}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {error && !data ? (
-        <div className="empty" role="alert">
+        <div className="cal-empty" role="alert">
           <strong>{error}</strong>
           <button type="button" className="btn primary" onClick={() => setAttempt((n) => n + 1)}>
             Tentar de novo
@@ -280,11 +304,7 @@ function CalendarContent() {
             <>
               {hero ? <Hero event={hero.event} personal={hero.personal} today={today} /> : null}
 
-              {weekParts.length ? (
-                <p className="cal-summary">
-                  <strong>Nos próximos 7 dias:</strong> {weekParts.join(" · ")}
-                </p>
-              ) : null}
+              {weekParts.length ? <p className="cal-summary">Nos próximos 7 dias, {joinParts(weekParts as string[])}.</p> : null}
 
               {events.length ? (
                 <>
@@ -300,7 +320,7 @@ function CalendarContent() {
                 <div className="cal-empty">
                   <strong>{filter === "mine" ? "Nada do que você acompanha chega nos próximos 60 dias." : "Nenhum lançamento encontrado nos próximos 60 dias."}</strong>
                   {filter === "mine" ? (
-                    <Link href="/discover" className="btn">
+                    <Link href="/discover" className="btn primary">
                       Explorar títulos
                     </Link>
                   ) : null}

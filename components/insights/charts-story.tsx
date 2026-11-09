@@ -74,7 +74,7 @@ export function MonthlyChart({ data, metric }: { data: MonthPoint[]; metric: Mon
       <div className="ins-chart-readout" aria-live="polite">
         <strong>{fmt(point)}</strong>
         <span>
-          em {monthShort(point.month)} de {point.month.slice(0, 4)} · {point.movies} {point.movies === 1 ? "filme" : "filmes"} ·{" "}
+          em {monthShort(point.month)} de {point.month.slice(0, 4)}, {point.movies} {point.movies === 1 ? "filme" : "filmes"},{" "}
           {point.episodes} {point.episodes === 1 ? "episódio" : "episódios"}
         </span>
       </div>
@@ -181,10 +181,10 @@ export function SplitBar({ movies, series }: { movies: number; series: number })
       </span>
       <span className="ins-split-legend">
         <span>
-          <i className="is-movies" aria-hidden="true" /> Filmes · <strong>{hoursText(movies)}</strong> ({moviePct}%)
+          <i className="is-movies" aria-hidden="true" /> Filmes: <strong>{hoursText(movies)}</strong> ({moviePct}%)
         </span>
         <span>
-          <i className="is-series" aria-hidden="true" /> Séries · <strong>{hoursText(series)}</strong> ({100 - moviePct}%)
+          <i className="is-series" aria-hidden="true" /> Séries: <strong>{hoursText(series)}</strong> ({100 - moviePct}%)
         </span>
       </span>
     </div>

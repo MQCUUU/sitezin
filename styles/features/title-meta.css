@@ -1,0 +1,79 @@
+/*
+ * Fase 4 — ficha do título (components/title/hero/TitleMeta.tsx).
+ * 1ª linha: tipo e ano em negrito + nota do TMDB. 2ª linha: fichinhas com
+ * fundo suave e sem borda (quebram de linha limpas, sem "·" nem traço solto).
+ */
+.tt-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tt-meta-lead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.tt-meta-lead > strong {
+  font-weight: 700;
+}
+
+.tt-meta-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+}
+
+.tt-meta-star {
+  color: var(--mc-color-rating);
+}
+
+.tt-meta-rating strong {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.tt-meta-rating-label {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tt-meta-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tt-meta-tags li {
+  padding: 6px 12px;
+  border-radius: var(--mc-radius-pill);
+  background: var(--panel);
+  color: color-mix(in srgb, var(--text) 82%, var(--muted));
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+@media (max-width: 760px) {
+  .tt-meta-lead {
+    font-size: 16px;
+  }
+
+  .tt-meta-tags {
+    gap: 6px;
+  }
+
+  .tt-meta-tags li {
+    padding: 5px 10px;
+    font-size: 13px;
+  }
+}

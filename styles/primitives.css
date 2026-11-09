@@ -37,7 +37,7 @@
   transition: background var(--mc-duration-fast) var(--mc-ease-standard),
     border-color var(--mc-duration-fast) var(--mc-ease-standard),
     color var(--mc-duration-fast) var(--mc-ease-standard),
-    transform var(--mc-duration-fast) var(--mc-ease-standard);
+    transform var(--mc-duration-fast) var(--mc-ease-out);
 }
 
 .mc-btn:hover {
@@ -46,7 +46,13 @@
 
 .mc-btn:active {
   background: var(--mc-color-surface-active);
-  transform: translateY(0.5px);
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mc-btn:active {
+    transform: none;
+  }
 }
 
 .mc-btn:disabled,
@@ -81,17 +87,17 @@
 }
 
 .mc-btn--primary {
-  background: var(--mc-color-accent);
+  background: var(--mc-color-primary);
   border-color: transparent;
-  color: var(--mc-color-accent-contrast);
+  color: var(--mc-color-primary-contrast);
 }
 
 .mc-btn--primary:hover {
-  background: var(--mc-color-accent-hover);
+  background: var(--mc-color-primary-hover);
 }
 
 .mc-btn--primary:active {
-  background: var(--mc-color-accent-active);
+  background: var(--mc-color-primary-hover);
 }
 
 .mc-btn--secondary {

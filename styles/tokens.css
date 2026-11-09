@@ -22,8 +22,9 @@
   --mc-color-bg: var(--bg);
   --mc-color-bg-elevated: var(--panel2);
   --mc-color-surface: var(--panel);
-  --mc-color-surface-hover: color-mix(in srgb, var(--accent) 6%, var(--panel));
-  --mc-color-surface-active: color-mix(in srgb, var(--accent) 12%, var(--panel));
+  /* Fase 4: superfícies neutras (a cor de destaque fica só para detalhes/estados). */
+  --mc-color-surface-hover: color-mix(in srgb, var(--text) 7%, var(--panel));
+  --mc-color-surface-active: color-mix(in srgb, var(--text) 11%, var(--panel));
   --mc-color-surface-muted: color-mix(in srgb, var(--text) 5%, var(--panel));
 
   /* ---------------------------------------------------------------- */
@@ -44,6 +45,11 @@
   /* ---------------------------------------------------------------- */
   /* Color: accent & status                                            */
   /* ---------------------------------------------------------------- */
+  /* Ação principal: clara sobre o fundo escuro, escura no tema claro (Fase 4). */
+  --mc-color-primary: var(--primary, #eceae6);
+  --mc-color-primary-hover: var(--primary-hover, #ffffff);
+  --mc-color-primary-contrast: var(--on-primary, #1e1e20);
+
   --mc-color-accent: var(--accent);
   --mc-color-accent-hover: color-mix(in srgb, var(--accent) 88%, white);
   --mc-color-accent-active: color-mix(in srgb, var(--accent) 85%, black);
@@ -73,9 +79,9 @@
   --mc-color-scrim: 6, 8, 16;
 
   /* ---------------------------------------------------------------- */
-  /* Typography (Inter stays the only family — see PREMIUM-UI-V2.md)   */
+  /* Typography — uma família: Schibsted Grotesk (Fase 4, next/font)    */
   /* ---------------------------------------------------------------- */
-  --mc-font-sans: var(--font-inter), var(--font-ui, Inter), ui-sans-serif,
+  --mc-font-sans: var(--font-sans), var(--font-ui, system-ui), ui-sans-serif,
     system-ui, -apple-system, "Segoe UI", sans-serif;
 
   /*

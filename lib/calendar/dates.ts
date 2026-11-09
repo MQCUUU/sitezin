@@ -55,6 +55,22 @@ export function startOfWeek(day: string) {
   return addDays(day, -weekday(day));
 }
 
+/**
+ * Semanas inteiras (domingo a sábado) que cobrem o período. O Calendário busca
+ * as descobertas do TMDB por semana: antes, 2 páginas para o período inteiro
+ * se espalhavam pelo mês e o Mês mostrava bem menos lançamentos por dia que a
+ * Semana. Com as mesmas janelas, os dois mostram o mesmo para cada dia.
+ */
+export function weekWindows(from: string, to: string): { start: string; end: string }[] {
+  const windows: { start: string; end: string }[] = [];
+
+  for (let start = startOfWeek(from); start <= to; start = addDays(start, 7)) {
+    windows.push({ start, end: addDays(start, 6) });
+  }
+
+  return windows;
+}
+
 export function monthKey(day: string) {
   return day.slice(0, 7);
 }

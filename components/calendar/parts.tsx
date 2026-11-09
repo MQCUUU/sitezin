@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 import { ChevronRight, Film, Tv, X } from "lucide-react";
 
 import { Poster } from "@/components/Poster";
-import { img } from "@/lib/tmdb";
+import { TitleBand } from "@/components/title/hero/TitleBand";
 import { addDays, capitalize, dayHeading, daysBetween, longDate, monthKey, relativeWhen, startOfWeek, weekday, WEEKDAYS_SHORT } from "@/lib/calendar/dates";
 import type { CalendarEvent } from "@/lib/calendar/types";
 import { lockScroll, trapTab } from "@/lib/modal-a11y";
@@ -39,7 +39,7 @@ export function EventCard({ event, compact = false }: { event: CalendarEvent; co
           <span className="cal-card-type">
             {event.media_type === "tv" ? <Tv size={14} aria-hidden="true" /> : <Film size={14} aria-hidden="true" />}
             {typeLabel(event)}
-            {detail ? <em>· {detail}</em> : null}
+            {detail ? <em>{detail}</em> : null}
           </span>
           <strong className="cal-card-title">{event.title}</strong>
           {personal ? <span className="cal-card-personal">{personal}</span> : null}
@@ -70,25 +70,39 @@ export function DayEvents({ events, compact = false }: { events: CalendarEvent[]
 
 /* ------------------------------------------------------------------ hero */
 
+/**
+ * Fase 4 — o próximo lançamento na faixa panorâmica (mesma linguagem do
+ * Título, do Início e do Para você): imagem em cima; quando, o quê e por que
+ * importa embaixo, em tipo; uma ação clara.
+ */
 export function Hero({ event, personal, today }: { event: CalendarEvent; personal: boolean; today: string }) {
   const detail = detailLabel(event);
   const line = personalLine(event);
+  const href = `/title/${event.media_type}/${event.tmdb_id}`;
+  const when = capitalize(relativeWhen(event.date, today));
 
   return (
-    <Link href={`/title/${event.media_type}/${event.tmdb_id}`} className="cal-hero" aria-label={`${personal ? "Próximo para você" : "Próximo lançamento"}: ${eventAria(event)}, ${relativeWhen(event.date, today)}`}>
-      {event.backdrop_path ? <span className="cal-hero-bg" style={{ backgroundImage: `url(${img(event.backdrop_path, "w1280")})` }} aria-hidden="true" /> : null}
-      <span className="cal-hero-shade" aria-hidden="true" />
-      <span className="cal-hero-content">
-        <span className="cal-kicker">{personal ? "Próximo para você" : "Próximo lançamento"}</span>
-        <strong className="cal-hero-title">{event.title}</strong>
-        <span className="cal-hero-meta">
-          {typeLabel(event)}
-          {detail ? ` · ${detail}` : ""}
-        </span>
-        <span className="cal-hero-when">{relativeWhen(event.date, today)}</span>
-        {line ? <span className="cal-hero-personal">{line}</span> : null}
-      </span>
-    </Link>
+    <section className="cal-feature" aria-labelledby="cal-feature-title">
+      <TitleBand path={event.backdrop_path || event.poster_path} />
+      <div className="cal-feature-body">
+        <div className="cal-feature-copy">
+          <p className="cal-feature-when">
+            <strong>{when}</strong> {personal ? "chega o próximo do que você acompanha" : "chega o próximo lançamento"}
+          </p>
+          <h2 id="cal-feature-title" className="cal-feature-title">
+            <Link href={href}>{event.title}</Link>
+          </h2>
+          <p className="cal-feature-what">
+            {typeLabel(event)}
+            {detail ? `, ${detail}` : ""}
+          </p>
+          {line ? <p className="cal-feature-personal">{line}</p> : null}
+        </div>
+        <Link href={href} className="btn primary cal-feature-action">
+          Abrir o título
+        </Link>
+      </div>
+    </section>
   );
 }
 
@@ -257,7 +271,7 @@ export function DayDetails({ day, events, today, onClose }: { day: string; event
       <div ref={panel} className="cal-sheet" role="dialog" aria-modal="true" aria-labelledby="cal-sheet-title" tabIndex={-1}>
         <header className="cal-sheet-head">
           <div>
-            <span className="cal-kicker">{Math.abs(daysBetween(today, day)) <= 1 ? dayHeading(day, today) : "Lançamentos do dia"}</span>
+            <span className="cal-sheet-kicker">{Math.abs(daysBetween(today, day)) <= 1 ? capitalize(dayHeading(day, today)) : "Lançamentos do dia"}</span>
             <h2 id="cal-sheet-title">{capitalize(longDate(day, today))}</h2>
           </div>
           <button type="button" className="cal-icon-btn" onClick={onClose} aria-label="Fechar">
@@ -272,7 +286,9 @@ export function DayDetails({ day, events, today, onClose }: { day: string; event
         ) : null}
         {personal.length ? (
           <section>
-            <h3 className="cal-sheet-sub">Para você · {personal.length}</h3>
+            <h3 className="cal-sheet-sub">
+              Para você <span>{personal.length}</span>
+            </h3>
             <div className="cal-day-events">
               {personal.map((e) => (
                 <EventCard key={e.id} event={e} />
@@ -282,7 +298,9 @@ export function DayDetails({ day, events, today, onClose }: { day: string; event
         ) : null}
         {other.length ? (
           <section>
-            <h3 className="cal-sheet-sub">{personal.length ? "Outros lançamentos" : "Lançamentos"} · {other.length}</h3>
+            <h3 className="cal-sheet-sub">
+              {personal.length ? "Outros lançamentos" : "Lançamentos"} <span>{other.length}</span>
+            </h3>
             <div className="cal-day-events">
               {other.map((e) => (
                 <EventCard key={e.id} event={e} />

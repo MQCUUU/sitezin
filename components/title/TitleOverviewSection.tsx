@@ -2,10 +2,7 @@ import "@/styles/features/title-detail.css";
 import Link from "next/link";
 import { CalendarDays, Clock3, Layers3, Play } from "lucide-react";
 
-import { MEDIA_STATUS_OPTIONS } from "@/lib/media-status";
-import { languageName, runtimeLabel } from "@/lib/title-locale";
-import type { LibraryLookupState } from "@/lib/library/lookup";
-import type { Status } from "@/lib/types";
+import { genreName, languageName, runtimeLabel } from "@/lib/title-locale";
 import { TitleSeriesProgress } from "./TitleSeriesProgress";
 import type {
   LibraryItem,
@@ -16,32 +13,24 @@ import type {
 export type TitleOverviewSectionProps = {
   type: TitleType;
   details: LooseTitleDetails;
-  status: Status;
   libraryItem: LibraryItem | null;
-  /** Fase 0: sem estado confirmado, o status não pode ser escolhido. */
-  libraryLookup: LibraryLookupState;
-  onStatusChange: (value: Status) => void;
 };
 
 /**
  * Sinopse, gêneros e fatos rápidos (lançamento/duração/conteúdo), mais a
- * sidebar de coleção (status + progresso de temporadas para séries).
+ * progresso de temporadas (séries na biblioteca). O status mora no topo (Fase 4).
  */
 export function TitleOverviewSection({
   type,
   details,
-  status,
   libraryItem,
-  libraryLookup,
-  onStatusChange,
 }: TitleOverviewSectionProps) {
-  const lookupPending = !libraryItem && libraryLookup !== "ready";
 
   const runtime = runtimeLabel(details.runtime);
   const overviewLanguage = details.overview_language ? languageName(details.overview_language) : null;
 
   const genres = (details.genres || [])
-    .map((genre: any) => genre.name)
+    .map((genre: any) => genreName(genre.name))
     .join(" · ");
 
   return (
@@ -64,7 +53,7 @@ export function TitleOverviewSection({
         {genres && (
           <div className="title-genres">
             {(details.genres || []).map((genre: any) => (
-              <span key={genre.id}>{genre.name}</span>
+              <span key={genre.id}>{genreName(genre.name)}</span>
             ))}
           </div>
         )}
@@ -133,52 +122,16 @@ export function TitleOverviewSection({
         </div>
       </div>
 
-      {/* SIDEBAR */}
-
-      <aside className="title-sidebar">
-        <div className="title-status-card">
-          <div className="title-section-heading">
-            <span>Minha coleção</span>
-
-            <h3>Status</h3>
-          </div>
-
-          {/* V3.1: lista canônica de status (lib/media-status.ts) — a mesma da Biblioteca. */}
-          <select
-            className="title-status-select"
-            aria-label="Status na sua biblioteca"
-            value={status}
-            onChange={(event) => onStatusChange(event.target.value as Status)}
-            disabled={lookupPending}
-          >
-            {MEDIA_STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-
-          {!libraryItem && libraryLookup === "ready" && (
-            <p className="title-status-hint">
-              Escolher um status adiciona o título à sua biblioteca.
-            </p>
-          )}
-
-          {!libraryItem && libraryLookup === "error" && (
-            <p className="title-status-hint">
-              Não foi possível verificar sua biblioteca agora.
-            </p>
-          )}
-        </div>
-
-        {type === "tv" && libraryItem && (
+      {/* Fase 4: o status saiu daqui (é a ação principal do topo). Fica só o progresso da série. */}
+      {type === "tv" && libraryItem && (
+        <aside className="title-sidebar">
           <TitleSeriesProgress
             tvId={Number(details.id)}
             progress={libraryItem.library_progress}
             totals={libraryItem.progress}
           />
-        )}
-      </aside>
+        </aside>
+      )}
     </section>
   );
 }

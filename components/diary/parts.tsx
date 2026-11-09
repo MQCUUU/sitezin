@@ -95,7 +95,7 @@ export function Moment({ moment }: { moment: DiaryMoment }) {
         <p className="dy-what">
           <Icon size={14} aria-hidden="true" />
           <span>{headline(moment)}</span>
-          {moment.time ? <span className="dy-time-inline"> · {moment.time}</span> : null}
+          {moment.time ? <span className="dy-time-inline">{moment.time}</span> : null}
         </p>
         {extra ? <p className="dy-detail">{extra}</p> : null}
         {mark ? (
@@ -170,6 +170,7 @@ export function Group({ group }: { group: DiaryGroup }) {
 
   return (
     <section className={`dy-group is-${group.kind}`}>
+      {/* Fase 4: uma linha alinhada aos títulos (sem caixa nem ícone em quadradinho). */}
       <button type="button" className="dy-group-head" aria-expanded={open} aria-controls={id} onClick={() => setOpen((v) => !v)}>
         <span className="dy-group-icon" aria-hidden="true">
           <Icon size={16} />
@@ -192,7 +193,7 @@ export function Group({ group }: { group: DiaryGroup }) {
                 <strong>{row.text}</strong>
                 <span>
                   {plural(row.count, "registro", "registros")}
-                  {row.from ? ` · ${row.from === row.to ? row.from : `${row.from}–${row.to}`}` : ""}
+                  {row.from ? `, ${row.from === row.to ? `às ${row.from}` : `das ${row.from} às ${row.to}`}` : ""}
                 </span>
               </li>
             ))}

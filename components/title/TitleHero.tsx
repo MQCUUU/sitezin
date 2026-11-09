@@ -1,266 +1,236 @@
+"use client";
+
 import "@/styles/features/title-detail.css";
-import { Heart, Plus, RefreshCw, Star, Trash2, Film, Tv } from "lucide-react";
+import "@/styles/features/title-hero.css";
+import { Heart, ListPlus } from "lucide-react";
+import { useId, useState } from "react";
 
 import { Poster } from "@/components/Poster";
+import { AddToListDialog } from "@/components/lists/AddToListDialog";
+import { useAuthState } from "@/hooks/useLibraryAuth";
+import type { LibraryLookupState } from "@/lib/library/lookup";
+import { genreName, languageName, runtimeLabel, workStatusLabel } from "@/lib/title-locale";
+import type { Status } from "@/lib/types";
+import { TitleBand } from "./hero/TitleBand";
+import { TitleMeta } from "./hero/TitleMeta";
+import { TitleRating } from "./hero/TitleRating";
+import { TitleStatusMenu } from "./hero/TitleStatusMenu";
 import { TitleWhereToWatch } from "./TitleWhereToWatch";
 import { WatchNowButton } from "./WatchNowButton";
-import { mediaStatusLabel } from "@/lib/media-status";
-import { languageName, runtimeLabel, workStatusLabel } from "@/lib/title-locale";
-import type { LibraryLookupState } from "@/lib/library/lookup";
 import type { LibraryItem, LooseTitleDetails, TitleType } from "./types";
 
 export type TitleHeroProps = {
   type: TitleType;
   details: LooseTitleDetails;
   libraryItem: LibraryItem | null;
+  status: Status;
+  rating: number | null;
   favorite: boolean;
   saving: boolean;
   /** Fase 0: "ready" = estado confirmado; "loading"/"error" = sem Adicionar/Curtir. */
   libraryLookup: LibraryLookupState;
   onRetryLibraryLookup: () => void;
-  onAddToLibrary: () => void;
+  onStatusChange: (status: Status) => void;
   onRemoveFromLibrary: () => void;
   onToggleFavorite: () => void;
+  onRatingChange: (rating: number | null) => void;
 };
 
 /**
- * Cabeçalho principal da title page: backdrop, poster, título, badges e as
- * ações primárias (adicionar/remover da biblioteca, curtir). Puramente
- * apresentacional — as mutações continuam no container (TitleView), que
- * decide o que `onAddToLibrary`/`onRemoveFromLibrary`/`onToggleFavorite`
- * de fato fazem.
+ * Topo da página do Título — Fase 4, direção "Tela 2.39:1".
  *
- * O backdrop é o maior bloco de pixels acima da dobra (cobre a largura
- * inteira do hero); o poster é bem menor e some atrás dele visualmente até
- * carregar. Por isso só o backdrop leva `priority` — marcar os dois
- * "prioritários" não prioriza nada de verdade.
+ * Faixa panorâmica sobre fundo preto; abaixo, pôster, título e uma frase de
+ * ficha técnica. UMA ação principal (clara): o status — fora da biblioteca,
+ * "Adicionar à biblioteca". Curtir, listas, onde assistir e (Modo Sem
+ * Censura) assistir agora são discretas. "Sua nota" fica ao lado.
+ * No celular as ações viram uma barra fixa acima da navegação inferior e o
+ * status abre numa folha.
+ *
+ * Apresentacional: as mutações continuam no TitleView.
  */
 export function TitleHero({
   type,
   details,
   libraryItem,
+  status,
+  rating,
   favorite,
   saving,
   libraryLookup,
   onRetryLibraryLookup,
-  onAddToLibrary,
+  onStatusChange,
   onRemoveFromLibrary,
   onToggleFavorite,
+  onRatingChange,
 }: TitleHeroProps) {
-  const title = details.title || details.name;
-  const heroBackdropPath = details.backdrop_path || details.poster_path;
+  const ratingHeadingId = useId();
+  const authState = useAuthState();
+  const [listOpen, setListOpen] = useState(false);
+  // Pulso do coração só quando a pessoa curte agora (não ao carregar algo já curtido).
+  const [likePulse, setLikePulse] = useState(0);
 
+  const title: string = details.title || details.name || "Sem título";
+  const originalTitle: string | undefined = details.original_title || details.original_name;
+  const year = (details.first_air_date || details.release_date || "").slice(0, 4);
   // Fase 0: sem item e sem estado confirmado, nada pode ser criado nem curtido.
   const lookupPending = !libraryItem && libraryLookup !== "ready";
+  const currentStatus = libraryItem ? status : null;
 
-  const year = (details.first_air_date || details.release_date || "").slice(
-    0,
-    4
+  function toggleFavorite() {
+    if (!favorite) setLikePulse((n) => n + 1);
+    onToggleFavorite();
+  }
+
+  const statusMenuProps = {
+    status: currentStatus,
+    libraryLookup,
+    saving,
+    onRetryLookup: onRetryLibraryLookup,
+    onChange: onStatusChange,
+    onRemove: onRemoveFromLibrary,
+  };
+
+  const likeLabel = favorite ? "Curtido" : "Curtir";
+  const heart = (
+    <Heart
+      key={likePulse}
+      size={18}
+      fill={favorite ? "currentColor" : "none"}
+      aria-hidden="true"
+      className={likePulse > 0 && favorite ? "tt-heart-pulse" : undefined}
+    />
   );
 
-  const runtime = runtimeLabel(details.runtime);
-
-  // V3.1: dados do TMDB apresentados em PT-BR (lib/title-locale.ts) — o cru não muda.
-  const workStatus = workStatusLabel(details.status, type);
-  const originalLanguage = languageName(details.original_language);
-
-  const voteCount = Number(details.vote_count || 0);
-  const tmdbRating = voteCount > 0 ? Number(details.vote_average || 0).toFixed(1) : null;
-
   return (
-    <section className="mc-title-hero">
-      <div className="title-hero mc-title-hero-frame">
-        <div className="title-hero-backdrop mc-title-hero-backdrop">
-          <Poster
-            path={heroBackdropPath}
-            alt=""
-            sizes="100vw"
-            tmdbSize="w1280"
-            priority
-          />
-        </div>
+    <section className="tt-hero" aria-labelledby="tt-title">
+      <TitleBand path={details.backdrop_path || details.poster_path} />
 
-        <div className="title-hero-overlay mc-title-hero-scrim" />
-
-        <div className="title-hero-content mc-title-hero-layer">
-          <div className="title-poster-wrap mc-title-poster-wrap">
+      <div className="tt-head">
+        <div className="tt-identity">
+          <div className="tt-poster">
             <Poster
               path={details.poster_path}
-              alt={title}
-              sizes="(max-width: 700px) 128px, (max-width: 1024px) 170px, 200px"
-              className="title-poster"
+              alt={`Pôster de ${title}`}
+              sizes="(max-width: 760px) 96px, 168px"
             />
-
-            {libraryItem && (
-              <div className="title-poster-status" title="Seu status na biblioteca">
-                <span className="status-dot" />
-                {mediaStatusLabel(libraryItem.status)}
-              </div>
-            )}
           </div>
 
-          <div className="title-main mc-title-main">
-            <div className="title-type">
-              {type === "tv" ? <Tv size={16} /> : <Film size={16} />}
+          <div className="tt-copy">
+            <h1 id="tt-title" className="tt-title">{title}</h1>
+            {originalTitle && originalTitle !== title ? <p className="tt-original">{originalTitle}</p> : null}
+            <TitleMeta
+              lead={[type === "tv" ? "Série" : "Filme", year || null]}
+              tags={titleTags(type, details)}
+              rating={Number(details.vote_average || 0)}
+              votes={Number(details.vote_count || 0)}
+            />
+            {details.tagline ? <p className="tt-tagline">“{details.tagline}”</p> : null}
 
-              {type === "tv" ? "Série" : "Filme"}
-
-              {year && (
-                <>
-                  <span>•</span>
-                  {year}
-                </>
-              )}
-            </div>
-
-            <h1>{title}</h1>
-
-            {(details.original_title || details.original_name) &&
-              (details.original_title || details.original_name) !==
-                title && (
-                <div className="title-original-name">
-                  {details.original_title || details.original_name}
-                </div>
-              )}
-
-            {details.tagline && (
-              <p className="title-tagline">“{details.tagline}”</p>
-            )}
-
-            <div className="title-quick-facts">
-              {workStatus && <span title={type === "tv" ? "Situação da série" : "Situação do filme"}>{workStatus}</span>}
-
-              {type === "movie" && runtime && <span>{runtime}</span>}
-
-              {type === "tv" && details.number_of_seasons && (
-                <span>
-                  {details.number_of_seasons}{" "}
-                  {Number(details.number_of_seasons) === 1
-                    ? "temporada"
-                    : "temporadas"}
-                </span>
-              )}
-
-              {/* Idioma ORIGINAL da obra (não é classificação etária). */}
-              {originalLanguage && <span>Idioma original: {originalLanguage}</span>}
-            </div>
-
-            <div className="title-ratings mc-title-meta-row">
-              {tmdbRating && (
-                <div className="title-rating tmdb-rating" title={`Média de ${voteCount.toLocaleString("pt-BR")} votos no TMDB`}>
-                  <Star size={18} fill="currentColor" />
-
-                  <div>
-                    <strong>{tmdbRating}</strong>
-
-                    <span>Média TMDB</span>
-                  </div>
-                </div>
-              )}
-
-              {libraryItem &&
-                libraryItem.personal_rating !== null &&
-                libraryItem.personal_rating !== undefined && (
-                  <div className="title-rating my-rating">
-                    <Star size={18} fill="currentColor" />
-
-                    <div>
-                      <strong>
-                        {Number(libraryItem.personal_rating).toFixed(1)}
-                      </strong>
-
-                      <span>Sua nota</span>
-                    </div>
-                  </div>
-                )}
-            </div>
-
-            <div className="title-actions mc-title-actions">
+            <div className="tt-actions">
+              <TitleStatusMenu {...statusMenuProps} variant="menu" />
+              <button
+                type="button"
+                className="btn tt-quiet tt-like"
+                aria-pressed={favorite}
+                onClick={toggleFavorite}
+                disabled={lookupPending}
+              >
+                {heart}
+                {likeLabel}
+              </button>
+              {/*
+               * Enquanto a sessão é verificada o botão já ocupa o lugar (invisível):
+               * antes ele surgia depois do carregamento, a linha de ações ganhava uma
+               * fileira e tudo abaixo (inclusive as abas) descia ~120px sob o cursor.
+               */}
+              {authState !== "guest" ? (
+                <button
+                  type="button"
+                  className="btn tt-quiet"
+                  onClick={() => setListOpen(true)}
+                  disabled={authState !== "authenticated"}
+                  data-reserved={authState !== "authenticated" ? "true" : undefined}
+                  aria-hidden={authState !== "authenticated" ? true : undefined}
+                  tabIndex={authState !== "authenticated" ? -1 : undefined}
+                >
+                  <ListPlus size={18} aria-hidden="true" />
+                  Adicionar a uma lista
+                </button>
+              ) : null}
               <WatchNowButton
                 type={type}
                 id={details.id}
                 title={title}
                 year={year}
                 releaseDate={details.release_date || details.first_air_date}
+                className="btn tt-quiet"
               />
-
-              {!libraryItem && libraryLookup === "error" ? (
-                <button
-                  type="button"
-                  className="btn primary title-main-btn"
-                  onClick={onRetryLibraryLookup}
-                >
-                  <RefreshCw size={18} />
-                  Tentar de novo
-                </button>
-              ) :!libraryItem && libraryLookup === "loading" ? (
-                <button
-                  type="button"
-                  className="btn primary title-main-btn"
-                  disabled
-                  aria-busy="true"
-                >
-                  <Plus size={18} />
-                  Verificando biblioteca...
-                </button>
-              ) : !libraryItem ? (
-                <button
-                  className="btn primary title-main-btn"
-                  onClick={onAddToLibrary}
-                  disabled={saving}
-                >
-                  <Plus size={18} />
-
-                  {saving ? "Adicionando..." : "Adicionar à biblioteca"}
-                </button>
-              ) : (
-                // Fase 3: remover (reversível, com "Desfazer") não tem o peso do CTA principal — variante discreta.
-                <button
-                  type="button"
-                  className="btn title-main-btn title-remove-btn"
-                  onClick={onRemoveFromLibrary}
-                  disabled={saving}
-                  aria-label={saving ? undefined : "Remover da biblioteca"}
-                >
-                  <Trash2 size={18} />
-
-                  {/* Fase 3: em telas estreitas o rótulo visível encurta para "Remover" (o nome acessível continua completo). */}
-                  {saving ? (
-                    "Removendo..."
-                  ) : (
-                    <span>
-                      Remover<span className="title-remove-label-extra"> da biblioteca</span>
-                    </span>
-                  )}
-                </button>
-              )}
-
-              <button
-                type="button"
-                aria-pressed={favorite}
-                className={
-                  favorite ? "btn favorite-btn active" : "btn favorite-btn"
-                }
-                onClick={onToggleFavorite}
-                disabled={lookupPending}
-              >
-                <Heart size={18} fill={favorite ? "currentColor" : "none"} />
-
-                {favorite ? "Curtido" : "Curtir"}
-              </button>
-
               <TitleWhereToWatch key={`${type}-${details.id}`} type={type} details={details} />
             </div>
 
-            {!libraryItem && libraryLookup === "error" && (
-              <p className="title-status-hint" role="alert">
-                Não foi possível verificar se este título está na sua biblioteca.
-                Nada foi alterado. Tente de novo.
+            {!libraryItem && libraryLookup === "error" ? (
+              <p className="tt-hint" role="alert">
+                Não foi possível verificar se este título está na sua biblioteca. Nada foi alterado. Tente de novo.
               </p>
-            )}
+            ) : null}
           </div>
         </div>
+
+        {libraryItem ? (
+          <aside className="tt-rating-aside" aria-labelledby={ratingHeadingId}>
+            <h2 id={ratingHeadingId} className="tt-rating-heading">Sua nota</h2>
+            <TitleRating value={rating} onChange={onRatingChange} headingId={ratingHeadingId} />
+          </aside>
+        ) : null}
       </div>
+
+      {/* Celular: ações fixas acima da navegação inferior (antes "Curtir" ficava escondido sob ela). */}
+      <div className="tt-mobile-bar">
+        <TitleStatusMenu {...statusMenuProps} variant="sheet" className="tt-mobile-primary" />
+        <button
+          type="button"
+          className="btn tt-quiet tt-icon tt-like"
+          aria-pressed={favorite}
+          aria-label={likeLabel}
+          onClick={toggleFavorite}
+          disabled={lookupPending}
+        >
+          {heart}
+        </button>
+        {authState === "authenticated" ? (
+          <button type="button" className="btn tt-quiet tt-icon" aria-label="Adicionar a uma lista" onClick={() => setListOpen(true)}>
+            <ListPlus size={20} aria-hidden="true" />
+          </button>
+        ) : null}
+      </div>
+
+      {listOpen ? (
+        <AddToListDialog
+          tmdbId={Number(details.id)}
+          mediaType={type}
+          title={title}
+          onClose={() => setListOpen(false)}
+        />
+      ) : null}
     </section>
   );
+}
+
+/**
+ * Fichinhas da ficha, cada dado no seu lugar: cada gênero, duração (filme) ou
+ * temporadas e situação (série), e o idioma original. Tipo, ano e nota ficam
+ * na primeira linha (TitleMeta).
+ */
+function titleTags(type: TitleType, details: LooseTitleDetails) {
+  const genres: string[] = (details.genres || []).map((genre: { name: string }) => genreName(genre.name)).filter(Boolean).slice(0, 3);
+  const language = languageName(details.original_language);
+  const seasons = Number(details.number_of_seasons || 0);
+
+  return [
+    ...genres,
+    type === "movie" ? runtimeLabel(details.runtime) || null : null,
+    type === "tv" && seasons ? `${seasons} ${seasons === 1 ? "temporada" : "temporadas"}` : null,
+    type === "tv" ? workStatusLabel(details.status, type) || null : null,
+    language ? `Idioma original: ${language}` : null,
+  ];
 }

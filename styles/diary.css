@@ -16,47 +16,47 @@
   border: 0;
 }
 
-/* ---------- cabeçalho ---------- */
+/* ---------- cabeçalho (Fase 4: título grande, sem rótulo em caixa alta) ---------- */
 .dy-header {
-  display: grid;
-  gap: 16px;
-  margin: 6px 0 18px;
-}
-
-.dy-eyebrow {
-  display: block;
-  font-size: var(--mc-fs-xs);
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--accent);
+  max-width: 860px;
+  margin: 24px 0 28px;
 }
 
 .dy-header h1 {
-  margin: 6px 0 4px;
-  font-size: clamp(1.75rem, 3.4vw, 2.5rem);
+  margin: 0;
+  font-size: clamp(40px, 5vw, 64px);
   font-weight: 800;
-  letter-spacing: -0.03em;
+  line-height: 1;
+  letter-spacing: -0.035em;
 }
 
 .dy-header p {
-  margin: 0;
+  margin: 12px 0 0;
   color: var(--muted);
-  font-size: var(--mc-fs-base);
+  font-size: 18px;
+  line-height: 1.5;
 }
 
-.dy-controls {
+/*
+ * Barra: o mês (onde estou) à esquerda, em tipo grande; os filtros à direita,
+ * como texto com o traço da cor de destaque. A linha de baixo fecha a barra.
+ */
+.dy-bar {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 14px;
-  min-width: 0;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px 24px;
+  max-width: 860px;
+  border-bottom: 1px solid var(--line);
 }
 
 .dy-nav {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
+  padding-bottom: 8px;
+  min-width: 0;
 }
 
 .dy-icon-btn,
@@ -65,11 +65,12 @@
   align-items: center;
   justify-content: center;
   height: 36px;
+  border: 0;
   border-radius: var(--mc-radius-md);
-  border: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
   background: transparent;
   color: var(--text);
   cursor: pointer;
+  transition: background-color 150ms ease, transform 120ms var(--mc-ease-out);
 }
 
 .dy-icon-btn {
@@ -77,81 +78,112 @@
 }
 
 .dy-today-btn {
-  padding: 0 14px;
-  font-size: var(--mc-fs-md);
-  font-weight: 650;
+  margin-left: 6px;
+  padding: 0 12px;
+  background: var(--panel);
+  font-size: 14px;
+  font-weight: 600;
 }
 
-.dy-icon-btn:hover:not(:disabled),
-.dy-today-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--text) 8%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .dy-icon-btn:hover:not(:disabled),
+  .dy-today-btn:hover:not(:disabled) {
+    background: var(--mc-color-surface-hover);
+  }
+}
+
+.dy-icon-btn:active:not(:disabled),
+.dy-today-btn:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .dy-icon-btn:disabled,
 .dy-today-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: default;
 }
 
+/* O mês é o título da barra: sem caixa, só o texto e uma seta discreta. */
+.dy-month {
+  min-width: 0;
+}
+
 .dy-month select {
-  height: 36px;
-  min-width: 170px;
-  padding: 0 30px 0 12px;
+  max-width: 100%;
+  height: 40px;
+  padding: 0 26px 0 6px;
+  border: 0;
   border-radius: var(--mc-radius-md);
-  border: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
-  background: color-mix(in srgb, var(--text) 5%, var(--panel))
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23929aaa' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
-    no-repeat right 10px center;
+  background: transparent
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23a6a39d' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+    no-repeat right 6px center;
   color: var(--text);
-  font-size: var(--mc-fs-base);
-  font-weight: 750;
+  font: inherit;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
   appearance: none;
   cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dy-month select:hover {
+    background-color: var(--mc-color-surface-hover);
+  }
 }
 
 .dy-month option {
   background: var(--panel);
   color: var(--text);
+  font-size: 15px;
+  font-weight: 500;
 }
 
-.dy-seg {
-  display: inline-flex;
-  gap: 2px;
-  padding: 4px;
-  margin-left: auto;
-  border-radius: var(--mc-radius-lg);
-  background: color-mix(in srgb, var(--text) 7%, var(--panel));
-  border: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
-  max-width: 100%;
+.dy-filters {
+  display: flex;
+  gap: 24px;
+  min-width: 0;
   overflow-x: auto;
   scrollbar-width: none;
 }
 
-.dy-seg::-webkit-scrollbar {
+.dy-filters::-webkit-scrollbar {
   display: none;
 }
 
-.dy-seg button {
+.dy-filter {
+  position: relative;
   flex: none;
-  min-height: 36px;
-  padding: 0 14px;
+  padding: 12px 0 14px;
   border: 0;
-  border-radius: var(--mc-radius-md);
-  background: transparent;
-  color: color-mix(in srgb, var(--text) 80%, transparent);
-  font-size: var(--mc-fs-md);
-  font-weight: 650;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
+  transition: color 150ms ease;
 }
 
-.dy-seg button:hover {
+.dy-filter[aria-checked="true"] {
   color: var(--text);
-  background: color-mix(in srgb, var(--text) 8%, transparent);
 }
 
-.dy-seg button.is-active {
-  color: var(--on-accent, #fff);
+@media (hover: hover) and (pointer: fine) {
+  .dy-filter:hover {
+    color: var(--text);
+  }
+}
+
+.dy-filter-indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
   background: var(--accent);
 }
 
@@ -166,27 +198,18 @@
 }
 
 .dy-day {
-  margin-top: 26px;
+  margin-top: 36px;
   scroll-margin-top: 90px;
 }
 
+/* Fase 4: o dia é o que organiza a leitura — título de verdade, não um rótulo miúdo. */
 .dy-day-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 0 0 4px;
-  font-size: var(--mc-fs-sm);
-  font-weight: 750;
-  letter-spacing: 0.02em;
-  color: color-mix(in srgb, var(--text) 78%, transparent);
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
   scroll-margin-top: 90px;
-}
-
-.dy-day-head::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: color-mix(in srgb, var(--text) 10%, transparent);
 }
 
 .dy-day.is-focused .dy-day-head {
@@ -217,6 +240,7 @@
 
 .dy-time-inline {
   display: none;
+  margin-left: 8px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -282,7 +306,7 @@ a.dy-title:hover {
   display: inline-block;
   margin-right: 6px;
   vertical-align: -2px;
-  color: var(--accent);
+  color: var(--muted);
 }
 
 .dy-detail {
@@ -291,18 +315,20 @@ a.dy-title:hover {
   color: var(--muted);
 }
 
+/* Marco: texto forte com a bandeirinha na cor de destaque (o destaque fica no detalhe, não numa pílula). */
 .dy-milestone {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   width: fit-content;
   margin: 4px 0 0;
-  padding: 3px 10px;
-  border-radius: var(--mc-radius-pill);
   font-size: var(--mc-fs-sm);
   font-weight: 700;
+  color: var(--text);
+}
+
+.dy-milestone svg {
   color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
 .dy-moment.is-milestone .dy-title {
@@ -399,40 +425,34 @@ a.dy-compact-title:hover {
 }
 
 /* ---------- grupos recolhidos ---------- */
+/*
+ * Grupo recolhido (Fase 4): uma linha do feed, nas mesmas colunas do momento
+ * (horário · ícone no lugar do pôster · texto), sem caixa nem borda própria.
+ */
 .dy-group {
-  margin: 10px 0 4px;
-  border-radius: var(--mc-radius-lg);
-  border: 1px solid color-mix(in srgb, var(--text) 9%, transparent);
-  background: color-mix(in srgb, var(--text) 3%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--text) 6%, transparent);
 }
 
 .dy-group-head {
-  display: flex;
+  display: grid;
+  grid-template-columns: 46px 56px minmax(0, 1fr) auto;
+  gap: 14px;
   align-items: center;
-  gap: 12px;
   width: 100%;
-  padding: 12px 14px;
+  padding: 14px 0;
   border: 0;
-  border-radius: var(--mc-radius-lg);
   background: transparent;
   color: var(--text);
+  font: inherit;
   text-align: left;
   cursor: pointer;
 }
 
-.dy-group-head:hover {
-  background: color-mix(in srgb, var(--text) 5%, transparent);
-}
-
 .dy-group-icon {
+  grid-column: 2;
   display: grid;
   place-items: center;
-  flex: none;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--mc-radius-sm);
   color: var(--muted);
-  background: color-mix(in srgb, var(--text) 7%, transparent);
 }
 
 .dy-group-text {
@@ -455,18 +475,36 @@ a.dy-compact-title:hover {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  flex: none;
   font-size: var(--mc-fs-sm);
-  font-weight: 650;
-  color: var(--accent);
+  font-weight: 600;
+  color: var(--muted);
+  transition: color 150ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dy-group-head:hover .dy-group-toggle {
+    color: var(--text);
+  }
+}
+
+/* A seta gira para indicar aberto/fechado (responde ao clique). */
+.dy-group-toggle svg {
+  transition: transform 200ms var(--mc-ease-out);
 }
 
 .dy-group-head[aria-expanded="true"] .dy-group-toggle svg {
   transform: rotate(180deg);
 }
 
+/* Aberto: as linhas usam as colunas do feed (horário, pôster, texto); notas e "mostrar mais" alinham ao texto. */
 .dy-group > div {
-  padding: 0 14px 12px;
+  padding: 0 0 14px;
+}
+
+.dy-group-note,
+.dy-summary-list,
+.dy-group-more {
+  margin-left: 130px;
 }
 
 .dy-group-note {
@@ -504,34 +542,31 @@ a.dy-compact-title:hover {
 }
 
 /* ---------- estados ---------- */
+/* Vazio e erro (Fase 4): texto e uma ação, alinhados à esquerda; sem moldura tracejada. */
 .dy-state {
   display: grid;
-  justify-items: center;
+  justify-items: start;
   gap: 10px;
-  max-width: 860px;
-  padding: 44px 20px;
-  border-radius: var(--mc-radius-lg);
-  border: 1px dashed color-mix(in srgb, var(--text) 14%, transparent);
-  text-align: center;
+  max-width: 34em;
+  padding: 40px 0;
   color: var(--muted);
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 .dy-state strong {
   color: var(--text);
-  font-size: var(--mc-fs-lg);
+  font-size: 22px;
+  font-weight: 700;
 }
 
 .dy-state .btn {
   width: auto;
-}
-
-.dy-empty svg {
-  color: var(--accent);
+  margin-top: 6px;
 }
 
 .dy-month-empty {
-  margin-top: 20px;
-  padding: 28px 20px;
+  padding: 28px 0;
 }
 
 .dy-notice {
@@ -539,12 +574,12 @@ a.dy-compact-title:hover {
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 12px;
-  margin: 8px 0 0;
-  padding: 10px 14px;
+  margin: 16px 0 0;
+  padding: 12px 16px;
   border-radius: var(--mc-radius-md);
   font-size: var(--mc-fs-md);
-  color: color-mix(in srgb, var(--text) 85%, transparent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--text);
+  background: var(--panel);
 }
 
 .dy-more {
@@ -555,18 +590,26 @@ a.dy-compact-title:hover {
 }
 
 .dy-more-btn {
-  min-height: 42px;
-  padding: 0 20px;
+  min-height: 44px;
+  padding: 0 22px;
+  border: 0;
   border-radius: var(--mc-radius-md);
-  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
-  background: color-mix(in srgb, var(--text) 5%, transparent);
+  background: var(--panel);
   color: var(--text);
-  font-weight: 650;
+  font: inherit;
+  font-weight: 600;
   cursor: pointer;
+  transition: background-color 150ms ease, transform 120ms var(--mc-ease-out);
 }
 
-.dy-more-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--text) 9%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .dy-more-btn:hover:not(:disabled) {
+    background: var(--mc-color-surface-hover);
+  }
+}
+
+.dy-more-btn:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .dy-more-error {
@@ -624,8 +667,9 @@ a.dy-compact-title:hover {
 }
 
 /* ---------- foco ---------- */
-.dy-header :focus-visible,
-.dy-feed :focus-visible {
+.dy-bar :focus-visible,
+.dy-feed :focus-visible,
+.dy-state :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -636,35 +680,49 @@ a.dy-compact-title:hover {
 }
 
 /* ---------- celular / tablet ---------- */
-@media (max-width: 620px) {
-  .dy-controls {
-    display: grid;
-    gap: 10px;
+@media (max-width: 760px) {
+  .dy-header {
+    margin: 12px 0 20px;
   }
 
+  .dy-header h1 {
+    font-size: clamp(32px, 10vw, 44px);
+  }
+
+  .dy-header p {
+    margin-top: 8px;
+    font-size: 16px;
+  }
+
+  /* Mês numa linha (ocupa a largura); filtros embaixo, sobre a linha da barra. */
   .dy-nav {
     width: 100%;
-  }
-
-  .dy-month {
-    flex: 1;
-    min-width: 0;
+    padding-bottom: 4px;
   }
 
   .dy-month select {
-    width: 100%;
-    min-width: 0;
+    font-size: 20px;
   }
 
-  .dy-seg {
-    margin-left: 0;
-    width: 100%;
+  .dy-today-btn {
+    margin-left: auto;
   }
 
-  .dy-seg button {
-    flex: 1 0 auto;
-    padding: 0 9px;
-    font-size: var(--mc-fs-sm);
+  .dy-filters {
+    width: 100%;
+    gap: 22px;
+  }
+
+  .dy-filter {
+    font-size: 15px;
+  }
+
+  .dy-day {
+    margin-top: 28px;
+  }
+
+  .dy-day-head {
+    font-size: 19px;
   }
 
   .dy-moment {
@@ -704,7 +762,18 @@ a.dy-compact-title:hover {
   }
 
   .dy-group-head {
-    padding: 12px;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 12px;
+  }
+
+  .dy-group-icon {
+    grid-column: 1;
+  }
+
+  .dy-group-note,
+  .dy-summary-list,
+  .dy-group-more {
+    margin-left: 56px;
   }
 
   .dy-group-toggle {
@@ -717,24 +786,37 @@ a.dy-compact-title:hover {
   }
 }
 
-/*
- * Celular estreito: o mês ("Outubro de 2026") era cortado no seletor —
- * sobravam ~136px entre as setas e "Hoje". Fonte e respiros menores, sem
- * esconder nenhum controle.
- */
 @media (max-width: 400px) {
-  .dy-nav {
-    gap: 4px;
+  /* 320px: "Novembro de 2026" inteiro entre as setas e "Hoje". */
+  .dy-month {
+    flex: 1;
   }
 
   .dy-month select {
-    padding: 0 24px 0 10px;
-    background-position: right 8px center;
-    font-size: var(--mc-fs-sm);
+    width: 100%;
+    padding: 0 18px 0 2px;
+    background-position: right 2px center;
+    font-size: 15px;
+  }
+
+  .dy-icon-btn {
+    width: 30px;
   }
 
   .dy-today-btn {
-    padding: 0 10px;
+    margin-left: 2px;
+    padding: 0 8px;
+  }
+
+  /* Os quatro filtros não cabem em 320px: rolam, com a borda direita esmaecida indicando que há mais. */
+  .dy-filters {
+    gap: 18px;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  }
+
+  .dy-filters > :last-child {
+    margin-right: 28px;
   }
 }
 
@@ -745,5 +827,11 @@ a.dy-compact-title:hover {
 
   .dy-group-toggle svg {
     transition: none;
+  }
+
+  .dy-icon-btn:active:not(:disabled),
+  .dy-today-btn:active:not(:disabled),
+  .dy-more-btn:active:not(:disabled) {
+    transform: none;
   }
 }

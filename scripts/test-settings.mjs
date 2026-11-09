@@ -12,7 +12,7 @@ register(
 
 const test = (await import("node:test")).default;
 const assert = (await import("node:assert/strict")).default;
-const { sanitizePreferences, DEFAULT_PREFERENCES, PREFERENCES_KEY, ACCENT_OPTIONS, readableAccent, contrastRatio, onAccent } = await import("../lib/preferences.ts");
+const { sanitizePreferences, DEFAULT_PREFERENCES, PREFERENCES_KEY, ACCENT_OPTIONS, readableAccent, contrastRatio, onAccent, DARK_SURFACE } = await import("../lib/preferences.ts");
 const { parseStreamingServices, providersToTmdbFilter, MAX_STREAMING_SERVICES } = await import("../lib/streaming-services.ts");
 const { relevantBrProviders, collapseProviderVariants } = await import("../lib/streaming/providers-br.ts");
 const { canViewProfile, canViewSection, mergeSocialSettings, followStatusFor } = await import("../lib/social/visibility.ts");
@@ -48,6 +48,15 @@ test("aparência: no tema Claro, toda cor de destaque fica legível (≥ 4.5:1) 
   }
   assert.ok(contrastRatio(ACCENT_OPTIONS[2].value, "#f5f6f8") < 3, "Ciano puro era ilegível (motivo da correção)");
   assert.equal(readableAccent("#15171c"), "#15171c", "cor já legível não muda");
+});
+
+test("aparência: no tema Escuro/OLED, toda cor de destaque é legível (≥ 4.5:1) sobre a superfície mais clara", () => {
+  // Fase 4: fundo grafite (#1e1e20) e superfícies até #2c2c30 — o roxo padrão ficava em ~3,9:1.
+  for (const option of ACCENT_OPTIONS) {
+    const readable = readableAccent(option.value, DARK_SURFACE);
+    assert.ok(contrastRatio(readable, DARK_SURFACE) >= 4.5, `${option.name}: ${readable}`);
+  }
+  assert.equal(readableAccent("#eceae6", DARK_SURFACE), "#eceae6", "cor já legível não muda");
 });
 
 test("aparência: texto do botão primário escolhe branco ou quase-preto pelo contraste (≥ 4.2 em todas)", () => {

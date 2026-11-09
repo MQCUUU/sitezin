@@ -98,7 +98,8 @@ export function activeHero(item: HomeItem): ActiveHero {
 
   const lp = item.library_progress ?? null;
   const progress = item.progress ?? null;
-  const runtime = item.episode_runtime ? ` · ~${item.episode_runtime} min por episódio` : "";
+  // Fase 4: complemento em frase ("…, cerca de 45 min cada"), sem "·".
+  const runtime = item.episode_runtime ? `, cerca de ${item.episode_runtime} min cada` : "";
   const episodeHref = (next: { season: number; episode: number }) => `/title/tv/${item.tmdb_id}/season/${next.season}/episode/${next.episode}`;
 
   // Barra = episódios exibidos assistidos / episódios exibidos (série inteira, sem especiais).
@@ -125,8 +126,9 @@ export function activeHero(item: HomeItem): ActiveHero {
       };
     case "not_started":
       return {
-        eyebrow,
-        description: lp.next ? `Ainda não começou · começa em ${code(lp.next)}` : "Ainda não começou.",
+        // Ainda não há "de onde parou": a frase sozinha já diz o que fazer.
+        eyebrow: "",
+        description: lp.next ? `Você ainda não começou. O primeiro episódio é o ${code(lp.next)}.` : "Você ainda não começou.",
         href: lp.next ? episodeHref(lp.next) : titleHref,
         action: "Começar",
         ...globalBar(),

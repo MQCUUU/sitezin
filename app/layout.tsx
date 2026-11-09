@@ -13,14 +13,13 @@ import "@/styles/title.css";
 import "@/styles/media-preview.css";
 import "@/styles/media-unified.css";
 // Fase 4: insights/calendar/diary.css vão só nas rotas que os usam (não no Login, Home, Busca…).
-import "@/styles/library.css";
 import "@/styles/lists.css";
 import "@/styles/brand.css";
 // Fase 3: padrão final de controles (botões, chips, ícones, diálogos) — por último.
 import "@/styles/controls.css";
 
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Schibsted_Grotesk } from "next/font/google";
 import { Suspense } from "react";
 
 import { Nav } from "@/components/Nav";
@@ -32,19 +31,15 @@ import { TopbarActions } from "@/components/TopbarActions";
 import { getSiteUrl } from "@/lib/site-url";
 
 /*
- * O globals.css pede `font-family: Inter, ...` desde sempre,
- * mas a fonte nunca era carregada — ninguém via Inter, só o
- * fallback do sistema.
- *
- * next/font baixa e hospeda a fonte junto com o app: sem
- * requisição ao Google, sem flash de fonte trocando, sem
- * layout shift. `display: swap` mostra o texto no fallback
- * enquanto a fonte carrega.
+ * Fase 4 (direção "Tela 2.39:1"): uma família só — Schibsted Grotesk, de
+ * títulos grandes a rótulos. next/font hospeda a fonte junto com o app (sem
+ * requisição ao Google, sem layout shift); `display: swap` mostra o fallback
+ * enquanto carrega.
  */
-const inter = Inter({
+const sans = Schibsted_Grotesk({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-inter",
+  variable: "--font-sans",
 });
 
 /*
@@ -124,7 +119,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#090b10" },
+    { media: "(prefers-color-scheme: dark)", color: "#1e1e20" },
     { media: "(prefers-color-scheme: light)", color: "#f5f6f8" },
   ],
 };
@@ -135,7 +130,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-BR" className={inter.variable}>
+    <html lang="pt-BR" className={sans.variable}>
       <body>
   <a
     className="skip-link"

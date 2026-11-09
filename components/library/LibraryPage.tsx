@@ -2,15 +2,18 @@
 
 
 import "@/styles/features/library-page.css";
+import "@/styles/features/library-screen.css";
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ArrowDownUp, CalendarDays, ChevronLeft, ChevronRight, Film, Heart, Library as LibraryIcon, RotateCcw, Search, SlidersHorizontal, Tag, Tv, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Grid3X3, Heart, LayoutGrid, List, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 
 import { PosterSkeleton } from "@/components/AsyncState";
 import { PosterGrid } from "@/components/PosterGrid";
 import { AddToListDialog } from "@/components/lists/AddToListDialog";
 import { readPreferences } from "@/lib/preferences";
+import { genreName } from "@/lib/title-locale";
 import type { LibraryItem } from "@/lib/types";
 import {
   LIBRARY_SORTS,
@@ -97,13 +100,13 @@ function toItems(result: LibraryResponse): LibraryItem[] {
 
 function RatingFilter({ label, hint, value, onChange }: { label: string; hint: string; value: string; onChange: (value: string) => void }) {
   return (
-    <fieldset className="library-rating-filter lib-rating-filter">
+    <fieldset className="lb-field lb-field-wide">
       <legend>
         {label} <span>{hint}</span>
       </legend>
-      <div className="library-rating-options">
+      <div className="lb-options">
         {["all", ...RATING_STEPS].map((step) => (
-          <button key={step} type="button" className={value === step ? "active" : ""} aria-pressed={value === step} onClick={() => onChange(step)}>
+          <button key={step} type="button" className="lb-option" aria-pressed={value === step} onClick={() => onChange(step)}>
             {step === "all" ? "Todas" : `${step}+`}
           </button>
         ))}
@@ -300,6 +303,13 @@ function LibraryContent() {
     go(withChange(query, { status: "all", favorite: false, type: "all", genre: "all", year: "all", minRating: "all", minTmdbRating: "all", search: "" }));
   };
 
+  const countLabel = (n: number) => `${n} ${n === 1 ? "título" : "títulos"}`;
+  const viewModes: [ViewMode, string, typeof Grid3X3][] = [
+    ["grid", "Grade", Grid3X3],
+    ["compact", "Grade compacta", LayoutGrid],
+    ["list", "Lista", List],
+  ];
+
   return (
     <>
       <div className="topbar">
@@ -315,77 +325,61 @@ function LibraryContent() {
         </div>
       </div>
 
-      <header className="library-head lib-head">
-        <div>
-          <div className="eyebrow">Minha coleção</div>
-          <h1>Biblioteca</h1>
-          <div className="muted" aria-live="polite">
-            {result ? (filtered ? `${totalResults} de ${totalLibrary} ${totalLibrary === 1 ? "título" : "títulos"}` : `${totalLibrary} ${totalLibrary === 1 ? "título" : "títulos"}`) : " "}
-          </div>
-        </div>
+      {/* Fase 4: sem rótulo em caixa alta — o título e a contagem, só. */}
+      <header className="lb-head">
+        <h1>Biblioteca</h1>
+        <p aria-live="polite">{result ? (filtered ? `${totalResults} de ${countLabel(totalLibrary)}` : countLabel(totalLibrary)) : " "}</p>
       </header>
 
-      <div className="lib-toolbar">
-        <div className="lib-tabs-wrap">
-          {canScrollTabsLeft && (
-            <button
-              type="button"
-              className="lib-tabs-arrow lib-tabs-arrow-left"
-              aria-label="Rolar abas para a esquerda"
-              onClick={() => scrollTabs("left")}
-            >
-              <ChevronLeft size={16} aria-hidden="true" />
-            </button>
-          )}
-          <div className="lib-tabs" role="tablist" aria-label="Status na coleção" ref={tabsRef} onKeyDown={onTabKey}>
-            {tabs.map(([value, label]) => {
-              const selected = query.status === value;
+      {/* Status: abas de texto; a ativa ganha um traço na cor de destaque que desliza até ela. */}
+      <div className="lb-tabs-wrap">
+        {canScrollTabsLeft && (
+          <button type="button" className="lb-tabs-arrow lb-tabs-arrow-left" aria-label="Rolar abas para a esquerda" onClick={() => scrollTabs("left")}>
+            <ChevronLeft size={16} aria-hidden="true" />
+          </button>
+        )}
+        <div className="lb-tabs" role="tablist" aria-label="Status na coleção" ref={tabsRef} onKeyDown={onTabKey}>
+          {tabs.map(([value, label]) => {
+            const selected = query.status === value;
 
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  role="tab"
-                  aria-selected={selected}
-                  aria-controls="library-results"
-                  tabIndex={selected ? 0 : -1}
-                  className={`library-quick-filter${selected ? " active" : ""}`}
-                  onClick={() => change({ status: value })}
-                >
-                  <span>{label}</span>
-                  <b>{counts[value] ?? 0}</b>
-                </button>
-              );
-            })}
-          </div>
-          {canScrollTabsRight && (
-            <button
-              type="button"
-              className="lib-tabs-arrow lib-tabs-arrow-right"
-              aria-label="Rolar abas para a direita"
-              onClick={() => scrollTabs("right")}
-            >
-              <ChevronRight size={16} aria-hidden="true" />
-            </button>
-          )}
+            return (
+              <button
+                key={value}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                aria-controls="library-results"
+                tabIndex={selected ? 0 : -1}
+                className="lb-tab"
+                onClick={() => change({ status: value })}
+              >
+                <span>{label}</span>
+                <span className="lb-tab-count">{counts[value] ?? 0}</span>
+                {selected ? (
+                  <motion.span layoutId="lb-tab-indicator" className="lb-tab-indicator" transition={{ type: "spring", duration: 0.32, bounce: 0 }} aria-hidden="true" />
+                ) : null}
+              </button>
+            );
+          })}
         </div>
+        {canScrollTabsRight && (
+          <button type="button" className="lb-tabs-arrow lb-tabs-arrow-right" aria-label="Rolar abas para a direita" onClick={() => scrollTabs("right")}>
+            <ChevronRight size={16} aria-hidden="true" />
+          </button>
+        )}
+      </div>
 
-        <button
-          type="button"
-          className={`lib-liked${query.favorite ? " active" : ""}`}
-          aria-pressed={query.favorite}
-          title="Curtidos combina com qualquer status"
-          onClick={() => change({ favorite: !query.favorite })}
-        >
+      {/* Uma linha: Curtidos (combina com qualquer status) à esquerda; ordem, filtros e visualização à direita. */}
+      <div className="lb-controls">
+        <button type="button" className="btn lb-liked" aria-pressed={query.favorite} title="Curtidos combina com qualquer status" onClick={() => change({ favorite: !query.favorite })}>
           <Heart size={16} fill={query.favorite ? "currentColor" : "none"} aria-hidden="true" />
-          <span>Curtidos</span>
-          <b>{counts.favorites ?? 0}</b>
+          Curtidos
+          <span className="lb-control-count">{counts.favorites ?? 0}</span>
         </button>
 
-        <div className="lib-toolbar-end">
-          <label className="library-quick-sort">
-            <ArrowDownUp size={16} aria-hidden="true" />
-            <span className="lib-sort-label">Ordenar por</span>
+        <div className="lb-controls-end">
+          <label className="lb-sort">
+            <span className="lb-sort-label">Ordenar por</span>
             <select value={sort} aria-label="Ordenar por" onChange={(event) => change({ sort: event.target.value as LibrarySort })}>
               {LIBRARY_SORTS.map((value) => (
                 <option key={value} value={value}>
@@ -395,108 +389,112 @@ function LibraryContent() {
             </select>
           </label>
 
-          <button type="button" className={`btn lib-filters-btn${showFilters ? " primary" : ""}`} aria-expanded={showFilters} aria-controls="library-filters-panel" onClick={() => setShowFilters((v) => !v)}>
+          <button type="button" className="btn lb-filters-btn" aria-expanded={showFilters} aria-controls="library-filters-panel" onClick={() => setShowFilters((v) => !v)}>
             <SlidersHorizontal size={16} aria-hidden="true" />
             Filtros
-            {panelCount > 0 ? <span className="library-active-filter-count">{panelCount}</span> : null}
+            {panelCount > 0 ? <span className="lb-control-count">{panelCount}</span> : null}
           </button>
+
+          <div className="lb-view" role="group" aria-label="Modo de visualização">
+            {viewModes.map(([mode, label, Icon]) => (
+              <button key={mode} type="button" title={label} aria-label={label} aria-pressed={viewMode === mode} onClick={() => changeView(mode)}>
+                <Icon size={16} aria-hidden="true" />
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {showFilters ? (
-        <section className="library-filter-panel lib-filter-panel" id="library-filters-panel" aria-label="Filtros da biblioteca">
-          <div className="library-filter-header">
-            <div>
+      {/* Filtros abrem com um leve deslize (responde ao clique); com movimento reduzido, só aparecem. */}
+      <AnimatePresence initial={false}>
+        {showFilters ? (
+          <motion.section
+            key="filters"
+            className="lb-filters"
+            id="library-filters-panel"
+            aria-label="Filtros da biblioteca"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6, transition: { duration: 0.12 } }}
+            transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+          >
+            <div className="lb-filters-head">
               <h2>Filtros</h2>
-              <p>Refine sua coleção. Status, curtidos e ordenação ficam na barra acima.</p>
-            </div>
-            <div className="library-filter-header-actions">
-              <span className="library-filter-count">{totalResults} resultados</span>
-              <button type="button" className="library-filter-close" onClick={() => setShowFilters(false)} title="Fechar filtros" aria-label="Fechar filtros">
+              <span>{totalResults === 1 ? "1 resultado" : `${totalResults} resultados`}</span>
+              <button type="button" className="lb-filters-close" onClick={() => setShowFilters(false)} title="Fechar filtros" aria-label="Fechar filtros">
                 <X size={18} />
               </button>
             </div>
-          </div>
 
-          <div className="lib-filter-grid">
-            <fieldset className="lib-filter-field">
-              <legend>
-                <Film size={16} aria-hidden="true" /> Tipo
-              </legend>
-              <div className="library-filter-options">
-                {(
-                  [
-                    ["all", "Todos"],
-                    ["movie", "Filmes"],
-                    ["tv", "Séries"],
-                  ] as const
-                ).map(([value, label]) => (
-                  <button key={value} type="button" aria-pressed={query.type === value} className={`library-filter-option${query.type === value ? " active" : ""}`} onClick={() => change({ type: value })}>
-                    {value === "movie" ? <Film size={14} aria-hidden="true" /> : value === "tv" ? <Tv size={14} aria-hidden="true" /> : null}
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
+            <div className="lb-filters-grid">
+              <fieldset className="lb-field">
+                <legend>Tipo</legend>
+                <div className="lb-options">
+                  {(
+                    [
+                      ["all", "Todos"],
+                      ["movie", "Filmes"],
+                      ["tv", "Séries"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <button key={value} type="button" aria-pressed={query.type === value} className="lb-option" onClick={() => change({ type: value })}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
 
-            <label className="lib-filter-field">
-              <span className="lib-filter-legend">
-                <Tag size={16} aria-hidden="true" /> Gênero
-              </span>
-              <select value={query.genre} onChange={(event) => change({ genre: event.target.value })}>
-                <option value="all">Todos os gêneros</option>
-                {(result?.genres ?? []).map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-            </label>
+              <label className="lb-field">
+                <span className="lb-legend">Gênero</span>
+                <select value={query.genre} onChange={(event) => change({ genre: event.target.value })}>
+                  <option value="all">Todos os gêneros</option>
+                  {(result?.genres ?? []).map((name) => (
+                    <option key={name} value={name}>
+                      {genreName(name)}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-            <label className="lib-filter-field">
-              <span className="lib-filter-legend">
-                <CalendarDays size={16} aria-hidden="true" /> Ano de lançamento
-              </span>
-              <select value={query.year} onChange={(event) => change({ year: event.target.value })}>
-                <option value="all">Todos os anos</option>
-                {(result?.years ?? []).map((value) => (
-                  <option key={value} value={value}>
-                    {value}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+              <label className="lb-field">
+                <span className="lb-legend">Ano de lançamento</span>
+                <select value={query.year} onChange={(event) => change({ year: event.target.value })}>
+                  <option value="all">Todos os anos</option>
+                  {(result?.years ?? []).map((value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-          <div className="library-rating-row lib-rating-row">
-            <RatingFilter label="Sua nota" hint="mínima, a que você deu" value={query.minRating} onChange={(value) => change({ minRating: value })} />
-            <RatingFilter label="Nota TMDB" hint="mínima, a do público" value={query.minTmdbRating} onChange={(value) => change({ minTmdbRating: value })} />
-          </div>
+              <RatingFilter label="Sua nota" hint="mínima, a que você deu" value={query.minRating} onChange={(value) => change({ minRating: value })} />
+              <RatingFilter label="Nota TMDB" hint="mínima, a do público" value={query.minTmdbRating} onChange={(value) => change({ minTmdbRating: value })} />
+            </div>
 
-          {panelCount > 0 ? (
-            <div className="library-filter-footer">
-              <button type="button" className="library-clear-filters" onClick={clearPanel}>
+            {panelCount > 0 ? (
+              <button type="button" className="lb-clear" onClick={clearPanel}>
                 <RotateCcw size={14} aria-hidden="true" />
                 Limpar filtros
               </button>
-            </div>
-          ) : null}
-        </section>
-      ) : null}
+            ) : null}
+          </motion.section>
+        ) : null}
+      </AnimatePresence>
 
       <div id="library-results" className={`lib-results${loading && result ? " is-busy" : ""}`} aria-busy={loading}>
         {error === "auth" ? (
-          <div className="empty" role="alert">
+          <div className="lb-empty" role="alert">
             <strong>Sua sessão expirou.</strong>
-            <p className="muted">Entre novamente para ver sua biblioteca.</p>
+            <p>Entre novamente para ver sua biblioteca.</p>
             <a className="btn primary" href={`/login?reason=session&next=${encodeURIComponent(pathname + (params.toString() ? `?${params.toString()}` : ""))}`}>
               Entrar
             </a>
           </div>
         ) : error === "load" && !result ? (
-          <div className="empty" role="alert">
+          <div className="lb-empty" role="alert">
             <strong>Não foi possível carregar sua biblioteca.</strong>
-            <p className="muted">Verifique sua conexão e tente novamente.</p>
+            <p>Verifique sua conexão e tente novamente.</p>
             <button type="button" className="btn primary" onClick={() => setReloadTick((n) => n + 1)}>
               Tentar de novo
             </button>
@@ -506,18 +504,17 @@ function LibraryContent() {
             <PosterSkeleton count={12} />
           </div>
         ) : totalLibrary === 0 ? (
-          <div className="lib-empty">
-            <LibraryIcon size={30} aria-hidden="true" />
+          <div className="lb-empty">
             <strong>Sua Biblioteca ainda está vazia.</strong>
-            <span>Adicione filmes e séries para acompanhar o que quer ver, o que está vendo e o que já viu.</span>
-            <Link href="/discover" className="btn">
+            <p>Adicione filmes e séries para acompanhar o que quer ver, o que está vendo e o que já viu.</p>
+            <Link href="/discover" className="btn primary">
               Explorar títulos
             </Link>
           </div>
         ) : totalResults === 0 ? (
-          <div className="lib-empty">
+          <div className="lb-empty">
             <strong>{query.search ? "Nenhum título encontrado na sua Biblioteca." : "Nenhum título corresponde a esses filtros."}</strong>
-            {query.search ? <span>A busca procura só entre os títulos da sua coleção.</span> : null}
+            {query.search ? <p>A busca procura só entre os títulos da sua coleção.</p> : null}
             <button type="button" className="btn" onClick={clearAll}>
               {query.search ? "Limpar busca e filtros" : "Limpar filtros"}
             </button>
@@ -532,35 +529,30 @@ function LibraryContent() {
                 </button>
               </p>
             ) : null}
-            <PosterGrid items={items} onChanged={() => setReloadTick((n) => n + 1)} viewMode={viewMode} onViewModeChange={changeView} onAddToList={setAddToListTarget} />
+            <PosterGrid items={items} onChanged={() => setReloadTick((n) => n + 1)} viewMode={viewMode} onAddToList={setAddToListTarget} />
           </>
         )}
       </div>
 
       {result && totalResults > 0 && totalPages > 1 ? (
-        <nav className="library-pagination-wrap" aria-label="Paginação da biblioteca">
-          <div className="library-page-info">
-            Página <strong>{query.page}</strong> de <strong>{totalPages}</strong> <span>·</span> <span>{totalResults} resultados</span>
-          </div>
-          <div className="library-pagination">
-            <button type="button" className="library-page-btn" disabled={query.page <= 1} onClick={() => goToPage(query.page - 1)} aria-label="Página anterior" title="Página anterior">
-              <ChevronLeft size={18} />
-            </button>
-            {buildPages(query.page, totalPages).map((value) =>
-              typeof value === "number" ? (
-                <button key={value} type="button" className={`library-page-btn${value === query.page ? " active" : ""}`} aria-current={value === query.page ? "page" : undefined} aria-label={`Página ${value}`} onClick={() => goToPage(value)}>
-                  {value}
-                </button>
-              ) : (
-                <span key={value} className="library-page-ellipsis" aria-hidden="true">
-                  …
-                </span>
-              )
-            )}
-            <button type="button" className="library-page-btn" disabled={query.page >= totalPages} onClick={() => goToPage(query.page + 1)} aria-label="Próxima página" title="Próxima página">
-              <ChevronRight size={18} />
-            </button>
-          </div>
+        <nav className="lb-pages" aria-label="Paginação da biblioteca">
+          <button type="button" className="lb-page" disabled={query.page <= 1} onClick={() => goToPage(query.page - 1)} aria-label="Página anterior" title="Página anterior">
+            <ChevronLeft size={18} />
+          </button>
+          {buildPages(query.page, totalPages).map((value) =>
+            typeof value === "number" ? (
+              <button key={value} type="button" className="lb-page" aria-current={value === query.page ? "page" : undefined} aria-label={`Página ${value}`} onClick={() => goToPage(value)}>
+                {value}
+              </button>
+            ) : (
+              <span key={value} className="lb-page-gap" aria-hidden="true">
+                …
+              </span>
+            )
+          )}
+          <button type="button" className="lb-page" disabled={query.page >= totalPages} onClick={() => goToPage(query.page + 1)} aria-label="Próxima página" title="Próxima página">
+            <ChevronRight size={18} />
+          </button>
         </nav>
       ) : null}
 

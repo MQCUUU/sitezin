@@ -9,100 +9,116 @@
     width: 100%;
     padding: 4px 32px 48px;
 }
-/* HERO */
-.fy-hero {
-    position: relative;
-    min-height: 190px;
-    margin: 18px 0 14px;
-    padding: 28px;
+/*
+ * Fase 4 — cabeçalho (sem caixa, brilho nem rótulo) e a melhor aposta na faixa
+ * panorâmica (TitleBand, styles/features/screen-band.css).
+ */
+.fy-head {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 24px 0 36px;
+}
+.fy-head-title {
+    margin: 0;
+    font-size: clamp(40px, 5vw, 64px);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.035em;
+}
+.fy-head-text {
+    margin: 0;
+    max-width: 40em;
+    color: var(--muted);
+    font-size: 18px;
+    line-height: 1.5;
+    text-wrap: pretty;
+}
+.fy-feature {
+    margin-bottom: 40px;
+}
+/* Recuo do .main (34px) + o da página (32px): a faixa vai de ponta a ponta. */
+.fy-feature .tt-band {
+    --tt-bleed: 66px;
+}
+.fy-feature-body {
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 28px;
-    overflow: hidden;
-    border: 1px solid var(--border);
-    border-radius: var(--mc-radius-xl);
-    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, var(--panel)), var(--panel) 48%, color-mix(in srgb, var(--accent) 3%, var(--panel)));
-}
-.fy-hero-glow {
-    position: absolute;
-    width: 360px;
-    height: 360px;
-    right: -120px;
-    top: -190px;
-    border-radius: 50%;
-    background: color-mix(in srgb, var(--accent) 18%, transparent);
-    filter: blur(60px);
-    pointer-events: none;
-}
-.fy-hero-copy,
-.fy-profile-card {
-    position: relative;
-    z-index: 1;
-}
-.fy-hero h1 {
-    margin: 6px 0 8px;
-    font-size: clamp(32px, 4vw, 48px);
-    letter-spacing: -.035em;
-}
-.fy-hero-copy > p {
-    max-width: 670px;
-    margin: 0;
-    color: var(--muted);
-    font-size: var(--mc-fs-xs);
-    line-height: 1.6;
-}
-/* "Personalizado" na cor de destaque escolhida em Aparência (mesmo padrão de "Minha coleção") */
-.fy-hero .eyebrow {
-    color: var(--accent);
-}
-.fy-based-on {
-    margin-top: 15px;
-    display: flex;
-    align-items: center;
-    gap: 7px;
     flex-wrap: wrap;
-    font-size: var(--mc-fs-xs);
+    gap: 20px 40px;
+    margin-top: 28px;
 }
-.fy-based-on span {
-    color: var(--muted);
-}
-.fy-based-on strong {
-    color: var(--text);
-}
-.fy-profile-card {
-    min-width: 255px;
-    padding: 14px 16px;
+.fy-feature-copy {
     display: flex;
-    align-items: center;
-    gap: 11px;
-    border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
-    border-radius: var(--mc-radius-lg);
-    background: color-mix(in srgb, var(--bg) 74%, transparent);
-    backdrop-filter: blur(14px);
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+    max-width: 44em;
 }
-.fy-profile-icon {
-    width: 40px;
-    height: 40px;
-    flex: 0 0 40px;
+.fy-feature-title {
+    margin: 0;
+    font-size: clamp(30px, 3.6vw, 48px);
+    font-weight: 800;
+    line-height: 1.02;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+}
+.fy-feature-title a {
+    color: inherit;
+    text-decoration: none;
+}
+@media (hover: hover) and (pointer: fine) {
+    .fy-feature-title a:hover {
+        text-decoration: underline;
+        text-decoration-thickness: 2px;
+        text-underline-offset: 6px;
+    }
+}
+.fy-feature-text {
+    margin: 0;
+    color: color-mix(in srgb, var(--text) 85%, var(--muted));
+    font-size: 17px;
+    line-height: 1.5;
+}
+.fy-feature-actions {
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.fy-feature-action {
+    min-height: 52px;
+    padding: 0 20px;
+    border: 0;
     border-radius: var(--mc-radius-md);
-    color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 11%, transparent);
+    font-size: 16px;
+    font-weight: 700;
 }
-.fy-profile-card strong,
-.fy-profile-card span {
-    display: block;
+.fy-feature-action--quiet {
+    background: var(--panel);
+    color: var(--text);
+    font-weight: 600;
 }
-.fy-profile-card strong {
-    font-size: var(--mc-fs-xs);
-}
-.fy-profile-card span {
-    margin-top: 3px;
-    color: var(--muted);
-    font-size: var(--mc-fs-xs);
+@media (max-width: 760px) {
+    .fy-head {
+        margin: 12px 0 24px;
+    }
+    .fy-head-title {
+        font-size: clamp(32px, 10vw, 44px);
+    }
+    .fy-head-text {
+        font-size: 16px;
+    }
+    .fy-feature .tt-band {
+        --tt-bleed: calc(16px + max(14px, env(safe-area-inset-left)));
+    }
+    .fy-feature-body {
+        margin-top: 18px;
+    }
+    .fy-feature-actions,
+    .fy-feature-action {
+        flex: 1 1 auto;
+    }
 }
 /* PROFILE GENRES */
 .fy-profile-genres {
@@ -356,37 +372,22 @@
     border-bottom: 0;
 }
 .fy-shelf-head {
-    margin-bottom: 12px;
+    margin-bottom: 16px;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 15px;
+    flex-direction: column;
+    gap: 4px;
 }
-.fy-shelf-icon {
-    width: 39px;
-    height: 39px;
-    flex: 0 0 39px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--mc-radius-md);
-    color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 10%, transparent);
-}
-.fy-shelf-title h2 {
+.fy-shelf-head h2 {
     margin: 0;
-    font-size: var(--mc-fs-xl);
+    font-size: 24px;
+    font-weight: 800;
     line-height: 1.15;
+    letter-spacing: -0.02em;
 }
-.fy-shelf-title p {
-    margin: 4px 0 0;
+.fy-shelf-head p {
+    margin: 0;
     color: var(--muted);
-    font-size: var(--mc-fs-xs);
-}
-.fy-shelf-count {
-    flex: 0 0 auto;
-    color: var(--muted);
-    font-size: var(--mc-fs-xs);
+    font-size: 15px;
 }
 .fy-row {
     display: grid;
@@ -457,52 +458,6 @@
     background: transparent;
     transition: color var(--mc-duration-fast) var(--mc-ease-standard);
 }
-.fy-social-header {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
-}
-.fy-social-avatar,
-.fy-social-avatar-fallback {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    object-fit: cover;
-}
-.fy-social-avatar-fallback {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--mc-color-accent, var(--accent));
-    color: #fff;
-    font-size: 10px;
-    font-weight: 700;
-}
-.fy-social-text {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    min-width: 0;
-    font-size: var(--mc-fs-xs, 12px);
-    line-height: 1.2;
-}
-.fy-social-name {
-    font-weight: 600;
-    color: var(--text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.fy-social-rating {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    color: var(--mc-color-rating, #f59e0b);
-    font-weight: 700;
-    font-size: var(--mc-fs-xs);
-}
 .fy-social-more {
     font-size: var(--mc-fs-xs);
     font-weight: 600;
@@ -511,50 +466,46 @@
     background: color-mix(in srgb, var(--text) 12%, transparent);
     color: var(--muted);
 }
-.fy-social-quote {
-    margin: 4px 0 0;
-    font-size: var(--mc-fs-xs);
-    line-height: 14px;
-    font-style: italic;
-    color: var(--text-secondary, var(--muted));
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-/* LOAD MORE */
+/* LOAD MORE — Fase 4: um botão discreto, sem caixa. */
 .fy-load-more {
-    margin: 25px 0 8px;
-    padding: 18px;
+    margin: 32px 0 8px;
     display: flex;
-    align-items: center;
+    justify-content: center;
+}
+.fy-load-more-btn {
+    min-height: 48px;
+    padding: 0 24px;
+    border: 0;
+    background: var(--panel);
+    color: var(--text);
+}
+
+/* "O que assistir agora?" (SmartQueue) — Fase 4: linha simples entre as prateleiras. */
+.fy-smart-queue-cta {
+    padding: 20px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
     justify-content: space-between;
-    gap: 18px;
-    border: 1px solid var(--border);
-    border-radius: var(--mc-radius-lg);
-    background: color-mix(in srgb, var(--accent) 4%, var(--panel));
 }
-.fy-load-more > div {
-    display: flex;
-    align-items: center;
-    gap: 11px;
+.fy-smart-queue-cta > div {
+    flex: 1 1 260px;
 }
-.fy-load-more > div > svg {
-    color: var(--accent);
+.fy-smart-queue-title {
+    margin: 0 0 4px;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.015em;
 }
-.fy-load-more strong,
-.fy-load-more span {
-    display: block;
+.fy-smart-queue-cta p {
+    margin: 0;
 }
-.fy-load-more strong {
-    font-size: var(--mc-fs-xs);
+.fy-smart-queue-btn {
+    min-height: 48px;
+    border: 0;
+    background: var(--panel);
+    color: var(--text);
 }
-.fy-load-more span {
-    margin-top: 3px;
-    color: var(--muted);
-    font-size: var(--mc-fs-xs);
-}
+
 /* ERROR */
 .fy-error {
     min-height: 260px;
@@ -631,19 +582,6 @@
     }
 }
 @media (max-width: 760px) {
-    .fy-hero {
-        min-height: 0;
-        padding: 20px;
-        align-items: stretch;
-        flex-direction: column;
-    }
-}
-@media (max-width: 760px) {
-    .fy-profile-card {
-        min-width: 0;
-    }
-}
-@media (max-width: 760px) {
     .fy-toolbar {
         align-items: stretch;
         flex-direction: column;
@@ -679,17 +617,6 @@
         grid-auto-columns: minmax(130px, 42vw);
     }
 }
-@media (max-width: 760px) {
-    .fy-shelf-count {
-        display: none;
-    }
-}
-@media (max-width: 760px) {
-    .fy-load-more {
-        align-items: stretch;
-        flex-direction: column;
-    }
-}
 @media (max-width: 480px) {
     .fy-filter-fields {
         grid-template-columns: 1fr;
@@ -700,17 +627,7 @@
         grid-auto-columns: 42vw;
     }
 }
-/*
- * Celular: cada prateleira já diz por que está ali (título + subtítulo). O
- * ícone decorativo ao lado do título e a frase de motivo repetida embaixo de
- * cada pôster ("Porque você gostou de X" ×10) só somavam ruído.
- */
-@media (max-width: 760px) {
-    .fy-shelf-icon,
-    .fy-card-body > p.fy-card-reason {
-        display: none;
-    }
-}
+
 .fy-card-wrap {
     position: relative;
     min-width: 145px;
@@ -718,25 +635,6 @@
 }
 .fy-card-poster-wrap {
     position: relative;
-}
-.fy-card-body {
-    display: block;
-    padding-top: 8px;
-    color: inherit;
-    text-decoration: none;
-}
-.fy-card-body > p {
-    margin: 6px 0 0;
-    display: -webkit-box;
-    min-height: 26px;
-    max-height: 26px;
-    overflow: hidden;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    color: var(--muted);
-    font-size: var(--mc-fs-xs);
-    line-height: 13px;
 }
 /*
  * Impede o menu de status de ser cortado
@@ -788,10 +686,6 @@
     50% {
         opacity: .9;
     }
-}
-/* RESPONSIVO */
-.fy-card-body > strong {
-    margin-top: 0;
 }
 
 /* Painel de opiniões aberto pelo indicador social do card. */

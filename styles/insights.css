@@ -39,31 +39,48 @@
 }
 
 /* ---------------------------------------------------------- cabeçalho */
+/* Fase 4: título grande e uma frase; sem rótulo em caixa alta acima. */
 .ins-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 18px 24px;
-  margin: 6px 0 18px;
+  margin: 24px 0 24px;
 }
 
+.ins-header-text {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+/* Antes: rótulo em caixa alta na cor de destaque. Agora: frase de apoio em texto normal. */
 .ins-eyebrow,
 .ins-kicker {
   display: block;
-  font-size: var(--mc-fs-xs);
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--accent);
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--muted);
 }
 
 .ins-header h1 {
-  margin: 6px 0 0;
-  font-size: clamp(1.75rem, 3.4vw, 2.5rem);
+  margin: 0;
+  font-size: clamp(40px, 5vw, 64px);
   font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+@media (max-width: 760px) {
+  .ins-header {
+    margin: 12px 0 20px;
+  }
+
+  .ins-header h1 {
+    font-size: clamp(32px, 10vw, 44px);
+  }
+
+  .ins-header-text {
+    margin-top: 8px;
+    font-size: 16px;
+  }
 }
 
 .ins-h1-soft {
@@ -92,62 +109,74 @@
 .ins-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 10px 20px;
+  margin-top: 22px;
 }
 
 /* Controle segmentado — contraste alto também no item inativo. */
+/*
+ * Fase 4: opções em fichinhas (mesmo desenho da Biblioteca e do Calendário):
+ * contorno fino; a escolhida vira superfície clara — sem a cor de destaque.
+ */
 .ins-seg {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 2px;
-  padding: 4px;
-  border-radius: var(--mc-radius-lg);
-  background: color-mix(in srgb, var(--text) 7%, var(--panel));
-  border: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
+  gap: 6px;
 }
 
 .ins-seg button {
-  min-height: 34px;
+  min-height: 36px;
   padding: 0 14px;
-  border: 0;
-  border-radius: var(--mc-radius-md);
+  border: 1px solid var(--line);
+  border-radius: var(--mc-radius-pill);
   background: transparent;
-  color: color-mix(in srgb, var(--text) 80%, transparent);
-  font-size: var(--mc-fs-md);
-  font-weight: 650;
+  color: var(--mc-color-text-secondary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 120ms var(--mc-ease-out);
 }
 
-.ins-seg--lg button {
-  min-height: 38px;
+.ins-seg button:active {
+  transform: scale(0.97);
 }
 
-.ins-seg button:hover {
-  color: var(--text);
-  background: color-mix(in srgb, var(--text) 8%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .ins-seg button:not(.is-active):hover {
+    border-color: color-mix(in srgb, var(--text) 30%, var(--line));
+    color: var(--text);
+  }
 }
 
 .ins-seg button.is-active {
-  background: var(--accent);
-  color: var(--on-accent, #fff);
-  box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--accent) 80%, transparent);
+  border-color: transparent;
+  background: var(--text);
+  color: var(--bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ins-seg button:active {
+    transform: none;
+  }
 }
 
 .ins-year-select {
   position: relative;
   display: inline-flex;
   align-items: center;
-  border-radius: var(--mc-radius-md);
-  color: color-mix(in srgb, var(--text) 80%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--mc-radius-pill);
+  color: var(--mc-color-text-secondary);
 }
 
 .ins-year-select select {
   min-height: 34px;
   padding: 0 30px 0 14px;
   border: 0;
-  border-radius: var(--mc-radius-md);
+  border-radius: var(--mc-radius-pill);
+  font-family: inherit;
   background: transparent;
   color: inherit;
   font-size: var(--mc-fs-md);
@@ -176,12 +205,12 @@
 
 .ins-year-select:hover {
   color: var(--text);
-  background: color-mix(in srgb, var(--text) 8%, transparent);
 }
 
 .ins-year-select.is-active {
-  background: var(--accent);
-  color: var(--on-accent, #fff);
+  border-color: transparent;
+  background: var(--text);
+  color: var(--bg);
 }
 
 .ins-year-select.is-standalone {
@@ -219,7 +248,7 @@
   display: flex;
   gap: 4px;
   margin: 0 -6px 8px;
-  padding: 10px 6px;
+  padding: 6px 6px 0;
   overflow-x: auto;
   scrollbar-width: none;
   background: color-mix(in srgb, var(--bg, #090b10) 86%, transparent);
@@ -232,24 +261,33 @@
   display: none;
 }
 
+/* Fase 4: capítulos em texto; o atual ganha o traço na cor de destaque (como as abas das outras páginas). */
 .ins-nav a {
   flex: 0 0 auto;
-  padding: 7px 12px;
-  border-radius: var(--mc-radius-pill);
-  font-size: var(--mc-fs-md);
+  padding: 8px 0 10px;
+  margin-right: 22px;
+  font-size: 15px;
   font-weight: 600;
-  color: color-mix(in srgb, var(--text) 72%, transparent);
-  transition: background-color 0.15s ease, color 0.15s ease;
+  color: var(--muted);
+  box-shadow: inset 0 -2px 0 transparent;
+  transition: color 150ms ease, box-shadow 200ms var(--mc-ease-out);
 }
 
-.ins-nav a:hover {
-  color: var(--text);
-  background: color-mix(in srgb, var(--text) 7%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .ins-nav a:hover {
+    color: var(--text);
+  }
 }
 
 .ins-nav a.is-active {
   color: var(--text);
-  background: color-mix(in srgb, var(--accent) 24%, transparent);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ins-nav a {
+    transition: none;
+  }
 }
 
 .ins-enrich {
@@ -314,9 +352,8 @@
   align-content: start;
   min-width: 0;
   padding: 22px 24px;
-  border-radius: var(--mc-radius-xl);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--text) 4%, var(--panel)), var(--panel));
-  border: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
+  border-radius: var(--mc-radius-lg);
+  background: var(--panel);
 }
 
 .ins-panel-head {
@@ -348,8 +385,6 @@
   margin: 0 0 8px;
   font-size: var(--mc-fs-xs);
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--muted);
 }
 
@@ -378,7 +413,6 @@
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.1;
-  font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
 
@@ -590,11 +624,7 @@
   padding: 36px 36px 30px;
   border-radius: var(--mc-radius-xl);
   overflow: hidden;
-  background:
-    radial-gradient(90% 120% at 0% 0%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 60%),
-    radial-gradient(70% 90% at 100% 100%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%),
-    linear-gradient(180deg, color-mix(in srgb, var(--text) 4%, var(--panel)), var(--panel));
-  border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
+  background: var(--panel);
   scroll-margin-top: 72px;
 }
 
@@ -622,7 +652,6 @@
   font-weight: 850;
   letter-spacing: -0.05em;
   line-height: 0.95;
-  font-variant-numeric: tabular-nums;
 }
 
 .ins-hero-number > span:not(.ins-how) {
@@ -678,8 +707,6 @@
 .ins-hero-stat span {
   font-size: var(--mc-fs-sm);
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--muted);
 }
 
@@ -710,7 +737,6 @@
 .ins-hero-row strong {
   font-size: 1.6rem;
   font-weight: 800;
-  font-variant-numeric: tabular-nums;
 }
 
 .ins-hero-row span {
@@ -803,16 +829,16 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 70%, transparent), var(--accent));
+  background: var(--accent);
   transition: width 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 .ins-tone-gold .ins-hbar-track span {
-  background: linear-gradient(90deg, #d9a441, var(--mc-color-rating));
+  background: var(--mc-color-rating);
 }
 
 .ins-tone-blue .ins-hbar-track span {
-  background: linear-gradient(90deg, #4f7cff, #7aa2ff);
+  background: #5b8cff;
 }
 
 .ins-tone-muted .ins-hbar-track span {
@@ -823,7 +849,6 @@
   min-width: 34px;
   text-align: right;
   font-size: var(--mc-fs-md);
-  font-variant-numeric: tabular-nums;
 }
 
 .ins-columns,
@@ -852,7 +877,6 @@
 .ins-histo-count {
   font-size: var(--mc-fs-xs);
   font-weight: 650;
-  font-variant-numeric: tabular-nums;
   color: color-mix(in srgb, var(--text) 85%, transparent);
   overflow: hidden;
 }
@@ -872,13 +896,13 @@
   width: 100%;
   min-height: 3px;
   border-radius: 10px 10px 4px 4px;
-  background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 55%, transparent));
+  background: var(--accent);
   transition: height 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 .ins-column.is-top .ins-column-bar span,
 .ins-histo-col.is-top .ins-histo-bar span {
-  background: linear-gradient(180deg, var(--mc-color-rating), #d9a441);
+  background: var(--mc-color-rating);
 }
 
 .ins-column-label,
@@ -1227,7 +1251,6 @@
   width: 100%;
   border-collapse: collapse;
   font-size: var(--mc-fs-md);
-  font-variant-numeric: tabular-nums;
 }
 
 .ins-table th,
@@ -1241,8 +1264,6 @@
 .ins-table thead th {
   font-size: var(--mc-fs-xs);
   font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
   color: var(--muted);
   background: color-mix(in srgb, var(--text) 4%, transparent);
 }
@@ -1272,8 +1293,6 @@
 .ins-rating-big span {
   font-size: var(--mc-fs-sm);
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--muted);
 }
 
@@ -1457,7 +1476,6 @@
 .ins-people-n {
   font-weight: 800;
   color: var(--accent);
-  font-variant-numeric: tabular-nums;
 }
 
 .ins-people-name {
@@ -1542,7 +1560,6 @@
   gap: 6px;
   font-size: var(--mc-fs-base);
   color: color-mix(in srgb, var(--text) 75%, transparent);
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
@@ -1585,7 +1602,6 @@
   font-weight: 850;
   text-align: center;
   color: color-mix(in srgb, var(--text) 55%, transparent);
-  font-variant-numeric: tabular-nums;
 }
 
 .ins-top li:nth-child(-n + 3) .ins-top-rank {
@@ -1628,7 +1644,6 @@
   gap: 4px;
   font-weight: 800;
   color: var(--mc-color-rating);
-  font-variant-numeric: tabular-nums;
 }
 
 .ins-podium {
@@ -1712,10 +1727,7 @@
   align-items: center;
   padding: 26px 28px;
   border-radius: var(--mc-radius-xl);
-  background:
-    radial-gradient(80% 120% at 100% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 60%),
-    linear-gradient(180deg, color-mix(in srgb, var(--text) 4%, var(--panel)), var(--panel));
-  border: 1px solid color-mix(in srgb, var(--text) 9%, transparent);
+  background: var(--panel);
 }
 
 .ins-year-numbers,
@@ -1737,7 +1749,6 @@
   font-weight: 850;
   letter-spacing: -0.03em;
   line-height: 1;
-  font-variant-numeric: tabular-nums;
 }
 
 .ins-year-numbers span,
@@ -1777,11 +1788,7 @@
   gap: 14px;
   padding: 44px 40px;
   border-radius: var(--mc-radius-xl);
-  background:
-    radial-gradient(70% 120% at 100% 0%, color-mix(in srgb, var(--accent) 36%, transparent), transparent 60%),
-    radial-gradient(60% 100% at 0% 100%, color-mix(in srgb, var(--mc-color-rating) 12%, transparent), transparent 70%),
-    linear-gradient(180deg, color-mix(in srgb, var(--text) 4%, var(--panel)), var(--panel));
-  border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+  background: var(--panel);
 }
 
 .ins-retro-lead {
@@ -1821,8 +1828,7 @@
   gap: 18px;
   padding: 16px;
   border-radius: var(--mc-radius-xl);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--text) 4%, var(--panel)), var(--panel));
-  border: 1px solid color-mix(in srgb, var(--text) 9%, transparent);
+  background: var(--panel);
 }
 
 .ins-retro-pick-poster {
@@ -1859,8 +1865,7 @@
   gap: 16px;
   padding: 26px 28px;
   border-radius: var(--mc-radius-xl);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--text) 4%, var(--panel)), var(--panel));
-  border: 1px solid color-mix(in srgb, var(--text) 9%, transparent);
+  background: var(--panel);
 }
 
 .ins-share h2 {
@@ -1889,29 +1894,6 @@
 .ins-retro-foot .ins-link {
   margin-left: 6px;
   text-decoration: none;
-}
-
-/* Diário: dia vindo do mapa de atividade */
-.diary-focus {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
-  margin: 0 0 18px;
-  padding: 14px 16px;
-  border-radius: var(--mc-radius-lg);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  font-weight: 650;
-}
-
-.diary-focus a {
-  color: var(--accent);
-}
-
-.diary-focus p {
-  flex-basis: 100%;
-  margin: 0;
-  font-weight: 400;
 }
 
 /* ---------------------------------------------------------- skeleton */
@@ -1997,23 +1979,13 @@
     gap: 56px;
   }
 
-  .ins-header {
-    align-items: stretch;
-  }
-
-  .ins-filters,
-  .ins-filters .ins-seg {
-    width: 100%;
-  }
-
-  .ins-filters .ins-seg button,
-  .ins-filters .ins-year-select {
-    flex: 1 1 auto;
-    justify-content: center;
+  /* Fase 4: fichinhas no tamanho do texto, quebrando linha (não esticadas na largura toda). */
+  .ins-filters {
+    gap: 10px;
   }
 
   .ins-seg button {
-    padding: 0 10px;
+    padding: 0 12px;
   }
 
   .ins-hero,

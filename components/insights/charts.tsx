@@ -82,7 +82,7 @@ function describeDay(info: [string, number, number, number]) {
   if (info[1]) parts.push(`${info[1]} filme${info[1] === 1 ? "" : "s"}`);
   if (info[2]) parts.push(`${info[2]} episódio${info[2] === 1 ? "" : "s"}`);
 
-  return `${parts.join(" e ")} · ${durationLabel(info[3])}`;
+  return `${parts.join(" e ")}, ${durationLabel(info[3])}`;
 }
 
 export function Heatmap({ days, years }: { days: [string, number, number, number][]; years: number[] }) {
@@ -223,7 +223,7 @@ export function Heatmap({ days, years }: { days: [string, number, number, number
           <span>Dias mais intensos:</span>
           {top.map((d) => (
             <Link key={d[0]} href={`/diary?date=${d[0]}`} className="ins-pill">
-              {d[0].split("-").reverse().slice(0, 2).join("/")} · {describeDay(d)}
+              {d[0].split("-").reverse().slice(0, 2).join("/")}, {describeDay(d)}
             </Link>
           ))}
         </div>

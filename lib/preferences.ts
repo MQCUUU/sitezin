@@ -131,6 +131,8 @@ export function applyAccountPreferences(preferences: unknown) {
 
 /* V3.3 — contraste (WCAG) do destaque. */
 const LIGHT_BG = "#f5f6f8";
+/** Fase 4: superfície mais clara dos temas escuros (--panel2 do grafite) — pior caso de contraste. */
+export const DARK_SURFACE = "#2c2c30";
 
 function rgbOf(hex: string) {
   return [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
@@ -153,18 +155,22 @@ export function contrastRatio(a: string, b: string) {
 }
 
 /**
- * Escurece o destaque (mesmo matiz) só o necessário para ler como texto
- * (≥ 4.5:1) sobre o fundo claro. Ciano/Verde/Laranja puros ficavam ~2:1 no
- * tema Claro (eyebrows, links e botões ilegíveis). No Escuro/OLED não muda.
+ * Ajusta o destaque (mesmo matiz) só o necessário para ler como texto
+ * (≥ 4.5:1) sobre o fundo: escurece num fundo claro (Ciano/Verde/Laranja puros
+ * ficavam ~2:1 no tema Claro) e, desde a Fase 4, clareia num fundo escuro
+ * (o roxo padrão ficava ~3,9:1 sobre o grafite).
  */
 export function readableAccent(accent: string, background = LIGHT_BG, minimum = 4.5) {
   const base = rgbOf(accent);
+  const lighten = luminance(rgbOf(background)) < 0.18;
   let factor = 0;
   let current = accent;
 
   while (contrastRatio(current, background) < minimum && factor < 0.9) {
     factor += 0.02;
-    current = `#${base.map((value) => Math.round(value * (1 - factor)).toString(16).padStart(2, "0")).join("")}`;
+    current = `#${base
+      .map((value) => Math.round(lighten ? value + (255 - value) * factor : value * (1 - factor)).toString(16).padStart(2, "0"))
+      .join("")}`;
   }
 
   return current;
@@ -176,7 +182,7 @@ export function applyPreferences(
   if (typeof document === "undefined") return;
 
   const root = document.documentElement;
-  const accent = preferences.theme === "light" ? readableAccent(preferences.accent) : preferences.accent;
+  const accent = readableAccent(preferences.accent, preferences.theme === "light" ? LIGHT_BG : DARK_SURFACE);
 
   root.dataset.theme = preferences.theme;
   root.dataset.density = preferences.density;

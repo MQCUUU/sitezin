@@ -125,3 +125,23 @@ export function pickTrailer(videos: unknown): { key: string; name: string } | nu
 
   return { key: String(best.key), name: typeof best.name === "string" && best.name ? best.name : "Trailer" };
 }
+
+/*
+ * Fase 4 — gêneros de SÉRIE que o TMDB devolve em inglês mesmo pedindo pt-BR
+ * (os de filme já vêm traduzidos). Nome desconhecido passa como está.
+ */
+const TV_GENRES_PT: Record<string, string> = {
+  "Action & Adventure": "Ação e aventura",
+  "Sci-Fi & Fantasy": "Ficção científica e fantasia",
+  "War & Politics": "Guerra e política",
+  Kids: "Infantil",
+  News: "Notícias",
+  Reality: "Reality show",
+  Soap: "Novela",
+  Talk: "Talk show",
+};
+
+export function genreName(name: unknown): string {
+  const text = typeof name === "string" ? name.trim() : "";
+  return TV_GENRES_PT[text] ?? text;
+}

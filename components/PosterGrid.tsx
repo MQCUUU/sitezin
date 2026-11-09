@@ -39,6 +39,7 @@ import { WatchProviderList } from "@/components/media/preview/WatchProviderList"
 import { fromLibraryItem } from "@/components/media/preview/adapters";
 import { normalizeWatchProviders } from "@/components/media/providers";
 import { LIBRARY_ACTION_COPY, removalConfirmOptions } from "@/lib/library/remove";
+import { genreName } from "@/lib/title-locale";
 
 type ViewMode =
   | "grid"
@@ -889,21 +890,22 @@ function Card({ item, position, ...actionProps }: CardActionProps & { item: Libr
         {item.title}
       </Link>
 
+      {/* Fase 4: uma linha que nunca quebra — tipo e ano; sua nota só se existir; curtido = só o coração. */}
       <MediaCardMeta>
-        <span className="mc-media-type-year">{mediaTypeLabel(item.media_type)} · {year ?? "—"}</span>
+        <span className="mc-media-type-year">
+          {mediaTypeLabel(item.media_type)}
+          {year ? ` ${year}` : ""}
+        </span>
         {item.personal_rating !== null && item.personal_rating !== undefined ? (
-          <span className="rating">
-            <Star size={12} fill="currentColor" />
-            {Number(item.personal_rating).toFixed(1)}
+          <span className="rating" title="Sua nota">
+            <Star size={12} fill="currentColor" aria-hidden="true" />
+            {Number(item.personal_rating).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
           </span>
-        ) : (
-          <span className="no-rating">Sem nota</span>
-        )}
+        ) : null}
 
         {item.favorite && (
-          <span className="favorite-label">
-            <Heart size={12} fill="currentColor" />
-            Curtido
+          <span className="favorite-label" role="img" aria-label="Curtido" title="Curtido">
+            <Heart size={13} fill="currentColor" aria-hidden="true" />
           </span>
         )}
       </MediaCardMeta>
@@ -920,7 +922,8 @@ function Card({ item, position, ...actionProps }: CardActionProps & { item: Libr
 function genreNames(genres: unknown): string[] {
   if (!Array.isArray(genres)) return [];
 
-  return [...new Set(genres.map((g) => (typeof g === "string" ? g : (g as { name?: string })?.name || "").trim()).filter(Boolean))];
+  // Fase 4: gêneros de série do TMDB em português ("Action & Adventure" → "Ação e aventura").
+  return [...new Set(genres.map((g) => genreName((typeof g === "string" ? g : (g as { name?: string })?.name || "").trim())).filter(Boolean))];
 }
 
 function ListItem({ item, ...actionProps }: CardActionProps & { item: LibraryItem }) {
@@ -936,8 +939,6 @@ function ListItem({ item, ...actionProps }: CardActionProps & { item: LibraryIte
       <div className="library-list-info">
         <div className="library-list-top">
           <div>
-            <div className="library-list-type">{item.media_type === "tv" ? "SÉRIE" : "FILME"}</div>
-
             <Link href={`/title/${item.media_type}/${item.tmdb_id}`} className="library-list-title">
               {item.title}
             </Link>
@@ -949,22 +950,25 @@ function ListItem({ item, ...actionProps }: CardActionProps & { item: LibraryIte
         <div className="library-list-meta">
           <MediaStatusTag status={item.status} />
 
-          {year && <span>{year}</span>}
+          <span className="library-list-kind">
+            {mediaTypeLabel(item.media_type)}
+            {year ? ` ${year}` : ""}
+          </span>
 
           {item.personal_rating !== null && item.personal_rating !== undefined && (
-            <span className="rating">
-              <Star size={12} fill="currentColor" />
-              {Number(item.personal_rating).toFixed(1)}
+            <span className="rating" title="Sua nota">
+              <Star size={12} fill="currentColor" aria-hidden="true" />
+              {Number(item.personal_rating).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
             </span>
           )}
 
-          {item.tmdb_rating !== undefined && item.tmdb_rating !== null && (
-            <span className="muted">TMDB {Number(item.tmdb_rating).toFixed(1)}</span>
+          {item.tmdb_rating !== undefined && item.tmdb_rating !== null && Number(item.tmdb_rating) > 0 && (
+            <span className="muted">TMDB {Number(item.tmdb_rating).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>
           )}
 
           {item.favorite && (
             <span className="favorite-label">
-              <Heart size={12} fill="currentColor" />
+              <Heart size={12} fill="currentColor" aria-hidden="true" />
               Curtido
             </span>
           )}

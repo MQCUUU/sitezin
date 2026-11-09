@@ -7,17 +7,6 @@ import { useEffect, useMemo, useState } from "react";
 
 import Link from "next/link";
 
-import {
-  ArrowRight,
-  BookOpenText,
-  CalendarDays,
-  Compass,
-  Film,
-  LogIn,
-  Sparkles,
-  Tv,
-  UserPlus,
-} from "lucide-react";
 
 import { Search } from "@/components/Search";
 import { Poster } from "@/components/Poster";
@@ -28,20 +17,18 @@ import { PosterGrid } from "@/components/PosterGrid";
 import { PickForMeLauncher } from "@/components/PickForMeLauncher";
 import { ErrorState } from "@/components/AsyncState";
 import { authClient } from "@/lib/auth/client";
-import { Reveal } from "@/components/ui/premium";
-import { HomeEmpty, HomeHero, HomeSkeleton, SummaryStrip } from "@/components/home/HomeParts";
+import { HomeSkeleton } from "@/components/home/HomeParts";
+import { HomeFeature } from "@/components/home/HomeFeature";
+import { HomeRows, HomeSection, type HomeRow } from "@/components/home/HomeSections";
 import { detailLabel, personalLine, typeLabel } from "@/components/calendar/copy";
-import { dayHeading, daysBetween, relativeWhen } from "@/lib/calendar/dates";
+import { dayHeading, relativeWhen } from "@/lib/calendar/dates";
 import { detail as momentDetail, formatRating, headline, momentAria } from "@/lib/diary/copy";
 import {
   activeHero,
   heroKind,
   homeSections,
   homeAgenda,
-  homeMetrics,
   pickHeroItem,
-  summaryCards,
-  watchingSummaryLine,
   URGENT_DAYS,
   type HomeTotals,
 } from "@/lib/home/home";
@@ -371,8 +358,7 @@ export default function HomeClient() {
 
   /* ------------------------------------------------- dados derivados */
 
-  const { watching, want, best, liked, totals } = homeData;
-  const homeReady = homeState === "ready";
+  const { watching, want, best, totals } = homeData;
   const librarySize = totals.library;
 
   const agendaView = useMemo(() => (agenda ? homeAgenda(agenda.events, agenda.today) : null), [agenda]);
@@ -382,8 +368,6 @@ export default function HomeClient() {
   const heroItem = useMemo(() => pickHeroItem(watching), [watching]);
   const urgentEvent = Boolean(nextEvent && agendaView?.nextInDays !== null && (agendaView?.nextInDays ?? 99) <= URGENT_DAYS);
   const kind = heroKind({ hero: heroItem, urgentEvent, queue: want.length > 0 });
-  const metrics = homeReady ? homeMetrics(totals, agendaState === "ready" ? agendaView : null) : [];
-  const cards = summaryCards(totals);
 
   const hero = useMemo(() => {
     if (kind === "watching" && heroItem) {
@@ -437,26 +421,6 @@ export default function HomeClient() {
     };
   }, [kind, heroItem, nextEvent, agendaView, want, totals.want, librarySize]);
 
-  /*
-   * Painel ao lado do destaque: o próximo evento da agenda (quando o destaque
-   * não é ele mesmo), senão quantos títulos você já concluiu. Nada útil → sem painel.
-   */
-  const heroSide = useMemo(() => {
-    if (agendaState === "loading" && !agenda) return { loading: true, label: "", value: "", small: "" };
-
-    const sideEvent = kind === "calendar" ? agendaView?.preview[1] ?? null : nextEvent;
-
-    if (sideEvent && agendaToday) {
-      return { loading: false, label: "Próximo na agenda", value: relativeWhen(sideEvent.date, agendaToday), small: sideEvent.title };
-    }
-
-    if (totals.watched > 0) {
-      return { loading: false, label: "Concluídos", value: String(totals.watched), small: `de ${totals.completion_base} já iniciados` };
-    }
-
-    return null;
-  }, [agendaState, agenda, kind, agendaView, nextEvent, agendaToday, totals.watched, totals.completion_base]);
-
   const moments = activity?.moments ?? [];
   const show = homeSections({
     homeState,
@@ -501,103 +465,43 @@ export default function HomeClient() {
     !user
   ) {
     return (
-      <div key="home-guest" className="home-smart">
+      <div key="home-guest" className="home-smart hm-screen">
         <div className="topbar home-topbar">
           <Search />
         </div>
 
-        <section className="home-guest-hero panel">
-          <div className="home-guest-icon">
-            <Sparkles
-              size={28}
-            />
-          </div>
-
-          <div className="eyebrow">
-            MYCATALOG
-          </div>
-
-          <h1>
-            Seu catálogo começa aqui.
-          </h1>
-
-          <p className="muted">
-            Organize o que você assiste, acompanhe séries, registre notas e descubra o que vale seu tempo.
+        {/*
+         * Fase 4 — visitante: título grande, uma frase e UMA ação clara (Criar
+         * conta). "Entrar" fica só no topo (antes repetia aqui embaixo).
+         */}
+        <section className="hm-guest" aria-labelledby="hm-guest-title">
+          <h1 id="hm-guest-title" className="hm-feature-title">Seu catálogo começa aqui.</h1>
+          <p className="hm-feature-text">
+            Organize o que você assiste, acompanhe séries episódio por episódio, dê notas e descubra o que vale seu tempo.
           </p>
-
-          {/*
-           * V2.1-C — hierarquia de CTA: "Criar conta" primário,
-           * "Explorar catálogo" secundário, "Entrar" sem disputar
-           * visualmente com os dois (link simples, não um .btn) —
-           * continua fácil de achar, só não compete com o CTA
-           * principal.
-           */}
-          <div className="home-guest-actions">
-            <Link
-              href="/signup"
-              className="btn primary"
-            >
-              <UserPlus
-                size={16}
-              />
-
+          <div className="hm-feature-actions">
+            <Link href="/signup" className="btn primary hm-action">
               Criar conta
             </Link>
-
-            <Link
-              href="/discover"
-              className="btn"
-            >
-              <Compass
-                size={16}
-              />
-
-              Explorar catálogo
+            <Link href="/discover" className="btn hm-action hm-action--quiet">
+              Explorar o catálogo
             </Link>
           </div>
-
-          <Link
-            href="/login"
-            className="home-guest-login-link"
-          >
-            <LogIn size={14} />
-            Já tem conta? Entrar
-          </Link>
         </section>
 
-        {/*
-         * V2.1-C — "o que o MyCatalog faz", em 10-20s de leitura.
-         * Só recursos que existem de verdade (nenhum item inventado).
-         */}
-        <section className="section home-guest-features" aria-label="O que o MyCatalog faz">
-          <div className="home-guest-feature">
-            <div className="home-guest-feature-icon">
-              <Tv size={20} />
-            </div>
+        {/* Só recursos que existem de verdade, em três frases curtas. */}
+        <section className="hm-guest-features" aria-label="O que o MyCatalog faz">
+          <div>
             <h2>Acompanhe</h2>
-            <p className="muted">
-              Filmes, séries, episódios e temporadas — status, progresso e reassistidas, tudo num só lugar.
-            </p>
+            <p>Filmes e séries com status, progresso por episódio e reassistidas, tudo num só lugar.</p>
           </div>
-
-          <div className="home-guest-feature">
-            <div className="home-guest-feature-icon">
-              <Compass size={20} />
-            </div>
+          <div>
             <h2>Descubra</h2>
-            <p className="muted">
-              Recomendações personalizadas, filtros por gênero e onde assistir, e o MyCatalog AI para sugerir algo na hora.
-            </p>
+            <p>Recomendações pelo seu gosto, filtros por gênero e por onde assistir, e o assistente para sugerir algo na hora.</p>
           </div>
-
-          <div className="home-guest-feature">
-            <div className="home-guest-feature-icon">
-              <BookOpenText size={20} />
-            </div>
+          <div>
             <h2>Lembre</h2>
-            <p className="muted">
-              Notas, Diário, Estatísticas e Retrospectiva do seu ano — e listas para organizar do seu jeito.
-            </p>
+            <p>Notas, diário, estatísticas e a retrospectiva do seu ano, além de listas do seu jeito.</p>
           </div>
         </section>
 
@@ -607,12 +511,7 @@ export default function HomeClient() {
          * quebram a Home, só omitem a seção.
          */}
         {trendingGuestState === "pronto" && trendingGuest.length > 0 && (
-          <section className="section home-guest-trending" aria-label="Em alta agora">
-            <div className="title-section-heading">
-              <span>Direto do catálogo</span>
-              <h2>Em alta agora</h2>
-            </div>
-
+          <HomeSection id="hm-trending" title="Em alta agora" href="/discover" linkLabel="Ver mais no Descobrir" className="home-guest-trending">
             <CarouselRail className="home-guest-trending-rail">
               {trendingGuest.map((item) => (
                 <div key={`${item.media_type}-${item.id}`} className="home-guest-trending-item">
@@ -634,7 +533,7 @@ export default function HomeClient() {
                 </div>
               ))}
             </CarouselRail>
-          </section>
+          </HomeSection>
         )}
       </div>
     );
@@ -642,8 +541,47 @@ export default function HomeClient() {
 
   /* -------------------------------------------------- autenticado */
 
+  /*
+   * Fase 4 — Início na direção "Tela 2.39:1": o destaque (faixa + título +
+   * uma ação), pôsteres do que está em andamento e da fila, e duas colunas em
+   * texto (agenda e diário). Saíram a saudação com métricas, o resumo, os
+   * "Melhores avaliados" (estão no Ranking) e a animação de seções ao rolar.
+   */
+  const agendaRows: HomeRow[] = (agendaView?.preview ?? []).map((event) => {
+    const extra = detailLabel(event);
+    return {
+      key: event.id,
+      href: `/title/${event.media_type}/${event.tmdb_id}`,
+      when: relativeWhen(event.date, agendaToday),
+      title: event.title,
+      what: `, ${lowerFirst(typeLabel(event))}${extra ? ` (${extra})` : ""}`,
+    };
+  });
+
+  const diaryRows: HomeRow[] = moments.slice(0, 5).map((moment) => {
+    const extra = momentDetail(moment);
+    const rating = moment.rating !== null ? ` e deu nota ${formatRating(moment.rating)}` : "";
+    return {
+      key: moment.id,
+      href: moment.media ? `/title/${moment.media.media_type}/${moment.media.tmdb_id}` : "/diary",
+      when: dayHeading(moment.day, activity?.today ?? moment.day),
+      title: moment.media?.title || "Título não identificado",
+      what: `, ${lowerFirst(headline(moment))}${extra ? ` (${lowerFirst(extra)})` : ""}${rating}`,
+      ariaLabel: momentAria(moment),
+    };
+  });
+
+  const featureSecondary =
+    kind === "watching" && heroItem && hero.href !== `/title/${heroItem.media_type}/${heroItem.tmdb_id}`
+      ? { href: `/title/${heroItem.media_type}/${heroItem.tmdb_id}`, label: heroItem.media_type === "tv" ? "Abrir a série" : "Abrir o filme" }
+      : kind !== "discover"
+        ? { href: "/discover", label: "Quero outra coisa" }
+        : librarySize === 0
+          ? { href: "/search", label: "Buscar o que já assisti" }
+          : null;
+
   return (
-    <div key="home-auth" className="home-smart">
+    <div key="home-auth" className="home-smart hm-screen">
       <div className="topbar home-topbar">
         <Search />
 
@@ -652,256 +590,63 @@ export default function HomeClient() {
         </div>
       </div>
 
-      {/* SAUDAÇÃO + MÉTRICAS */}
-      <section className="section home-smart-intro">
-        <div>
-          <div className="eyebrow">SUA HOME</div>
-          <h1>{user?.name ? `Olá, ${user.name.split(" ")[0]}.` : "Sua Home."}</h1>
-          <p className="muted">Aqui fica só o que merece sua atenção agora.</p>
-        </div>
-
-        {metrics.length > 0 && (
-          <div className="home-smart-summary" aria-label="Resumo da sua biblioteca">
-            {metrics.map((metric) => (
-              <span key={metric.key} title={metric.hint}>
-                <strong>{metric.value}</strong>
-                {metric.label}
-              </span>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* 1. AÇÃO IMEDIATA */}
       {show.skeleton ? (
         <HomeSkeleton />
       ) : show.error ? (
         <section className="section">
           <ErrorState
             compact
-            title="Não foi possível carregar sua Home"
-            description="Sua biblioteca não respondeu agora. A agenda e a atividade abaixo continuam disponíveis."
+            title="Não foi possível carregar seu Início"
+            description="Sua biblioteca não respondeu agora. A agenda e o diário abaixo continuam disponíveis."
             onRetry={() => setReloadKey((key) => key + 1)}
           />
         </section>
       ) : (
-        <>
-          <section className="section home-hero-section">
-            <HomeHero
-              kind={kind}
-              eyebrow={hero.eyebrow}
-              title={hero.title}
-              description={hero.description}
-              href={hero.href}
-              action={hero.action}
-              backdropPath={hero.backdrop}
-              meta={hero.meta}
-              bar={hero.bar}
-              side={heroSide}
-            />
-          </section>
-
-          {show.empty && <HomeEmpty />}
-        </>
-      )}
-
-      {/* 2. ALTERNATIVAS ATIVAS */}
-      {show.resume && (
-        <LibrarySection
-          eyebrow="RETOMAR"
-          title="Continuar assistindo"
-          description="Seus títulos em andamento, pela última atividade."
-          href="/library?status=watching"
-          items={watching}
+        <HomeFeature
+          lead={hero.eyebrow}
+          title={hero.title}
+          description={hero.description}
+          href={hero.href}
+          action={hero.action}
+          backdropPath={hero.backdrop}
+          meta={hero.meta}
+          bar={hero.bar}
+          secondary={featureSecondary}
         />
       )}
 
-      {/* 3. PRÓXIMOS EVENTOS (prévia do Calendário) */}
-      {show.agenda && (
-        <section className="section">
-          <SectionHead
-            eyebrow="AGENDA"
-            title="O que está chegando"
-            description="Episódios, temporadas e estreias da sua biblioteca nos próximos 60 dias."
-            href="/calendar"
-            linkLabel="Ver calendário"
-          />
-
-          {agendaState === "loading" ? (
-            <div className="home-agenda-grid" role="status" aria-label="Carregando agenda">
-              {[1, 2, 3].map((item) => (
-                <div key={item} className="panel home-agenda-skeleton" />
-              ))}
-            </div>
-          ) : (
-            <div className="home-agenda-grid">
-              {agendaView?.preview.map((event) => {
-                const extra = detailLabel(event);
-                const personal = personalLine(event);
-                const urgent = daysBetween(agendaToday, event.date) <= 1;
-
-                return (
-                  <Link
-                    key={event.id}
-                    href={`/title/${event.media_type}/${event.tmdb_id}`}
-                    className="panel home-agenda-card"
-                  >
-                    <span className="home-agenda-thumb" aria-hidden="true">
-                      <Poster path={event.poster_path || event.backdrop_path} alt="" sizes="48px" tmdbSize="w185" />
-                    </span>
-                    <div className="home-agenda-main">
-                      <div className={`home-agenda-when ${urgent ? "urgent" : ""}`}>
-                        <CalendarDays size={14} aria-hidden="true" />
-                        {relativeWhen(event.date, agendaToday)}
-                      </div>
-
-                      <div className="home-agenda-type">
-                        {event.media_type === "tv" ? <Tv size={14} aria-hidden="true" /> : <Film size={14} aria-hidden="true" />}
-                        {typeLabel(event)}
-                        {extra ? ` · ${extra}` : ""}
-                      </div>
-
-                      <strong>{event.title}</strong>
-
-                      {personal && <span>{personal}</span>}
-                    </div>
-                    <ArrowRight size={14} aria-hidden="true" />
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* 4. CONTEXTO RECENTE (prévia do Diário) */}
-      {show.activity && (
-        <Reveal as="section" className="section home-two-columns home-activity-section">
-          <div>
-            <SectionHead eyebrow="DIÁRIO" title="Atividade recente" href="/diary" linkLabel="Ver diário" />
-
-            <div className="panel home-activity-panel">
-              {activityState === "loading" ? (
-                <div role="status" aria-label="Carregando atividade">
-                  {[0, 1, 2].map((i) => (
-                    <div key={i} className="mc-skeleton home-activity-skeleton" />
-                  ))}
-                </div>
-              ) : (
-                moments.map((moment) => {
-                  const href = moment.media ? `/title/${moment.media.media_type}/${moment.media.tmdb_id}` : "/diary";
-                  const extra = momentDetail(moment);
-                  const what = [headline(moment), extra, moment.rating !== null ? `★ ${formatRating(moment.rating)}` : null]
-                    .filter(Boolean)
-                    .join(" · ");
-
-                  return (
-                    <Link key={moment.id} href={href} className="home-activity-item" aria-label={momentAria(moment)}>
-                      <span className="home-activity-dot" aria-hidden="true" />
-
-                      <div>
-                        <strong>{moment.media?.title || "Título não identificado"}</strong>
-                        <span className="home-activity-what">{what}</span>
-                        <small>
-                          {dayHeading(moment.day, activity?.today ?? moment.day)}
-                          {moment.time ? ` · ${moment.time}` : ""}
-                        </small>
-                      </div>
-
-                      <ArrowRight size={14} aria-hidden="true" />
-                    </Link>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </Reveal>
-      )}
-
-      {/* 5. RESUMO DA BIBLIOTECA + BACKLOG */}
-      {show.summary && (
-        <section className="section home-summary-section" aria-label="Seu resumo">
-          <SummaryStrip
-            cards={cards}
-            watching={watching}
-            want={want}
-            liked={liked}
-            best={best}
-            totals={{ watching: totals.watching, want: totals.want, favorites: totals.favorites, rated: totals.rated }}
-            watchingLine={watchingSummaryLine(watching, kind === "watching" ? heroItem : null)}
-          />
-        </section>
+      {show.resume && (
+        <HomeSection id="hm-resume" title="Continuar assistindo" href="/library?status=watching" linkLabel="Ver todos">
+          <PosterGrid items={watching} carousel />
+        </HomeSection>
       )}
 
       {show.queue && (
-        <LibrarySection
-          eyebrow="SUA FILA"
-          title="Quero assistir"
-          description="O que você já decidiu ver, adicionados por último primeiro."
-          href="/library?status=want"
-          items={want}
-        />
+        <HomeSection id="hm-queue" title="Na sua fila" href="/watchlist" linkLabel="Ver a fila inteira">
+          <PosterGrid items={want} carousel />
+        </HomeSection>
       )}
 
-      {show.best && (
-        <LibrarySection
-          eyebrow="SUAS NOTAS"
-          title="Melhores avaliados"
-          description="Suas maiores notas pessoais."
-          href="/ranking"
-          items={best}
-        />
+      {(show.agenda || show.activity) && (
+        <div className="hm-columns">
+          {show.agenda && (
+            <HomeSection id="hm-week" title="O que está chegando" href="/calendar" linkLabel="Abrir o calendário">
+              <HomeRows rows={agendaRows} loading={agendaState === "loading"} loadingLabel="Carregando agenda" />
+            </HomeSection>
+          )}
+
+          {show.activity && (
+            <HomeSection id="hm-diary" title="No seu diário" href="/diary" linkLabel="Abrir o diário">
+              <HomeRows rows={diaryRows} loading={activityState === "loading"} loadingLabel="Carregando diário" />
+            </HomeSection>
+          )}
+        </div>
       )}
     </div>
   );
 }
 
-function SectionHead({
-  eyebrow,
-  title,
-  description,
-  href,
-  linkLabel = "Ver todos",
-}: {
-  eyebrow: string;
-  title: string;
-  description?: string;
-  href: string;
-  linkLabel?: string;
-}) {
-  return (
-    <div className="section-head home-section-head">
-      <div>
-        <div className="eyebrow">{eyebrow}</div>
-        <h2>{title}</h2>
-        {description && <p className="muted">{description}</p>}
-      </div>
-
-      <Link href={href} className="muted home-section-link" aria-label={`${linkLabel}: ${title}`}>
-        {linkLabel}
-        <ArrowRight size={14} aria-hidden="true" />
-      </Link>
-    </div>
-  );
+function lowerFirst(text: string) {
+  return text ? text.charAt(0).toLocaleLowerCase("pt-BR") + text.slice(1) : text;
 }
 
-function LibrarySection({
-  eyebrow,
-  title,
-  description,
-  href,
-  items,
-}: {
-  eyebrow: string;
-  title: string;
-  description?: string;
-  href: string;
-  items: LibraryItem[];
-}) {
-  return (
-    <Reveal as="section" className="section">
-      <SectionHead eyebrow={eyebrow} title={title} description={description} href={href} />
-      <PosterGrid items={items} carousel />
-    </Reveal>
-  );
-}

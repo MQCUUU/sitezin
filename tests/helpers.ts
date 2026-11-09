@@ -1,6 +1,7 @@
 import {
   APIRequestContext,
   expect,
+  type Page,
 } from "@playwright/test";
 
 export async function jsonRequest<
@@ -84,4 +85,32 @@ export async function deleteIgnoring404(
   ).toContain(
     response.status()
   );
+}
+/*
+ * Fase 4 — status na página do Título: o <select> virou a ação principal
+ * (botão claro que abre um menu). Estes helpers usam a versão de computador
+ * (.tt-actions); no celular a mesma escolha abre numa folha.
+ */
+export const STATUS_LABEL: Record<string, string> = {
+  want: "Quero assistir",
+  watching: "Assistindo",
+  watched: "Assistido",
+  rewatching: "Reassistindo",
+  rewatched: "Reassistido",
+  paused: "Pausado",
+  dropped: "Abandonado",
+};
+
+export function titleStatusButton(page: Page) {
+  return page.locator(".tt-actions .tt-primary");
+}
+
+export async function chooseTitleStatus(page: Page, status: keyof typeof STATUS_LABEL | string) {
+  await titleStatusButton(page).click();
+  await page.getByRole("menuitemradio", { name: STATUS_LABEL[status], exact: true }).click();
+}
+
+/** Status mostrado no botão principal; "none" = fora da biblioteca. */
+export async function expectTitleStatus(page: Page, status: string | "none") {
+  await expect(titleStatusButton(page)).toHaveText(status === "none" ? /Adicionar à biblioteca/ : STATUS_LABEL[status]);
 }

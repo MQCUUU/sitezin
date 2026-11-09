@@ -61,18 +61,21 @@ export function visibleChapters(d: Data): string[] {
 
 /* ------------------------------------------------------------ peças */
 
+/**
+ * Fase 4: o capítulo abre pelo título (sem "02, ATIVIDADE" em caixa alta
+ * acima — o nome do capítulo já está na navegação e o título diz o assunto).
+ * `index`/`kicker` continuam no tipo para não mexer nos chamadores.
+ */
 export function Chapter({
   id,
-  index,
-  kicker,
   title,
   lead,
   children,
   aside,
 }: {
   id: string;
-  index: number;
-  kicker: string;
+  index?: number;
+  kicker?: string;
   title: string;
   lead?: ReactNode;
   children: ReactNode;
@@ -82,9 +85,6 @@ export function Chapter({
     <section id={id} className="ins-chapter" aria-labelledby={`${id}-title`}>
       <header className="ins-chapter-head">
         <div>
-          <span className="ins-kicker">
-            {String(index).padStart(2, "0")} · {kicker}
-          </span>
           <h2 id={`${id}-title`}>{title}</h2>
           {lead ? <p className="ins-chapter-lead">{lead}</p> : null}
         </div>
@@ -278,8 +278,8 @@ export function SummaryChapter({ data, onPeriod }: { data: Data; onPeriod: (p: s
           <HowTo>Estimativa: duração de cada filme e episódio marcado como assistido (45 min quando o episódio não informa duração). Reassistidas contam de novo; “Quero assistir” nunca conta.</HowTo>
         </p>
         <p className="ins-hero-sub">
-          {hours >= 48 ? `≈ ${hoursText(hours)} de filmes e séries · ` : ""}
-          {nf.format(cur.movies)} {cur.movies === 1 ? "filme" : "filmes"} · {nf.format(cur.episodes)} {cur.episodes === 1 ? "episódio" : "episódios"}
+          {hours >= 48 ? `≈ ${hoursText(hours)} de filmes e séries, ` : ""}
+          {nf.format(cur.movies)} {cur.movies === 1 ? "filme" : "filmes"}, {nf.format(cur.episodes)} {cur.episodes === 1 ? "episódio" : "episódios"}
           {cur.series ? ` de ${nf.format(cur.series)} ${cur.series === 1 ? "série" : "séries"}` : ""}
         </p>
         {data.meta.type === "all" ? <SplitBar movies={cur.movieHours} series={cur.seriesHours} /> : null}
@@ -299,7 +299,7 @@ export function SummaryChapter({ data, onPeriod }: { data: Data; onPeriod: (p: s
           <small>
             {cur.rated ? `${nf.format(cur.rated)} ${cur.rated === 1 ? "título avaliado" : "títulos avaliados"}` : "Nenhum avaliado no período"}
             {prev && cur.avgRating !== null && prev.avgRating !== null && Math.abs(cur.avgRating - prev.avgRating) >= 0.1
-              ? ` · ${cur.avgRating > prev.avgRating ? "+" : "−"}${dec(Math.abs(cur.avgRating - prev.avgRating))} vs. antes`
+              ? `, ${cur.avgRating > prev.avgRating ? "+" : "−"}${dec(Math.abs(cur.avgRating - prev.avgRating))} vs. antes`
               : ""}
           </small>
         </div>
@@ -430,7 +430,7 @@ export function TasteChapter({ data, index }: { data: Data; index: number }) {
           <div className="ins-panel-head">
             <h3>O que você mais assiste</h3>
           </div>
-          <HBars rows={watched.map((g) => ({ label: g.name, value: g.count, display: `${g.count}`, hint: `${g.name}: ${g.count} títulos · ${durationLabel(g.minutes)}${g.avg !== null ? ` · nota média ${dec(g.avg)}` : ""}` }))} />
+          <HBars rows={watched.map((g) => ({ label: g.name, value: g.count, display: `${g.count}`, hint: `${g.name}: ${g.count} títulos, ${durationLabel(g.minutes)}${g.avg !== null ? `, nota média ${dec(g.avg)}` : ""}` }))} />
         </div>
         <div className="ins-panel">
           <div className="ins-panel-head">
@@ -496,7 +496,7 @@ export function TasteChapter({ data, index }: { data: Data; index: number }) {
               <h3>De que época</h3>
             </div>
             <Columns
-              data={t.decades.map((d) => ({ label: d.label.replace(/^(\d{2})(\d{2})s$/, "’$2"), value: d.count, title: `Década de ${d.label.slice(0, 4)}: ${d.count} títulos${d.avg !== null ? ` · nota média ${dec(d.avg)}` : ""}` }))}
+              data={t.decades.map((d) => ({ label: d.label.replace(/^(\d{2})(\d{2})s$/, "’$2"), value: d.count, title: `Década de ${d.label.slice(0, 4)}: ${d.count} títulos${d.avg !== null ? `, nota média ${dec(d.avg)}` : ""}` }))}
               height={150}
             />
             {t.classicShare !== null ? (
@@ -505,7 +505,7 @@ export function TasteChapter({ data, index }: { data: Data; index: number }) {
                 {(() => {
                   const best = t.decades.filter((d) => d.avg !== null).sort((a, b) => (b.avg as number) - (a.avg as number))[0];
 
-                  return best ? ` · sua melhor década é a de ${best.label.slice(0, 4)} (média ${dec(best.avg as number)})` : "";
+                  return best ? `, sua melhor década é a de ${best.label.slice(0, 4)} (média ${dec(best.avg as number)})` : "";
                 })()}
                 .
               </p>
@@ -629,7 +629,7 @@ export function RatingsChapter({ data, index }: { data: Data; index: number }) {
             <dt>Avaliados</dt>
             <dd>
               {nf.format(r.n)}
-              {r.coverage !== null ? <small> · {pct(r.coverage)} do que assistiu</small> : null}
+              {r.coverage !== null ? <small>, {pct(r.coverage)} do que assistiu</small> : null}
             </dd>
           </div>
         </dl>
@@ -672,7 +672,7 @@ export function RatingsChapter({ data, index }: { data: Data; index: number }) {
                       <li key={`${d.type}-${d.tmdb_id}`}>
                         <Link href={`/title/${d.type}/${d.tmdb_id}`}>{d.title}</Link>
                         <small>
-                          você {dec(d.rating)} · TMDB {dec(d.community)}
+                          você {dec(d.rating)}, TMDB {dec(d.community)}
                         </small>
                       </li>
                     ))}
@@ -687,7 +687,7 @@ export function RatingsChapter({ data, index }: { data: Data; index: number }) {
                       <li key={`${d.type}-${d.tmdb_id}`}>
                         <Link href={`/title/${d.type}/${d.tmdb_id}`}>{d.title}</Link>
                         <small>
-                          você {dec(d.rating)} · TMDB {dec(d.community)}
+                          você {dec(d.rating)}, TMDB {dec(d.community)}
                         </small>
                       </li>
                     ))}
@@ -755,7 +755,7 @@ export function TitlesChapter({ data, index }: { data: Data; index: number }) {
                 </h3>
                 {s.remainingEpisodes ? (
                   <span className="ins-muted ins-small">
-                    faltam {nf.format(s.remainingEpisodes)} episódios · ≈ {durationLabel(s.remainingMinutes)}
+                    faltam {nf.format(s.remainingEpisodes)} episódios, ≈ {durationLabel(s.remainingMinutes)}
                   </span>
                 ) : null}
               </div>
@@ -773,8 +773,8 @@ export function TitlesChapter({ data, index }: { data: Data; index: number }) {
                       </span>
                       <small>
                         {p.total ? `${p.watched}/${p.total} ep.` : `${p.watched} ep.`}
-                        {p.remaining ? ` · faltam ${p.remaining}` : ""}
-                        {p.staleDays !== null && p.staleDays >= 30 ? ` · parada há ${p.staleDays} dias` : ""}
+                        {p.remaining ? `, faltam ${p.remaining}` : ""}
+                        {p.staleDays !== null && p.staleDays >= 30 ? `, parada há ${p.staleDays} dias` : ""}
                       </small>
                     </li>
                   );
@@ -877,7 +877,7 @@ export function RewatchChapter({ data, index }: { data: Data; index: number }) {
                   r.ratingChange ? `ao rever, a nota ${r.ratingChange.mean >= 0 ? "sobe" : "cai"} em média ${dec(Math.abs(r.ratingChange.mean))}` : null,
                 ]
                   .filter(Boolean)
-                  .join(" · ")}
+                  .join(", ")}
               </p>
               {r.top.length ? <PosterStrip items={r.top.slice(0, 5)} caption={(item) => `${r.top.find((x) => x.tmdb_id === item.tmdb_id)?.times ?? 1}× revisto`} /> : null}
             </>
@@ -929,7 +929,7 @@ export function WatchlistChapter({ data, index }: { data: Data; index: number })
   return (
     <Chapter id="watchlist" index={index} kicker="Watchlist" title="O que está esperando por você" aside={<Link href="/library?status=want" className="ins-link">Abrir watchlist <ArrowRight size={14} aria-hidden="true" /></Link>}>
       <div className="ins-facts">
-        <Fact label="para assistir" value={nf.format(w.size)} sub={`${w.movies} filmes · ${w.series} séries`} />
+        <Fact label="para assistir" value={nf.format(w.size)} sub={`${w.movies} filmes, ${w.series} séries`} />
         <Fact label={`adicionados ${periodWords(data)}`} value={nf.format(w.addedInPeriod)} />
         {w.converted ? (
           <Fact
@@ -1004,7 +1004,7 @@ export function EvolutionChapter({ data, index }: { data: Data; index: number })
           <h3>Títulos por ano</h3>
         </div>
         <Columns
-          data={e.years.map((y) => ({ label: String(y.year), value: y.count, title: `${y.year}: ${y.count} títulos${y.avg !== null ? ` · nota média ${dec(y.avg)}` : ""}` }))}
+          data={e.years.map((y) => ({ label: String(y.year), value: y.count, title: `${y.year}: ${y.count} títulos${y.avg !== null ? `, nota média ${dec(y.avg)}` : ""}` }))}
           height={140}
           highlight={e.years.length - 1}
         />
@@ -1099,8 +1099,8 @@ export function AiChapter({ data, index }: { data: Data; index: number }) {
             rows={ai.sources.slice(0, 6).map((s) => ({
               label: SOURCE_LABEL[s.source] ?? s.source,
               value: s.added,
-              display: `${s.added}${s.avgRating !== null ? ` · ★ ${dec(s.avgRating)}` : ""}`,
-              hint: `${s.added} salvos · ${s.watched} assistidos · gostou de ${s.liked}`,
+              display: `${s.added}${s.avgRating !== null ? `, ★ ${dec(s.avgRating)}` : ""}`,
+              hint: `${s.added} salvos, ${s.watched} assistidos, gostou de ${s.liked}`,
             }))}
           />
         </div>

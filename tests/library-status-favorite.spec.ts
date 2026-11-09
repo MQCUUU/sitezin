@@ -1,3 +1,4 @@
+import { chooseTitleStatus, expectTitleStatus, titleStatusButton } from "./helpers";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 
 /*
@@ -36,7 +37,7 @@ async function seedRated(request: APIRequestContext) {
 
 async function openTitle(page: Page) {
   await page.goto(TITLE_URL);
-  await expect(page.getByRole("button", { name: /Adicionar à biblioteca|Remover da biblioteca/ })).toBeEnabled();
+  await expect(titleStatusButton(page)).toBeEnabled();
 }
 
 /** Espera a fila de mutações esvaziar: o servidor chega ao estado esperado. */
@@ -60,13 +61,13 @@ test.describe("Fase 1 — status e Curtir persistentes", () => {
 
   test("status num título fora da biblioteca: adiciona e grava (sobrevive ao refresh)", async ({ page }) => {
     await openTitle(page);
-    await page.getByLabel("Status na sua biblioteca").selectOption("watched");
+    await chooseTitleStatus(page, "watched");
 
-    await expect(page.getByRole("button", { name: /Remover da biblioteca/ })).toBeVisible();
+    await expectTitleStatus(page, "watched");
     await settle(page.request, { status: "watched", favorite: false });
 
     await page.reload();
-    await expect(page.getByLabel("Status na sua biblioteca")).toHaveValue("watched");
+    await expectTitleStatus(page, "watched");
   });
 
   test("Curtir num título fora da biblioteca: adiciona curtido (sobrevive ao refresh)", async ({ page }) => {
@@ -87,21 +88,19 @@ test.describe("Fase 1 — status e Curtir persistentes", () => {
     await page.getByRole("button", { name: "Curtir" }).click();
     await settle(page.request, { favorite: true, status: "want", personal_rating: 9, review: REVIEW });
 
-    await page.getByLabel("Status na sua biblioteca").selectOption("watching");
+    await chooseTitleStatus(page, "watching");
     await settle(page.request, { favorite: true, status: "watching", personal_rating: 9, review: REVIEW });
   });
 
   test("cliques rápidos num título novo: status + Curtir + status — vence o mais recente, nada se perde", async ({ page }) => {
     await openTitle(page);
-    const select = page.getByLabel("Status na sua biblioteca");
-
-    await select.selectOption("watched");
+    await chooseTitleStatus(page, "watched");
     await page.getByRole("button", { name: /^(Curtir|Curtido)$/ }).click();
-    await select.selectOption("paused");
+    await chooseTitleStatus(page, "paused");
 
     await settle(page.request, { status: "paused", favorite: true });
     await page.reload();
-    await expect(select).toHaveValue("paused");
+    await expectTitleStatus(page, "paused");
     await expect(page.getByRole("button", { name: "Curtido" })).toHaveAttribute("aria-pressed", "true");
   });
 
@@ -143,12 +142,12 @@ test.describe("Fase 1 — status e Curtir persistentes", () => {
         : route.continue()
     );
 
-    await page.getByLabel("Status na sua biblioteca").selectOption("watched");
+    await chooseTitleStatus(page, "watched");
 
     const prompt = page.locator(".mycatalog-toast").filter({ hasText: "Sua sessão expirou" });
     await expect(prompt).toBeVisible();
     await expect(prompt).toContainText("marcar");
     await expect(page.getByText("Não autenticado")).toHaveCount(0);
-    await expect(page.getByLabel("Status na sua biblioteca")).toHaveValue("want");
+    await expectTitleStatus(page, "none");
   });
 });

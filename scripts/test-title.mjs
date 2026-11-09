@@ -19,7 +19,7 @@ register(
 
 const test = (await import("node:test")).default;
 const assert = (await import("node:assert/strict")).default;
-const { workStatusLabel, languageName, countryNames, runtimeLabel, pickTrailer, pickOverviewFallback } = await import("../lib/title-locale.ts");
+const { workStatusLabel, languageName, countryNames, runtimeLabel, pickTrailer, pickOverviewFallback, genreName } = await import("../lib/title-locale.ts");
 const { collapseProviderVariants } = await import("../lib/streaming/providers-br.ts");
 const { normalizeWatchProviders } = await import("../components/media/providers/normalize.ts");
 const { safeWatchLink, whereToWatchRows } = await import("../lib/streaming/watch-link.ts");
@@ -420,4 +420,12 @@ test("remoção: a confirmação é a mesma em todas as telas e usa a chave nova
   assert.equal(options.skipKey, REMOVAL_SKIP_KEY);
   assert.notEqual(REMOVAL_SKIP_KEY, "mycatalog_skip_remove_confirm", "quem pulava o aviso antigo precisa ver o novo");
   assert.equal(removalConfirmOptions(null).title, "Remover “este título”?");
+});
+
+test("gêneros de série que o TMDB não traduz viram português (Fase 4)", () => {
+  assert.equal(genreName("Action & Adventure"), "Ação e aventura");
+  assert.equal(genreName("War & Politics"), "Guerra e política");
+  assert.equal(genreName("Sci-Fi & Fantasy"), "Ficção científica e fantasia");
+  assert.equal(genreName("Drama"), "Drama", "já em português: não muda");
+  assert.equal(genreName("Ficção científica"), "Ficção científica");
 });

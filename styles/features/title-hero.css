@@ -1,0 +1,472 @@
+/*
+ * Fase 4 — topo da página do Título (direção "Tela 2.39:1").
+ * Faixa panorâmica preta de ponta a ponta, título grande, UMA ação clara.
+ * Hierarquia por tipografia e espaço: sem moldura, sem brilho, sem degradê.
+ * Componentes: components/title/TitleHero.tsx + components/title/hero/*.
+ */
+
+.tt-hero {
+  margin-bottom: 48px;
+}
+
+/* ------------------------------------------------------------ cabeçalho */
+
+.tt-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
+  gap: 48px;
+  align-items: start;
+  max-width: 1280px;
+  margin: 40px auto 0;
+  /* Mesmo recuo das abas e seções abaixo (40px): uma coluna só. */
+  padding-inline: 40px;
+}
+
+.tt-identity {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.tt-poster {
+  position: relative;
+  flex: 0 0 168px;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border-radius: var(--mc-radius-xs);
+  background: var(--panel);
+}
+
+.tt-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.tt-title {
+  margin: 0;
+  font-size: clamp(40px, 5.4vw, 72px);
+  font-weight: 800;
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.tt-original {
+  margin: -4px 0 0;
+  color: var(--muted);
+  font-size: var(--mc-fs-sm, 13px);
+  font-weight: 600;
+}
+
+
+.tt-tagline {
+  margin: 0;
+  max-width: 38em;
+  color: color-mix(in srgb, var(--text) 82%, var(--muted));
+  font-size: 17px;
+  font-style: italic;
+  line-height: 1.45;
+}
+
+/* ------------------------------------------------------------ ações */
+
+.tt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.tt-actions .btn,
+.tt-mobile-bar .btn {
+  min-height: 52px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--mc-radius-md);
+  font-size: 16px;
+}
+
+/*
+ * Largura mínima = a do rótulo mais longo ("Adicionar à biblioteca"): trocar
+ * "Verificando biblioteca…" pelo status ("Reassistido") não muda mais a quebra
+ * da linha de ações — antes as abas pulavam ~60px depois do carregamento.
+ */
+.tt-primary {
+  gap: 10px;
+  min-width: 248px;
+  padding: 0 20px;
+  font-weight: 700;
+}
+
+/* Espaço reservado enquanto a sessão é verificada (ver TitleHero). */
+.tt-actions [data-reserved="true"] {
+  visibility: hidden;
+}
+
+.tt-primary-chevron {
+  margin-left: 2px;
+  transition: transform var(--mc-duration-fast) var(--mc-ease-out);
+}
+
+.tt-primary[aria-expanded="true"] .tt-primary-chevron {
+  transform: rotate(180deg);
+}
+
+/* Ações discretas: superfície neutra, sem borda nem cor de destaque. */
+.tt-quiet,
+.tt-actions .title-where-btn {
+  background: var(--panel);
+  color: var(--text);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tt-quiet:hover,
+  .tt-actions .title-where-btn:hover {
+    background: var(--mc-color-surface-hover);
+  }
+}
+
+.tt-like[aria-pressed="true"] {
+  color: var(--mc-color-favorite);
+}
+
+/* Curtir: o coração pulsa uma vez quando a pessoa curte (confirma a ação). */
+.tt-heart-pulse {
+  animation: tt-heart-pulse 260ms var(--mc-ease-out);
+}
+
+@keyframes tt-heart-pulse {
+  40% {
+    transform: scale(1.22);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tt-heart-pulse {
+    animation: none;
+  }
+}
+
+.tt-hint {
+  margin: 0;
+  color: var(--mc-color-danger);
+  font-size: 14px;
+}
+
+/* ------------------------------------------------------------ menu de status */
+
+.tt-status {
+  position: relative;
+}
+
+.tt-status-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: var(--mc-z-popover);
+  width: 260px;
+  padding: 6px;
+  border-radius: var(--mc-radius-lg);
+  background: var(--panel2);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+.tt-status-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.tt-status-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--mc-radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tt-status-option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tt-status-option:hover {
+    background: var(--mc-color-surface-hover);
+  }
+}
+
+.tt-status-option[aria-checked="true"] {
+  font-weight: 700;
+}
+
+.tt-status-check {
+  margin-left: auto;
+  color: var(--accent);
+}
+
+.tt-status-separator {
+  height: 1px;
+  margin: 6px 8px;
+  background: var(--line);
+}
+
+.tt-status-remove {
+  color: var(--mc-color-danger);
+}
+
+/* ------------------------------------------------------------ sua nota */
+
+.tt-rating-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tt-rating-heading {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.tt-rating {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tt-rating-value {
+  margin: 0;
+  font-size: 64px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.tt-rating-scale {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.tt-rating-step {
+  min-height: 44px;
+  border: 0;
+  border-radius: var(--mc-radius-sm);
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  /* A escala "preenche" até a nota escolhida: só cor muda, sem deslocamento. */
+  transition: background-color 150ms var(--mc-ease-out), color 150ms var(--mc-ease-out),
+    transform var(--mc-duration-fast) var(--mc-ease-out);
+}
+
+.tt-rating-step[data-filled="true"] {
+  background: var(--mc-color-primary);
+  color: var(--mc-color-primary-contrast);
+}
+
+.tt-rating-step:active {
+  transform: scale(0.94);
+}
+
+.tt-rating-step:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tt-rating-step:not([data-filled="true"]):hover {
+    background: var(--mc-color-surface-hover);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tt-rating-step:active {
+    transform: none;
+  }
+}
+
+.tt-rating-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.tt-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------ celular */
+
+.tt-mobile-bar {
+  display: none;
+}
+
+.tt-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--mc-z-overlay);
+  display: flex;
+  align-items: flex-end;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.tt-sheet {
+  width: 100%;
+  padding: 10px 12px calc(20px + env(safe-area-inset-bottom));
+  border-radius: var(--mc-radius-xl) var(--mc-radius-xl) 0 0;
+  background: var(--panel2);
+}
+
+.tt-sheet-grabber {
+  display: block;
+  width: 36px;
+  height: 4px;
+  margin: 0 auto 10px;
+  border-radius: var(--mc-radius-pill);
+  background: var(--line);
+}
+
+.tt-sheet .tt-status-option {
+  min-height: 52px;
+  font-size: 16px;
+}
+
+@media (max-width: 1100px) {
+  .tt-head {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 36px;
+  }
+
+  .tt-rating-aside {
+    max-width: 420px;
+  }
+
+  .tt-rating-scale {
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .tt-hero {
+    margin-bottom: 32px;
+  }
+
+  .tt-head {
+    margin-top: 20px;
+    gap: 28px;
+    padding-inline: 0;
+  }
+
+  .tt-actions .btn {
+    width: auto;
+    flex: 0 0 auto;
+  }
+
+  .tt-identity {
+    gap: 16px;
+  }
+
+  .tt-poster {
+    flex-basis: 96px;
+  }
+
+  .tt-title {
+    font-size: clamp(30px, 9vw, 40px);
+  }
+
+
+  .tt-tagline {
+    font-size: 15px;
+  }
+
+  /* Status, Curtir e Listas vão para a barra fixa; ficam aqui só "Onde assistir"/"Assistir agora". */
+  .tt-actions .tt-status,
+  .tt-actions > .tt-primary,
+  .tt-actions .tt-like,
+  .tt-actions > .tt-quiet:has(.lucide-list-plus) {
+    display: none;
+  }
+
+  .tt-rating-scale {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .tt-rating-value {
+    font-size: 48px;
+  }
+
+  .tt-mobile-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--mc-mobile-nav-h, 62px) + env(safe-area-inset-bottom));
+    z-index: var(--mc-z-topbar);
+    display: flex;
+    gap: 10px;
+    padding: 10px max(14px, env(safe-area-inset-right)) 10px max(14px, env(safe-area-inset-left));
+    border-top: 1px solid var(--line);
+    background: var(--bg);
+  }
+
+  .tt-mobile-primary {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .tt-mobile-primary .tt-primary-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tt-icon {
+    flex: 0 0 52px;
+    padding: 0;
+  }
+
+  @media (max-width: 360px) {
+    .tt-mobile-bar {
+      gap: 8px;
+    }
+
+    .tt-mobile-bar .tt-primary {
+      padding: 0 12px;
+    }
+
+    .tt-mobile-bar .tt-primary-chevron {
+      display: none;
+    }
+
+    .tt-icon {
+      flex-basis: 48px;
+    }
+  }
+
+  /* Espaço para a barra fixa não cobrir o fim da página. */
+  .main:has(.tt-mobile-bar) {
+    padding-bottom: calc(88px + 72px + env(safe-area-inset-bottom));
+  }
+}

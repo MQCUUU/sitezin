@@ -1,0 +1,56 @@
+/*
+ * Fase 4 — faixa panorâmica (components/title/hero/TitleBand.tsx), usada no
+ * Título e no Início. Fundo preto de ponta a ponta (sai do recuo do .main),
+ * tela 2.39:1 limitada a 48% da altura, cortina que abre quando a imagem chega.
+ */
+.tt-band {
+  --tt-bleed: 34px;
+  margin: 0 calc(var(--tt-bleed) * -1);
+  padding: 32px 0;
+  background: #000;
+}
+
+.tt-band-screen {
+  position: relative;
+  width: 100%;
+  /* A tela nunca passa de ~48% da altura: o título aparece sem rolar; sobra preto nas laterais, como no cinema. */
+  max-width: min(1440px, calc(48vh * 2.39));
+  margin: 0 auto;
+  aspect-ratio: 2.39 / 1;
+  overflow: hidden;
+  /* Fechada no centro até a imagem chegar; abre para as bordas como uma cortina. */
+  clip-path: inset(50% 0 50% 0);
+  transition: clip-path 420ms var(--mc-ease-in-out);
+}
+
+.tt-band[data-ready="true"] .tt-band-screen {
+  clip-path: inset(0 0 0 0);
+}
+
+.tt-band-screen img {
+  object-position: center 30%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tt-band-screen {
+    clip-path: none;
+    opacity: 0;
+    transition: opacity 200ms ease;
+  }
+  .tt-band[data-ready="true"] .tt-band-screen {
+    opacity: 1;
+  }
+}
+
+
+@media (max-width: 760px) {
+  .tt-band {
+    --tt-bleed: max(14px, env(safe-area-inset-left));
+    padding: 0;
+  }
+
+  /* No celular a faixa ganha altura (2.39:1 ficaria fina demais numa tela em pé). */
+  .tt-band-screen {
+    aspect-ratio: 16 / 10;
+  }
+}
