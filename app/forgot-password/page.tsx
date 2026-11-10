@@ -111,7 +111,7 @@ export default function ForgotPasswordPage() {
       <section className="auth-card auth-small-card">
         {/* V3.5: a mesma marca de entrar/cadastrar — antes, cartão genérico sem identidade. */}
         <Link href="/" className="auth-card-brand" aria-label="MyCatalog — página inicial">
-          <BrandLogo size={26} />
+          <BrandLogo size={24} />
         </Link>
 
         <Link

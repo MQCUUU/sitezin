@@ -12,7 +12,10 @@ register(
 
 const test = (await import("node:test")).default;
 const assert = (await import("node:assert/strict")).default;
-const { sanitizePreferences, DEFAULT_PREFERENCES, PREFERENCES_KEY, ACCENT_OPTIONS, readableAccent, contrastRatio, onAccent, DARK_SURFACE, LIGHT_SURFACE } = await import("../lib/preferences.ts");
+const prefs = await import("../lib/preferences.ts");
+const fs = (await import("node:fs")).default;
+const { sanitizePreferences, DEFAULT_PREFERENCES, PREFERENCES_KEY, applyPreferences, contrastRatio } = prefs;
+
 const { parseStreamingServices, providersToTmdbFilter, MAX_STREAMING_SERVICES } = await import("../lib/streaming-services.ts");
 const { relevantBrProviders, collapseProviderVariants } = await import("../lib/streaming/providers-br.ts");
 const { canViewProfile, canViewSection, mergeSocialSettings, followStatusFor } = await import("../lib/social/visibility.ts");
@@ -33,43 +36,49 @@ test("aparência: só valores conhecidos; lixo/JSON inválido vira padrão (nunc
   assert.equal(sanitizePreferences({ accent: "#22c55e; background:url(x)" }).accent, DEFAULT_PREFERENCES.accent, "sem injeção de CSS");
 });
 
-test("aparência: uma única chave; restaurar padrão só toca aparência + ordem da Biblioteca", () => {
+test("aparência: uma única chave; o campo accent continua aceito (compatível), mas não há mais opções de cor", () => {
   assert.equal(PREFERENCES_KEY, "mycatalog.preferences.v1");
   assert.deepEqual(Object.keys(DEFAULT_PREFERENCES).sort(), ["accent", "defaultSort", "density", "motion", "radius", "theme"]);
-  assert.equal(ACCENT_OPTIONS.length, 6);
-  for (const option of ACCENT_OPTIONS) assert.equal(sanitizePreferences({ accent: option.value }).accent, option.value);
-});
-
-test("aparência: no tema Claro, toda cor de destaque fica legível (≥ 4.5:1) sem trocar o matiz", () => {
-  // Fase 6: medido contra a superfície mais escura do tema Claro (--panel2 #eae8e4),
-  // não contra o fundo — links de destaque também ficam sobre painéis tingidos.
-  assert.equal(LIGHT_SURFACE, "#eae8e4");
-  for (const option of ACCENT_OPTIONS) {
-    const readable = readableAccent(option.value);
-    assert.ok(contrastRatio(readable, LIGHT_SURFACE) >= 4.5, `${option.name}: ${readable}`);
-    assert.ok(contrastRatio(readable, "#f4f3f0") >= 4.5, `${option.name} sobre o fundo: ${readable}`);
-    assert.ok(contrastRatio("#ffffff", readable) >= 4.5, `texto branco sobre ${option.name}`);
+  for (const gone of ["ACCENT_OPTIONS", "readableAccent", "onAccent", "DARK_SURFACE", "LIGHT_SURFACE"]) {
+    assert.equal(prefs[gone], undefined, gone);
   }
-  assert.ok(contrastRatio(ACCENT_OPTIONS[2].value, "#f5f6f8") < 3, "Ciano puro era ilegível (motivo da correção)");
-  assert.equal(readableAccent("#15171c"), "#15171c", "cor já legível não muda");
 });
 
-test("aparência: no tema Escuro/OLED, toda cor de destaque é legível (≥ 4.5:1) sobre a superfície mais clara", () => {
-  // Fase 4: fundo grafite (#1e1e20) e superfícies até #2c2c30 — o roxo padrão ficava em ~3,9:1.
-  for (const option of ACCENT_OPTIONS) {
-    const readable = readableAccent(option.value, DARK_SURFACE);
-    assert.ok(contrastRatio(readable, DARK_SURFACE) >= 4.5, `${option.name}: ${readable}`);
+test("aparência: a cor da marca é fixa — applyPreferences não escreve nem herda --accent", () => {
+  const set = [];
+  const removed = [];
+  globalThis.document = { documentElement: { dataset: {}, style: { setProperty: (k) => set.push(k), removeProperty: (k) => removed.push(k) } } };
+  try {
+    applyPreferences({ ...DEFAULT_PREFERENCES, accent: "#22c55e", theme: "light" });
+    assert.deepEqual(set.filter((k) => /accent/.test(k)), []);
+    for (const k of ["--accent", "--accent2", "--on-accent"]) assert.ok(removed.includes(k), k);
+    assert.equal(globalThis.document.documentElement.dataset.theme, "light");
+  } finally {
+    delete globalThis.document;
   }
-  assert.equal(readableAccent("#eceae6", DARK_SURFACE), "#eceae6", "cor já legível não muda");
 });
 
-test("aparência: texto do botão primário escolhe branco ou quase-preto pelo contraste (≥ 4.2 em todas)", () => {
-  for (const option of ACCENT_OPTIONS) {
-    for (const accent of [option.value, readableAccent(option.value)]) {
-      assert.ok(contrastRatio(onAccent(accent), accent) >= 4.2, `${option.name} ${accent} → ${onAccent(accent)}`);
+test("aparência: âmbar MyCatalog legível em todos os temas (≥ 4.5:1 sobre fundo e superfícies)", () => {
+  const css = fs.readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+  const block = (selector) => {
+    const i = css.indexOf(selector + " {");
+    assert.ok(i >= 0, selector);
+    const body = css.slice(i, css.indexOf("}", i));
+    return Object.fromEntries([...body.matchAll(/--([a-z0-9-]+):\s*(#[0-9a-f]{6})/gi)].map((m) => [m[1], m[2].toLowerCase()]));
+  };
+  const dark = block(":root");
+  const oled = { ...dark, ...block('html[data-theme="oled"]') };
+  const light = { ...dark, ...block('html[data-theme="light"]') };
+  assert.equal(dark.accent, "#f39a2b");
+  assert.equal(light.accent, "#9a4a00");
+  for (const [name, t] of Object.entries({ dark, oled, light })) {
+    for (const surface of ["bg", "panel", "panel2"]) {
+      assert.ok(contrastRatio(t.accent, t[surface]) >= 4.5, `${name} accent/${surface}: ${contrastRatio(t.accent, t[surface]).toFixed(2)}`);
+      assert.ok(contrastRatio(t.text, t[surface]) >= 7, `${name} text/${surface}`);
+      assert.ok(contrastRatio(t.muted, t[surface]) >= 4.5, `${name} muted/${surface}`);
     }
+    assert.ok(contrastRatio(t["on-accent"], t.accent) >= 4.5, `${name} on-accent`);
   }
-  assert.equal(onAccent("#06b6d4"), "#0b0d12", "Ciano: texto escuro");
 });
 
 /* ================================================================ STREAMING */
@@ -305,7 +314,7 @@ test("@: mesma regra em todas as rotas (inclusive a vitrine do perfil)", () => {
 
 /* ================================================================ CATÁLOGO E SESSÃO (bloqueio final V3.3) */
 
-const fs = (await import("node:fs")).default;
+
 const path = (await import("node:path")).default;
 const walk = (dir) =>
   fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

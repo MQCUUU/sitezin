@@ -1,8 +1,6 @@
-// Marca MyCatalog V3.5: node scripts/test-brand.mjs
-// Puro (lê só código-fonte e assets). Trava: fonte única da geometria, favicon
-// dinâmico seguro (destaque inválido → padrão), assets/manifest/títulos e nomes
-// acessíveis. O comportamento ao vivo (Configurações → favicon, refresh, outra
-// aba) foi verificado em navegador real contra TEST.
+// Marca MyCatalog (Projeção, Fase 1 — símbolo Dobra): node scripts/test-brand.mjs
+// Puro (lê só código-fonte e assets). Trava: fonte única da geometria, cor fixa da
+// marca (sem cor escolhida pelo usuário), assets/manifest/títulos e nomes acessíveis.
 import { register } from "node:module";
 
 register(
@@ -17,7 +15,6 @@ const assert = (await import("node:assert/strict")).default;
 const fs = (await import("node:fs")).default;
 const path = (await import("node:path")).default;
 const brand = await import("../lib/brand.ts");
-const { DEFAULT_PREFERENCES, ACCENT_OPTIONS } = await import("../lib/preferences.ts");
 
 const root = path.resolve(new URL(".", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"), "..");
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
@@ -29,33 +26,32 @@ const walk = (dir) =>
 const rel = (file) => path.relative(root, file).split(path.sep).join("/");
 const sources = [...walk(path.join(root, "app")), ...walk(path.join(root, "components"))].map((file) => [rel(file), fs.readFileSync(file, "utf8")]);
 
-test("destaque da marca = destaque padrão do usuário (sem segunda tabela de cor)", () => {
-  assert.equal(brand.BRAND_ACCENT, DEFAULT_PREFERENCES.accent);
-  assert.ok(ACCENT_OPTIONS.some((option) => option.value === brand.BRAND_ACCENT));
+test("cor da marca é fixa: âmbar MyCatalog (frente) e âmbar fechado (verso)", () => {
+  assert.equal(brand.BRAND_AMBER, "#f39a2b");
+  assert.equal(brand.BRAND_AMBER_BACK, "#b7630e");
+  assert.equal(brand.BRAND_ROOM, "#121113");
+  // Nada de cor por usuário na marca.
+  assert.equal(brand.brandAccent, undefined);
+  assert.equal(brand.needsDynamicFavicon, undefined);
 });
 
-test("brandAccent: só #rrggbb passa; o resto cai no padrão", () => {
-  assert.equal(brand.brandAccent("#3B82F6"), "#3b82f6");
-  for (const bad of [undefined, null, "", "red", "#fff", "#12345g", '"/><script>', "url(x)", 42, {}]) {
-    assert.equal(brand.brandAccent(bad), brand.BRAND_ACCENT, String(bad));
-  }
-});
-
-test("favicon: SVG pequeno, data: URL codificada, sem injeção", () => {
+test("Dobra: quatro faces, frente por cima do verso", () => {
+  assert.equal(brand.BRAND_VIEWBOX, "0 0 100 100");
+  assert.equal(brand.BRAND_FACES.back.length, 2);
+  assert.equal(brand.BRAND_FACES.front.length, 2);
   const svg = brand.brandMarkSvg();
-  assert.ok(svg.length < 700, `svg com ${svg.length} bytes`);
-  const href = brand.brandFaviconHref('"/><script>alert(1)</script>');
-  assert.ok(href.startsWith("data:image/svg+xml,"));
-  assert.ok(!/[<>"]/.test(href), "href precisa estar codificada");
-  assert.ok(decodeURIComponent(href).includes(`stroke="${brand.BRAND_ACCENT}"`));
-  assert.ok(decodeURIComponent(brand.brandFaviconHref("#22c55e")).includes('stroke="#22c55e"'));
+  const back = svg.indexOf(brand.BRAND_AMBER_BACK);
+  const front = svg.indexOf(brand.BRAND_AMBER);
+  assert.ok(back > 0 && front > back, "verso desenhado antes da frente");
+  for (const face of [...brand.BRAND_FACES.back, ...brand.BRAND_FACES.front]) assert.ok(svg.includes(face), face);
 });
 
-test("favicon dinâmico só quando o destaque foge do padrão", () => {
-  assert.equal(brand.needsDynamicFavicon(brand.BRAND_ACCENT), false);
-  assert.equal(brand.needsDynamicFavicon("#8B5CF6"), false);
-  assert.equal(brand.needsDynamicFavicon("lixo"), false);
-  assert.equal(brand.needsDynamicFavicon("#3b82f6"), true);
+test("favicon: desenho próprio na grade de 16 px, SVG pequeno e estático", () => {
+  const svg = brand.brandFaviconSvg();
+  assert.ok(svg.length < 700, `svg com ${svg.length} bytes`);
+  assert.match(svg, /viewBox="0 0 16 16"/);
+  assert.ok(svg.includes(brand.BRAND_ROOM), "placa Sala");
+  assert.equal(read("app/icon.svg").trim(), svg.trim());
 });
 
 test("monocromático: as variantes mono usam só preto e branco", () => {
@@ -66,34 +62,36 @@ test("monocromático: as variantes mono usam só preto e branco", () => {
 });
 
 test("assets estáticos gerados da mesma geometria", () => {
-  assert.equal(read("app/icon.svg").trim(), brand.brandMarkSvg().trim());
-  assert.ok(read("public/brand/mycatalog-mark.svg").includes(brand.BRAND_STROKE_PATH));
+  assert.ok(read("public/brand/mycatalog-mark.svg").includes(brand.BRAND_FACES.front[1]));
   for (const file of ["app/apple-icon.png", "public/brand/icon-192.png", "public/brand/icon-512.png", "public/brand/icon-maskable-512.png"]) {
     const png = fs.readFileSync(path.join(root, file));
     assert.equal(png.subarray(1, 4).toString(), "PNG", file);
   }
 });
 
-test("manifest: ícones existem, maskable separado, tema neutro", () => {
+test("manifest: ícones existem, maskable separado, tema = Sala", () => {
   const manifest = read("app/manifest.ts");
   for (const src of [...manifest.matchAll(/src: "([^"]+)"/g)].map((m) => m[1])) {
     const file = src === "/icon.svg" ? "app/icon.svg" : `public${src}`;
     assert.ok(fs.existsSync(path.join(root, file)), src);
   }
   assert.match(manifest, /purpose: "maskable"/);
-  assert.doesNotMatch(manifest, /theme_color: "#8b5cf6"/);
+  assert.match(manifest, /theme_color: "#121113"/);
+  assert.match(manifest, /background_color: "#121113"/);
 });
 
 test("fonte única: geometria do símbolo só em lib/brand.ts", () => {
-  const duplicated = sources.filter(([, src]) => src.includes(brand.BRAND_STROKE_PATH) || /M23 18 L32 33/.test(src)).map(([file]) => file);
+  const duplicated = sources.filter(([, src]) => src.includes("63,72") || src.includes("61,72")).map(([file]) => file);
   assert.deepEqual(duplicated, []);
-  assert.doesNotMatch(read("app/opengraph-image.tsx"), /<svg|<path/);
+  assert.doesNotMatch(read("app/opengraph-image.tsx"), /<svg|<path|<polygon/);
 });
 
-test("lockup: nome com cor fixa, destaque só no traço", () => {
+test("lockup: o símbolo é o M da palavra (yCatalog), nome acessível MyCatalog, sem cor do usuário", () => {
   const mark = read("components/brand/BrandMark.tsx");
-  assert.match(mark, /var\(--accent\)/);
+  assert.doesNotMatch(mark, /var\(--accent\)/);
   assert.match(mark, /aria-hidden/);
+  assert.match(mark, /yCatalog/);
+  assert.match(mark, /aria-label="MyCatalog"/);
   assert.match(read("styles/brand.css"), /\.brand-wordmark[\s\S]*?color: var\(--text\)/);
 });
 
@@ -134,16 +132,9 @@ test("favicon: fonte central — nenhuma rota declara ícone próprio", () => {
   assert.deepEqual(icons, ["apple-icon.png", "icon.svg"]);
 });
 
-test("favicon dinâmico sobrevive à navegação: 1 link, observer só nos filhos do <head>, sem polling", () => {
-  const src = read("components/brand/DynamicFavicon.tsx");
-  assert.match(src, /observer\.observe\(document\.head, \{ childList: true \}\)/);
-  assert.doesNotMatch(src, /subtree|attributes:|setInterval|setTimeout|requestAnimationFrame/);
-  assert.match(src, /getElementById\(LINK_ID\)/, "reaproveita o link existente");
-  assert.match(src, /observer\.disconnect\(\)/);
-});
-
-test("favicon dinâmico montado no layout raiz", () => {
+test("favicon estático: o favicon dinâmico (cor do usuário) saiu", () => {
+  assert.equal(fs.existsSync(path.join(root, "components/brand/DynamicFavicon.tsx")), false);
   const layout = read("app/layout.tsx");
-  assert.match(layout, /<DynamicFavicon \/>/);
+  assert.doesNotMatch(layout, /DynamicFavicon/);
   assert.match(layout, /styles\/brand\.css/);
 });

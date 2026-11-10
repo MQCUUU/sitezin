@@ -57,9 +57,6 @@
     font-weight: 900;
     letter-spacing: -.045em;
 }
-.auth-brand span {
-    color: var(--accent);
-}
 .auth-shell {
     width: min(970px, 100%);
     display: grid;

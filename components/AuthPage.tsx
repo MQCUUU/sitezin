@@ -488,7 +488,7 @@ export function AuthPage({
         className="auth-brand"
         aria-label="MyCatalog — página inicial"
       >
-        <BrandLogo size={30} />
+        <BrandLogo size={28} />
       </Link>
 
       <div className="auth-shell">

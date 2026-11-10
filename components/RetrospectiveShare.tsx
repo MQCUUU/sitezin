@@ -2,6 +2,7 @@
 
 
 import "@/styles/features/insights.css";
+import { BRAND_AMBER } from "@/lib/brand";
 import { useRef, useState } from "react";
 import { Download, ImageIcon, Share2 } from "lucide-react";
 import {
@@ -30,9 +31,8 @@ export function RetrospectiveShare({ data }: { data: RetrospectiveCardData }) {
     if (!canvas) return;
 
     try {
-      const accent =
-        getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#8b5cf6";
-      drawRetrospectiveCard(canvas, data, /^#[0-9a-fA-F]{6}$/.test(accent) ? accent : "#8b5cf6");
+      // O card tem fundo escuro fixo: usa sempre o âmbar da marca (no tema Claro o --accent é o âmbar fechado).
+      drawRetrospectiveCard(canvas, data, BRAND_AMBER);
       setGeneratedFor(data.year);
       setMessage("Card gerado.");
     } catch {

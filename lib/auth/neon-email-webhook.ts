@@ -320,17 +320,17 @@ export function renderMagicLinkEmail(linkType: LinkType, linkUrl: string): Email
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:560px;">
           <tr><td style="padding:0 0 18px 2px;">
             <table role="presentation" cellspacing="0" cellpadding="0" border="0"><tr>
-              <td width="5" style="width:5px;border-radius:4px;background-color:#8b5cf6;font-size:0;line-height:0;">&nbsp;</td>
+              <td width="5" style="width:5px;border-radius:4px;background-color:#f39a2b;font-size:0;line-height:0;">&nbsp;</td>
               <td style="padding-left:10px;color:#f6f7fb;font-size:19px;font-weight:750;letter-spacing:-0.4px;">MyCatalog</td>
             </tr></table>
           </td></tr>
           <tr><td style="padding:34px 32px 30px;border:1px solid #252a35;border-radius:16px;background-color:#11151d;">
-            <p style="margin:0 0 12px;color:#a78bfa;font-size:11px;font-weight:700;letter-spacing:1.2px;line-height:1.4;">${content.eyebrow}</p>
+            <p style="margin:0 0 12px;color:#f39a2b;font-size:11px;font-weight:700;letter-spacing:1.2px;line-height:1.4;">${content.eyebrow}</p>
             <h1 style="margin:0 0 14px;color:#f6f7fb;font-size:26px;font-weight:700;letter-spacing:-0.6px;line-height:1.2;">${content.title}</h1>
             <p style="margin:0 0 26px;color:#c1c5d0;font-size:15px;line-height:1.65;">${content.intro}</p>
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 25px;">
-              <tr><td align="center" style="border-radius:9px;background-color:#8b5cf6;">
-                <a href="${safeLink}" target="_blank" style="display:inline-block;padding:14px 20px;border:1px solid #8b5cf6;border-radius:9px;color:#ffffff;font-size:14px;font-weight:700;line-height:1.2;text-decoration:none;">${content.button}</a>
+              <tr><td align="center" style="border-radius:9px;background-color:#f39a2b;">
+                <a href="${safeLink}" target="_blank" style="display:inline-block;padding:14px 20px;border:1px solid #f39a2b;border-radius:9px;color:#121113;font-size:14px;font-weight:700;line-height:1.2;text-decoration:none;">${content.button}</a>
               </td></tr>
             </table>
             <p style="margin:0 0 8px;color:#a7adba;font-size:12px;line-height:1.55;">Se o botão não funcionar, copie e cole este link no navegador:</p>
@@ -386,10 +386,10 @@ export function renderOtpEmail(otpType: OtpType, otpCode: string, expiresAt: str
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px">
       <tr><td style="padding:0 0 18px 2px;color:#f6f7fb;font-size:19px;font-weight:750">▌ MyCatalog</td></tr>
       <tr><td style="padding:34px 32px 30px;border:1px solid #252a35;border-radius:16px;background:#11151d">
-        <p style="margin:0 0 12px;color:#a78bfa;font-size:11px;font-weight:700;letter-spacing:1.2px">${content.eyebrow}</p>
+        <p style="margin:0 0 12px;color:#f39a2b;font-size:11px;font-weight:700;letter-spacing:1.2px">${content.eyebrow}</p>
         <h1 style="margin:0 0 14px;font-size:26px;line-height:1.2">${content.title}</h1>
         <p style="margin:0 0 24px;color:#c1c5d0;font-size:15px;line-height:1.65">${content.intro}</p>
-        <p style="margin:0 0 22px;padding:18px;border:1px solid #343044;border-radius:12px;background:#171522;color:#c4b5fd;text-align:center;font-size:34px;font-weight:800;letter-spacing:10px;font-variant-numeric:tabular-nums">${codeHtml}</p>
+        <p style="margin:0 0 22px;padding:18px;border:1px solid #2e2c31;border-radius:12px;background:#1b1a1d;color:#f39a2b;text-align:center;font-size:34px;font-weight:800;letter-spacing:10px;font-variant-numeric:tabular-nums">${codeHtml}</p>
         <p style="margin:0 0 18px;color:#a7adba;font-size:12px;line-height:1.6">Este código expira em aproximadamente ${expiryMinutes} minuto(s). Não compartilhe com ninguém.</p>
         <p style="margin:0;padding-top:18px;border-top:1px solid #292e39;color:#a7adba;font-size:12px;line-height:1.6">${content.safety}</p>
       </td></tr>

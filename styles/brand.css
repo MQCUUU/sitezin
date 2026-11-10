@@ -1,15 +1,14 @@
 /*
- * V3.5 — marca MyCatalog (componentes em components/brand/, geometria em
- * lib/brand.ts). Regras antigas (.brand span / .auth-brand span) pintavam
- * metade do nome com o destaque; aqui o nome tem cor FIXA e a personalização
- * vive só no traço central do símbolo.
+ * Marca MyCatalog — símbolo Dobra (componentes em components/brand/, geometria
+ * em lib/brand.ts). Projeção, Fase 1: o símbolo é o M da palavra ([M]yCatalog),
+ * na altura da maiúscula da Archivo (0,683 em); cor fixa da marca.
  */
 
 .brand-logo {
   display: inline-flex;
-  align-items: center;
-  gap: 10px;
+  align-items: baseline;
   min-width: 0;
+  line-height: 1;
 }
 
 .brand-mark {
@@ -17,12 +16,20 @@
   display: block;
 }
 
+.brand-logo .brand-logo-mark {
+  width: 0.683em;
+  height: 0.683em;
+  margin-right: 0.05em;
+  align-self: baseline;
+}
+
 .brand-logo .brand-wordmark,
 .brand .brand-wordmark,
 .auth-brand .brand-wordmark {
   color: var(--text);
-  font-weight: 800;
-  letter-spacing: -0.4px;
+  font-weight: 700;
+  font-variation-settings: "wdth" 100;
+  letter-spacing: -0.025em;
   line-height: 1;
   white-space: nowrap;
 }

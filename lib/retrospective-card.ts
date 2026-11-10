@@ -84,7 +84,7 @@ function wrapLines(
 export function drawRetrospectiveCard(
   canvas: HTMLCanvasElement,
   data: RetrospectiveCardData,
-  accent = "#8b5cf6"
+  accent = "#f39a2b"
 ): void {
   canvas.width = CARD_WIDTH;
   canvas.height = CARD_HEIGHT;

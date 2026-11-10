@@ -23,21 +23,12 @@ export type AppearancePreferences = {
 
 export const DEFAULT_PREFERENCES: AppearancePreferences = {
   theme: "dark",
-  accent: "#8b5cf6",
+  accent: "#f39a2b",
   density: "comfortable",
   radius: "rounded",
   motion: "full",
   defaultSort: "added",
 };
-
-export const ACCENT_OPTIONS = [
-  { name: "Violeta", value: "#8b5cf6" },
-  { name: "Azul", value: "#3b82f6" },
-  { name: "Ciano", value: "#06b6d4" },
-  { name: "Verde", value: "#22c55e" },
-  { name: "Rosa", value: "#ec4899" },
-  { name: "Laranja", value: "#f97316" },
-] as const;
 
 const THEMES: ThemePreference[] = ["dark", "light", "oled"];
 const DENSITIES: DensityPreference[] = ["comfortable", "compact"];
@@ -129,16 +120,7 @@ export function applyAccountPreferences(preferences: unknown) {
   storeLocally(sanitizePreferences(preferences));
 }
 
-/* V3.3 — contraste (WCAG) do destaque. */
-/**
- * Fase 6: superfície mais escura do tema Claro (--panel2) — pior caso de
- * contraste. Antes media contra "#f5f6f8" (fundo antigo) e o roxo padrão
- * ficava em ~4,1:1 sobre os painéis tingidos.
- */
-export const LIGHT_SURFACE = "#eae8e4";
-/** Fase 4: superfície mais clara dos temas escuros (--panel2 do grafite) — pior caso de contraste. */
-export const DARK_SURFACE = "#2c2c30";
-
+/* Contraste WCAG — usado nos testes de tema (scripts/test-settings.mjs). */
 function rgbOf(hex: string) {
   return [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 }
@@ -159,55 +141,19 @@ export function contrastRatio(a: string, b: string) {
   return (x + 0.05) / (y + 0.05);
 }
 
-/**
- * Ajusta o destaque (mesmo matiz) só o necessário para ler como texto
- * (≥ 4.5:1) sobre o fundo: escurece num fundo claro (Ciano/Verde/Laranja puros
- * ficavam ~2:1 no tema Claro) e, desde a Fase 4, clareia num fundo escuro
- * (o roxo padrão ficava ~3,9:1 sobre o grafite).
- */
-export function readableAccent(accent: string, background = LIGHT_SURFACE, minimum = 4.5) {
-  const base = rgbOf(accent);
-  const lighten = luminance(rgbOf(background)) < 0.18;
-  let factor = 0;
-  let current = accent;
-
-  while (contrastRatio(current, background) < minimum && factor < 0.9) {
-    factor += 0.02;
-    current = `#${base
-      .map((value) => Math.round(lighten ? value + (255 - value) * factor : value * (1 - factor)).toString(16).padStart(2, "0"))
-      .join("")}`;
-  }
-
-  return current;
-}
-
-export function applyPreferences(
-  preferences: AppearancePreferences
-) {
+export function applyPreferences(preferences: AppearancePreferences) {
   if (typeof document === "undefined") return;
 
   const root = document.documentElement;
-  const accent = readableAccent(preferences.accent, preferences.theme === "light" ? LIGHT_SURFACE : DARK_SURFACE);
 
   root.dataset.theme = preferences.theme;
   root.dataset.density = preferences.density;
   root.dataset.radius = preferences.radius;
   root.dataset.motion = preferences.motion;
 
-  root.style.setProperty(
-    "--accent",
-    accent
-  );
-
-  root.style.setProperty(
-    "--accent2",
-    accent
-  );
-
-  // Texto SOBRE o destaque (botão primário): branco ou quase-preto, o que ler melhor.
-  root.style.setProperty("--on-accent", onAccent(accent));
-}
-
-export function onAccent(accent: string) {
-  return contrastRatio(accent, "#ffffff") >= contrastRatio(accent, "#0b0d12") ? "#ffffff" : "#0b0d12";
+  // Projeção (Fase 1): o âmbar MyCatalog vem do CSS de cada tema. Limpa o que
+  // a versão anterior escrevia no <html> (cor escolhida pelo usuário).
+  root.style.removeProperty("--accent");
+  root.style.removeProperty("--accent2");
+  root.style.removeProperty("--on-accent");
 }

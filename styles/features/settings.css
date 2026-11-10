@@ -785,37 +785,10 @@ input {
     color: var(--bg);
 }
 .set-segmented button:focus-visible,
-.set-swatches button:focus-visible,
 .set-switch:focus-visible,
 .set-icon-btn:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
-}
-.set-swatches {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-.set-swatches button {
-    width: 32px;
-    height: 32px;
-    min-width: 32px;
-    min-height: 32px;
-    aspect-ratio: 1 / 1;
-    flex: 0 0 32px;
-    flex-shrink: 0;
-    padding: 0;
-    border-radius: 50%;
-    border: 2px solid transparent;
-    cursor: pointer;
-    box-sizing: border-box;
-    appearance: none;
-    -webkit-appearance: none;
-}
-.set-swatches button.is-active {
-    border-color: var(--text);
-    box-shadow: 0 0 0 2px var(--panel);
 }
 .set-switch {
     position: relative;

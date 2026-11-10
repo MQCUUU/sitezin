@@ -29,7 +29,6 @@ import { HiddenTitlesSettings } from '@/components/HiddenTitlesSettings';
 import { UncensoredModeSettings } from '@/components/settings/UncensoredModeSettings';
 
 import {
-  ACCENT_OPTIONS,
   DEFAULT_PREFERENCES,
   type AppearancePreferences,
   readPreferences,
@@ -49,7 +48,7 @@ import {
 type TabId = 'appearance' | 'streaming' | 'notifications' | 'account' | 'ratings' | 'data';
 
 const TABS: { id: TabId; label: string; hint: string; icon: LucideIcon }[] = [
-  { id: 'appearance', label: 'Aparência', hint: 'Tema, cor e densidade', icon: Palette },
+  { id: 'appearance', label: 'Aparência', hint: 'Tema, densidade e cantos', icon: Palette },
   { id: 'streaming', label: 'Streaming', hint: 'Modo Sem Censura e onde assiste', icon: Tv },
   { id: 'notifications', label: 'Notificações', hint: 'Avisos do site', icon: Bell },
   { id: 'account', label: 'Conta e privacidade', hint: 'Perfil, @, visibilidade', icon: ShieldCheck },
@@ -171,24 +170,6 @@ function AppearanceSection() {
             { value: 'oled', label: 'OLED' },
           ]}
         />
-      </Row>
-
-      <Row label="Cor de destaque">
-        <div className="set-swatches" role="radiogroup" aria-label="Cor de destaque">
-          {ACCENT_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              role="radio"
-              aria-checked={preferences.accent === option.value}
-              aria-label={option.name}
-              title={option.name}
-              className={preferences.accent === option.value ? 'is-active' : ''}
-              style={{ background: option.value }}
-              onClick={() => change('accent', option.value)}
-            />
-          ))}
-        </div>
       </Row>
 
       <Row label="Densidade" hint="Compacta mostra mais títulos por tela.">

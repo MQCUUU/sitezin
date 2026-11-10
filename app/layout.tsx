@@ -19,26 +19,27 @@ import "@/styles/brand.css";
 import "@/styles/controls.css";
 
 import type { Metadata, Viewport } from "next";
-import { Schibsted_Grotesk } from "next/font/google";
+import { Archivo } from "next/font/google";
 import { Suspense } from "react";
 
 import { Nav } from "@/components/Nav";
 import { AppearanceProvider } from "@/components/AppearanceProvider";
-import { DynamicFavicon } from "@/components/brand/DynamicFavicon";
 import { ScrollMemory } from "@/components/ScrollMemory";
 import { AppProviders } from "@/components/AppProviders";
 import { TopbarActions } from "@/components/TopbarActions";
 import { getSiteUrl } from "@/lib/site-url";
 
 /*
- * Fase 4 (direção "Tela 2.39:1"): uma família só — Schibsted Grotesk, de
- * títulos grandes a rótulos. next/font hospeda a fonte junto com o app (sem
- * requisição ao Google, sem layout shift); `display: swap` mostra o fallback
- * enquanto carrega.
+ * Projeção (Fase 1): uma família só — Archivo, variável em peso e largura
+ * (eixo wdth 62–125): títulos condensados de cartaz e texto na largura normal.
+ * next/font hospeda a fonte junto com o app (sem requisição ao Google) e ajusta
+ * a fonte de reserva para não haver salto de layout; `display: swap` mostra a
+ * reserva enquanto carrega.
  */
-const sans = Schibsted_Grotesk({
+const sans = Archivo({
   subsets: ["latin"],
   display: "swap",
+  axes: ["wdth"],
   variable: "--font-sans",
 });
 
@@ -119,8 +120,8 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#1e1e20" },
-    { media: "(prefers-color-scheme: light)", color: "#f4f3f0" },
+    { media: "(prefers-color-scheme: dark)", color: "#121113" },
+    { media: "(prefers-color-scheme: light)", color: "#f2f0ec" },
   ],
 };
 
@@ -141,7 +142,6 @@ export default function RootLayout({
 
   <AppProviders>
           <AppearanceProvider />
-          <DynamicFavicon />
 
           <Suspense fallback={null}>
             <ScrollMemory />

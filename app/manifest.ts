@@ -17,8 +17,8 @@ export default function manifest(): MetadataRoute.Manifest {
       "Organize sua biblioteca de filmes e séries, acompanhe o que assistiu e descubra novos títulos.",
     start_url: "/",
     display: "standalone",
-    background_color: "#1e1e20",
-    theme_color: "#1e1e20",
+    background_color: "#121113",
+    theme_color: "#121113",
     lang: "pt-BR",
     orientation: "any",
     categories: [

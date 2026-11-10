@@ -158,7 +158,7 @@ export function Nav() {
           className="brand mc-focusable"
           aria-label="MyCatalog — página inicial"
         >
-          <BrandLogo size={28} />
+          <BrandLogo size={24} />
         </Link>
 
         {/* NAVEGAÇÃO */}
@@ -233,7 +233,7 @@ export function Nav() {
 
       {/* V3.5: no mobile a sidebar some — o símbolo (sem o nome, por espaço) leva ao início. */}
       <Link href="/" className="mobile-brand mc-focusable" aria-label="MyCatalog — página inicial">
-        <BrandMark size={30} />
+        <BrandMark size={22} />
       </Link>
 
       {/* ====================================== */}

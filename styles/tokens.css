@@ -66,7 +66,13 @@
   --mc-color-info: #4ea8de;
   --mc-color-info-soft: color-mix(in srgb, #4ea8de 16%, transparent);
   --mc-color-favorite: #ff5c83;
-  --mc-color-rating: #f6c65b;
+  /*
+   * Projeção (Fase 1): a nota do público (TMDB) é neutra; o âmbar fica para o
+   * que é seu (sua nota, seu status). Antes o mesmo amarelo servia aos dois.
+   */
+  --mc-color-rating: var(--mc-color-text-secondary);
+  /* Fundo do item atual e das marcas "seu" (aba da navegação, fichas). */
+  --mc-color-brand-tint: var(--brand-tint, #2f2216);
 
   /*
    * Scrim for text sitting on top of a photographic image (hero
@@ -79,7 +85,7 @@
   --mc-color-scrim: 6, 8, 16;
 
   /* ---------------------------------------------------------------- */
-  /* Typography — uma família: Schibsted Grotesk (Fase 4, next/font)    */
+  /* Typography — uma família: Archivo (Projeção, Fase 1, next/font)      */
   /* ---------------------------------------------------------------- */
   --mc-font-sans: var(--font-sans), var(--font-ui, system-ui), ui-sans-serif,
     system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -194,12 +200,13 @@
    *   xl 22 blocos de destaque (hero, cards grandes)
    *   pill  chips/pílulas — fica pílula em qualquer preferência
    */
-  --mc-radius-xs: 4px;
-  --mc-radius-sm: 8px;
-  --mc-radius-md: 12px;
-  --mc-radius-lg: 16px;
-  --mc-radius-xl: 22px;
-  --mc-radius-panel: var(--radius-panel, 16px);
+  /* Projeção (Fase 1): escala mais reta — pôster de 4 px (cópia de filme), botão 8, diálogo 12. */
+  --mc-radius-xs: 2px;
+  --mc-radius-sm: 4px;
+  --mc-radius-md: 8px;
+  --mc-radius-lg: 12px;
+  --mc-radius-xl: 12px;
+  --mc-radius-panel: var(--radius-panel, 12px);
   --mc-radius-pill: 999px;
 
   /* ---------------------------------------------------------------- */
@@ -320,8 +327,7 @@
  * mantém a leitura de "estrela/ouro" com 5,1:1 sobre o painel branco.
  */
 [data-theme="light"] {
-  --mc-color-rating: #a35c00;
-  /* Mesmo motivo para o rosa de "Curtido" (#ff5c83 sobre o fundo claro = 2,7:1). */
+  /* O rosa de "Curtido" (#ff5c83 sobre o fundo claro = 2,7:1). */
   --mc-color-favorite: #c2255c;
 }
 
@@ -334,11 +340,11 @@
 
 /* Preferência "Cantos": a escala inteira acompanha (ver --mc-radius-* acima). */
 [data-radius="soft"] {
-  --mc-radius-xs: 3px;
-  --mc-radius-sm: 6px;
-  --mc-radius-md: 8px;
-  --mc-radius-lg: 10px;
-  --mc-radius-xl: 12px;
+  --mc-radius-xs: 2px;
+  --mc-radius-sm: 3px;
+  --mc-radius-md: 6px;
+  --mc-radius-lg: 8px;
+  --mc-radius-xl: 8px;
 }
 
 [data-radius="square"] {

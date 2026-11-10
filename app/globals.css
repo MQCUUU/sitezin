@@ -9,20 +9,26 @@
  */
 
 :root {
-    /* Fase 4 — "Tela 2.39:1": grafite neutro de sala de cinema (antes azul-escuro). */
-    --bg: #1e1e20;
-    --panel: #26262a;
-    --panel2: #2c2c30;
-    --text: #eceae6;
-    --muted: #a6a39d;
-    --line: #2e2e32;
-    /* Ação principal: clara sobre o fundo (a cor de destaque fica para detalhes). */
-    --primary: #eceae6;
+    /*
+     * Projeção (Fase 1) — "Cabine": sala escura levemente quente e uma cor só da
+     * marca, o âmbar MyCatalog, fixo (não há mais cor escolhida pelo usuário).
+     * O âmbar marca o que é seu, o item atual e o foco; o resto fica neutro.
+     */
+    --bg: #121113;
+    --panel: #1b1a1d;
+    --panel2: #242226;
+    --text: #eeeae3;
+    --muted: #a29d95;
+    --line: #2e2c31;
+    /* Ação principal: clara sobre o fundo. */
+    --primary: #eeeae3;
     --primary-hover: #ffffff;
-    --on-primary: #1e1e20;
-    /* Roxo padrão já ajustado para 4,5:1 sobre o grafite (lib/preferences.ts readableAccent). */
-    --accent: #a27df8;
-    --accent2: #a27df8;
+    --on-primary: #121113;
+    --accent: #f39a2b;
+    --accent2: #f39a2b;
+    --on-accent: #121113;
+    /* Fundo do item atual (navegação, fichas suas). */
+    --brand-tint: #2f2216;
     --good: #35d39a;
     --danger: #ff667d;
 
@@ -102,7 +108,7 @@ button {
     outline: none
 }
 .search input:focus {
-    border-color: #4d3c7f
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--line))
 }
 .search svg {
     position: absolute;
@@ -475,22 +481,28 @@ button {
 
 html[data-theme="oled"] {
     --bg: #000000;
-    --panel: #121213;
-    --panel2: #19191b;
-    --text: #eceae6;
-    --muted: #a19e98;
-    --line: #232326
+    --panel: #0e0e0f;
+    --panel2: #161618;
+    --text: #eeeae3;
+    --muted: #9c978f;
+    --line: #1f1f22;
+    --brand-tint: #241a10
 }
 html[data-theme="light"] {
-    --bg: #f4f3f0;
+    --bg: #f2f0ec;
     --panel: #ffffff;
-    --panel2: #eae8e4;
-    --text: #1e1e20;
-    --muted: #5f5c57;
-    --line: #dcd9d3;
-    --primary: #1e1e20;
+    --panel2: #e8e6e1;
+    --text: #1a191c;
+    --muted: #5e5a54;
+    --line: #dad7d1;
+    --primary: #1a191c;
     --primary-hover: #000000;
-    --on-primary: #f4f3f0
+    --on-primary: #f2f0ec;
+    /* O âmbar puro some no claro (1,9:1): texto e indicadores usam o âmbar fechado. */
+    --accent: #9a4a00;
+    --accent2: #9a4a00;
+    --on-accent: #ffffff;
+    --brand-tint: #f5e3cf
 }
 html[data-theme="light"] .sidebar {
     background: #ffffff
