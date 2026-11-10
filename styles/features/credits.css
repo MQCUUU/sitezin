@@ -1,0 +1,57 @@
+/*
+ * Projeção (Fase 2) — Créditos (components/ui/Credits.tsx). Grade de duas
+ * colunas com subgrid: todas as funções terminam no mesmo eixo, todos os nomes
+ * começam nele. Sem caixa, sem ícone, sem borda.
+ */
+.mc-credits {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--mc-space-8) var(--mc-space-16);
+  margin: 0;
+  font-size: var(--mc-fs-base);
+  line-height: 1.45;
+}
+
+.mc-credits-row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: baseline;
+}
+
+.mc-credits dt {
+  color: var(--mc-color-text-secondary);
+  text-align: right;
+}
+
+.mc-credits dd {
+  margin: 0;
+  color: var(--mc-color-text);
+  font-weight: 560;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.mc-credits dd a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--mc-color-accent);
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 480px) {
+  .mc-credits {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--mc-space-12);
+  }
+
+  .mc-credits-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .mc-credits dt {
+    text-align: left;
+    font-size: var(--mc-fs-sm);
+  }
+}

@@ -20,8 +20,6 @@ export function TitleTrailer({ details }: TitleTrailerProps) {
   return (
     <section className="section mc-title-section">
       <div className="title-section-heading">
-        <span>Vídeo</span>
-
         <h2>Trailer</h2>
       </div>
 

@@ -53,34 +53,7 @@
   box-shadow: var(--mc-shadow-modal);
 }
 
-/* ---------------------------------------------------------------------------
- * Abas da página de título: rótulo 13px (igual às abas do Descobrir), 40px,
- * nunca quebra linha. No celular, cada aba tem o tamanho do texto e o trilho
- * rola — antes as 4 colunas fixas (repeat(4,1fr)) espremiam "Avaliações e
- * resenhas" em 2 linhas a 390px.
- * ------------------------------------------------------------------------- */
-.mc-title-tabs .title-content-tabs button {
-  min-height: var(--mc-control-md);
-  font-size: var(--mc-fs-sm);
-  white-space: nowrap;
-}
-
-/*
- * Tablet/notebook estreito (601px até ~1000px com a barra lateral): as colunas
- * 1fr encolhiam abaixo do texto e, sem quebra de linha, os rótulos vazavam por
- * cima das abas vizinhas. Cada coluna nunca fica menor que o próprio texto;
- * quando não cabe, o trilho rola (overflow-x: auto em .mc-title-tabs-track).
- */
-.mc-title-tabs .title-content-tabs.mc-title-tabs-track {
-  grid-template-columns: none;
-  grid-auto-columns: minmax(max-content, 1fr);
-}
-
-@media (max-width: 600px) {
-  .mc-title-tabs .title-content-tabs.mc-title-tabs-track {
-    grid-auto-columns: max-content;
-  }
-}
+/* Abas da página de título: styles/features/title-detail.css (Projeção, Fase 2: abas de texto). */
 
 /* ---------------------------------------------------------------------------
  * Busca do topo: a mesma geometria em todas as páginas (largura máx. 600px,

@@ -65,7 +65,8 @@ export function formatRuntime(minutes: number | null | undefined) {
   return h ? (rest ? `${h}h ${pad(rest)}min` : `${h}h`) : `${rest} min`;
 }
 
-export type HeroBar = { percent: number; label: string };
+/** Projeção (Fase 2): watched/total alimentam o Rolo (uma marca por episódio). */
+export type HeroBar = { percent: number; label: string; watched: number; total: number };
 
 export type ActiveHero = {
   eyebrow: string;
@@ -108,7 +109,7 @@ export function activeHero(item: HomeItem): ActiveHero {
 
     const label = `${progress.watched} de ${progress.total} episódios exibidos`;
 
-    return { meta: `${label}${runtime}`, bar: { percent: progress.percent, label } };
+    return { meta: `${label}${runtime}`, bar: { percent: progress.percent, label, watched: progress.watched, total: progress.total } };
   };
 
   if (!lp) {

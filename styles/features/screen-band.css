@@ -8,23 +8,31 @@
  * faixa ficava preta até ~4,4s (LCP). Agora abre por animação CSS, sem JS; a
  * imagem tem preload (priority) e normalmente já está lá quando a cortina abre.
  */
+/*
+ * Projeção (Fase 2): a Tela vai de ponta a ponta do conteúdo, sem a tarja
+ * preta em volta. Mantém 2.39:1 até um teto de altura (~60% da tela); passando
+ * dele, a imagem é recortada (cover) em vez de ganhar barras laterais.
+ */
 .tt-band {
   --tt-bleed: 34px;
   margin: 0 calc(var(--tt-bleed) * -1);
-  padding: 32px 0;
   background: #000;
 }
 
 .tt-band-screen {
   position: relative;
   width: 100%;
-  /* A tela nunca passa de ~48% da altura: o título aparece sem rolar; sobra preto nas laterais, como no cinema. */
-  max-width: min(1440px, calc(48vh * 2.39));
-  margin: 0 auto;
   aspect-ratio: 2.39 / 1;
+  max-height: min(60vh, 640px);
   overflow: hidden;
   /* Abre do centro para as bordas, como uma cortina. */
   animation: tt-band-open 420ms var(--mc-ease-in-out) 80ms both;
+}
+
+.tt-band-screen img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 @keyframes tt-band-open {
@@ -51,7 +59,6 @@
 @media (max-width: 760px) {
   .tt-band {
     --tt-bleed: max(14px, env(safe-area-inset-left));
-    padding: 0;
   }
 
   /* No celular a faixa ganha altura (2.39:1 ficaria fina demais numa tela em pé). */

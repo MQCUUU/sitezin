@@ -286,9 +286,10 @@
     cursor: pointer
 }
 .notification-action.primary {
-    border-color: var(--accent);
-    background: var(--accent);
-    color: var(--on-accent, #fff)
+    /* Projeção (Fase 2): sem preenchimento âmbar. */
+    background: var(--mc-color-primary);
+    border-color: transparent;
+    color: var(--mc-color-primary-contrast);
 }
 .notification-action:disabled {
     opacity: .72;

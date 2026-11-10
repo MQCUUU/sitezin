@@ -15,6 +15,8 @@ import "@/styles/media-unified.css";
 // Fase 4: insights/calendar/diary.css vão só nas rotas que os usam (não no Login, Home, Busca…).
 import "@/styles/lists.css";
 import "@/styles/brand.css";
+// Projeção (Fase 2): enquadramento e dobra sobre o pôster.
+import "@/styles/frame.css";
 // Fase 3: padrão final de controles (botões, chips, ícones, diálogos) — por último.
 import "@/styles/controls.css";
 

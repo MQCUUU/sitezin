@@ -229,6 +229,9 @@ test("barra: numerador/denominador e barra são a MESMA grandeza (episódios exi
   assert.equal(h.bar.label, "32 de 40 episódios exibidos");
   assert.equal(h.bar.percent, 80);
   assert.equal(h.bar.percent, Math.round((item.progress.watched / item.progress.total) * 100));
+  // Projeção (Fase 2): o Rolo desenha uma marca por episódio — precisa das contagens.
+  assert.equal(h.bar.watched, item.progress.watched);
+  assert.equal(h.bar.total, item.progress.total);
   assert.ok(h.meta.startsWith(h.bar.label), "a linha de contexto é exatamente o que a barra mede");
 });
 

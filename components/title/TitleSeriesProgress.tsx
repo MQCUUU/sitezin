@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PlayCircle } from "lucide-react";
 
 import { SeriesProgressPanel } from "@/components/library/SeriesProgress";
+import { ReelProgress } from "@/components/ui/ReelProgress";
 import { episodeCode } from "@/lib/library/progress";
 import type { LibraryProgress } from "@/lib/library/progress";
 import type { TvProgress } from "@/lib/tv-progress";
@@ -42,17 +43,12 @@ export function TitleSeriesProgress({
       {showBar && (
         <div className="title-series-progress-total">
           <span>{barLabel}</span>
-          <span
-            className="title-series-progress-bar"
-            role="progressbar"
-            aria-label="Episódios exibidos assistidos"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={totals!.percent!}
-            aria-valuetext={barLabel!}
-          >
-            <span style={{ width: `${totals!.percent}%` }} />
-          </span>
+          <ReelProgress
+            watched={totals!.watched}
+            total={totals!.total!}
+            label="Episódios exibidos assistidos"
+            valueText={barLabel!}
+          />
         </div>
       )}
 

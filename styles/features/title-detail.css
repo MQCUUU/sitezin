@@ -1490,7 +1490,7 @@
 .episode-watch-action:hover {
     background: var(--accent);
     border-color: var(--accent);
-    color: #fff;
+    color: var(--on-accent);
 }
 .episode-watch-action:active {
     transform: translateY(0.5px);
@@ -1757,60 +1757,48 @@
     }
 }
 /*
- * The nav keeps the legacy `.title-content-tabs` class (QA scripts across
- * C1.1.5-C1.2.5 select tabs by id, not by class, but this class predates
- * that and other code may still reference it) — its sticky/margin from
- * app/globals.css now belongs to the `.mc-title-tabs` wrapper instead, so
- * reset it here at higher specificity rather than editing the legacy line.
+ * Projeção (Fase 2): abas de texto com traço âmbar sob a atual — o mesmo padrão
+ * das outras páginas (.sk-tabs). Saiu a pílula com fundo e desfoque. A barra
+ * continua grudada no topo ao rolar, com o fundo da página e um fio embaixo.
  */
-.mc-title-tabs .title-content-tabs.mc-title-tabs-track {
-    position: static;
-    top: auto;
-    margin: 0;
-}
 .mc-title-tabs-track {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: 1fr;
-    gap: var(--mc-space-4);
-    padding: var(--mc-space-4);
-    border-radius: var(--mc-radius-pill);
-    border: var(--mc-border-subtle);
-    background: color-mix(in srgb, var(--mc-color-surface) 92%, transparent);
-    backdrop-filter: blur(14px);
+    display: flex;
+    gap: var(--mc-space-24);
+    padding: 0;
+    border-bottom: 1px solid var(--mc-color-border);
+    background: var(--mc-color-bg);
     overflow-x: auto;
+    scrollbar-width: none;
 }
-@media (max-width: 600px) {
-    .mc-title-tabs-track {
-        grid-auto-columns: minmax(120px, 1fr);
-    }
+.mc-title-tabs-track::-webkit-scrollbar {
+    display: none;
 }
 .mc-title-tab {
+    flex: 0 0 auto;
     min-width: 0;
-    padding: var(--mc-space-12) var(--mc-space-8);
+    padding: var(--mc-space-12) 0;
     border: none;
-    border-radius: var(--mc-radius-pill);
+    border-radius: 0;
     background: transparent;
     color: var(--mc-color-text-secondary);
-    font-size: var(--mc-text-caption-size);
-    font-weight: 700;
-    letter-spacing: 0.01em;
+    font-size: var(--mc-fs-md);
+    font-weight: 600;
+    white-space: nowrap;
     cursor: pointer;
     position: relative;
-    transition: background var(--mc-duration-fast) var(--mc-ease-standard), color var(--mc-duration-fast) var(--mc-ease-standard);
+    box-shadow: inset 0 -2px 0 transparent;
+    transition: color var(--mc-duration-fast) var(--mc-ease-standard), box-shadow var(--mc-duration-fast) var(--mc-ease-standard);
 }
 .mc-title-tab:hover {
     color: var(--mc-color-text);
 }
-/* Projeção (Fase 1): aba atual = fundo âmbar tinta + texto âmbar (o mesmo "item atual" da navegação), não mais preenchida. */
 .mc-title-tab.active {
-    background: var(--mc-color-brand-tint);
-    color: var(--mc-color-accent);
-    font-weight: 700;
+    color: var(--mc-color-text);
+    box-shadow: inset 0 -2px 0 var(--mc-color-accent);
 }
 .mc-title-tab:focus-visible {
-    outline: none;
-    box-shadow: var(--mc-focus-ring);
+    outline: 2px solid var(--mc-color-accent);
+    outline-offset: -2px;
 }
 @media (prefers-reduced-motion: reduce) {
     .mc-title-tab {
@@ -2006,19 +1994,8 @@
     font-size: var(--mc-fs-sm);
     color: var(--muted);
 }
-.title-series-progress-bar {
-    display: block;
-    height: 6px;
-    border-radius: var(--mc-radius-pill);
-    overflow: hidden;
-    background: color-mix(in srgb, var(--text) 10%, transparent);
-}
-.title-series-progress-bar > span {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: var(--accent);
-}
+
+
 .title-series-progress-actions {
     display: flex;
     flex-wrap: wrap;
@@ -2446,4 +2423,9 @@ a.series-episode-row {
     border: 2px solid var(--mc-color-accent);
     border-radius: inherit;
     pointer-events: none;
+}
+
+/* Projeção (Fase 2): ficha em Créditos, abaixo dos gêneros. */
+.title-credits {
+    margin-top: var(--mc-space-24);
 }

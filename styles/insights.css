@@ -1053,9 +1053,10 @@
 }
 
 .ins-years button.is-active {
-  color: var(--on-accent, #fff);
-  background: var(--accent);
-  border-color: var(--accent);
+  /* Projeção (Fase 2): sem preenchimento âmbar. */
+  background: var(--mc-color-text);
+  border-color: var(--mc-color-text);
+  color: var(--mc-color-bg);
 }
 
 .ins-heat-scroll {

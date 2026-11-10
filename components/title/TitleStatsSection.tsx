@@ -1,5 +1,4 @@
-import { Globe2, Languages, MessageSquare } from "lucide-react";
-
+import { Credits } from "@/components/ui/Credits";
 import { countryNames, languageName } from "@/lib/title-locale";
 import type { LooseTitleDetails } from "./types";
 
@@ -18,34 +17,20 @@ export function TitleStatsSection({ details }: TitleStatsSectionProps) {
   const countries = countryNames(details.production_countries);
   const votes = Number(details.vote_count || 0);
   const facts = [
-    language ? { icon: <Languages size={20} aria-hidden="true" />, label: "Idioma original", value: language } : null,
-    countries.length ? { icon: <Globe2 size={20} aria-hidden="true" />, label: countries.length > 1 ? "Países de origem" : "País de origem", value: countries.join(", ") } : null,
-    votes > 0 ? { icon: <MessageSquare size={20} aria-hidden="true" />, label: "Votos no TMDB", value: votes.toLocaleString("pt-BR") } : null,
-  ].filter((fact): fact is { icon: React.JSX.Element; label: string; value: string } => fact !== null);
+    { label: "Idioma original", value: language || null },
+    { label: countries.length > 1 ? "Países de origem" : "País de origem", value: countries.length ? countries.join(", ") : null },
+    { label: "Votos no TMDB", value: votes > 0 ? votes.toLocaleString("pt-BR") : null },
+  ];
 
-  if (facts.length === 0) return null;
+  if (facts.every((fact) => !fact.value)) return null;
 
   return (
     <section className="section mc-title-section">
       <div className="title-section-heading">
-        <span>Detalhes</span>
-
         <h2>Informações</h2>
       </div>
 
-      <div className="title-stats-grid">
-        {facts.map((fact) => (
-          <div key={fact.label} className="panel title-stat">
-            {fact.icon}
-
-            <div>
-              <span className="muted">{fact.label}</span>
-
-              <strong>{fact.value}</strong>
-            </div>
-          </div>
-        ))}
-      </div>
+      <Credits items={facts} label="Informações" />
     </section>
   );
 }

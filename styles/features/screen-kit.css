@@ -371,12 +371,32 @@ button.sk-link {
 }
 
 /* ---------------------------------------------------------------- Vazio */
+/* Projeção (Fase 2): o vazio é uma "tela apagada" com o enquadramento âmbar. */
 .sk-empty {
+  position: relative;
   display: grid;
   justify-items: start;
   gap: 10px;
-  max-width: 52ch;
-  padding: 48px 0;
+  max-width: 60ch;
+  padding: 40px 36px;
+}
+
+.sk-empty::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 2px solid var(--mc-color-accent);
+  -webkit-mask:
+    linear-gradient(#000 0 0) top left / 18px 18px no-repeat,
+    linear-gradient(#000 0 0) top right / 18px 18px no-repeat,
+    linear-gradient(#000 0 0) bottom left / 18px 18px no-repeat,
+    linear-gradient(#000 0 0) bottom right / 18px 18px no-repeat;
+  mask:
+    linear-gradient(#000 0 0) top left / 18px 18px no-repeat,
+    linear-gradient(#000 0 0) top right / 18px 18px no-repeat,
+    linear-gradient(#000 0 0) bottom left / 18px 18px no-repeat,
+    linear-gradient(#000 0 0) bottom right / 18px 18px no-repeat;
 }
 
 .sk-empty h2 {

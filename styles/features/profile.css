@@ -1182,8 +1182,10 @@
     cursor: pointer
 }
 .profile-own-connections-tabs button.active {
-    background: var(--accent);
-    color: var(--on-accent,#07110d)
+    /* Projeção (Fase 2): sem preenchimento âmbar. */
+    background: var(--mc-color-text);
+    border-color: var(--mc-color-text);
+    color: var(--mc-color-bg);
 }
 .profile-own-connections-tabs button span {
     min-width: 20px;

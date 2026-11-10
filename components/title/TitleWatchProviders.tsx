@@ -46,8 +46,6 @@ export function TitleWatchProviders({ details }: TitleWatchProvidersProps) {
   return (
     <section className="section mc-title-section title-watch-section">
       <div className="title-section-heading">
-        <span>Disponibilidade</span>
-
         <h2>Onde assistir no Brasil</h2>
       </div>
 

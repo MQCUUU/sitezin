@@ -568,7 +568,7 @@
     background: color-mix(in srgb, var(--text) 8%, transparent);
 }
 .verify-story-steps .is-current { color: var(--text); }
-.verify-story-steps .is-current b { color: #fff; background: var(--accent); }
+.verify-story-steps .is-current b { color: var(--on-accent); background: var(--accent); }
 .verify-story-steps .is-complete { color: #55dfa6; }
 .verify-story-steps .is-complete b { color: #08150f; background: #55dfa6; }
 .verify-story-steps i { height: 1px; background: var(--border); }

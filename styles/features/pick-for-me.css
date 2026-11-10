@@ -109,9 +109,10 @@
     cursor: pointer;
 }
 .pick-type-tabs button.active {
-    color: var(--on-accent, #fff);
-    /* Fase 3: aba selecionada = destaque sólido + texto pelo contraste (igual às demais abas). */
-    background: var(--accent);
+    /* Projeção (Fase 2): sem preenchimento âmbar. */
+    background: var(--mc-color-text);
+    border-color: var(--mc-color-text);
+    color: var(--mc-color-bg);
 }
 .pick-form-grid {
     margin-top: 13px;

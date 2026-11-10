@@ -1,5 +1,6 @@
 import "@/styles/features/title-detail.css";
 import type { TvProgress } from "@/lib/tv-progress";
+import { ReelProgress } from "@/components/ui/ReelProgress";
 
 /*
  * V2.1-E — "S2 E4 · Próximo episódio" + barra de progresso discreta.
@@ -47,17 +48,12 @@ export function TvNextEpisode({
         </span>
       ) : null}
       {percent !== null && progress.total ? (
-        <span
-          className="tv-next-episode-bar"
-          role="progressbar"
-          aria-label="Progresso da série"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={percent}
-          aria-valuetext={`${progress.watched} de ${progress.total} episódios`}
-        >
-          <span style={{ width: `${percent}%` }} />
-        </span>
+        <ReelProgress
+          watched={progress.watched}
+          total={progress.total}
+          label="Progresso da série"
+          valueText={`${progress.watched} de ${progress.total} episódios`}
+        />
       ) : null}
     </div>
   );

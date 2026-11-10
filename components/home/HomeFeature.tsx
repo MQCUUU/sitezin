@@ -4,6 +4,7 @@ import "@/styles/features/home-screen.css";
 import Link from "next/link";
 
 import { TitleBand } from "@/components/title/hero/TitleBand";
+import { ReelProgress } from "@/components/ui/ReelProgress";
 import type { HeroBar } from "@/lib/home/home";
 
 /**
@@ -53,17 +54,12 @@ export function HomeFeature({
             <div className="hm-progress">
               <span className="hm-progress-label">{meta}</span>
               {bar ? (
-                <span
-                  className="hm-progress-track"
-                  role="progressbar"
-                  aria-label="Episódios exibidos assistidos"
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={bar.percent}
-                  aria-valuetext={bar.label}
-                >
-                  <span className="hm-progress-fill" style={{ transform: `scaleX(${bar.percent / 100})` }} />
-                </span>
+                <ReelProgress
+                  watched={bar.watched}
+                  total={bar.total}
+                  label="Episódios exibidos assistidos"
+                  valueText={bar.label}
+                />
               ) : null}
             </div>
           ) : null}

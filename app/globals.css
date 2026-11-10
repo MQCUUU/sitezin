@@ -167,8 +167,9 @@ button {
     justify-content: center;
     gap: var(--mc-space-8);
     padding: 0 var(--mc-space-16);
-    border: var(--mc-border-default);
-    background: var(--mc-color-surface-muted);
+    /* Projeção (Fase 2): secundário = fio de 1 px, sem fundo (3 variantes: principal, secundário, texto). */
+    border: 1px solid var(--mc-color-border-strong);
+    background: transparent;
     color: var(--mc-color-text);
     font-weight: 600;
     line-height: 1;
@@ -269,9 +270,7 @@ button {
 
     transition: .25s
 }
-.poster:hover img {
-    transform: scale(1.04)
-}
+
 
 .card-title {
     font-weight: 700;
@@ -1053,34 +1052,27 @@ select:disabled {
     border-radius: var(--mc-radius-sm);
     background: color-mix(in srgb, var(--text) 6%, var(--panel));
 }
-.mc-skeleton::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    transform: translateX(-100%);
-    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--text) 7%, transparent), transparent);
-    animation: mcSkeletonShimmer 1.25s infinite;
+/*
+ * Projeção (Fase 2): sem brilho correndo (chamava atenção para a espera). O
+ * esqueleto pulsa devagar só na opacidade; com reduzir movimento fica parado.
+ */
+.mc-skeleton {
+    animation: mcSkeletonPulse 1.2s ease-in-out infinite alternate;
 }
-@keyframes mcSkeletonShimmer {
-    100% {
-        transform: translateX(100%);
+@keyframes mcSkeletonPulse {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: .55;
     }
 }
-/*
- * G1 — a foundation global de reduced-motion (regra universal perto do
- * topo deste arquivo) já zera `animation-duration`, então o shimmer
- * para de se mover. Mas sem isto aqui, o pseudo-elemento ainda
- * existe com seu gradiente (só "congelado"), o que pode deixar uma
- * faixa de brilho visível parada em vez do estado estático limpo que
- * `.mc-ui-skeleton` (o sistema novo) já garante. Mesmo padrão: some
- * a faixa, mantém só o fundo sólido de `.mc-skeleton`.
- */
-[data-motion="reduced"] .mc-skeleton::after {
-    display: none;
+[data-motion="reduced"] .mc-skeleton {
+    animation: none;
 }
 @media (prefers-reduced-motion: reduce) {
-    .mc-skeleton::after {
-        display: none;
+    .mc-skeleton {
+        animation: none;
     }
 }
 .mc-skeleton-eyebrow {
@@ -1320,13 +1312,13 @@ button:disabled,input:disabled,select:disabled,textarea:disabled {
     cursor: not-allowed;
     opacity: .55
 }
-.chip,.title-content-tabs button,.search-result-tabs button,.discover-tabs button {
+.chip,.search-result-tabs button,.discover-tabs button {
     font-family: var(--font-ui);
     font-weight: 750;
     letter-spacing: 0;
     border-radius: var(--control-radius)
 }
-.discover-tabs,.title-content-tabs,.search-result-tabs {
+.discover-tabs,.search-result-tabs {
     border: 1px solid var(--control-border);
     background: color-mix(in srgb,var(--panel) 94%,transparent);
     box-shadow: 0 8px 30px rgba(0,0,0,.14)
@@ -1498,42 +1490,9 @@ html,body {
     height: 100%;
     object-fit: cover
 }
-.title-content-tabs {
-    position: sticky;
-    z-index: 12;
-    top: 8px;
-    display: grid;
-    grid-template-columns: repeat(4,1fr);
-    gap: 5px;
-    margin: 24px 0;
-    padding: 5px;
-    border: 1px solid var(--border);
-    border-radius: var(--mc-radius-md);
-    background: color-mix(in srgb,var(--panel) 94%,transparent);
-    backdrop-filter: blur(14px)
-}
-.title-content-tabs button {
-    min-width: 0;
-    padding: 11px 8px;
-    border: 0;
-    border-radius: var(--mc-radius-sm);
-    background: transparent;
-    color: var(--muted);
-    font-size: var(--mc-fs-xs);
-    font-weight: 800;
-    cursor: pointer
-}
-.title-content-tabs button.active {
-    background: var(--accent);
-    color: var(--on-accent,#07110d)
-}
-@media(max-width:600px) {
-    .title-content-tabs {
-        top: 4px;
-        overflow-x: auto;
-        grid-template-columns: repeat(4,minmax(110px,1fr))
-    }
-}
+
+
+
 [hidden] {
     display: none!important
 }
@@ -1608,7 +1567,7 @@ label:has(>input[type=checkbox]),label:has(>input[type=radio]) {
     .topbar .search,.library-head>*,.section-head>* {
         min-width: 0
     }
-    .filters,.profile-tabs,.title-content-tabs {
+    .filters,.profile-tabs {
         max-width: 100%;
         overflow-x: auto;
         overscroll-behavior-inline: contain;
@@ -1695,18 +1654,8 @@ label:has(>input[type=checkbox]),label:has(>input[type=radio]) {
     outline-offset: 2px;
 }
 /* V2.1-E — próximo episódio / progresso de série */
-.tv-next-episode-bar {
-    display: block;
-    height: 3px;
-    border-radius: var(--mc-radius-pill);
-    background: rgba(255,255,255,.12);
-    overflow: hidden;
-}
-.tv-next-episode-bar > span {
-    display: block;
-    height: 100%;
-    background: var(--accent);
-}
+
+
 /* V2.2-A — poster entra com fade curto (sem layout shift: o container já reserva o espaço) */
 .mc-poster-fade {
     transition: opacity .22s ease;

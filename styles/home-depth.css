@@ -21,22 +21,10 @@
 /* ---------- Hero ---------- */
 
 .home-hero-bar,
-.tv-next-episode-bar {
-  position: relative;
-  display: block;
-  height: 4px;
-  border-radius: var(--mc-radius-pill);
-  overflow: hidden;
-  background: color-mix(in srgb, var(--text) 14%, transparent);
-}
+
 
 .home-hero-bar > span,
-.tv-next-episode-bar > span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #ff6fb5));
-}
+
 
 /* ---------- Continuar assistindo: próximo episódio / progresso ---------- */
 

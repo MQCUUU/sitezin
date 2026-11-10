@@ -1,0 +1,88 @@
+/*
+ * Projeção (Fase 2) — peças de assinatura sobre o pôster.
+ *
+ * ENQUADRAMENTO: quatro cantos em L, 2 px, na cor da marca, como as marcas do
+ * visor de uma câmera. Aparece no pôster sob o ponteiro (só mouse) e no pôster
+ * com foco de teclado. Substitui o contorno que clareava no hover. Fica DENTRO
+ * da imagem (inset 8px): o pôster recorta o que passa da borda.
+ *
+ * DOBRA: um triângulo âmbar no canto superior esquerdo marca o que já está na
+ * sua biblioteca (o selo de status embaixo diz qual status).
+ *
+ * Uma regra só (.mc-frame) para qualquer superfície que precise do enquadramento.
+ */
+
+.mc-media-card-image::after,
+.mc-frame::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  z-index: 3;
+  pointer-events: none;
+  border: 2px solid var(--mc-color-accent);
+  -webkit-mask:
+    linear-gradient(#000 0 0) top left / 14px 14px no-repeat,
+    linear-gradient(#000 0 0) top right / 14px 14px no-repeat,
+    linear-gradient(#000 0 0) bottom left / 14px 14px no-repeat,
+    linear-gradient(#000 0 0) bottom right / 14px 14px no-repeat;
+  mask:
+    linear-gradient(#000 0 0) top left / 14px 14px no-repeat,
+    linear-gradient(#000 0 0) top right / 14px 14px no-repeat,
+    linear-gradient(#000 0 0) bottom left / 14px 14px no-repeat,
+    linear-gradient(#000 0 0) bottom right / 14px 14px no-repeat;
+  opacity: 0;
+  transform: scale(1.04);
+  transition:
+    opacity var(--mc-duration-fast) var(--mc-ease-out),
+    transform var(--mc-duration-fast) var(--mc-ease-out);
+}
+
+.mc-frame {
+  position: relative;
+}
+
+/* Mouse: o pôster sob o ponteiro ganha o enquadramento (o contorno antigo sai). */
+@media (hover: hover) and (pointer: fine) {
+  .card:hover .mc-media-card-image::after,
+  .mc-frame:hover::after {
+    opacity: 1;
+    transform: none;
+  }
+
+  .card:hover .mc-media-card-image {
+    border-color: var(--mc-color-border-subtle);
+  }
+}
+
+/* Teclado: aparece na hora, sem transição (ação repetida, não anima). */
+.mc-media-card:has(a:focus-visible) .mc-media-card-image::after,
+.mc-media-card:has(button:focus-visible) .mc-media-card-image::after,
+.mc-frame:focus-visible::after,
+.mc-frame[aria-current]::after,
+.mc-frame[aria-selected="true"]::after {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+
+/* Dobra: o título está na sua biblioteca. */
+.mc-media-card-image:has(.mc-status-chip)::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  width: 0;
+  height: 0;
+  border-top: 16px solid var(--mc-color-accent);
+  border-right: 16px solid transparent;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mc-media-card-image::after,
+  .mc-frame::after {
+    transform: none;
+    transition: opacity var(--mc-duration-fast) linear;
+  }
+}

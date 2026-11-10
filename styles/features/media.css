@@ -199,15 +199,10 @@
     transition: border-color var(--mc-duration-fast) ease;
 }
 /*
- * Fase 5: o pôster não sobe, não cresce e não ganha sombra no hover — isso
- * acontecia dezenas de vezes por dia em toda grade (e preso no toque). Fica só
- * um contorno mais claro, e só com mouse: indica o que está sob o ponteiro.
+ * Fase 5: o pôster não sobe, não cresce e não ganha sombra no hover.
+ * Projeção (Fase 2): o que está sob o ponteiro ganha o enquadramento
+ * (styles/frame.css), não mais um contorno mais claro.
  */
-@media (hover: hover) and (pointer: fine) {
-    .card:hover .mc-media-card-image {
-        border-color: color-mix(in srgb, var(--mc-color-text) 28%, transparent);
-    }
-}
 .mc-media-card-meta .rating {
     color: var(--mc-color-rating);
 }
@@ -619,12 +614,16 @@ html[data-motion="reduced"] .mc-preview-providers > * {
     border-color: color-mix(in srgb, var(--accent) 60%, rgba(255, 255, 255, 0.14));
 }
 .mc-pa-btn--status.is-open {
-    background: var(--accent);
-    border-color: var(--accent);
+    /* Projeção (Fase 2): sem preenchimento âmbar. */
+    background: var(--mc-color-primary);
+    border-color: transparent;
+    color: var(--mc-color-primary-contrast);
 }
 .mc-pa-btn--add {
-    background: var(--accent);
-    border-color: color-mix(in srgb, var(--accent) 70%, #fff);
+    /* Projeção (Fase 2): sem preenchimento âmbar. */
+    background: var(--mc-color-primary);
+    border-color: transparent;
+    color: var(--mc-color-primary-contrast);
 }
 .mc-pa-btn--like.is-on {
     color: var(--mc-color-favorite, var(--mc-color-favorite));

@@ -3,7 +3,6 @@
 import { useConfirm } from "@/components/ConfirmProvider";
 import "@/styles/features/collection.css";
 import "@/styles/features/screen-kit.css";
-import { motion } from "motion/react";
 import { removeFromLibrary } from "@/lib/library/actions";
 import { removalConfirmOptions } from "@/lib/library/remove";
 import { apiFetch } from "@/lib/api-client";
@@ -24,6 +23,7 @@ import { fromLooseMediaItem } from "@/components/media/preview/adapters";
 import { normalizeWatchProviders } from "@/components/media/providers";
 import { safeJson, formatRuntime, type CollectionMovie, type LibraryItem } from "@/components/collection/shared";
 import { CollectionCard } from "@/components/collection/CollectionCard";
+import { ReelProgress } from "@/components/ui/ReelProgress";
 /*
  * Fase 6 — o Server Component (page.tsx) busca a coleção e entrega aqui em
  * `initialData`: o HTML inicial já traz o hero e a lista. Só se o servidor
@@ -1234,21 +1234,12 @@ export default function CollectionView({
           </h2>
           <span>{progress}%</span>
         </div>
-        <div
-          className="cl-progress-track"
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={progress}
-          aria-label="Progresso da coleção"
-        >
-          <motion.div
-            className="cl-progress-fill"
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: progress / 100 }}
-            transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-          />
-        </div>
+        <ReelProgress
+          watched={watchedCount}
+          total={movies.length}
+          label="Progresso da coleção"
+          valueText={`${watchedCount} de ${movies.length} assistidos`}
+        />
         <p>
           {progress === 100
             ? "Coleção concluída."

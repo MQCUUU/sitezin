@@ -1,0 +1,49 @@
+/*
+ * Projeção (Fase 2) — Rolo (components/ui/ReelProgress.tsx): progresso em
+ * marcas. Visto = Tela, próximo = âmbar da marca, resto = fio. Ao marcar um
+ * episódio, a marca enche da esquerda (200 ms, só transform).
+ */
+.mc-reel {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  width: 100%;
+  height: 10px;
+}
+
+.mc-reel[data-dense] {
+  gap: 1px;
+}
+
+.mc-reel-mark {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 2px;
+  border-radius: 1px;
+  background: var(--mc-color-border);
+  overflow: hidden;
+}
+
+.mc-reel-mark::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--mc-color-text);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--mc-duration-normal) var(--mc-ease-out);
+}
+
+.mc-reel-mark[data-state="done"]::after {
+  transform: scaleX(1);
+}
+
+.mc-reel-mark[data-state="next"] {
+  background: var(--mc-color-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mc-reel-mark::after {
+    transition: none;
+  }
+}

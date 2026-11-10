@@ -35,9 +35,10 @@
     border-color: color-mix(in srgb,var(--accent) 40%,var(--border))
 }
 .discover-page-btn.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--on-accent, #fff)
+    /* Projeção (Fase 2): sem preenchimento âmbar. */
+    background: var(--mc-color-brand-tint);
+    border-color: transparent;
+    color: var(--mc-color-accent);
 }
 .discover-page-btn:disabled {
     opacity: .35;
@@ -88,8 +89,10 @@
     justify-content: center;
 }
 .mc-discover-page-btn--active {
-    background: var(--mc-color-accent);
-    color: var(--mc-color-accent-contrast);
+    /* Projeção (Fase 2): sem preenchimento âmbar. */
+    background: var(--mc-color-brand-tint);
+    border-color: transparent;
+    color: var(--mc-color-accent);
 }
 .mc-discover-page-btn:focus-visible {
     outline: none;

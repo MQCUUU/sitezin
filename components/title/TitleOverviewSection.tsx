@@ -1,7 +1,7 @@
 import "@/styles/features/title-detail.css";
 import Link from "next/link";
-import { CalendarDays, Clock3, Layers3, Play } from "lucide-react";
 
+import { Credits } from "@/components/ui/Credits";
 import { genreName, languageName, runtimeLabel } from "@/lib/title-locale";
 import { TitleSeriesProgress } from "./TitleSeriesProgress";
 import type {
@@ -37,8 +37,6 @@ export function TitleOverviewSection({
     <section className="title-info section mc-title-overview-section">
       <div className="title-info-main">
         <div className="title-section-heading">
-          <span>Sobre</span>
-
           <h2>{type === "tv" ? "Sobre a série" : "Sobre o filme"}</h2>
         </div>
 
@@ -58,68 +56,31 @@ export function TitleOverviewSection({
           </div>
         )}
 
-        <div className="title-facts">
-          <div className="title-fact">
-            <CalendarDays size={18} />
-
-            <div>
-              <span>Lançamento</span>
-
-              <strong>
-                {(details.first_air_date || details.release_date || "—")
-                  .split("-")
-                  .reverse()
-                  .join("/")}
-              </strong>
-            </div>
-          </div>
-
-          {runtime && (
-            <div className="title-fact">
-              <Clock3 size={18} />
-
-              <div>
-                <span>Duração</span>
-
-                <strong>{runtime}</strong>
-              </div>
-            </div>
-          )}
-
-          {type === "tv" && (
-            <div className="title-fact">
-              <Play size={18} />
-
-              <div>
-                <span>Conteúdo</span>
-
-                <strong>
-                  {details.number_of_seasons || 0}{" "}
-                  {details.number_of_seasons === 1 ? "temporada" : "temporadas"}
-
-                  {", "}
-
-                  {details.number_of_episodes || 0} episódios
-                </strong>
-              </div>
-            </div>
-          )}
-
-          {type === "movie" && details.belongs_to_collection && (
-            <Link
-              href={`/collection/${details.belongs_to_collection.id}`}
-              className="title-fact title-fact-link"
-            >
-              <Layers3 size={18} />
-
-              <div>
-                <span>Franquia</span>
-
-                <strong>{details.belongs_to_collection.name}</strong>
-              </div>
-            </Link>
-          )}
-        </div>
+        <Credits
+          className="title-credits"
+          label="Ficha"
+          items={[
+            {
+              label: "Lançamento",
+              value: (details.first_air_date || details.release_date || "").split("-").reverse().join("/") || null,
+            },
+            { label: "Duração", value: runtime },
+            {
+              label: "Conteúdo",
+              value:
+                type === "tv"
+                  ? `${details.number_of_seasons || 0} ${details.number_of_seasons === 1 ? "temporada" : "temporadas"}, ${details.number_of_episodes || 0} episódios`
+                  : null,
+            },
+            {
+              label: "Franquia",
+              value:
+                type === "movie" && details.belongs_to_collection ? (
+                  <Link href={`/collection/${details.belongs_to_collection.id}`}>{details.belongs_to_collection.name}</Link>
+                ) : null,
+            },
+          ]}
+        />
       </div>
 
       {/* Fase 4: o status saiu daqui (é a ação principal do topo). Fica só o progresso da série. */}

@@ -71,22 +71,10 @@
   font-size: 15px;
 }
 
-.hm-progress-track {
-  display: block;
-  height: 6px;
-  overflow: hidden;
-  border-radius: var(--mc-radius-pill);
-  background: var(--panel2);
-}
+
 
 /* A barra preenche com transform (sem animar largura). */
-.hm-progress-fill {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--mc-color-primary);
-  transform-origin: left center;
-}
+
 
 .hm-feature-actions {
   display: flex;
