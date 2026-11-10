@@ -485,6 +485,14 @@ export async function personTMDB(id: number | string) {
   });
 }
 
+/** Fase 6: só o cabeçalho da coleção (sem as partes) — usado pelo proxy para o 404 real. */
+export async function collectionTMDB(id: number | string) {
+  return tmdb(`/collection/${id}?language=${getLanguage()}`, {
+    revalidate: TMDB_CACHE.DETAILS,
+    tags: [`tmdb:collection:${id}`],
+  });
+}
+
 /*
  * ==========================================
  * DETALHES LEVES

@@ -9,6 +9,7 @@ import { getDb } from "@/lib/db/neon";
 import { createUpstreamLog, sqlCallName, type UpstreamLog } from "@/lib/search/upstream";
 import { isExactTitle, isSelfPortrayal, resultCountLabel, titleMatchScore } from "@/lib/search/rank";
 import { PRIMARY_TIMEOUT_MS } from "@/lib/search/progressive";
+import { pickTitleCorrection, shouldTryTitleCorrection, type TitleSuggestionRow } from "@/lib/search/title-correction";
 
 const TMDB_BASE =
   "https://api.themoviedb.org/3";
@@ -1677,11 +1678,58 @@ export async function GET(req: NextRequest) {
 
   const log = createUpstreamLog();
   const started = performance.now();
-  const response = await upstream.run(log, () => handle(req));
+  const response = await upstream.run(log, () => handleWithTitleCorrection(req));
 
   response.headers.set("Server-Timing", log.header(performance.now() - started));
 
   return response;
+}
+
+/*
+ * Fase 6 — erro de digitação em título ("intrestellar"): se a busca voltar
+ * vazia, pergunta ao índice local o título mais parecido e refaz a busca com
+ * ele. A resposta ganha `corrected: { from, to }` para a página avisar.
+ * Regras (quando tentar, qual sugestão aceitar) em lib/search/title-correction.ts.
+ */
+async function handleWithTitleCorrection(req: NextRequest) {
+  const first = await handle(req);
+  const query = req.nextUrl.searchParams.get("q") || "";
+
+  if (first.status !== 200) return first;
+
+  const body = await first.clone().json().catch(() => null);
+  if (!shouldTryTitleCorrection(query, body)) return first;
+
+  const suggestion = pickTitleCorrection(query, await localTitleSuggestions(query));
+  if (!suggestion) return first;
+
+  const url = req.nextUrl.clone();
+  url.searchParams.set("q", suggestion);
+  const second = await handle(new NextRequest(url, { headers: req.headers }));
+  if (second.status !== 200) return first;
+
+  const corrected = await second.json().catch(() => null);
+  const found =
+    corrected &&
+    ((corrected.handled && Array.isArray(corrected.results) && corrected.results.length > 0) ||
+      (Array.isArray(corrected.catalog) && corrected.catalog.length > 0));
+  if (!found) return first;
+
+  return NextResponse.json({ ...corrected, corrected: { from: query.trim(), to: suggestion } }, { headers: second.headers });
+}
+
+async function localTitleSuggestions(query: string): Promise<TitleSuggestionRow[]> {
+  try {
+    const sql = trackedDb();
+    const rows = await sql`
+      SELECT title, similarity, popularity
+      FROM public.search_v4_title_suggest(${query}, 3)
+    `;
+    return (rows || []) as TitleSuggestionRow[];
+  } catch (error: unknown) {
+    console.error("search_v4_title_suggest:", error instanceof Error ? error.message : error);
+    return [];
+  }
 }
 
 async function handle(

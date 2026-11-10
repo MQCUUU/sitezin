@@ -1705,3 +1705,39 @@ label:has(>input[type=checkbox]),label:has(>input[type=radio]) {
     }
 }
 
+
+/*
+ * Transição entre páginas (app/template.tsx). Navegar é frequente: só um fade
+ * curto do conteúdo, sem deslocamento. A página que sai some rápido (120ms) e a
+ * que entra aparece em 180ms, curva forte de saída. O resto da tela (raiz) não
+ * anima — barra lateral e topo são iguais nas duas páginas.
+ * Movimento reduzido (sistema ou preferência do app): nada anima.
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation: none;
+}
+::view-transition-old(.mc-page) {
+    animation: mc-page-out 120ms var(--mc-ease-out) both;
+}
+::view-transition-new(.mc-page) {
+    animation: mc-page-in 180ms var(--mc-ease-out) both;
+}
+@keyframes mc-page-out {
+    to { opacity: 0; }
+}
+@keyframes mc-page-in {
+    from { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+        animation: none !important;
+    }
+}
+html[data-motion="reduced"]::view-transition-group(*),
+html[data-motion="reduced"]::view-transition-old(*),
+html[data-motion="reduced"]::view-transition-new(*) {
+    animation: none !important;
+}

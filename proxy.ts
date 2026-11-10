@@ -3,7 +3,7 @@ import { validateSessionData } from "@neondatabase/auth/server";
 
 import { getAuthCookieSecret } from "@/lib/auth/cookie-secret";
 import { isLocalDevelopmentHost } from "@/lib/auth/local-development";
-import { episodeExists, listAccess, personExists, profileExists, titleExists } from "@/lib/resource-exists";
+import { collectionExists, episodeExists, listAccess, personExists, profileExists, titleExists } from "@/lib/resource-exists";
 import { allowedOriginsFromEnv, checkApiMutation } from "@/lib/api-guard";
 import { isPrivatePath, pathMatches } from "@/lib/private-routes";
 
@@ -172,6 +172,7 @@ const NOT_FOUND_REWRITE = "/_mc/nao-encontrado";
 const TITLE_RE = /^\/title\/([^/]+)\/([^/]+)\/?$/;
 const EPISODE_RE = /^\/title\/tv\/([^/]+)\/season\/([^/]+)\/episode\/([^/]+)\/?$/;
 const PERSON_RE = /^\/person\/([^/]+)\/?$/;
+const COLLECTION_RE = /^\/collection\/([^/]+)\/?$/;
 const PROFILE_RE = /^\/u\/([^/]+)\/?$/;
 const LIST_RE = /^\/lists\/([^/]+)\/?$/;
 
@@ -232,6 +233,9 @@ async function isMissingResource(request: NextRequest, pathname: string): Promis
   }
   if ((match = pathname.match(PERSON_RE))) {
     return (await personExists(match[1])) === false;
+  }
+  if ((match = pathname.match(COLLECTION_RE))) {
+    return (await collectionExists(match[1])) === false;
   }
   if ((match = pathname.match(PROFILE_RE))) {
     return (await profileExists(decodeSegment(match[1]))) === false;

@@ -218,6 +218,10 @@ function SearchPageContent() {
   const [person, setPerson] = useState<any>(null);
   const [personCredits, setPersonCredits] = useState<SearchItem[]>([]);
 
+  // Fase 6: título corrigido pela busca ("intrestellar" → "Interestelar").
+
+  const [correctedTo, setCorrectedTo] = useState<string | null>(null);
+
   const [advancedMeta, setAdvancedMeta] = useState<AdvancedMeta>({
     used: false,
     mode: "",
@@ -430,6 +434,7 @@ function SearchPageContent() {
         setPersonCredits([]);
         setAdvancedMeta({ used: false, mode: "", title: "", subtitle: "" });
         setAdvancedLoading(false);
+        setCorrectedTo(null);
 
         const usersOnly = query.startsWith("@");
         const catalogQuery = query.replace(/^@+/, "").trim();
@@ -471,6 +476,7 @@ function SearchPageContent() {
 
         if (cancelled) return;
 
+        setCorrectedTo(typeof advancedData?.corrected?.to === "string" ? advancedData.corrected.to : null);
         setResults(normalResults);
 
         /*
@@ -834,7 +840,7 @@ function SearchPageContent() {
 
       <div className="sp-page">
         {query ? (
-          <SearchPageHeader query={query} isPerson={Boolean(person)} />
+          <SearchPageHeader query={query} isPerson={Boolean(person)} correctedTo={correctedTo} />
         ) : (
           <header className="sk-head">
             <div className="sk-head-text">

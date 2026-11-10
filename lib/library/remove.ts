@@ -35,7 +35,7 @@ export const REMOVAL_EFFECTS = {
     "curtido",
     "resenha",
     "tags (library_tags)",
-    "notas por categoria (review_scores / category_ratings)",
+    "notas por categoria (review_scores)",
     "Diário (activity_events)",
     "visualizações (watch_entries)",
     "episódios (episodes_progress)",

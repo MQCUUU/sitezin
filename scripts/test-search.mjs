@@ -18,6 +18,7 @@ const {
   mediaIdentity, dedupeMedia, rankTitles, isSelfPortrayal, NOTABLE_PERSON_POPULARITY, resultCountLabel,
 } = await import("../lib/search/rank.ts");
 const { needsPersonVariants, personVariantsFor, PRIMARY_TIMEOUT_MS, SECONDARY_TIMEOUT_MS } = await import("../lib/search/progressive.ts");
+const { shouldTryTitleCorrection, pickTitleCorrection, MIN_CORRECTION_SIMILARITY } = await import("../lib/search/title-correction.ts");
 const { createUpstreamLog, parseUpstreamHeader, sqlCallName } = await import("../lib/search/upstream.ts");
 const { chunkLibraryStatePairs, LIBRARY_STATE_BATCH_SIZE } = await import("../lib/library-state-batches.ts");
 
@@ -275,4 +276,25 @@ test("ao vivo: rotas públicas cacheáveis sem estado pessoal; lote é privado e
   assert.ok(Array.isArray(unresolved.body.catalog), "advanced devolve o multi (a página não repete /api/search)");
   const state = await fetch(BASE + "/api/library/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: [{ media_type: "movie", tmdb_id: 268 }] }) });
   assert.equal(state.status, 401);
+});
+
+test("correção de título: só tenta quando a busca voltou vazia de verdade", () => {
+  const empty = { handled: false, catalog: [] };
+  assert.equal(shouldTryTitleCorrection("intrestellar", empty), true);
+  assert.equal(shouldTryTitleCorrection("intrestellar", { handled: false, catalog: null }), false, "catalog null = TMDB falhou, não é 'zero resultados'");
+  assert.equal(shouldTryTitleCorrection("intrestellar", { handled: false, catalog: [{ id: 1 }] }), false);
+  assert.equal(shouldTryTitleCorrection("intrestellar", { handled: true, results: [] }), false);
+  assert.equal(shouldTryTitleCorrection("abc", empty), false, "busca curta não é corrigida");
+  assert.equal(shouldTryTitleCorrection("@intrestellar", empty), false, "busca de usuário fica de fora");
+  assert.equal(shouldTryTitleCorrection("intrestellar", { ...empty, corrected: { to: "x" } }), false, "não corrige duas vezes");
+  assert.equal(shouldTryTitleCorrection("intrestellar", { ...empty, error: "x" }), false);
+});
+
+test("correção de título: aceita a sugestão mais parecida acima do mínimo", () => {
+  assert.equal(MIN_CORRECTION_SIMILARITY, 0.4);
+  assert.equal(pickTitleCorrection("intrestellar", [{ title: "Interestelar", similarity: 0.53 }]), "Interestelar");
+  assert.equal(pickTitleCorrection("interstlar", [{ title: "Interestelar", similarity: "0.41" }]), "Interestelar", "similarity pode vir como texto do banco");
+  assert.equal(pickTitleCorrection("harry poter", [{ title: "Harry Potter e a Pedra Filosofal", similarity: 0.33 }]), null, "abaixo do mínimo não troca");
+  assert.equal(pickTitleCorrection("Parasita", [{ title: "Parasita", similarity: 1 }, { title: "Paraíso", similarity: 0.31 }]), null, "a própria grafia não é correção");
+  assert.equal(pickTitleCorrection("x", []), null);
 });

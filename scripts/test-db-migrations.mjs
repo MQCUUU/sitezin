@@ -71,5 +71,16 @@ test("baseline exige o Neon Auth e não traz a tabela de exemplo da Neon", () =>
 });
 
 test("migrations não apagam tabelas nem dados", () => {
-  assert.doesNotMatch(all, /\bDROP TABLE\b|\bTRUNCATE\b|\bDELETE FROM public\./i);
+  // Fase 6: a única exceção revisada é a 0006 (tabelas órfãs), e só com estas tabelas.
+  const REVIEWED_DROPS = { "0006_drop_orphan_tables.sql": ["movie_tags", "tags", "category_ratings", "rating_categories", "friendships"] };
+  for (const migration of migrations) {
+    assert.doesNotMatch(migration.text, /\bTRUNCATE\b|\bDELETE FROM public\./i, migration.name);
+    const allowed = REVIEWED_DROPS[migration.name];
+    if (!allowed) {
+      assert.doesNotMatch(migration.text, /\bDROP TABLE\b/i, migration.name);
+      continue;
+    }
+    const drops = [...migration.text.matchAll(/\bDROP TABLE(?: IF EXISTS)?\s+public\.(\w+)/gi)].map((m) => m[1]);
+    assert.deepEqual(drops, allowed, `${migration.name}: só as tabelas revisadas`);
+  }
 });

@@ -1,6 +1,6 @@
 import { getDb } from "@/lib/db/neon";
 import { isUuid } from "@/lib/lists/validate";
-import { detailsTMDB, personTMDB, seasonTMDB } from "@/lib/tmdb";
+import { collectionTMDB, detailsTMDB, personTMDB, seasonTMDB } from "@/lib/tmdb";
 
 /*
  * Fase 5 (P3-05) — "este recurso existe?", decidido ANTES de renderizar.
@@ -71,6 +71,11 @@ export function titleExists(type: string, id: string): Promise<Existence> {
 export function personExists(id: string): Promise<Existence> {
   if (!POSITIVE_INT.test(id)) return Promise.resolve(false);
   return cached(`person:${id}`, () => tmdbExists(() => personTMDB(id)));
+}
+
+export function collectionExists(id: string): Promise<Existence> {
+  if (!POSITIVE_INT.test(id)) return Promise.resolve(false);
+  return cached(`collection:${id}`, () => tmdbExists(() => collectionTMDB(id)));
 }
 
 export function episodeExists(tvId: string, season: string, episode: string): Promise<Existence> {
