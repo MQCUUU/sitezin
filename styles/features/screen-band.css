@@ -1,7 +1,12 @@
 /*
  * Fase 4 — faixa panorâmica (components/title/hero/TitleBand.tsx), usada no
  * Título e no Início. Fundo preto de ponta a ponta (sai do recuo do .main),
- * tela 2.39:1 limitada a 48% da altura, cortina que abre quando a imagem chega.
+ * tela 2.39:1 limitada a 48% da altura, cortina que abre na primeira pintura.
+ *
+ * Fase 6: a cortina abria quando o React avisava que a imagem tinha chegado —
+ * ou seja, depois da hidratação. No celular lento a imagem chegava em ~1s e a
+ * faixa ficava preta até ~4,4s (LCP). Agora abre por animação CSS, sem JS; a
+ * imagem tem preload (priority) e normalmente já está lá quando a cortina abre.
  */
 .tt-band {
   --tt-bleed: 34px;
@@ -18,13 +23,18 @@
   margin: 0 auto;
   aspect-ratio: 2.39 / 1;
   overflow: hidden;
-  /* Fechada no centro até a imagem chegar; abre para as bordas como uma cortina. */
-  clip-path: inset(50% 0 50% 0);
-  transition: clip-path 420ms var(--mc-ease-in-out);
+  /* Abre do centro para as bordas, como uma cortina. */
+  animation: tt-band-open 420ms var(--mc-ease-in-out) 80ms both;
 }
 
-.tt-band[data-ready="true"] .tt-band-screen {
-  clip-path: inset(0 0 0 0);
+@keyframes tt-band-open {
+  from { clip-path: inset(50% 0 50% 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+
+@keyframes tt-band-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .tt-band-screen img {
@@ -33,12 +43,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .tt-band-screen {
-    clip-path: none;
-    opacity: 0;
-    transition: opacity 200ms ease;
-  }
-  .tt-band[data-ready="true"] .tt-band-screen {
-    opacity: 1;
+    animation: tt-band-fade 200ms ease both;
   }
 }
 

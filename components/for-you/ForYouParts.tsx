@@ -129,6 +129,8 @@ export function MovieCard({
         <Link
           href={`/title/${type}/${item.id}`}
           className="poster-link fy-poster-link"
+          tabIndex={-1}
+          aria-hidden="true"
         >
           {item.poster_path ? (
             <Poster

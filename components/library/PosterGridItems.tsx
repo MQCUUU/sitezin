@@ -62,7 +62,7 @@ export function Card({ item, position, leaving = false, ...actionProps }: CardAc
   return (
     <MediaCard data-leaving={leaving || undefined} aria-hidden={leaving || undefined}>
       <MediaCardImage>
-        <Link href={`/title/${item.media_type}/${item.tmdb_id}`} className="poster-link">
+        <Link href={`/title/${item.media_type}/${item.tmdb_id}`} tabIndex={-1} aria-hidden="true" className="poster-link">
           <Poster path={item.poster_path} alt={item.title} sizes="(max-width:700px) 46vw, (max-width:1100px) 24vw, 170px" {...posterLoading(position)} />
         </Link>
 
@@ -115,7 +115,7 @@ export function ListItem({ item, leaving = false, ...actionProps }: CardActionPr
 
   return (
     <div className="library-list-item" data-leaving={leaving || undefined} aria-hidden={leaving || undefined}>
-      <Link href={`/title/${item.media_type}/${item.tmdb_id}`} className="library-list-poster">
+      <Link href={`/title/${item.media_type}/${item.tmdb_id}`} tabIndex={-1} aria-hidden="true" className="library-list-poster">
         <Poster path={item.poster_path} alt={item.title} sizes="80px" tmdbSize="w342" />
       </Link>
 

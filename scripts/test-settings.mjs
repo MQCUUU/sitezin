@@ -12,7 +12,7 @@ register(
 
 const test = (await import("node:test")).default;
 const assert = (await import("node:assert/strict")).default;
-const { sanitizePreferences, DEFAULT_PREFERENCES, PREFERENCES_KEY, ACCENT_OPTIONS, readableAccent, contrastRatio, onAccent, DARK_SURFACE } = await import("../lib/preferences.ts");
+const { sanitizePreferences, DEFAULT_PREFERENCES, PREFERENCES_KEY, ACCENT_OPTIONS, readableAccent, contrastRatio, onAccent, DARK_SURFACE, LIGHT_SURFACE } = await import("../lib/preferences.ts");
 const { parseStreamingServices, providersToTmdbFilter, MAX_STREAMING_SERVICES } = await import("../lib/streaming-services.ts");
 const { relevantBrProviders, collapseProviderVariants } = await import("../lib/streaming/providers-br.ts");
 const { canViewProfile, canViewSection, mergeSocialSettings, followStatusFor } = await import("../lib/social/visibility.ts");
@@ -41,9 +41,13 @@ test("aparência: uma única chave; restaurar padrão só toca aparência + orde
 });
 
 test("aparência: no tema Claro, toda cor de destaque fica legível (≥ 4.5:1) sem trocar o matiz", () => {
+  // Fase 6: medido contra a superfície mais escura do tema Claro (--panel2 #eae8e4),
+  // não contra o fundo — links de destaque também ficam sobre painéis tingidos.
+  assert.equal(LIGHT_SURFACE, "#eae8e4");
   for (const option of ACCENT_OPTIONS) {
     const readable = readableAccent(option.value);
-    assert.ok(contrastRatio(readable, "#f5f6f8") >= 4.5, `${option.name}: ${readable}`);
+    assert.ok(contrastRatio(readable, LIGHT_SURFACE) >= 4.5, `${option.name}: ${readable}`);
+    assert.ok(contrastRatio(readable, "#f4f3f0") >= 4.5, `${option.name} sobre o fundo: ${readable}`);
     assert.ok(contrastRatio("#ffffff", readable) >= 4.5, `texto branco sobre ${option.name}`);
   }
   assert.ok(contrastRatio(ACCENT_OPTIONS[2].value, "#f5f6f8") < 3, "Ciano puro era ilegível (motivo da correção)");

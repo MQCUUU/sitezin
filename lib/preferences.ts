@@ -130,7 +130,12 @@ export function applyAccountPreferences(preferences: unknown) {
 }
 
 /* V3.3 — contraste (WCAG) do destaque. */
-const LIGHT_BG = "#f5f6f8";
+/**
+ * Fase 6: superfície mais escura do tema Claro (--panel2) — pior caso de
+ * contraste. Antes media contra "#f5f6f8" (fundo antigo) e o roxo padrão
+ * ficava em ~4,1:1 sobre os painéis tingidos.
+ */
+export const LIGHT_SURFACE = "#eae8e4";
 /** Fase 4: superfície mais clara dos temas escuros (--panel2 do grafite) — pior caso de contraste. */
 export const DARK_SURFACE = "#2c2c30";
 
@@ -160,7 +165,7 @@ export function contrastRatio(a: string, b: string) {
  * ficavam ~2:1 no tema Claro) e, desde a Fase 4, clareia num fundo escuro
  * (o roxo padrão ficava ~3,9:1 sobre o grafite).
  */
-export function readableAccent(accent: string, background = LIGHT_BG, minimum = 4.5) {
+export function readableAccent(accent: string, background = LIGHT_SURFACE, minimum = 4.5) {
   const base = rgbOf(accent);
   const lighten = luminance(rgbOf(background)) < 0.18;
   let factor = 0;
@@ -182,7 +187,7 @@ export function applyPreferences(
   if (typeof document === "undefined") return;
 
   const root = document.documentElement;
-  const accent = readableAccent(preferences.accent, preferences.theme === "light" ? LIGHT_BG : DARK_SURFACE);
+  const accent = readableAccent(preferences.accent, preferences.theme === "light" ? LIGHT_SURFACE : DARK_SURFACE);
 
   root.dataset.theme = preferences.theme;
   root.dataset.density = preferences.density;

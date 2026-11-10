@@ -49,7 +49,14 @@ export function Popover({
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
+      if (event.key !== "Escape") return;
+      // Fase 6: com o foco num item do painel, fechar o desmontaria e o foco
+      // cairia no <body>. Devolve ao gatilho (o [aria-expanded] do mesmo container).
+      const container = containerRef.current;
+      if (container?.contains(document.activeElement)) {
+        container.querySelector<HTMLElement>("[aria-expanded]")?.focus();
+      }
+      onClose();
     }
 
     document.addEventListener("mousedown", handlePointerDown);

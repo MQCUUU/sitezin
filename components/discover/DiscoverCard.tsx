@@ -47,7 +47,7 @@ export function DiscoverCard({
   return (
     <MediaCard className="discover-card">
       <MediaCardImage>
-        <Link href={`/title/${item.media_type}/${item.id}`} className="poster-link">
+        <Link href={`/title/${item.media_type}/${item.id}`} tabIndex={-1} aria-hidden="true" className="poster-link">
           <Poster
             {...posterLoading(position)}
             path={item.poster_path}

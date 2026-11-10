@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 import { AnimatePresence, motion, useIsPresent } from "motion/react";
@@ -42,10 +42,25 @@ export function Dialog({
 }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
+  /*
+   * Fase 6: o elemento que recebe o foco de volta é lido no render em que o
+   * diálogo abre — antes do commit. Lido no efeito, um `autoFocus` do conteúdo
+   * já teria levado o foco para dentro do painel, e ao fechar o foco voltava
+   * para um botão que some (caía no <body>).
+   */
+  const [wasOpen, setWasOpen] = useState(open);
+  const [returnTo, setReturnTo] = useState<HTMLElement | null>(() =>
+    open && typeof document !== "undefined" ? (document.activeElement as HTMLElement | null) : null
+  );
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open && typeof document !== "undefined") setReturnTo(document.activeElement as HTMLElement | null);
+  }
+
   useEffect(() => {
     if (!open) return;
 
-    const previousActive = document.activeElement as HTMLElement | null;
+    const previousActive = returnTo;
     const unlockScroll = lockScroll();
     panelRef.current?.focus();
 
@@ -65,7 +80,7 @@ export function Dialog({
       document.removeEventListener("keydown", handleKeyDown, true);
       previousActive?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open, onClose, returnTo]);
 
   if (typeof document === "undefined") return null;
 
