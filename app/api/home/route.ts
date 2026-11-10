@@ -1,6 +1,5 @@
 import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { naoAutenticado, respostaDeErro } from "@/lib/api-error";
 import { loadHome, type HomeSql } from "@/lib/home/load";

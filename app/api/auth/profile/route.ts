@@ -1,6 +1,5 @@
 import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { isReservedUsername, isValidUsername, normalizeUsername, USERNAME_RESERVED_MESSAGE } from "@/lib/username";
 import { applyUsernameChange } from "@/lib/username-change";

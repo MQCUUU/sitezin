@@ -440,8 +440,6 @@ export function buildFriendRecommendations(
 
     const releaseDate = normalizeDate(row.release_date);
     const firstAirDate = normalizeDate(row.first_air_date);
-    const year = (releaseDate || firstAirDate || "").slice(0, 4);
-    const typeLabel = row.media_type === "tv" ? "série" : "filme";
 
     scoredCards.push({
       id: row.tmdb_id,

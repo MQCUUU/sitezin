@@ -5,7 +5,6 @@ import { getDb } from "@/lib/db/neon";
 import { NextRequest, NextResponse } from "next/server";
 
 import { respostaDeErro } from "@/lib/api-error";
-import { auth } from "@/lib/auth/server";
 import { todayIn } from "@/lib/calendar/dates";
 import { genreFilterLabels, genreKeyFromParam, GENRE_LABEL, idsForKey, type GenreKey } from "@/lib/for-you/genres";
 import { anchorOrder, anchorsPerPage, buildProfile, topGenres, type MediaType, type Profile, type TitleSignal, type WeightedTitle } from "@/lib/for-you/profile";

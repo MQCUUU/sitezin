@@ -2,7 +2,6 @@ import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-se
 import { NextResponse } from "next/server";
 
 import { respostaDeErro } from "@/lib/api-error";
-import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { lightweightDetailsTMDB, searchMoviesTMDB } from "@/lib/tmdb";
 import { chooseLetterboxdMovie } from "@/lib/letterboxd/match";

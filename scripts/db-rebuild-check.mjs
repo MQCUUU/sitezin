@@ -4,8 +4,10 @@
 //                                       db/migrations do zero, compara com o TEST, faz um smoke
 //                                       de integridade e APAGA o banco no fim
 //   npm run db:rebuild-check -- --keep  mantém o banco (imprime só o NOME, nunca a URL)
+//   npm run db:rebuild-check -- --env DATABASE_URL_UNPOOLED   outra variável do TEST (ex.: a da role dona,
+//                                       que pode criar banco; a role de runtime não pode)
 //
-// Usa TEST_DATABASE_URL (nunca PROD — recusa se o host for o de PROD_DATABASE_URL).
+// Usa TEST_DATABASE_URL por padrão (nunca PROD — recusa se o host for o de PROD_DATABASE_URL).
 // O schema neon_auth (do Neon Auth) é simulado por db/dev/neon-auth-stub.sql: o app real
 // precisa do Neon Auth habilitado no branch (ver db/README.md).
 import crypto from "node:crypto";
@@ -90,9 +92,11 @@ async function smoke(url) {
 
 async function main() {
   const env = loadEnv();
-  const testUrl = env.TEST_DATABASE_URL;
-  if (!testUrl) throw new Error("TEST_DATABASE_URL não definida.");
-  if (isProductionUrl(testUrl, env)) throw new Error("TEST_DATABASE_URL aponta para PRODUÇÃO. Recusado.");
+  const envIndex = process.argv.indexOf("--env");
+  const varName = envIndex >= 0 && process.argv[envIndex + 1] ? process.argv[envIndex + 1] : "TEST_DATABASE_URL";
+  const testUrl = env[varName];
+  if (!testUrl) throw new Error(`${varName} não definida.`);
+  if (isProductionUrl(testUrl, env)) throw new Error(`${varName} aponta para PRODUÇÃO. Recusado.`);
 
   const name = `mycatalog_rebuild_${new Date().toISOString().replace(/\D/g, "").slice(0, 12)}`;
   const target = new URL(testUrl);

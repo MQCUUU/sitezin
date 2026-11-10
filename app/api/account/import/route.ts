@@ -2,7 +2,6 @@ import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-se
 import { NextRequest, NextResponse } from "next/server";
 
 import { respostaDeErro } from "@/lib/api-error";
-import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { InvalidJsonError, readJsonWithLimit, RequestBodyTooLargeError } from "@/lib/request-json";
 import { planRestore } from "@/lib/backup/plan";

@@ -277,11 +277,14 @@ function SearchPageContent() {
    * Streaming, gêneros e detalhes
    * só carregam ao abrir o olhinho.
    */
+  // Só o id (e o tipo) disparam a prévia; o resto do item não muda o pedido.
+  const previewId = previewItem?.id;
+  const previewType = previewItem?.media_type;
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
-      if (!previewItem) {
+      if (!previewId || !previewType) {
         setPreviewDetails(null);
         return;
       }
@@ -289,7 +292,7 @@ function SearchPageContent() {
       try {
         setPreviewDetailsLoading(true);
 
-        const response = await fetch(`/api/tmdb/${previewItem.media_type}/${previewItem.id}`);
+        const response = await fetch(`/api/tmdb/${previewType}/${previewId}`);
         const data = await safeJson(response);
 
         if (!response.ok || data?.error) {
@@ -309,7 +312,7 @@ function SearchPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [previewItem?.id, previewItem?.media_type]);
+  }, [previewId, previewType]);
 
   /*
    * Série na biblioteca: progresso canônico do item individual (`library_progress`;

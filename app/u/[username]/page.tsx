@@ -7,7 +7,7 @@ import "@/styles/features/screen-kit.css";
 import { motion } from "motion/react";
 import { apiFetch, errorMessage, isApiError } from "@/lib/api-client";
 import { ListCover } from "@/components/lists/ListCover";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useEffectEvent } from "react";
 import { useModal } from "@/hooks/useModal";
 import { ConnectedPosterActions } from "@/components/media/ConnectedPosterActions";
 import Link from "next/link";
@@ -272,9 +272,11 @@ export default function PublicProfilePage() {
       setLoading(false);
     }
   }
-  useEffect(() => { load(); }, [username]);
+  // Os efeitos abaixo disparam por username/eventos; useEffectEvent chama sempre o load mais recente.
+  const loadFromEffect = useEffectEvent(() => { void load(); });
+  useEffect(() => { loadFromEffect(); }, [username]);
   useEffect(() => {
-    const refreshWhenVisible = () => { if (document.visibilityState === "visible") load(); };
+    const refreshWhenVisible = () => { if (document.visibilityState === "visible") loadFromEffect(); };
     window.addEventListener("focus", refreshWhenVisible);
     document.addEventListener("visibilitychange", refreshWhenVisible);
     return () => {
@@ -290,7 +292,7 @@ export default function PublicProfilePage() {
         router.replace(`/u/${detail.username}`);
         return;
       }
-      load();
+      loadFromEffect();
     };
     window.addEventListener("mycatalog:profile-updated", refresh);
     return () => window.removeEventListener("mycatalog:profile-updated", refresh);
@@ -376,9 +378,11 @@ export default function PublicProfilePage() {
     return () => window.removeEventListener("mycatalog:follows-updated", refreshFollows);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [username, data?.social?.relationship, connectionSubTab]);
+  const hasData = data != null;
+  const viewerRelationship = data?.social?.relationship;
   useEffect(() => {
-    if (data && data.social?.relationship !== "self" && tab === "connections") setTab("activity");
-  }, [data?.social?.relationship, tab]);
+    if (hasData && viewerRelationship !== "self" && tab === "connections") setTab("activity");
+  }, [hasData, viewerRelationship, tab]);
 
   useEffect(() => {
     if (tab !== "connections" || data?.social?.relationship !== "self") return;
@@ -507,9 +511,14 @@ export default function PublicProfilePage() {
 
   async function createList() { if (!listName.trim()) return; let result; try { result = await apiFetch("/api/lists", { method: "POST", json: { name: listName } }); } catch (error) { return toast.error("Não foi possível criar a lista", { description: errorMessage(error) }); }setData((current:any)=>({...current,lists:[{...result,items:[{count:0}]},...(current.lists||[])]}));setListName("");toast.success("Lista criada"); }
 
-  const modalRows: PersonRow[] = connectionModal
-    ? ((data?.social?.relationship === "self" || connectionModal === "friends") ? connectionLists[connectionModal].items : (data?.social?.[connectionModal]) || []).map(normalizePerson).filter(Boolean) as PersonRow[]
-    : [];
+  const socialData = data?.social;
+  const modalRows = useMemo<PersonRow[]>(
+    () =>
+      connectionModal
+        ? (((socialData?.relationship === "self" || connectionModal === "friends") ? connectionLists[connectionModal].items : socialData?.[connectionModal]) || []).map(normalizePerson).filter(Boolean) as PersonRow[]
+        : [],
+    [connectionModal, connectionLists, socialData]
+  );
   const filteredRows = useMemo(() => modalRows.filter((row) => `${row.profile.display_name || ""} ${row.profile.username || ""}`.toLowerCase().includes(connectionSearch.trim().toLowerCase())), [modalRows, connectionSearch]);
   if (loading) return <><div className="topbar"><Search /></div><div className="empty"><Loader2 className="spin" /> Carregando perfil...</div></>;
   if (!data && loadError) return <><div className="topbar"><Search /></div><div className="empty" role="alert">{loadError}</div></>;

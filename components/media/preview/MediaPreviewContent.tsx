@@ -38,31 +38,28 @@ export function MediaPreviewContent({ data, actions, providers, extraActions, pe
   const rating = data.voteAverage && data.voteAverage > 0 ? data.voteAverage.toFixed(1) : null;
   const titleHref = `/title/${data.mediaType}/${data.id}`;
 
+  /*
+   * Banner (2.39:1) no lugar do pôster: o pôster mudava de tamanho conforme a
+   * coluna de texto e a prévia "pulava". O painel tem tamanho fixo (media-preview.css);
+   * o banner entra com fade quando a imagem chega (Poster / mc-poster-fade).
+   */
   return (
     <>
-      {data.backdropPath && (
-        <div className="mc-preview-backdrop">
-          <Poster path={data.backdropPath} alt="" sizes="(max-width: 700px) 100vw, 760px" tmdbSize="w780" />
-          <div className="mc-preview-backdrop-scrim" />
-        </div>
-      )}
+      <div className="mc-preview-banner">
+        {data.backdropPath ? (
+          <Poster path={data.backdropPath} alt="" sizes="(max-width: 700px) 100vw, 640px" tmdbSize="w780" />
+        ) : null}
+        <div className="mc-preview-backdrop-scrim" />
+
+        {data.libraryState?.libraryId && (
+          <div className="mc-preview-poster-status">
+            <span className="mc-preview-status-dot" />
+            {data.libraryState.statusLabel || "Na biblioteca"}
+          </div>
+        )}
+      </div>
 
       <div className="mc-preview-body">
-        <div className="mc-preview-poster">
-          <Poster
-            path={data.posterPath}
-            alt={data.title}
-            sizes="(max-width: 480px) 112px, 180px"
-          />
-
-          {data.libraryState?.libraryId && (
-            <div className="mc-preview-poster-status">
-              <span className="mc-preview-status-dot" />
-              {data.libraryState.statusLabel || "Na biblioteca"}
-            </div>
-          )}
-        </div>
-
         <div className="mc-preview-main">
           <div className="mc-preview-eyebrow">
             {data.mediaType === "tv" ? "Série" : "Filme"}
@@ -96,7 +93,7 @@ export function MediaPreviewContent({ data, actions, providers, extraActions, pe
 
           {personal}
 
-          {providers}
+          <div className="mc-preview-providers">{providers}</div>
 
           <div className="mc-preview-footer">
             <MediaPreviewActions data={data} actions={actions} />

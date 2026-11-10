@@ -2,7 +2,6 @@ import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-se
 import { NextRequest, NextResponse } from "next/server";
 
 import { entradaInvalida, naoAutenticado, respostaDeErro } from "@/lib/api-error";
-import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { limitPublicRequest } from "@/lib/rate-limit";
 import { socialRatingBucket } from "@/lib/social/ratings";

@@ -11,6 +11,8 @@ export type DiscoverItem = {
   original_name?: string;
 
   poster_path: string | null;
+  /** Banner da prévia (a API do Descobrir já devolve). */
+  backdrop_path?: string | null;
 
   release_date?: string;
   first_air_date?: string;

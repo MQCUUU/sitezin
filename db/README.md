@@ -27,6 +27,7 @@ migration aplicada **nunca é editada** — o runner recusa se o checksum mudar.
 | `npm run db:migrate -- --baseline` | banco que **já existe**: registra a 0001 sem executá-la | só a tabela de controle |
 | `npm run db:drift -- --a X --b Y` | compara o schema de dois bancos (nomes das variáveis) | não |
 | `npm run db:rebuild-check` | cria banco descartável no TEST, aplica tudo do zero, compara com o TEST, smoke de integridade, apaga | só o banco descartável |
+| `npm run db:rebuild-check -- --env DATABASE_URL_UNPOOLED` | o mesmo, com a conexão da role dona do TEST (a de runtime não pode criar banco) | só o banco descartável |
 | `npm run test:db` | migrations em dia, tabelas críticas com RLS, sem acesso anônimo | não |
 
 Todos leem `.env.local` e **nunca imprimem connection strings**. Padrão:

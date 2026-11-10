@@ -1,4 +1,5 @@
 import { pickTrailer } from "@/lib/title-locale";
+import { TrailerFrame } from "./TrailerFrame";
 import type { LooseTitleDetails } from "./types";
 
 export type TitleTrailerProps = {
@@ -32,24 +33,7 @@ export function TitleTrailer({ details }: TitleTrailerProps) {
           borderRadius: "var(--mc-radius-lg)",
         }}
       >
-        <div
-          style={{ position: "relative", width: "100%", aspectRatio: "16 / 9" }}
-        >
-          <iframe
-            src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(trailer.key)}`}
-            title={trailer.name}
-            loading="lazy"
-            allow="clipboard-write; encrypted-media; picture-in-picture; web-share"
-            allowFullScreen
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              border: 0,
-            }}
-          />
-        </div>
+        <TrailerFrame videoKey={trailer.key} title={trailer.name} />
       </div>
     </section>
   );

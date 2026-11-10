@@ -2,7 +2,6 @@ import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-se
 import { NextRequest, NextResponse } from "next/server";
 
 import { respostaDeErro } from "@/lib/api-error";
-import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { BACKUP_VERSION, csvCell } from "@/lib/backup/plan";
 

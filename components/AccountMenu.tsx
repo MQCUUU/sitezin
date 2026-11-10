@@ -121,6 +121,7 @@ export function AccountMenu(): React.ReactElement {
   const ready = mounted && !isPending;
 
   const sessionUserId = session?.user?.id;
+  const sessionEmail = session?.user?.email;
 
   // Troca de usuário na mesma aba (sessão expirou e outra conta entrou):
   // nunca reaproveitar o perfil em cache do usuário anterior.
@@ -152,7 +153,7 @@ export function AccountMenu(): React.ReactElement {
         if (key.startsWith("mycatalog:account-meta:v1:") && key !== cacheKey) localStorage.removeItem(key);
       }
 
-      const email = session?.user?.email;
+      const email = sessionEmail;
 
       for (const key of Object.keys(sessionStorage)) {
         if (key.startsWith("mycatalog:foryou:") && !key.startsWith(`mycatalog:foryou:v2:${sessionUserId}:`)) {
@@ -209,7 +210,7 @@ export function AccountMenu(): React.ReactElement {
     return () => {
       active = false;
     };
-  }, [sessionUserId]);
+  }, [sessionUserId, sessionEmail]);
 
   useEffect(() => {
     function refreshAccount(event: Event): void {
@@ -293,6 +294,7 @@ export function AccountMenu(): React.ReactElement {
       // ignore
     }
 
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- recarga completa de propósito: ao sair, descarta todo o estado e o cache do cliente.
     location.href = "/login";
   }
 

@@ -49,7 +49,6 @@ export function EmailVerificationPage() {
     const storedEmail = readPendingVerificationEmail() || readPendingSignup()?.email || "";
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Read client-only storage after hydration to keep SSR output deterministic.
     setEmail(storedEmail);
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Restore the send status after a verified login redirects here.
     setAutoSendError(readPendingVerificationError() || "");
     let resendAt = 0;
     try { resendAt = Number(window.sessionStorage.getItem(COOLDOWN_KEY) || 0); } catch { /* Keep the in-memory cooldown only. */ }

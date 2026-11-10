@@ -9,18 +9,22 @@
  */
 
 .mc-dialog.mc-preview-dialog {
-  width: min(680px, 100%);
+  /*
+   * Tamanho fixo: toda prévia abre do mesmo tamanho e não muda quando
+   * "Onde assistir" ou a imagem chegam (antes crescia ~50px e o painel,
+   * centralizado, subia). O corpo rola por dentro se o conteúdo passar.
+   */
+  width: min(640px, 100%);
+  height: min(600px, calc(100dvh - 32px));
+  /* Referência do botão de fechar (absoluto no canto do painel). */
+  position: relative;
   padding: 0;
   /*
-   * x hidden clips the full-bleed backdrop image's square corners to the
-   * panel's rounded radius; y auto lets the panel itself scroll when the
-   * content (poster + meta + overview + providers + actions) is taller
-   * than max-height. Both must live on this selector — a lower-specificity
-   * `.mc-preview-dialog { overflow-y: auto }` here previously lost to this
-   * rule's `overflow: hidden` shorthand and silently disabled all scrolling.
+   * Recorta o banner nos cantos arredondados. Não rola: a altura é fixa e
+   * quem rola, se precisar, é o .mc-preview-body.
    */
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: hidden;
   display: flex;
   flex-direction: column;
 }

@@ -107,11 +107,21 @@ export function pickOverviewFallback(translations: unknown, originalLanguage: un
 
 /* --------------------------------------------------------------- trailer */
 
-type Video = { site?: unknown; type?: unknown; official?: unknown; key?: unknown; name?: unknown; iso_639_1?: unknown };
+type Video = {
+  site?: unknown;
+  type?: unknown;
+  official?: unknown;
+  key?: unknown;
+  name?: unknown;
+  iso_639_1?: unknown;
+  iso_3166_1?: unknown;
+};
 
 /**
- * Melhor vídeo do YouTube: trailer oficial > trailer > teaser > qualquer;
- * dentro de cada nível, PT-BR (pt) antes de inglês, antes do resto.
+ * Melhor vídeo do YouTube. O idioma vem primeiro: trailer ou teaser em
+ * português sempre que houver (pt-BR antes de pt-PT), depois inglês, depois o
+ * que tiver. Dentro do mesmo idioma: trailer oficial > trailer > teaser.
+ * Clipes e bastidores só entram quando não há trailer/teaser em idioma nenhum.
  */
 export function pickTrailer(videos: unknown): { key: string; name: string } | null {
   const list = (Array.isArray((videos as { results?: unknown })?.results) ? (videos as { results: Video[] }).results : [])
@@ -120,8 +130,10 @@ export function pickTrailer(videos: unknown): { key: string; name: string } | nu
   if (!list.length) return null;
 
   const tier = (v: Video) => (v.type === "Trailer" && v.official === true ? 0 : v.type === "Trailer" ? 1 : v.type === "Teaser" ? 2 : 3);
-  const lang = (v: Video) => (v.iso_639_1 === "pt" ? 0 : v.iso_639_1 === "en" ? 1 : 2);
-  const best = [...list].sort((a, b) => tier(a) - tier(b) || lang(a) - lang(b))[0];
+  const isTrailer = (v: Video) => (tier(v) <= 2 ? 0 : 1);
+  const lang = (v: Video) =>
+    v.iso_639_1 === "pt" ? (v.iso_3166_1 === "BR" ? 0 : 1) : v.iso_639_1 === "en" ? 2 : 3;
+  const best = [...list].sort((a, b) => isTrailer(a) - isTrailer(b) || lang(a) - lang(b) || tier(a) - tier(b))[0];
 
   return { key: String(best.key), name: typeof best.name === "string" && best.name ? best.name : "Trailer" };
 }

@@ -1,7 +1,6 @@
 import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextResponse } from "next/server";
 import { entradaInvalida, naoAutenticado, respostaDeErro } from "@/lib/api-error";
-import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 
 const UUID_PATTERN =

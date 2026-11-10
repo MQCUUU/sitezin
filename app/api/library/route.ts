@@ -1,6 +1,5 @@
 import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { removeLibraryItem } from "@/lib/library/remove";
 import { attachSeriesProgress } from "@/lib/library/attach-progress";

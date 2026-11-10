@@ -1,4 +1,5 @@
 import type { DiscoverItem, Genre } from "@/components/discover/types";
+import { genreName as translateGenre } from "@/lib/title-locale";
 import { getStatusLabel as getDiscoverStatusLabel } from "@/components/discover/types";
 import type { LibraryState, SearchItem } from "@/components/search/page/types";
 import { getStatusLabel as getSearchStatusLabel } from "@/components/search/page/types";
@@ -70,6 +71,7 @@ function libraryStateFrom(
 export function fromDiscoverItem(item: DiscoverItem, genreLookup: Genre[]): MediaPreviewData {
   const genres = (item.genre_ids || [])
     .map((id) => genreLookup.find((genre) => genre.id === id)?.name)
+    .map((name) => (name ? translateGenre(name) : name))
     .filter((name): name is string => Boolean(name));
 
   return {
@@ -79,7 +81,7 @@ export function fromDiscoverItem(item: DiscoverItem, genreLookup: Genre[]): Medi
     originalTitle: item.original_title || item.original_name || null,
     overview: item.overview || null,
     posterPath: item.poster_path,
-    backdropPath: null,
+    backdropPath: item.backdrop_path || null,
     releaseDate: item.release_date || item.first_air_date || null,
     runtime: null,
     genres,
@@ -107,7 +109,7 @@ export function fromSearchItem(
     backdropPath: item.backdrop_path || details?.backdrop_path || null,
     releaseDate: item.release_date || item.first_air_date || details?.release_date || details?.first_air_date || null,
     runtime: details?.runtime ?? null,
-    genres: (details?.genres || []).map((genre) => genre.name),
+    genres: (details?.genres || []).map((genre) => translateGenre(genre.name)),
     voteAverage: item.vote_average || details?.vote_average || null,
     libraryState: libraryStateFrom(
       libraryItem?.library_id ?? null,
@@ -152,7 +154,7 @@ export function fromLooseMediaItem(
     backdropPath: item.backdrop_path || details?.backdrop_path || null,
     releaseDate: item.release_date || item.first_air_date || details?.release_date || details?.first_air_date || null,
     runtime: runtime ?? null,
-    genres: (Array.isArray(sourceGenres) ? sourceGenres : []).map((genre) => genre.name),
+    genres: (Array.isArray(sourceGenres) ? sourceGenres : []).map((genre) => translateGenre(genre.name)),
     voteAverage: item.vote_average || details?.vote_average || null,
     libraryState: libraryStateFrom(
       libraryItem?.library_id ?? null,
@@ -167,12 +169,12 @@ function genreName(genre: { id: number; name: string } | string): string | null 
     // PosterGrid's legacy preview defends against genres stored as a raw JSON string — preserved here.
     try {
       const parsed = JSON.parse(genre);
-      return parsed?.name || genre;
+      return translateGenre(parsed?.name || genre);
     } catch {
-      return genre;
+      return translateGenre(genre);
     }
   }
-  return genre?.name || null;
+  return genre?.name ? translateGenre(genre.name) : null;
 }
 
 /**

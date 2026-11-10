@@ -87,6 +87,30 @@ test("trailer: oficial > trailer > teaser > qualquer; PT antes de EN; só YouTub
   assert.equal(pickTrailer(undefined), null);
 });
 
+test("trailer: a consulta ao TMDB pede vídeos pt-BR explicitamente", async () => {
+  // Com só "pt" o TMDB devolve os vídeos de Portugal e omite os do Brasil.
+  const { readFileSync } = await import("node:fs");
+  const source = readFileSync(new URL("../lib/tmdb.ts", import.meta.url), "utf8");
+  assert.match(source, /include_video_language=pt-BR,pt,en,null/);
+});
+
+test("trailer: português sempre que houver; se não, o que tiver", () => {
+  const v = (o) => ({ site: "YouTube", key: o.key, type: o.type ?? "Trailer", official: o.official ?? false, iso_639_1: o.lang ?? "en", iso_3166_1: o.country ?? "US", name: o.key });
+  // Trailer em PT (mesmo não oficial, mesmo teaser) ganha do trailer oficial em inglês.
+  assert.equal(pickTrailer({ results: [v({ key: "en-oficial", official: true }), v({ key: "pt-trailer", lang: "pt", country: "BR" })] }).key, "pt-trailer");
+  assert.equal(pickTrailer({ results: [v({ key: "en-oficial", official: true }), v({ key: "pt-teaser", type: "Teaser", lang: "pt", country: "BR" })] }).key, "pt-teaser");
+  // pt-BR antes de pt-PT.
+  assert.equal(pickTrailer({ results: [v({ key: "pt-pt", lang: "pt", country: "PT", official: true }), v({ key: "pt-br", lang: "pt", country: "BR" })] }).key, "pt-br");
+  // Dentro do mesmo idioma, oficial > trailer > teaser.
+  assert.equal(pickTrailer({ results: [v({ key: "br-teaser", type: "Teaser", lang: "pt", country: "BR" }), v({ key: "br-oficial", lang: "pt", country: "BR", official: true })] }).key, "br-oficial");
+  // Sem PT: inglês antes dos outros idiomas.
+  assert.equal(pickTrailer({ results: [v({ key: "es", lang: "es", official: true }), v({ key: "en", official: true })] }).key, "en");
+  // Sem PT nem EN: o que houver.
+  assert.equal(pickTrailer({ results: [v({ key: "ja", lang: "ja" })] }).key, "ja");
+  // Clipe em PT não passa na frente de um trailer de verdade em outro idioma.
+  assert.equal(pickTrailer({ results: [v({ key: "pt-clip", type: "Clip", lang: "pt", country: "BR" }), v({ key: "en-trailer" })] }).key, "en-trailer");
+});
+
 /* ================================================================ STREAMING BR */
 
 test("streaming: variante some quando o serviço-base está na lista; variante sozinha fica", () => {

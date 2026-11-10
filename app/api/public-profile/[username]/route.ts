@@ -84,7 +84,8 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
     WHERE f.follower_id = ${profile.id} AND f.status = 'accepted'`;
 
   if (!canView) {
-    const [followersCountRes, followingCountRes, friendsCountRes] = await Promise.all([followersCountPromise, followingCountPromise, friendsCountPromise]);
+    // Perfil bloqueado não mostra amigos: a contagem nem é consultada aqui.
+    const [followersCountRes, followingCountRes] = await Promise.all([followersCountPromise, followingCountPromise]);
 
     return NextResponse.json(
       {

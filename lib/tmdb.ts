@@ -447,7 +447,8 @@ export async function detailsTMDB(
 ) {
   return tmdb(
     // V3.1: vídeos em PT e EN (e sem idioma) — só pt-BR deixava muitos títulos sem trailer.
-    `/${type}/${id}?language=${getLanguage()}&append_to_response=credits,videos,images,recommendations&include_video_language=pt,en,null`,
+    // "pt-BR" explícito: com "pt" sozinho o TMDB devolve só os vídeos de Portugal (pickTrailer prefere os do Brasil).
+    `/${type}/${id}?language=${getLanguage()}&append_to_response=credits,videos,images,recommendations&include_video_language=pt-BR,pt,en,null`,
     {
       revalidate:
         TMDB_CACHE.DETAILS,

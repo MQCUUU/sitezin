@@ -5,7 +5,7 @@ import { useConfirm } from "@/components/ConfirmProvider";
 import "@/styles/features/discover.css";
 import { removeFromLibrary } from "@/lib/library/actions";
 import { removalConfirmOptions } from "@/lib/library/remove";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState, useEffectEvent } from "react";
 import { Loader2 } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 
@@ -68,6 +68,8 @@ function DiscoverContent() {
   // Fase 1: visitante é convidado a entrar; 401 nunca vira "Não autenticado".
   const libraryAuth = useLibraryAuth();
   const { params, setParams, replaceParams } = useDiscoverParams();
+  // Usado dentro do efeito de carregamento: corrige a página na URL sem virar dependência dele.
+  const syncPageFromEffect = useEffectEvent((page: number) => replaceParams({ page }));
 
   const [showFilters, setShowFilters] = useState(false);
 
@@ -295,7 +297,7 @@ function DiscoverContent() {
 
           // página fora do intervalo (ex.: page=999999) → última válida, sem novo histórico
           if (Number(result.page) && Number(result.page) !== params.page) {
-            replaceParams({ page: Number(result.page) });
+            syncPageFromEffect(Number(result.page));
           }
         }
       } catch (error) {

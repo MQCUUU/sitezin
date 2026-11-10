@@ -204,6 +204,7 @@ export function AccountPrivacy() {
         // a conta já não existe; a sessão local é descartada pelo redirect
       }
 
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- recarga completa de propósito: a conta não existe mais, nada do cliente pode sobrar.
       location.href = "/?account=deleted";
     } catch (error) {
       toast.error("Não foi possível excluir sua conta", { description: errorMessage(error) });

@@ -1,6 +1,5 @@
 import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextResponse, type NextRequest } from "next/server";
-import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { naoAutenticado, respostaDeErro } from "@/lib/api-error";
 import { dateKeyInTimeZone } from "@/lib/date-only";

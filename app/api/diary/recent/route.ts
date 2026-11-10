@@ -2,7 +2,6 @@ import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-se
 import { NextResponse } from "next/server";
 
 import { naoAutenticado, respostaDeErro } from "@/lib/api-error";
-import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { CALENDAR_TZ, todayIn } from "@/lib/calendar/dates";
 import { HOME_RECENT_LIMIT, loadRecentMoments } from "@/lib/diary/recent";

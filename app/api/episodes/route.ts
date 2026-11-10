@@ -5,7 +5,6 @@ import {
   naoAutenticado,
   respostaDeErro,
 } from "@/lib/api-error";
-import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { episodeRowsUpsertQuery, getEpisodeJournalWrite, type EpisodeUpsertRow } from "@/lib/episode-progress";
 import { planSeriesUpdate, type SeriesPlan } from "@/lib/library/episode-write";

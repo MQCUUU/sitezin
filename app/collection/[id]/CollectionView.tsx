@@ -198,13 +198,15 @@ export default function CollectionView({
   /*
    * Streaming/detalhes do olhinho.
    */
+  // Só o id (e o tipo) disparam a prévia; o resto do item não muda o pedido.
+  const previewId = previewItem?.id;
   useEffect(() => {
     let cancelled =
       false;
 
     async function loadPreview() {
       if (
-        !previewItem
+        !previewId
       ) {
         setPreviewDetails(
           null
@@ -220,7 +222,7 @@ export default function CollectionView({
 
         const response =
           await fetch(
-            `/api/tmdb/movie/${previewItem.id}`
+            `/api/tmdb/movie/${previewId}`
           );
 
         const data =
@@ -271,7 +273,7 @@ export default function CollectionView({
         true;
     };
   }, [
-    previewItem?.id,
+    previewId,
   ]);
 
   useEffect(() => {

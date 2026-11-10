@@ -2420,3 +2420,30 @@ a.series-episode-row {
         animation: none
     }
 }
+
+/* Player do trailer (components/title/TrailerFrame.tsx). O anel fica no
+   contêiner porque o iframe de outra origem não recebe :focus-visible; o
+   painel corta o que passa da borda, então o anel é desenhado para dentro. */
+.mc-trailer-frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+}
+.mc-trailer-frame iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+/* O iframe é pintado por cima do outline do contêiner: o anel é uma camada
+   acima dele, que não pega clique. */
+.mc-trailer-frame[data-focus-visible]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border: 2px solid var(--mc-color-accent);
+    border-radius: inherit;
+    pointer-events: none;
+}

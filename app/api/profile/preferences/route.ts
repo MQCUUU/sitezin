@@ -1,7 +1,6 @@
 import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextRequest, NextResponse } from "next/server";
 
-import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { entradaInvalida, naoAutenticado, respostaDeErro } from "@/lib/api-error";
 import { sanitizePreferences } from "@/lib/preferences";

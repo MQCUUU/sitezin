@@ -9,7 +9,7 @@ import { apiFetch } from "@/lib/api-client";
 import { getLibraryVersion } from "@/lib/library-cache";
 import { authClient } from "@/lib/auth/client";
 import { SmartQueue } from "@/components/SmartQueue";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState, useEffectEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DEFAULT_FOR_YOU_QUERY, parseForYouQuery, serializeForYouQuery, type ForYouQuery } from "@/lib/for-you/url";
@@ -259,13 +259,16 @@ export default function ForYouPage() {
    * underlying Dialog (C2.3) — this effect used to duplicate that.
    */
 
+  // Só o id (e o tipo) disparam a prévia; o resto do item não muda o pedido.
+  const previewId = previewItem?.id;
+  const previewType = previewItem?.media_type;
   useEffect(() => {
     let cancelled =
       false;
 
     async function loadPreview() {
       if (
-        !previewItem
+        !previewId || !previewType
       ) {
         setPreviewDetails(
           null
@@ -279,7 +282,7 @@ export default function ForYouPage() {
           true
         );
 
-        const data = await apiFetch(`/api/tmdb/${previewItem.media_type}/${previewItem.id}`);
+        const data = await apiFetch(`/api/tmdb/${previewType}/${previewId}`);
 
         if (
           !cancelled
@@ -320,8 +323,8 @@ export default function ForYouPage() {
         true;
     };
   }, [
-    previewItem?.id,
-    previewItem?.media_type,
+    previewId,
+    previewType,
   ]);
 
   const activeFilterCount =
@@ -650,6 +653,9 @@ export default function ForYouPage() {
     }
   }
 
+  // O efeito abaixo dispara pelos filtros; useEffectEvent chama sempre o load mais recente.
+  const loadFromEffect = useEffectEvent((page: number, append: boolean) => load(page, append));
+
   useEffect(() => {
     // Espera a sessão resolver para saber de quem é o cache.
     if (sessionPending) return;
@@ -657,7 +663,7 @@ export default function ForYouPage() {
     const timer =
       setTimeout(
         () => {
-          load(
+          loadFromEffect(
             1,
             false
           );

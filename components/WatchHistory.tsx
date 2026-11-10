@@ -2,7 +2,7 @@
 
 import "@/styles/features/title-detail.css";
 import { apiFetch } from "@/lib/api-client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useEffectEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { useModal } from "@/hooks/useModal";
 import { CalendarDays, Check, Clock3, Edit3, History, Loader2, Plus, RefreshCcw, Save, Star, Trash2, X } from "lucide-react";
@@ -172,8 +172,11 @@ export function WatchHistory({
     }
   }
 
+  // Dispara pelo libraryId; useEffectEvent chama sempre o load mais recente.
+  const loadFromEffect = useEffectEvent(() => { void load(); });
+
   useEffect(() => {
-    load();
+    loadFromEffect();
   }, [
     libraryId,
   ]);

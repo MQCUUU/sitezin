@@ -121,6 +121,7 @@ async function parseResponse(response: Response) {
 function redirectToLogin() {
   if (typeof window === "undefined") return;
   const params = new URLSearchParams({ reason: "session", next: `${window.location.pathname}${window.location.search}` });
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- recarga completa de propósito: sessão expirada não pode deixar dados da conta na memória.
   window.location.href = `/login?${params.toString()}`;
 }
 
