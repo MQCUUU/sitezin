@@ -1,5 +1,6 @@
 import "@/styles/features/insights.css";
 import "@/styles/insights.css";
+import "@/styles/features/insights-page.css";
 import type { Metadata } from "next";
 
 import { InsightsPage } from "@/components/insights/InsightsPage";

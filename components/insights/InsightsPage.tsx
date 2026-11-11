@@ -1,28 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { Component, Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { getLibraryVersion } from "@/lib/library-cache";
 import type { InsightsPayload } from "@/lib/insights/types";
 
-import {
-  ActivityChapter,
-  AiChapter,
-  CHAPTERS,
-  EvolutionChapter,
-  FavoritesChapter,
-  RatingsChapter,
-  DroppedChapter,
-  SummaryChapter,
-  TasteChapter,
-  TitlesChapter,
-  WatchlistChapter,
-  YearChapter,
-  visibleChapters as chapterIds,
-} from "./story";
 import { Button } from "@/components/ui/Button";
+import { EmptyOpening, Opening } from "./sections";
 
 /*
  * Página Insights — uma narrativa contínua (sem abas escondendo conteúdo).
@@ -48,7 +33,7 @@ const cache = new Map<string, { at: number; data: InsightsPayload }>();
 const TTL = 60_000;
 const enrichRun = { active: false };
 
-class ChapterBoundary extends Component<{ name: string; children: ReactNode }, { failed: boolean }> {
+class SectionBoundary extends Component<{ name: string; children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
 
   static getDerivedStateFromError() {
@@ -62,7 +47,7 @@ class ChapterBoundary extends Component<{ name: string; children: ReactNode }, {
   render() {
     if (this.state.failed) {
       return (
-        <p className="ins-chapter-error" role="status">
+        <p className="ix-note" role="status">
           Não foi possível mostrar “{this.props.name}” agora. O resto da página continua funcionando.
         </p>
       );
@@ -74,42 +59,12 @@ class ChapterBoundary extends Component<{ name: string; children: ReactNode }, {
 
 function Skeleton() {
   return (
-    <div className="ins-skeleton" role="status" aria-live="polite" aria-label="Carregando seus insights">
-      <div className="mc-skeleton ins-skel-hero" />
-      <div className="mc-skeleton ins-skel-wide" />
-      <div className="ins-skel-duo">
-        <div className="mc-skeleton ins-skel-card" />
-        <div className="mc-skeleton ins-skel-card" />
-      </div>
+    <div className="ix-skeleton" role="status" aria-live="polite" aria-label="Carregando seus insights">
+      <div className="mc-skeleton ix-skel-title" />
+      <div className="mc-skeleton ix-skel-line" />
+      <div className="mc-skeleton ix-skel-block" />
     </div>
   );
-}
-
-function useScrollSpy(ids: string[], ready: boolean) {
-  const [active, setActive] = useState(ids[0]);
-
-  useEffect(() => {
-    if (!ready || typeof IntersectionObserver === "undefined") return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-
-        if (visible) setActive(visible.target.id);
-      },
-      { rootMargin: "-120px 0px -65% 0px" }
-    );
-
-    ids.forEach((id) => {
-      const el = document.getElementById(id);
-
-      if (el) observer.observe(el);
-    });
-
-    return () => observer.disconnect();
-  }, [ids, ready]);
-
-  return active;
 }
 
 function InsightsContent() {
@@ -219,79 +174,44 @@ function InsightsContent() {
   const setPeriod = (value: string) => update({ period: value === "year" ? null : value });
   const years = useMemo(() => Array.from({ length: 8 }, (_, i) => String(thisYear - 1 - i)), [thisYear]);
   const isYear = /^\d{4}$/.test(period);
-  const newUser = data && data.meta.historyTotal === 0;
-  const ids = useMemo(() => (data ? chapterIds(data) : []), [data]);
-  const visibleChapters = CHAPTERS.filter((c) => ids.includes(c.id));
-  const active = useScrollSpy(ids, Boolean(data));
-  const position = (id: string) => Math.max(1, ids.indexOf(id) + 1);
+  const isEmpty = Boolean(data) && (data!.meta.historyTotal === 0 || data!.summary.cur.movies + data!.summary.cur.series === 0);
 
   return (
-    <>
-
-      {/* Fase 4: o nome da página é o título; a promessa vira a frase de apoio. */}
-      <header className="ins-header">
-        <h1>Insights</h1>
-        <p className="ins-header-text">Entenda seu jeito de assistir: quanto, quando e do que você realmente gosta.</p>
-
-        <div className="ins-filters" role="group" aria-label="Filtros">
-          <div className="ins-seg ins-seg--lg" role="radiogroup" aria-label="Período">
-            {PERIODS.map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                role="radio"
-                aria-checked={period === value}
-                className={period === value ? "is-active" : ""}
-                onClick={() => setPeriod(value)}
-              >
-                {label}
-              </button>
-            ))}
-            <label className={`ins-year-select${isYear ? " is-active" : ""}`}>
-              <span className="ins-sr">Outro ano</span>
-              <select value={isYear ? period : ""} onChange={(event) => event.target.value && setPeriod(event.target.value)}>
-                <option value="" disabled>
-                  Outro ano
-                </option>
-                {years.map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className="ins-seg" role="radiogroup" aria-label="Tipo">
-            {TYPES.map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                role="radio"
-                aria-checked={type === value}
-                className={type === value ? "is-active" : ""}
-                onClick={() => update({ type: value === "all" ? null : value })}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </header>
-
-      {data && !error ? (
-        <nav className="ins-nav" aria-label="Capítulos">
-          {visibleChapters.map((c) => (
-            <a key={c.id} href={`#${c.id}`} className={active === c.id ? "is-active" : ""} aria-current={active === c.id ? "true" : undefined}>
-              {c.label}
-            </a>
+    <div className="ix-page">
+      <div className="ix-filters" role="group" aria-label="Filtros">
+        <div className="ix-seg" role="radiogroup" aria-label="Período">
+          {PERIODS.map(([value, label]) => (
+            <button key={value} type="button" role="radio" aria-checked={period === value} className={period === value ? "is-active" : ""} onClick={() => setPeriod(value)}>
+              {label}
+            </button>
           ))}
-        </nav>
-      ) : null}
+          <label className={`ix-year${isYear ? " is-active" : ""}`}>
+            <span className="mc-visually-hidden">Outro ano</span>
+            <select value={isYear ? period : ""} onChange={(event) => event.target.value && setPeriod(event.target.value)}>
+              <option value="" disabled>
+                Outro ano
+              </option>
+              {years.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="ix-seg" role="radiogroup" aria-label="Tipo">
+          {TYPES.map(([value, label]) => (
+            <button key={value} type="button" role="radio" aria-checked={type === value} className={type === value ? "is-active" : ""} onClick={() => update({ type: value === "all" ? null : value })}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {enriching ? (
-        <p className="ins-enrich" role="status">
-          Completando idioma, país e diretores dos seus títulos — a página se atualiza sozinha.
+        <p className="ix-note" role="status">
+          Completando idioma, país e diretores dos seus títulos. A página se atualiza sozinha.
         </p>
       ) : null}
 
@@ -307,72 +227,24 @@ function InsightsContent() {
       {!error && !data ? <Skeleton /> : null}
 
       {data && !error ? (
-        <div className={`ins-story${loading ? " is-loading" : ""}`} aria-busy={loading}>
-          {newUser ? (
-            <section id="resumo" className="ins-hero ins-hero--empty">
-              <span className="ins-kicker">Bem-vindo aos seus Insights</span>
-              <p className="ins-hero-title">Seu perfil está começando a tomar forma.</p>
-              <p className="ins-hero-sub">
-                Marque filmes e episódios como assistidos e dê algumas notas: aqui você vai ver quanto assiste, do que realmente gosta e como seu gosto muda.
-              </p>
-              <div className="ins-hero-actions">
-                <Link href="/discover" className="btn primary">
-                  Descobrir títulos
-                </Link>
-                <Link href="/library" className="btn">
-                  Abrir biblioteca
-                </Link>
-              </div>
-            </section>
+        <div className={`ix-story${loading ? " is-loading" : ""}`} aria-busy={loading}>
+          {isEmpty ? (
+            <SectionBoundary name="Resumo">
+              <EmptyOpening data={data} onPeriod={setPeriod} />
+            </SectionBoundary>
           ) : (
-            <>
-              <ChapterBoundary name="Resumo">
-                <SummaryChapter data={data} onPeriod={setPeriod} />
-              </ChapterBoundary>
-              <ChapterBoundary name="Atividade">
-                <ActivityChapter data={data} index={position("atividade")} />
-              </ChapterBoundary>
-              <ChapterBoundary name="Meu gosto">
-                <TasteChapter data={data} index={position("gosto")} />
-              </ChapterBoundary>
-              <ChapterBoundary name="Notas">
-                <RatingsChapter data={data} index={position("notas")} />
-              </ChapterBoundary>
-              <ChapterBoundary name="Filmes e séries">
-                <TitlesChapter key={data.meta.type} data={data} index={position("titulos")} />
-              </ChapterBoundary>
-              <ChapterBoundary name="Abandonos">
-                <DroppedChapter data={data} index={position("abandonos")} />
-              </ChapterBoundary>
-            </>
+            <SectionBoundary name="Resumo">
+              <Opening data={data} />
+            </SectionBoundary>
           )}
-          <ChapterBoundary name="Watchlist">
-            <WatchlistChapter data={data} index={position("watchlist")} />
-          </ChapterBoundary>
-          {!newUser ? (
-            <>
-              <ChapterBoundary name="Evolução">
-                <EvolutionChapter data={data} index={position("evolucao")} />
-              </ChapterBoundary>
-              <ChapterBoundary name="IA">
-                <AiChapter data={data} index={position("ia")} />
-              </ChapterBoundary>
-              <ChapterBoundary name="Maiores notas">
-                <FavoritesChapter data={data} index={position("favoritos")} />
-              </ChapterBoundary>
-              <ChapterBoundary name="Seu ano">
-                <YearChapter data={data} index={position("ano")} />
-              </ChapterBoundary>
-            </>
-          ) : null}
           {data.meta.failed.length ? (
-            <p className="ins-chapter-error" role="status">
+            <p className="ix-note" role="status">
               Algumas partes não puderam ser calculadas agora. Tente atualizar a página em instantes.
             </p>
           ) : null}
         </div>
       ) : null}
-    </>
+    </div>
   );
 }
 

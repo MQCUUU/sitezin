@@ -1,0 +1,161 @@
+/*
+ * Fase 7 — Insights clean (prefixo ix-). Sem painel, borda, sombra ou degradê:
+ * hierarquia por tipo e espaço, blocos separados por um fio. Âmbar só no que é seu.
+ */
+
+.ix-page {
+    --ix-bar: color-mix(in srgb, var(--text) 22%, transparent);
+    --ix-track: color-mix(in srgb, var(--text) 8%, transparent);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    padding-block: 24px 64px;
+}
+.ix-page > *,
+.ix-story > * {
+    min-width: 0;
+}
+
+/* ---- filtros: texto com traço no selecionado ---- */
+.ix-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 32px;
+}
+.ix-seg {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 20px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    max-width: 100%;
+}
+.ix-seg > button,
+.ix-year {
+    flex: none;
+    padding: 8px 0;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: var(--mc-fs-md);
+    font-weight: 560;
+    white-space: nowrap;
+    cursor: pointer;
+    box-shadow: inset 0 -2px 0 transparent;
+    transition: color 150ms ease;
+}
+.ix-seg > button:hover,
+.ix-year:hover {
+    color: var(--text);
+}
+.ix-seg > button.is-active,
+.ix-year.is-active {
+    color: var(--text);
+    box-shadow: inset 0 -2px 0 var(--mc-color-accent);
+}
+.ix-year select {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+.ix-seg > button:focus-visible,
+.ix-year:focus-within {
+    outline: 2px solid var(--mc-color-accent);
+    outline-offset: 3px;
+}
+
+/* ---- abertura: a frase ---- */
+.ix-title {
+    margin: 32px 0 16px;
+    max-width: 14ch;
+    font-size: clamp(48px, 8vw, 112px);
+    font-weight: 770;
+    font-variation-settings: "wdth" 70;
+    line-height: 0.92;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+}
+.ix-ficha {
+    margin: 0;
+    max-width: 62ch;
+    color: var(--muted);
+    font-size: 18px;
+}
+.ix-mine {
+    color: var(--mc-color-accent);
+    font-weight: 650;
+}
+.ix-change {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 15px;
+}
+.ix-lines {
+    margin: 20px 0 0;
+    max-width: 62ch;
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1.55;
+}
+.ix-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 24px;
+}
+.ix-note {
+    margin: 16px 0 0;
+    max-width: 62ch;
+    color: var(--muted);
+    font-size: 15px;
+}
+
+/* ---- esqueleto ---- */
+.ix-skeleton {
+    display: grid;
+    gap: 16px;
+    margin-top: 32px;
+}
+.ix-skel-title {
+    height: 96px;
+    width: 70%;
+}
+.ix-skel-line {
+    height: 18px;
+    width: 50%;
+}
+.ix-skel-block {
+    height: 160px;
+}
+.ix-story.is-loading {
+    opacity: 0.6;
+}
+
+/* ---- blocos ---- */
+.ix-block {
+    max-width: 880px;
+    margin-top: 48px;
+    padding-top: 28px;
+    border-top: 1px solid var(--line);
+}
+.ix-h2 {
+    margin: 0 0 20px;
+    font-size: 22px;
+    font-weight: 720;
+    font-variation-settings: "wdth" 80;
+}
+.ix-h3 {
+    margin: 28px 0 12px;
+    font-size: 16px;
+    font-weight: 640;
+}
+.ix-link {
+    color: var(--text);
+    text-decoration: underline;
+    text-decoration-color: var(--mc-color-accent);
+    text-underline-offset: 3px;
+}
