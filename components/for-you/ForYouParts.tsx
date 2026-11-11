@@ -193,6 +193,24 @@ export function MovieCard({
   );
 }
 
+/** Esqueleto do destaque (mesma caixa da faixa e do texto do FeaturedPick): sem salto quando as sugestões chegam. */
+export function FeaturedSkeleton() {
+  return (
+    <section className="fy-feature fy-feature--skeleton" role="status" aria-label="Carregando destaque">
+      <div className="tt-band">
+        <div className="tt-band-screen mc-skeleton dc-band-skeleton" />
+      </div>
+      <div className="fy-feature-body">
+        <div className="fy-feature-copy">
+          <div className="mc-skeleton fy-feat-skel-title" />
+          <div className="mc-skeleton fy-feat-skel-meta" />
+          <div className="mc-skeleton fy-feat-skel-text" />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function FeedSkeleton() {
   return (
     <div className="fy-feed">

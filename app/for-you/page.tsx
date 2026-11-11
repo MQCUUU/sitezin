@@ -21,7 +21,7 @@ import { WatchProviderList } from "@/components/media/preview/WatchProviderList"
 import { fromLooseMediaItem } from "@/components/media/preview/adapters";
 import { normalizeWatchProviders } from "@/components/media/providers";
 import { FOR_YOU_CACHE_PREFIX, isValidForYouPayload, safeJson, type Shelf, type FilterData, type LibraryItem } from "@/components/for-you/shared";
-import { ShelfRow, FeedSkeleton, joinNames, FeaturedPick } from "@/components/for-you/ForYouParts";
+import { ShelfRow, FeedSkeleton, FeaturedSkeleton, joinNames, FeaturedPick } from "@/components/for-you/ForYouParts";
 import { ProjectionProvider } from "@/components/screen/ProjectionProvider";
 export default function ForYouPage() {
   // Fase 6: erros das ações de biblioteca (401 = "Sua sessão expirou", resto = aviso amigável).
@@ -1098,6 +1098,7 @@ export default function ForYouPage() {
             onPreview={() => setPreviewItem(featured.item)}
           />
         )}
+        {!featured && loading ? <FeaturedSkeleton /> : null}
 
         {profileGenres.length >
           0 && (

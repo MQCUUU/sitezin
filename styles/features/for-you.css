@@ -751,3 +751,17 @@
     .fy-opinions-controls { align-items: stretch; flex-direction: column; }
     .fy-opinions-controls label { justify-content: flex-end; }
 }
+
+/* Esqueleto do destaque: alturas de título e frase iguais às do texto real. */
+.fy-feat-skel-title {
+    width: min(480px, 70%);
+    height: clamp(30px, 3.6vw, 48px);
+}
+.fy-feat-skel-text {
+    width: min(360px, 60%);
+    height: 28px;
+}
+.fy-feat-skel-meta {
+    width: min(260px, 50%);
+    height: 20px;
+}
