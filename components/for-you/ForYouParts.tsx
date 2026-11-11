@@ -124,7 +124,7 @@ export function MovieCard({
   const endorsement = item.friend_endorsement || item.friend_opinion_summary;
 
   return (
-    <MediaCard className="fy-card-wrap">
+    <MediaCard className="fy-card-wrap" data-projection={item.backdrop_path || undefined}>
       <MediaCardImage className="fy-card-poster-wrap">
         <Link
           href={`/title/${type}/${item.id}`}

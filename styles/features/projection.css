@@ -1,0 +1,71 @@
+/*
+ * Projeção (Fase 5) — troca de imagem da faixa e RoomLight.
+ * Só transform/opacity/background-color; sem filtro, sem variável herdada.
+ * `.pj-root` não cria caixa: os ouvintes ficam nele, o layout é o de sempre.
+ */
+
+.pj-root {
+  display: contents;
+}
+
+/* Camada de cima da faixa: aparece quando a imagem terminou de carregar. */
+.tt-band-projection {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+  opacity: 0;
+  transition: opacity 240ms var(--mc-ease-out);
+  pointer-events: none;
+}
+
+.tt-band-projection[data-ready="true"] {
+  opacity: 1;
+}
+
+/* Reflexo na sala: faixa de cor no alto da janela, atrás do conteúdo. */
+.pj-room {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 72vh;
+  z-index: 0;
+  pointer-events: none;
+  background-color: transparent;
+  opacity: 0;
+  -webkit-mask-image: radial-gradient(ellipse 75% 100% at 50% 0%, #000 0%, transparent 100%);
+  mask-image: radial-gradient(ellipse 75% 100% at 50% 0%, #000 0%, transparent 100%);
+  transition: background-color 420ms var(--mc-ease-out), opacity 420ms var(--mc-ease-out);
+}
+
+.pj-room[data-on="true"] {
+  opacity: 0.22;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tt-band-projection { transition: none; }
+  .pj-room { display: none; }
+}
+
+html[data-motion="reduced"] .tt-band-projection { transition: none; }
+html[data-motion="reduced"] .pj-room { display: none; }
+
+/* Economia de dados: sem reflexo extra. */
+@media (prefers-reduced-data: reduce) {
+  .pj-room { display: none; }
+}
+
+/* Toque não tem passagem de ponteiro; sem reflexo preso após um toque. */
+@media (hover: none) {
+  .pj-room { display: none; }
+}
+
+/* Descobrir: faixa mais baixa que a do Início, para a grade aparecer logo. */
+.dc-band .tt-band-screen {
+  max-height: min(34vh, 360px);
+}
+
+@media (max-width: 760px) {
+  .dc-band .tt-band-screen { aspect-ratio: 16 / 7; }
+}

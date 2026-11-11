@@ -45,7 +45,7 @@ export function DiscoverCard({
   const itemYear = (item.release_date || item.first_air_date || "").slice(0, 4);
 
   return (
-    <MediaCard className="discover-card">
+    <MediaCard className="discover-card" data-projection={item.backdrop_path || undefined}>
       <MediaCardImage>
         <Link href={`/title/${item.media_type}/${item.id}`} tabIndex={-1} aria-hidden="true" className="poster-link">
           <Poster

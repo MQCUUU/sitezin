@@ -37,6 +37,8 @@ import {
 } from "@/components/discover";
 
 import { MediaPreviewDialog } from "@/components/media/preview/MediaPreviewDialog";
+import { ProjectionProvider } from "@/components/screen/ProjectionProvider";
+import { TitleBand } from "@/components/title/hero/TitleBand";
 import { WatchProviderList } from "@/components/media/preview/WatchProviderList";
 import { fromDiscoverItem } from "@/components/media/preview/adapters";
 import { normalizeWatchProviders } from "@/components/media/providers";
@@ -663,8 +665,15 @@ function DiscoverContent() {
     return Array.from(unique.values());
   }, [data?.results]);
 
+  const bandPath = items.find((item) => item.backdrop_path)?.backdrop_path ?? null;
+
   return (
-    <>
+    <ProjectionProvider>
+      {bandPath ? (
+        <div className="dc-band">
+          <TitleBand path={bandPath} />
+        </div>
+      ) : null}
 
       <DiscoverHeader
         totalLabel={data ? data.total_label ?? data.total_results.toLocaleString("pt-BR") : null}
@@ -781,6 +790,6 @@ function DiscoverContent() {
         providers={<WatchProviderList data={normalizeWatchProviders(previewDetails?.watch_providers, "BR")} loading={previewDetailsLoading} />}
       />
 
-    </>
+    </ProjectionProvider>
   );
 }

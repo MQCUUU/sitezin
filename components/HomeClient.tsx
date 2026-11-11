@@ -14,6 +14,7 @@ import { ErrorState } from "@/components/AsyncState";
 import { authClient } from "@/lib/auth/client";
 import { HomeSkeleton } from "@/components/home/HomeParts";
 import { HomeFeature } from "@/components/home/HomeFeature";
+import { ProjectionProvider } from "@/components/screen/ProjectionProvider";
 import { HomeRows, HomeSection, type HomeRow } from "@/components/home/HomeSections";
 import { detailLabel, personalLine, typeLabel } from "@/components/calendar/copy";
 import { dayHeading, relativeWhen } from "@/lib/calendar/dates";
@@ -570,6 +571,7 @@ export default function HomeClient() {
           : null;
 
   return (
+    <ProjectionProvider>
     <div key="home-auth" className="home-smart hm-screen">
       {show.skeleton ? (
         <HomeSkeleton />
@@ -624,6 +626,7 @@ export default function HomeClient() {
         </div>
       )}
     </div>
+    </ProjectionProvider>
   );
 }
 

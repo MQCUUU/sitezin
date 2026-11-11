@@ -60,7 +60,7 @@ export function Card({ item, position, leaving = false, ...actionProps }: CardAc
   const year = date ? new Date(date).getFullYear() : null;
 
   return (
-    <MediaCard data-leaving={leaving || undefined} aria-hidden={leaving || undefined}>
+    <MediaCard data-leaving={leaving || undefined} aria-hidden={leaving || undefined} data-projection={item.backdrop_path || undefined}>
       <MediaCardImage>
         <Link href={`/title/${item.media_type}/${item.tmdb_id}`} tabIndex={-1} aria-hidden="true" className="poster-link">
           <Poster path={item.poster_path} alt={item.title} sizes="(max-width:700px) 46vw, (max-width:1100px) 24vw, 170px" {...posterLoading(position)} />

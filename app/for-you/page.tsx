@@ -22,6 +22,7 @@ import { fromLooseMediaItem } from "@/components/media/preview/adapters";
 import { normalizeWatchProviders } from "@/components/media/providers";
 import { FOR_YOU_CACHE_PREFIX, isValidForYouPayload, safeJson, type Shelf, type FilterData, type LibraryItem } from "@/components/for-you/shared";
 import { ShelfRow, FeedSkeleton, joinNames, FeaturedPick } from "@/components/for-you/ForYouParts";
+import { ProjectionProvider } from "@/components/screen/ProjectionProvider";
 export default function ForYouPage() {
   // Fase 6: erros das ações de biblioteca (401 = "Sua sessão expirou", resto = aviso amigável).
   const libraryAuth = useLibraryAuth();
@@ -1068,7 +1069,7 @@ export default function ForYouPage() {
   })();
 
   return (
-    <>
+    <ProjectionProvider>
 
       {/* Fase 5 (P2-10): <div> — o <main> é do layout raiz (antes havia um main dentro do outro). */}
       <div className="fy-page" data-rec-tool="for_you">
@@ -1714,7 +1715,7 @@ export default function ForYouPage() {
         providers={<WatchProviderList data={normalizeWatchProviders(previewDetails?.watch_providers, "BR")} loading={previewLoading} />}
       />
 
-    </>
+    </ProjectionProvider>
   );
 }
 
