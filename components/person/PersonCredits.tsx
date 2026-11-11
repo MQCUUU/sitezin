@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Film, Star, Tv } from "lucide-react";
 import { ConnectedPosterActions } from "@/components/media/ConnectedPosterActions";
 import { getYear, getTitle, type Credit } from "@/components/person/shared";
+import { groupByDecade } from "@/lib/acervo/format";
 
 export function PersonCreditsSection({
   title,
@@ -15,13 +16,18 @@ export function PersonCreditsSection({
   total,
   expanded,
   onToggle,
+  byDecade = false,
 }: {
   title: string;
   items: Credit[];
   total: number;
   expanded: boolean;
   onToggle: () => void;
+  /** Fase 6: com a lista inteira aberta, agrupa os trabalhos por década. */
+  byDecade?: boolean;
 }) {
+  const groups = byDecade && expanded ? groupByDecade(items, (item) => getYear(item)) : null;
+
   return (
     <section className="sk-section pp-section">
       <div className="sk-section-head">
@@ -30,11 +36,24 @@ export function PersonCreditsSection({
         </h2>
       </div>
 
-      <div className="person-credit-grid">
-        {items.map((item) => (
-          <PersonCreditCard key={`${item.media_type}-${item.id}`} item={item} />
-        ))}
-      </div>
+      {groups ? (
+        groups.map((group) => (
+          <div key={group.label} className="pp-decade-group">
+            <h3 className="pp-decade">{group.label}</h3>
+            <div className="person-credit-grid">
+              {group.items.map((item) => (
+                <PersonCreditCard key={`${item.media_type}-${item.id}`} item={item} />
+              ))}
+            </div>
+          </div>
+        ))
+      ) : (
+        <div className="person-credit-grid">
+          {items.map((item) => (
+            <PersonCreditCard key={`${item.media_type}-${item.id}`} item={item} />
+          ))}
+        </div>
+      )}
 
       {total > 12 && (
         <div className="person-show-more">
@@ -111,6 +130,7 @@ export function PersonCreditCard({
 
         <ConnectedPosterActions
           media={{ tmdbId: Number(item.id), mediaType: item.media_type === "tv" ? "tv" : "movie", title, year, posterPath: item.poster_path ?? null, voteAverage: rating || null }}
+          tags
         />
       </MediaCardImage>
 

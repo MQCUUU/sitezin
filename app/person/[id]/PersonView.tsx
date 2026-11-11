@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Loader2, UserRound } from "lucide-react";
 import { SmartBackButton } from "@/components/SmartBackButton";
-import { img } from "@/lib/tmdb";
+import { TitleBand } from "@/components/title/hero/TitleBand";
 import { safeJson, formatDate, getYear, type Person, type Credit } from "@/components/person/shared";
 import { PersonCreditsSection, PersonCreditCard } from "@/components/person/PersonCredits";
 /*
@@ -387,50 +387,37 @@ export default function PersonView({
         <SmartBackButton />
       </div>
 
-      {/* Fase 4b: o topo fica sempre à vista; as abas trocam só o conteúdo abaixo. */}
-      <section className="sk-hero">
-        {backdrop && (
-          <div className="sk-hero-backdrop" aria-hidden="true" style={{ backgroundImage: `url(${img(backdrop, "w1280")})` }} />
-        )}
+      {/* Fase 6: a pessoa abre na Tela do trabalho mais conhecido; o retrato 4:5 sobe sobre a borda inferior (única sobreposição do produto). */}
+      <section className={`pp-hero${backdrop ? "" : " pp-hero--plain"}`} aria-label={person.name}>
+        {backdrop ? <TitleBand path={backdrop} /> : null}
 
-        <div className="sk-hero-content">
-          <div className="sk-hero-poster">
+        <div className="pp-head">
+          <div className="pp-portrait">
             {person.profile_path ? (
-              <Poster path={person.profile_path} alt={person.name} sizes="(max-width: 700px) 120px, 220px" priority />
+              <Poster path={person.profile_path} alt={person.name} sizes="(max-width: 700px) 120px, 200px" priority />
             ) : (
-              <div className="sk-hero-poster-empty">
-                <UserRound size={48} aria-hidden="true" />
+              <div className="pp-portrait-empty">
+                <UserRound size={40} aria-hidden="true" />
               </div>
             )}
           </div>
 
-          <div className="sk-hero-copy">
-            <p className="sk-hero-kicker">{departmentLabel(person.known_for_department)}</p>
-            <h1>{person.name}</h1>
+          <div className="pp-id">
+            <h1 className="pp-name">{person.name}</h1>
             {person.also_known_as && person.also_known_as.length > 0 && person.also_known_as[0] !== person.name ? (
-              <p className="sk-hero-sub">Também conhecido(a) como {person.also_known_as[0]}</p>
+              <p className="pp-aka">Também conhecido(a) como {person.also_known_as[0]}</p>
             ) : null}
-
-            <dl className="sk-stats">
-              <div>
-                <dt>Trabalhos</dt>
-                <dd>{credits.length}</dd>
-              </div>
-              <div>
-                <dt>Filmes</dt>
-                <dd>{movies.length}</dd>
-              </div>
-              <div>
-                <dt>Séries</dt>
-                <dd>{series.length}</dd>
-              </div>
-              {averageRating !== null && (
-                <div>
-                  <dt>Média no TMDB</dt>
-                  <dd>{averageRating.toFixed(1).replace(".", ",")}</dd>
-                </div>
-              )}
-            </dl>
+            <p className="pp-ficha">
+              {[
+                departmentLabel(person.known_for_department),
+                `${credits.length} ${credits.length === 1 ? "trabalho" : "trabalhos"}`,
+                movies.length ? `${movies.length} ${movies.length === 1 ? "filme" : "filmes"}` : null,
+                series.length ? `${series.length} ${series.length === 1 ? "série" : "séries"}` : null,
+                averageRating !== null ? `média ${averageRating.toFixed(1).replace(".", ",")}` : null,
+              ]
+                .filter(Boolean)
+                .join(", ")}
+            </p>
           </div>
         </div>
       </section>
@@ -533,6 +520,7 @@ export default function PersonView({
           total={movies.length}
           items={visibleMovies}
           expanded={showAllMovies}
+          byDecade
           onToggle={() => toggleExpanded("filmes")}
         />
       )}
@@ -543,6 +531,7 @@ export default function PersonView({
           total={series.length}
           items={visibleSeries}
           expanded={showAllSeries}
+          byDecade
           onToggle={() => toggleExpanded("series")}
         />
       )}

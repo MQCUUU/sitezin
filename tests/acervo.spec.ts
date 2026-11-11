@@ -110,4 +110,15 @@ test.describe("Fase 6 — Coleção e Pessoa", () => {
     await expect(page.locator(".sk-hero-poster")).toHaveCount(0);
     await expect(page.locator(".cl-ficha")).toHaveText(/^\d+ filmes?/);
   });
+
+  test("Pessoa abre na Tela com retrato, ficha e filmografia por década", async ({ page }) => {
+    await page.goto("/person/287");
+    await expect(page.locator(".pp-hero .tt-band-screen")).toBeVisible({ timeout: 60_000 });
+    await expect(page.locator(".pp-hero .pp-portrait")).toBeVisible();
+    await expect(page.locator(".pp-hero .sk-hero-kicker")).toHaveCount(0);
+    await expect(page.locator(".pp-ficha")).toContainText("trabalhos");
+
+    await page.goto("/person/287?tab=acting&ver=filmes");
+    await expect(page.locator(".pp-decade").first()).toHaveText(/^Anos \d{4}$|^Sem data$/, { timeout: 60_000 });
+  });
 });
