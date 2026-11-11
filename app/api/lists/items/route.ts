@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
         FROM public.custom_list_items i
         WHERE i.list_id = $1
       )
-      SELECT o.rank::int, m.id AS media_id, m.tmdb_id, m.media_type, m.title, m.original_title, m.poster_path,
+      SELECT o.rank::int, m.id AS media_id, m.tmdb_id, m.media_type, m.title, m.original_title, m.poster_path, m.backdrop_path,
              m.release_date, m.first_air_date, ${libraryStatus} AS library_status
       FROM ordered o
       JOIN public.media m ON m.id = o.media_id

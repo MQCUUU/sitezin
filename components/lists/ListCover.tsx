@@ -13,9 +13,9 @@ import { img } from "@/lib/tmdb";
  * MyCatalog; 1 → pôster único; 2–3 → composição; 4+ → mosaico 2×2. Miniaturas
  * w185, lazy (eager na capa do detalhe, acima da dobra), proporção fixa (sem layout shift); pôster quebrado vira bloco neutro.
  */
-export function ListCover({ posters, size = "md" }: { posters: (string | null)[]; size?: "md" | "lg" | "sm" }) {
+export function ListCover({ posters, size = "md", count = 4 }: { posters: (string | null)[]; size?: "md" | "lg" | "sm"; count?: 3 | 4 }) {
   const [broken, setBroken] = useState<Set<number>>(new Set());
-  const valid = posters.filter((p): p is string => Boolean(p)).slice(0, 4);
+  const valid = posters.filter((p): p is string => Boolean(p)).slice(0, count);
   const layout = valid.length >= 4 ? "four" : valid.length === 3 ? "three" : valid.length === 2 ? "two" : valid.length === 1 ? "one" : "empty";
 
   if (layout === "empty") {

@@ -188,13 +188,13 @@ export function ListsPage() {
       {state === "ready" && lists.length > 0 ? (
         <>
           <p className="lst-count">{plural(total, "lista", "listas")}</p>
-          <div className="lst-grid">
+          <div className="lst-grid lst-rows">
             {lists.map((list) => (
               <article key={list.id} className="lst-card">
                 <Link href={`/lists/${list.id}`} className="lst-card-link" aria-label={`${list.name}, ${plural(list.item_count, "título", "títulos")}, ${list.is_public ? "pública" : "privada"}`}>
-                  <ListCover posters={list.covers} />
+                  <ListCover posters={list.covers} count={3} />
                   <div className="lst-card-body">
-                    <strong className="lst-card-title">{list.name}</strong>
+                    <h2 className="lst-card-title lst-row-title">{list.name}</h2>
                     {list.description ? <p className="lst-card-desc">{list.description}</p> : null}
                     <p className="lst-card-meta">
                       <span>{plural(list.item_count, "título", "títulos")}</span> <Visibility isPublic={list.is_public} />

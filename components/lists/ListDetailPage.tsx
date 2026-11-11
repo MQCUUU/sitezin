@@ -21,6 +21,8 @@ import { AddTitlesDialog } from "./AddTitlesDialog";
 import { ListCover } from "./ListCover";
 import { ListFormDialog } from "./ListFormDialog";
 import { ListMenu } from "./ListMenu";
+import { ProjectionProvider } from "@/components/screen/ProjectionProvider";
+import { TitleBand } from "@/components/title/hero/TitleBand";
 import { Visibility, copyListLink } from "./ListsPage";
 import { Button } from "@/components/ui/Button";
 
@@ -32,7 +34,7 @@ import { Button } from "@/components/ui/Button";
  * Biblioteca do dono; lista privada para outros = "não encontrada".
  */
 
-type Item = { rank: number; media_id: number; tmdb_id: number; media_type: "movie" | "tv"; title: string; original_title: string | null; poster_path: string | null; release_date: string | null; first_air_date: string | null; library_status: string | null };
+type Item = { rank: number; media_id: number; tmdb_id: number; media_type: "movie" | "tv"; title: string; original_title: string | null; poster_path: string | null; backdrop_path?: string | null; release_date: string | null; first_air_date: string | null; library_status: string | null };
 type Meta = { id: string; name: string; description: string | null; is_public: boolean; is_owner: boolean; item_count: number; covers: string[]; owner: { username: string | null; display_name: string | null } };
 
 function Skeleton() {
@@ -236,7 +238,18 @@ function DetailContent() {
     return !q && (local.length >= 4 || items.length >= (meta?.item_count ?? 0)) ? local : meta?.covers ?? [];
   }, [items, q, meta]);
 
-  if (state === "loading") return <Skeleton />;
+  if (state === "loading") {
+    return (
+      <>
+        <div className="lst-band">
+          <div className="tt-band">
+            <div className="tt-band-screen mc-skeleton dc-band-skeleton" role="status" aria-label="Carregando destaque" />
+          </div>
+        </div>
+        <Skeleton />
+      </>
+    );
+  }
 
   if (state === "missing") {
     return (
@@ -278,9 +291,17 @@ function DetailContent() {
   const owner = meta.is_owner;
   const ownerName = meta.owner.display_name || meta.owner.username || "outro usuário";
   const canReorder = owner && !q && meta.item_count > 1;
+  // Fase 6: a lista abre na Tela do primeiro item com imagem; sem nenhuma, a capa em mosaico continua no cabeçalho.
+  const bandPath = items.find((item) => item.backdrop_path)?.backdrop_path ?? null;
 
   return (
-    <>
+    <ProjectionProvider>
+      {bandPath ? (
+        <div className="lst-band">
+          <TitleBand path={bandPath} />
+        </div>
+      ) : null}
+
       {owner ? (
         <Link href="/lists" className="lst-back">
           <ArrowLeft size={16} aria-hidden="true" /> Listas
@@ -288,7 +309,7 @@ function DetailContent() {
       ) : null}
 
       <header className="lst-detail-head">
-        <ListCover posters={covers} size="lg" />
+        {bandPath ? null : <ListCover posters={covers} size="lg" />}
         <div className="lst-detail-text">
           <h1>{meta.name}</h1>
           {meta.description ? <p className="lst-detail-desc">{meta.description}</p> : null}
@@ -370,7 +391,7 @@ function DetailContent() {
             const href = `/title/${item.media_type}/${item.tmdb_id}`;
 
             return (
-              <li key={item.media_id} className="lst-item" data-leaving={leavingId === item.media_id || undefined}>
+              <li key={item.media_id} className="lst-item" data-leaving={leavingId === item.media_id || undefined} data-projection={item.backdrop_path || undefined}>
                 <div className="lst-item-media mc-pa-host">
                 <Link href={href} className="lst-item-poster" tabIndex={reorder ? -1 : 0} aria-label={`${item.title}${year ? `, ${year}` : ""}`}>
                   {item.poster_path ? (
@@ -454,7 +475,7 @@ function DetailContent() {
           />
         </>
       ) : null}
-    </>
+    </ProjectionProvider>
   );
 }
 

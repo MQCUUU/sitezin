@@ -62,3 +62,26 @@ test.describe("Fase 6 — Watchlist", () => {
     await expect(page.locator(".wl-rank").first()).toBeVisible();
   });
 });
+
+test.describe("Fase 6 — Listas", () => {
+  let listId: string | null = null;
+
+  test.afterEach(async ({ request }) => {
+    if (listId) await request.delete(`/api/lists?id=${listId}`);
+    listId = null;
+  });
+
+  test("Lista abre na Tela do primeiro item e o índice é feito de linhas", async ({ page, request }) => {
+    const created = await request.post("/api/lists", { data: { name: "E2E Fase 6" } });
+    expect(created.status()).toBe(201);
+    listId = (await created.json()).id;
+    expect((await request.post("/api/lists/items", { data: { list_id: listId, tmdb_id: 680, media_type: "movie" } })).ok()).toBe(true);
+
+    await page.goto(`/lists/${listId}`);
+    await expect(page.locator("h1")).toHaveText("E2E Fase 6", { timeout: 30_000 });
+    await expect(page.locator(".lst-band .tt-band-screen img").first()).toBeVisible({ timeout: 30_000 });
+
+    await page.goto("/lists");
+    await expect(page.locator(".lst-row-title", { hasText: "E2E Fase 6" })).toBeVisible({ timeout: 30_000 });
+  });
+});
