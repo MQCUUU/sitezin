@@ -46,3 +46,19 @@ test.describe("Fase 6 — acervo", () => {
     await expect(page.locator(".lb-band .tt-band-projection")).toHaveAttribute("data-ready", "false", { timeout: 5_000 });
   });
 });
+
+test.describe("Fase 6 — Watchlist", () => {
+  test.afterEach(async ({ request }) => {
+    await remove(request, WANT);
+  });
+
+  test("Watchlist mostra o total com horas e o número como alça", async ({ page, request }) => {
+    await remove(request, WANT);
+    expect((await request.post("/api/library", { data: { media: WANT, status: "want" } })).status()).toBe(201);
+
+    await page.goto("/watchlist");
+    await expect(page.locator(".wl-head-total")).toHaveText(/^\d[\d.]* títulos?(, (cerca de \d+ horas?|menos de 1 hora))?$/, { timeout: 30_000 });
+    await expect(page.locator(".wl-grip")).toHaveCount(0);
+    await expect(page.locator(".wl-rank").first()).toBeVisible();
+  });
+});

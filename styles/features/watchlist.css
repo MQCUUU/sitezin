@@ -11,6 +11,29 @@
 .wl-page {
     max-width: 980px;
 }
+/* Fase 6: título condensado, total em horas e uma dica curta. */
+.wl-head {
+    margin: 8px 0 28px;
+}
+.wl-head-title {
+    margin: 0;
+    font-size: clamp(36px, 4.4vw, 60px);
+    font-weight: 770;
+    font-variation-settings: "wdth" 70;
+    line-height: 0.92;
+    letter-spacing: -0.005em;
+}
+.wl-head-total {
+    margin: 12px 0 0;
+    font-size: 18px;
+    font-weight: 650;
+    min-height: 1.4em;
+}
+.wl-head-hint {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: var(--mc-fs-base);
+}
 .wl-sr {
     position: absolute;
     width: 1px;
@@ -42,24 +65,21 @@
 }
 .wl-row {
     display: grid;
-    grid-template-columns: 18px 44px 72px minmax(0, 1fr) auto;
+    grid-template-columns: 44px 72px minmax(0, 1fr) auto;
     align-items: center;
     gap: 16px;
     padding: 14px 0;
 }
-.wl-grip {
-    display: grid;
-    place-items: center;
-    color: var(--muted);
-    cursor: grab;
-}
+/* O número é a posição e a alça de arrastar. */
 .wl-rank {
     color: var(--muted);
-    font-size: 28px;
-    font-weight: 800;
-    letter-spacing: -0.03em;
+    font-size: 32px;
+    font-weight: 770;
+    font-variation-settings: "wdth" 70;
+    letter-spacing: -0.005em;
     line-height: 1;
     text-align: right;
+    cursor: grab;
 }
 .wl-item:first-child .wl-rank {
     color: var(--accent);
@@ -167,9 +187,6 @@
             "rank poster controls";
         gap: 6px 12px;
         padding: 12px 0;
-    }
-    .wl-grip {
-        display: none;
     }
     .wl-rank {
         grid-area: rank;

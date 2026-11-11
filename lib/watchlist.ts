@@ -46,7 +46,8 @@ function dayOf(value: unknown): string | null {
 export async function listWatchlist(sql: Sql, userId: string, opts: { limit: number; offset: number }) {
   const limit = Math.min(Math.max(1, Math.floor(opts.limit) || 50), WATCHLIST_PAGE_MAX);
   const offset = Math.max(0, Math.floor(opts.offset) || 0);
-  const rows = await sql`
+  const [rows, minutesRows] = await Promise.all([
+    sql`
     WITH q AS (
       SELECT
         li.id, li.favorite, li.added_at, li.media_id,
@@ -63,7 +64,20 @@ export async function listWatchlist(sql: Sql, userId: string, opts: { limit: num
     JOIN public.media m ON m.id = q.media_id
     ORDER BY q.rank
     LIMIT ${limit} OFFSET ${offset}
-  `;
+  `,
+    // Fase 6: duração estimada da fila inteira (não só da página): filme = runtime; série = episódios x duração (45 min se faltar).
+    sql`
+      SELECT COALESCE(sum(
+        CASE WHEN m.media_type = 'tv'
+          THEN COALESCE(m.episodes_count, 0) * COALESCE(NULLIF(m.runtime, 0), 45)
+          ELSE COALESCE(NULLIF(m.runtime, 0), 0)
+        END
+      ), 0)::int AS minutes
+      FROM public.library_items li
+      JOIN public.media m ON m.id = li.media_id
+      WHERE li.user_id = ${userId} AND li.status = 'want'
+    `,
+  ]);
   const total = rows.length ? Number(rows[0].total) : Number((await sql`SELECT count(*)::int AS n FROM public.library_items WHERE user_id = ${userId} AND status = 'want'`)[0]?.n || 0);
 
   const items: WatchlistItem[] = rows.map((r) => ({
@@ -85,7 +99,7 @@ export async function listWatchlist(sql: Sql, userId: string, opts: { limit: num
     },
   }));
 
-  return { items, total };
+  return { items, total, total_minutes: Number(minutesRows[0]?.minutes || 0) };
 }
 
 /**

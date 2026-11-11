@@ -3,7 +3,7 @@
 import "@/styles/features/watchlist.css";
 import "@/styles/features/screen-kit.css";
 import Link from "next/link";
-import { ArrowDown, ArrowDownToLine, ArrowUp, ArrowUpToLine, GripVertical } from "lucide-react";
+import { ArrowDown, ArrowDownToLine, ArrowUp, ArrowUpToLine } from "lucide-react";
 import { motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -11,6 +11,8 @@ import { Poster } from "@/components/Poster";
 import { ConnectedPosterActions } from "@/components/media/ConnectedPosterActions";
 import { useToast } from "@/components/ToastProvider";
 import { apiFetch, errorMessage } from "@/lib/api-client";
+import { formatCountAndHours } from "@/lib/acervo/format";
+import { formatRuntime } from "@/lib/home/home";
 import { setLibraryEntry, useLibraryEntry } from "@/lib/library/entry-store";
 import type { WatchlistItem } from "@/lib/watchlist";
 import { Button } from "@/components/ui/Button";
@@ -34,6 +36,7 @@ export function WatchlistPage() {
   const toast = useToast();
   const [items, setItems] = useState<WatchlistItem[]>([]);
   const [total, setTotal] = useState(0);
+  const [totalMinutes, setTotalMinutes] = useState(0);
   const [state, setState] = useState<State>("loading");
   const [loadingMore, setLoadingMore] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -42,7 +45,7 @@ export function WatchlistPage() {
   const liveRef = useRef<HTMLParagraphElement>(null);
 
   const load = useCallback(async (offset: number) => {
-    const data = await apiFetch<{ items: WatchlistItem[]; total: number }>(`/api/watchlist?limit=${PAGE}&offset=${offset}`, { cache: "no-store" });
+    const data = await apiFetch<{ items: WatchlistItem[]; total: number; total_minutes?: number }>(`/api/watchlist?limit=${PAGE}&offset=${offset}`, { cache: "no-store" });
     // Os botões do pôster já nascem sabendo o estado (sem consulta extra).
     for (const item of data.items) {
       setLibraryEntry(item.media.media_type, item.media.tmdb_id, { library_id: item.library_id, status: "want", favorite: item.favorite });
@@ -57,6 +60,7 @@ export function WatchlistPage() {
         if (!alive) return;
         setItems(data.items);
         setTotal(data.total);
+        setTotalMinutes(data.total_minutes ?? 0);
         setState("ready");
       })
       .catch(() => alive && setState("error"));
@@ -71,6 +75,7 @@ export function WatchlistPage() {
       const data = await load(items.length);
       setItems((current) => [...current, ...data.items.filter((i) => !current.some((c) => c.library_id === i.library_id))]);
       setTotal(data.total);
+      setTotalMinutes(data.total_minutes ?? 0);
     } catch (error) {
       toast.error("Não foi possível carregar mais", { description: errorMessage(error, "Tente novamente.") });
     } finally {
@@ -110,19 +115,11 @@ export function WatchlistPage() {
   return (
     <>
     <div className="wl-page">
-      <header className="sk-head">
-        <div className="sk-head-text">
-          <h1>Watchlist</h1>
-          <p>
-            Tudo que você marca como Quero assistir entra aqui sozinho e sai quando o status muda. Arraste ou use as
-            setas para escolher o que assistir primeiro.
-          </p>
-        </div>
-        {state === "ready" ? (
-          <p className="sk-head-aside">
-            <strong>{total}</strong> {total === 1 ? "título na fila" : "títulos na fila"}
-          </p>
-        ) : null}
+      {/* Fase 6: a fila abre com o total em horas; o número de cada linha é a posição e a alça. */}
+      <header className="wl-head">
+        <h1 className="wl-head-title">Watchlist</h1>
+        {state === "ready" ? <p className="wl-head-total">{formatCountAndHours(total, totalMinutes)}</p> : null}
+        <p className="wl-head-hint">Arraste pelo número ou use as setas para escolher o que assistir primeiro.</p>
       </header>
 
       <p className="wl-sr" role="status" aria-live="polite" ref={liveRef} />
@@ -245,9 +242,6 @@ function WatchlistRow({
       }}
     >
       <motion.div layout="position" transition={{ type: "spring", duration: 0.35, bounce: 0 }} className="wl-row">
-      <span className="wl-grip" aria-hidden="true">
-        <GripVertical size={18} />
-      </span>
       <span className="wl-rank" aria-label={`Prioridade ${rank}`}>
         {rank}
       </span>
@@ -276,7 +270,7 @@ function WatchlistRow({
         <small className="wl-meta">
           {media.media_type === "tv" ? "Série" : "Filme"}
           {year ? ` ${year}` : ""}
-          {media.runtime && media.media_type === "movie" ? `, ${media.runtime} min` : ""}
+          {media.runtime && media.media_type === "movie" ? `, ${formatRuntime(media.runtime)}` : ""}
         </small>
       </div>
       <div className="wl-controls" role="group" aria-label={`Prioridade de ${media.title}`}>
