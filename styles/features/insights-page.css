@@ -54,6 +54,9 @@
     color: var(--text);
     box-shadow: inset 0 -2px 0 var(--mc-color-accent);
 }
+.ix-year {
+    position: relative;
+}
 .ix-year select {
     border: 0;
     background: transparent;
@@ -341,14 +344,16 @@
 .ix-top-poster {
     position: relative;
     display: block;
+    aspect-ratio: 2 / 3;
 }
-.ix-top-poster img {
+.ix-top-poster > a {
     display: block;
     width: 100%;
-    height: auto;
-    aspect-ratio: 2 / 3;
-    object-fit: cover;
+    height: 100%;
+}
+.ix-top-poster img {
     border-radius: 4px;
+    object-fit: cover;
 }
 .ix-top-title {
     overflow: hidden;
