@@ -1,6 +1,6 @@
 "use client";
 
-import type { Dispatch, SetStateAction } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import { Film, RotateCcw, Shuffle, Sparkles, Tv, WandSparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
@@ -80,6 +80,8 @@ export function PickFilterStep({
     setExcludeWatched,
     setExcludeLibrary,
   } = setters;
+
+  const [moreOpen, setMoreOpen] = useState(false);
 
   return (
       <>
@@ -163,6 +165,129 @@ export function PickFilterStep({
           </button>
         </div>
 
+        <div className="pick-duration">
+          <div className="pick-mode-title" id="pick-duration-title">
+            Quanto tempo você tem
+          </div>
+
+          <div className="pick-choice-row" role="radiogroup" aria-labelledby="pick-duration-title">
+            {[
+              ["any", "Qualquer"],
+              ["short", "Curto"],
+              ["medium", "Médio"],
+              ["long", "Longo"],
+            ].map(([value, label]) => (
+              <button key={value} type="button" role="radio" aria-checked={duration === value} className={duration === value ? "active" : ""} onClick={() => setDuration(value)}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="pick-mode-title">
+          Estilo da escolha
+        </div>
+
+        <div className="pick-mode-grid">
+          <button
+            type="button"
+            className={
+              mode ===
+                "safe"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setMode(
+                "safe"
+              )
+            }
+          >
+            <strong>
+              Seguro
+            </strong>
+
+            <span>
+              Mais confiável e bem consolidado
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className={
+              mode ===
+                "popular"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setMode(
+                "popular"
+              )
+            }
+          >
+            <strong>
+              Popular
+            </strong>
+
+            <span>
+              Favorece títulos conhecidos
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className={
+              mode ===
+                "discover"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setMode(
+                "discover"
+              )
+            }
+          >
+            <strong>
+              Descobrir
+            </strong>
+
+            <span>
+              Sai um pouco do óbvio sem baixar a qualidade
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className={
+              mode ===
+                "gems"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setMode(
+                "gems"
+              )
+            }
+          >
+            <strong>
+              Joias escondidas
+            </strong>
+
+            <span>
+              Menos populares, mas bem avaliados
+            </span>
+          </button>
+        </div>
+
+        <button type="button" className="pick-more-toggle" aria-expanded={moreOpen} aria-controls="pick-more" onClick={() => setMoreOpen((v) => !v)}>
+          {moreOpen ? "Menos filtros" : "Mais filtros"}
+          {activeFilters > 0 ? ` (${activeFilters})` : ""}
+        </button>
+
+        <div className="pick-more" id="pick-more" hidden={!moreOpen}>
         <div className="pick-form-grid">
           <div className="pick-field">
             <span>
@@ -328,42 +453,6 @@ export function PickFilterStep({
 
           <label>
             <span>
-              Duração
-            </span>
-
-            <select
-              value={
-                duration
-              }
-              onChange={(
-                event
-              ) =>
-                setDuration(
-                  event.target
-                    .value
-                )
-              }
-            >
-              <option value="any">
-                Qualquer
-              </option>
-
-              <option value="short">
-                Curto
-              </option>
-
-              <option value="medium">
-                Médio
-              </option>
-
-              <option value="long">
-                Longo
-              </option>
-            </select>
-          </label>
-
-          <label>
-            <span>
               País
             </span>
 
@@ -449,104 +538,6 @@ export function PickFilterStep({
           </label>
         </div>
 
-        <div className="pick-mode-title">
-          Estilo da escolha
-        </div>
-
-        <div className="pick-mode-grid">
-          <button
-            type="button"
-            className={
-              mode ===
-                "safe"
-                ? "active"
-                : ""
-            }
-            onClick={() =>
-              setMode(
-                "safe"
-              )
-            }
-          >
-            <strong>
-              Seguro
-            </strong>
-
-            <span>
-              Mais confiável e bem consolidado
-            </span>
-          </button>
-
-          <button
-            type="button"
-            className={
-              mode ===
-                "popular"
-                ? "active"
-                : ""
-            }
-            onClick={() =>
-              setMode(
-                "popular"
-              )
-            }
-          >
-            <strong>
-              Popular
-            </strong>
-
-            <span>
-              Favorece títulos conhecidos
-            </span>
-          </button>
-
-          <button
-            type="button"
-            className={
-              mode ===
-                "discover"
-                ? "active"
-                : ""
-            }
-            onClick={() =>
-              setMode(
-                "discover"
-              )
-            }
-          >
-            <strong>
-              Descobrir
-            </strong>
-
-            <span>
-              Sai um pouco do óbvio sem baixar a qualidade
-            </span>
-          </button>
-
-          <button
-            type="button"
-            className={
-              mode ===
-                "gems"
-                ? "active"
-                : ""
-            }
-            onClick={() =>
-              setMode(
-                "gems"
-              )
-            }
-          >
-            <strong>
-              Joias escondidas
-            </strong>
-
-            <span>
-              Menos populares, mas bem avaliados
-            </span>
-          </button>
-        </div>
-
         <div className="pick-toggle-grid">
           <button
             type="button"
@@ -613,6 +604,7 @@ export function PickFilterStep({
               </small>
             </div>
           </button>
+        </div>
         </div>
 
         {error && (
