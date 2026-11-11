@@ -38,14 +38,16 @@ test.describe("Fase 5 — Projeção em Descobrir", () => {
       if (/image\.tmdb\.org\/t\/p\/w780/.test(request.url())) requests.push(request.url());
     });
     const count = Math.min(8, await page.locator(cards).count());
-    // mouse.move direto (sem a espera de actionability do hover): ~30 ms por pôster
-    for (let i = 0; i < count; i++) {
-      const box = await page.locator(cards).nth(i).boundingBox();
-      if (!box) continue;
-      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 3);
-      await page.waitForTimeout(30);
-    }
+    // Varredura dentro da página, 30 ms por pôster (o Playwright gasta mais que isso entre movimentos).
+    await page.evaluate(async (count) => {
+      const list = Array.from(document.querySelectorAll("[data-projection]")).slice(0, count);
+      for (const el of list) {
+        el.dispatchEvent(new PointerEvent("pointerover", { bubbles: true, pointerType: "mouse" }));
+        await new Promise((resolve) => setTimeout(resolve, 30));
+      }
+    }, count);
     await page.waitForTimeout(600);
+    expect(requests.length).toBeGreaterThanOrEqual(1);
     expect(requests.length).toBeLessThanOrEqual(2);
   });
 
@@ -58,5 +60,21 @@ test.describe("Fase 5 — Projeção em Descobrir", () => {
     await expect(layer).toHaveCount(1, { timeout: 5_000 });
     await expect(layer).toHaveCSS("transition-duration", /^(0s|1e-05s)$/);
     await expect(page.locator(".pj-room")).toBeHidden();
+  });
+
+  test("com Economia de dados a faixa não troca e nenhuma imagem extra é pedida", async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "connection", { value: { saveData: true }, configurable: true });
+    });
+    await page.goto("/discover");
+    await expect(page.locator(cards).first()).toBeVisible({ timeout: 30_000 });
+    const requests: string[] = [];
+    page.on("request", (request) => {
+      if (/image\.tmdb\.org\/t\/p\/(w780|w92)\//.test(request.url())) requests.push(request.url());
+    });
+    await page.locator(cards).nth(2).hover();
+    await page.waitForTimeout(600);
+    await expect(page.locator(".tt-band-projection")).toHaveCount(0);
+    expect(requests).toEqual([]);
   });
 });

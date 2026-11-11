@@ -669,9 +669,16 @@ function DiscoverContent() {
 
   return (
     <ProjectionProvider>
+      {/* A faixa reserva o espaço desde o primeiro quadro (igual ao Início): sem salto quando os resultados chegam. */}
       {bandPath ? (
         <div className="dc-band">
           <TitleBand path={bandPath} />
+        </div>
+      ) : loading && !data ? (
+        <div className="dc-band">
+          <div className="tt-band">
+            <div className="tt-band-screen mc-skeleton dc-band-skeleton" role="status" aria-label="Carregando destaque" />
+          </div>
         </div>
       ) : null}
 
