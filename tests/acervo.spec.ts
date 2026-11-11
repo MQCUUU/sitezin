@@ -102,3 +102,12 @@ test.describe("Fase 6 — Calendário", () => {
     }
   });
 });
+
+test.describe("Fase 6 — Coleção e Pessoa", () => {
+  test("Coleção abre na Tela, sem pôster, com ficha", async ({ page }) => {
+    await page.goto("/collection/10");
+    await expect(page.locator(".cl-hero .tt-band-screen")).toBeVisible({ timeout: 60_000 });
+    await expect(page.locator(".sk-hero-poster")).toHaveCount(0);
+    await expect(page.locator(".cl-ficha")).toHaveText(/^\d+ filmes?/);
+  });
+});

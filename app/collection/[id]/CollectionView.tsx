@@ -6,21 +6,21 @@ import "@/styles/features/screen-kit.css";
 import { removeFromLibrary } from "@/lib/library/actions";
 import { removalConfirmOptions } from "@/lib/library/remove";
 import { apiFetch } from "@/lib/api-client";
-import { Poster } from "@/components/Poster";
 import { chunkLibraryStateIds } from "@/lib/library-state-batches";
 import { ApiError } from "@/lib/api-client";
 import { intentForMedia, type LibraryIntent } from "@/lib/auth/pending-action";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { Layers3, Loader2, Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { SmartBackButton } from "@/components/SmartBackButton";
-import { img } from "@/lib/tmdb";
+import { TitleBand } from "@/components/title/hero/TitleBand";
+import { collectionFicha } from "@/lib/acervo/format";
 import { MediaPreviewDialog } from "@/components/media/preview/MediaPreviewDialog";
 import { WatchProviderList } from "@/components/media/preview/WatchProviderList";
 import { fromLooseMediaItem } from "@/components/media/preview/adapters";
 import { normalizeWatchProviders } from "@/components/media/providers";
-import { safeJson, formatRuntime, type CollectionMovie, type LibraryItem } from "@/components/collection/shared";
+import { safeJson, type CollectionMovie, type LibraryItem } from "@/components/collection/shared";
 import { CollectionCard } from "@/components/collection/CollectionCard";
 import { ReelProgress } from "@/components/ui/ReelProgress";
 /*
@@ -512,37 +512,6 @@ export default function CollectionView({
         getLibraryItem,
       ]
     );
-
-  const libraryCount =
-    useMemo(
-      () =>
-        movies.filter(
-          (
-            movie
-          ) =>
-            Boolean(
-              getLibraryItem(
-                movie
-              )
-            )
-        ).length,
-      [
-        movies,
-        getLibraryItem,
-      ]
-    );
-
-  const progress =
-    movies.length >
-      0
-      ? Math.round(
-          (
-            watchedCount /
-            movies.length
-          ) *
-            100
-        )
-      : 0;
 
   const visibleMovies =
     useMemo(
@@ -1149,56 +1118,31 @@ export default function CollectionView({
         <SmartBackButton />
       </div>
 
-      {/* Fase 4b: uma página só (antes, duas abas): topo, progresso e os filmes. */}
-      <section className="sk-hero">
-        {collection.backdrop_path && (
-          <div
-            className="sk-hero-backdrop"
-            aria-hidden="true"
-            style={{ backgroundImage: `url(${img(collection.backdrop_path, "w1280")})` }}
-          />
-        )}
+      {/* Fase 6: a Coleção abre na mesma Tela do Título — sem herói próprio e sem pôster no topo. */}
+      <section className="cl-hero" aria-labelledby="cl-title">
+        <TitleBand path={collection.backdrop_path ?? movies.find((movie) => movie.backdrop_path)?.backdrop_path ?? null} />
+        <div className="cl-head">
+          <h1 id="cl-title" className="cl-title">
+            {collection.name}
+          </h1>
+          <p className="cl-ficha">
+            {collectionFicha(movies.length, Number(stats?.total_runtime) > 0 ? Number(stats.total_runtime) : null, Number(stats?.average_rating) > 0 ? Number(stats.average_rating) : null)}
+          </p>
+          {collection.overview && <p className="cl-overview">{collection.overview}</p>}
 
-        <div className="sk-hero-content">
-          <div className="sk-hero-poster">
-            {collection.poster_path ? (
-              <Poster path={collection.poster_path} alt={collection.name} sizes="(max-width: 700px) 120px, 220px" priority />
-            ) : (
-              <div className="sk-hero-poster-empty">
-                <Layers3 size={48} aria-hidden="true" />
-              </div>
-            )}
+          <div className="cl-progress" role="group" aria-label="Seu progresso na coleção">
+            <p className="cl-progress-text">
+              {watchedCount} de {movies.length} assistidos
+            </p>
+            <ReelProgress
+              watched={watchedCount}
+              total={movies.length}
+              label="Progresso da coleção"
+              valueText={`${watchedCount} de ${movies.length} assistidos`}
+            />
           </div>
 
-          <div className="sk-hero-copy">
-            <p className="sk-hero-kicker">Coleção</p>
-            <h1>{collection.name}</h1>
-            {collection.overview && <p className="sk-hero-text">{collection.overview}</p>}
-
-            <dl className="sk-stats">
-              <div>
-                <dt>Filmes</dt>
-                <dd>{movies.length}</dd>
-              </div>
-              {stats?.total_runtime > 0 && (
-                <div>
-                  <dt>Duração total</dt>
-                  <dd>{formatRuntime(Number(stats.total_runtime))}</dd>
-                </div>
-              )}
-              {stats?.average_rating && (
-                <div>
-                  <dt>Média no TMDB</dt>
-                  <dd>{Number(stats.average_rating).toFixed(1).replace(".", ",")}</dd>
-                </div>
-              )}
-              <div>
-                <dt>Na biblioteca</dt>
-                <dd>{libraryCount}</dd>
-              </div>
-            </dl>
-
-            <div className="sk-hero-actions">
+          <div className="sk-hero-actions">
               <Button variant="primary" type="button" disabled={bulkProcessing} onClick={() => guardedBulk(addAll)}>
                 {bulkProcessing ? <Loader2 size={16} className="spin" aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
                 Adicionar os que faltam
@@ -1207,30 +1151,7 @@ export default function CollectionView({
                 Quero assistir todos
               </Button>
             </div>
-          </div>
         </div>
-      </section>
-
-      <section className="cl-progress" aria-label="Seu progresso na coleção">
-        <div className="cl-progress-head">
-          <h2>
-            {watchedCount} de {movies.length} assistidos
-          </h2>
-          <span>{progress}%</span>
-        </div>
-        <ReelProgress
-          watched={watchedCount}
-          total={movies.length}
-          label="Progresso da coleção"
-          valueText={`${watchedCount} de ${movies.length} assistidos`}
-        />
-        <p>
-          {progress === 100
-            ? "Coleção concluída."
-            : progress === 0
-              ? "Você ainda não assistiu nenhum filme desta coleção."
-              : `Faltam ${movies.length - watchedCount} para concluir a coleção.`}
-        </p>
       </section>
 
       <section className="sk-section cl-films" aria-labelledby="collection-films-title">

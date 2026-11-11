@@ -97,3 +97,49 @@
         margin-left: 0;
     }
 }
+
+/* Fase 6 — a Coleção abre na Tela do Título: nome, ficha, sinopse, Rolo e ações. Sem pôster no topo. */
+.cl-hero {
+    margin-bottom: 12px;
+}
+.cl-head {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-width: 760px;
+    padding-top: 24px;
+}
+.cl-title {
+    margin: 0;
+    font-size: clamp(44px, 5.6vw, 80px);
+    font-weight: 770;
+    font-variation-settings: "wdth" 70;
+    line-height: 0.92;
+    letter-spacing: -0.005em;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+}
+.cl-ficha {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 650;
+}
+.cl-overview {
+    margin: 0;
+    max-width: 62ch;
+    color: var(--mc-color-text-secondary);
+    line-height: 1.55;
+}
+.cl-head .cl-progress {
+    margin: 4px 0 0;
+}
+.cl-head .cl-progress-text {
+    margin: 0 0 8px;
+    color: var(--muted);
+    font-size: var(--mc-fs-md);
+}
+@media (max-width: 700px) {
+    .cl-title {
+        font-size: clamp(36px, 11vw, 48px);
+    }
+}
