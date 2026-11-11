@@ -205,9 +205,11 @@
 /* Fase 4: o dia é o que organiza a leitura — título de verdade, não um rótulo miúdo. */
 .dy-day-head {
   margin: 0 0 6px;
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-size: clamp(26px, 2.6vw, 34px);
+  font-weight: 770;
+  font-variation-settings: "wdth" 70;
+  line-height: 1;
+  letter-spacing: -0.005em;
   color: var(--text);
   scroll-margin-top: 90px;
 }
@@ -342,7 +344,8 @@ a.dy-title:hover {
   margin: 2px 0 0;
   font-size: var(--mc-fs-md);
   font-weight: 700;
-  color: #f5c451;
+  /* Fase 6: a nota é sua — cor de assinatura (no tema claro o token já resolve para o âmbar escuro). */
+  color: var(--mc-color-accent);
 }
 
 .dy-comment p {
@@ -722,7 +725,7 @@ a.dy-compact-title:hover {
   }
 
   .dy-day-head {
-    font-size: 19px;
+    font-size: 24px;
   }
 
   .dy-moment {
