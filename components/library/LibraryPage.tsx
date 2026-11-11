@@ -11,6 +11,9 @@ import { AnimatePresence, motion } from "motion/react";
 
 import { PosterSkeleton } from "@/components/AsyncState";
 import { PosterGrid } from "@/components/PosterGrid";
+import { LibraryBand } from "@/components/library/LibraryBand";
+import { ProjectionProvider } from "@/components/screen/ProjectionProvider";
+import { formatCountAndHours } from "@/lib/acervo/format";
 import { AddToListDialog } from "@/components/lists/AddToListDialog";
 import { readPreferences } from "@/lib/preferences";
 import { genreName } from "@/lib/title-locale";
@@ -55,6 +58,7 @@ type LibraryResponse = {
   total_pages: number;
   total_results: number;
   total_library: number;
+  watched_minutes?: number;
   counts: Record<string, number>;
   genres: string[];
   years: string[];
@@ -310,7 +314,10 @@ function LibraryContent() {
   ];
 
   return (
-    <>
+    <ProjectionProvider>
+      {/* Fase 6: a página abre na Tela; passar o ponteiro por um pôster projeta o backdrop dele. */}
+      <LibraryBand items={items} loading={loading} />
+
       <div className="topbar">
         <div className="library-search" role="search">
           <Search size={18} aria-hidden="true" />
@@ -324,10 +331,12 @@ function LibraryContent() {
         </div>
       </div>
 
-      {/* Fase 4: sem rótulo em caixa alta — o título e a contagem, só. */}
+      {/* Fase 6: abre com um número seu ("214 títulos, cerca de 312 horas"); o recorte filtrado vem logo abaixo. */}
       <header className="lb-head">
-        <h1>Biblioteca</h1>
-        <p aria-live="polite">{result ? (filtered ? `${totalResults} de ${countLabel(totalLibrary)}` : countLabel(totalLibrary)) : " "}</p>
+        <h1 aria-label={result ? `Biblioteca: ${formatCountAndHours(totalLibrary, result.watched_minutes ?? 0)}` : "Biblioteca"}>
+          {result ? formatCountAndHours(totalLibrary, result.watched_minutes ?? 0) : "Biblioteca"}
+        </h1>
+        {result && filtered ? <p aria-live="polite">{`${totalResults} de ${countLabel(totalLibrary)}`}</p> : null}
       </header>
 
       {/* Status: abas de texto; a ativa ganha um traço na cor de destaque que desliza até ela. */}
@@ -556,7 +565,7 @@ function LibraryContent() {
       ) : null}
 
       {addToListTarget ? <AddToListDialog tmdbId={addToListTarget.tmdb_id} mediaType={addToListTarget.media_type === "tv" ? "tv" : "movie"} title={addToListTarget.title} onClose={() => setAddToListTarget(null)} /> : null}
-    </>
+    </ProjectionProvider>
   );
 }
 

@@ -60,6 +60,8 @@ interface PaginatedLibraryResponse {
   total_pages: number;
   total_results: number;
   total_library: number;
+  /** Minutos já assistidos (filmes assistidos + episódios marcados); estimativa para "cerca de N horas". */
+  watched_minutes: number;
   counts: Record<string, number>;
   genres: string[];
   years: string[];
@@ -349,14 +351,27 @@ export async function GET(
       sql`
         SELECT
           count(*)::int AS all,
-          count(*) FILTER (WHERE status = 'want')::int AS want,
-          count(*) FILTER (WHERE status = 'watching')::int AS watching,
-          count(*) FILTER (WHERE status = 'watched')::int AS watched,
-          count(*) FILTER (WHERE status = 'paused')::int AS paused,
-          count(*) FILTER (WHERE status = 'dropped')::int AS dropped,
-          count(*) FILTER (WHERE favorite)::int AS favorites
-        FROM public.library_items
-        WHERE user_id = ${userId}
+          count(*) FILTER (WHERE li.status = 'want')::int AS want,
+          count(*) FILTER (WHERE li.status = 'watching')::int AS watching,
+          count(*) FILTER (WHERE li.status = 'watched')::int AS watched,
+          count(*) FILTER (WHERE li.status = 'paused')::int AS paused,
+          count(*) FILTER (WHERE li.status = 'dropped')::int AS dropped,
+          count(*) FILTER (WHERE li.favorite)::int AS favorites,
+          COALESCE(sum(
+            CASE
+              WHEN m.media_type = 'movie' AND li.status = 'watched' THEN COALESCE(NULLIF(m.runtime, 0), 0)
+              WHEN m.media_type = 'tv' THEN
+                COALESCE(
+                  NULLIF((SELECT count(*) FROM public.episodes_progress ep
+                          WHERE ep.user_id = li.user_id AND ep.media_id = li.media_id AND ep.watched), 0),
+                  CASE WHEN li.status = 'watched' THEN COALESCE(m.episodes_count, 0) ELSE 0 END
+                ) * COALESCE(NULLIF(m.runtime, 0), 45)
+              ELSE 0
+            END
+          ), 0)::int AS watched_minutes
+        FROM public.library_items li
+        JOIN public.media m ON m.id = li.media_id
+        WHERE li.user_id = ${userId}
       `,
       // 4. Opções de filtro (gêneros/anos) — agregado no SQL, biblioteca inteira do usuário.
       sql`
@@ -422,7 +437,8 @@ export async function GET(
         total_pages: totalPages,
         total_results: totalResults,
         total_library: Number(counts.all || 0),
-        counts,
+        watched_minutes: Number(counts.watched_minutes || 0),
+        counts: { all: counts.all, want: counts.want, watching: counts.watching, watched: counts.watched, paused: counts.paused, dropped: counts.dropped, favorites: counts.favorites },
         genres: Array.from(genreSet).sort((a, b) => a.localeCompare(b, "pt-BR")),
         years: Array.from(yearSet).sort((a, b) => Number(b) - Number(a)),
       } satisfies PaginatedLibraryResponse,

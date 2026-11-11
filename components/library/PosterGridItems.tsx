@@ -3,6 +3,7 @@ import { MediaPosterActions } from "@/components/media/MediaPosterActions";
 import { MediaPosterTags, MediaStatusTag, mediaTypeLabel } from "@/components/media/MediaBadges";
 import { TvNextEpisode } from "@/components/TvNextEpisode";
 import { SeriesProgressLine } from "@/components/library/SeriesProgress";
+import { ReelProgress } from "@/components/ui/ReelProgress";
 import Link from "next/link";
 import { Heart, Star } from "lucide-react";
 import type { LibraryItem } from "@/lib/types";
@@ -157,6 +158,15 @@ export function ListItem({ item, leaving = false, ...actionProps }: CardActionPr
           )}
         </div>
 
+        {item.library_progress?.season && (item.library_progress.season.total ?? 0) > 0 ? (
+          <ReelProgress
+            className="library-list-reel"
+            watched={item.library_progress.season.watched}
+            total={item.library_progress.season.total ?? 0}
+            label={`Progresso de ${item.title}`}
+            valueText={item.library_progress.card ?? undefined}
+          />
+        ) : null}
         {item.library_progress ? <SeriesProgressLine progress={item.library_progress} /> : null}
 
         {item.overview && <p className="library-list-overview lib-clamp-2">{item.overview}</p>}

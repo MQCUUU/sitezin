@@ -11,12 +11,27 @@
   margin: 24px 0 28px;
 }
 
+/* Fase 6: a Tela abre a página; a legenda diz o que está em foco (e é sua). */
+.lb-band-caption {
+  margin: 12px 0 28px;
+  color: var(--muted);
+  font-size: var(--mc-fs-base);
+}
+
+.lb-band-caption strong {
+  color: var(--mc-color-accent);
+  font-weight: 700;
+}
+
 .lb-head h1 {
   margin: 0;
-  font-size: clamp(40px, 5vw, 64px);
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: -0.035em;
+  font-size: clamp(36px, 4.4vw, 60px);
+  font-weight: 770;
+  font-variation-settings: "wdth" 70;
+  line-height: 0.92;
+  letter-spacing: -0.005em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 
 .lb-head p {
