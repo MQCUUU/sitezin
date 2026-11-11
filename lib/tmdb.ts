@@ -392,6 +392,18 @@ async function tmdb(
   }
 }
 
+/** Fase 7b — imagem de fundo das telas de entrada: um dos populares do momento (nunca lança). */
+export async function loginBackdropTMDB(): Promise<string | null> {
+  try {
+    const data = await tmdb(`/movie/popular?language=${getLanguage()}&page=1`, { revalidate: 86400 });
+    const paths = ((data?.results ?? []) as { backdrop_path?: string | null }[]).map((item) => item.backdrop_path).filter((path): path is string => Boolean(path));
+
+    return paths.length ? paths[new Date().getDate() % paths.length] : null;
+  } catch {
+    return null;
+  }
+}
+
 /*
  * ==========================================
  * BUSCA

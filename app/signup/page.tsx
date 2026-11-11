@@ -7,8 +7,12 @@ import {
   AuthPage,
 } from "@/components/AuthPage";
 
-export default function SignupPage() {
+import { loginBackdropTMDB } from "@/lib/tmdb";
+
+export default async function SignupPage() {
+  const backdrop = await loginBackdropTMDB();
+
   return (
-    <AuthPage mode="signup" />
+    <AuthPage mode="signup" backdrop={backdrop} />
   );
 }

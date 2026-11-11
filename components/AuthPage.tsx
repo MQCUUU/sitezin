@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/Button";
 
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandMark";
+import { img } from "@/lib/tmdb";
 
 import {
   useRouter,
@@ -144,9 +145,11 @@ function friendlyAuthError(
 
 export function AuthPage({
   mode,
+  backdrop = null,
 }: {
   mode:
     Mode;
+  backdrop?: string | null;
 }) {
   const router =
     useRouter();
@@ -492,7 +495,8 @@ export function AuthPage({
       </Link>
 
       <div className="auth-shell">
-        <section className="auth-visual">
+        <section className="auth-visual" data-has-image={backdrop ? "true" : undefined}>
+          {backdrop ? <div className="auth-visual-image" style={{ backgroundImage: `url(${img(backdrop, "w1280")})` }} aria-hidden="true" /> : null}
 
           <h1>
             {isSignup
@@ -503,44 +507,6 @@ export function AuthPage({
           <p>
             Organize filmes e séries, registre o que assistiu e receba recomendações baseadas no seu gosto.
           </p>
-
-          <div className="auth-feature-list">
-            <div>
-              <div>
-                <strong>
-                  Biblioteca pessoal
-                </strong>
-
-                <small>
-                  Status, notas, curtidos e histórico.
-                </small>
-              </div>
-            </div>
-
-            <div>
-              <div>
-                <strong>
-                  Descobertas melhores
-                </strong>
-
-                <small>
-                  Para Você e Escolha pra mim.
-                </small>
-              </div>
-            </div>
-
-            <div>
-              <div>
-                <strong>
-                  Seus dados são seus
-                </strong>
-
-                <small>
-                  Exporte e faça backup quando quiser.
-                </small>
-              </div>
-            </div>
-          </div>
         </section>
 
         <section className="auth-card">
