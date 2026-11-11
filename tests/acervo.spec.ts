@@ -85,3 +85,20 @@ test.describe("Fase 6 — Listas", () => {
     await expect(page.locator(".lst-row-title", { hasText: "E2E Fase 6" })).toBeVisible({ timeout: 30_000 });
   });
 });
+
+test.describe("Fase 6 — Calendário", () => {
+  test("Agenda curta, Mais 7 dias avança e a página não explode de altura", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/calendar");
+    await expect(page.locator(".cal-agenda, .cal-empty-inline, .cal-empty").first()).toBeVisible({ timeout: 60_000 });
+    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThan(6000);
+
+    const more = page.getByRole("button", { name: "Mais 7 dias" });
+    if (await more.count()) {
+      const note = await page.locator(".cal-more-wrap .cal-note").textContent();
+      await more.click();
+      await expect(page.locator(".cal-more-wrap .cal-note")).not.toHaveText(note ?? "", { timeout: 30_000 });
+      expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThan(6000);
+    }
+  });
+});

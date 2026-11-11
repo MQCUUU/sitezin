@@ -12,6 +12,7 @@ import type { CalendarEvent, CalendarResponse } from "@/lib/calendar/types";
 
 import { AgendaView, DayDetails, Hero, MonthView, WeekView, groupByDay } from "./parts";
 import { Button } from "@/components/ui/Button";
+import { AGENDA_PAGE_DAYS, defaultFilter, orderFilters, sliceAgenda, visibleUntil } from "@/lib/calendar/agenda";
 
 /*
  * Calendário V2 — "meu calendário pessoal de filmes e séries".
@@ -113,7 +114,6 @@ function CalendarContent() {
   const rawDate = search.get("date") || "";
   const anchor = isDay(rawDate) ? rawDate : /^\d{4}-\d{2}$/.test(rawDate) && isDay(`${rawDate}-01`) ? `${rawDate}-01` : today;
   const rawFilter = search.get("filter");
-  const filter: Filter = rawFilter === "mine" || rawFilter === "movie" || rawFilter === "tv" ? rawFilter : "all";
 
   const range = useMemo(() => {
     if (view === "week") {
@@ -135,6 +135,10 @@ function CalendarContent() {
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [openDay, setOpenDay] = useState<string | null>(null);
+  const [visibleDays, setVisibleDays] = useState(AGENDA_PAGE_DAYS);
+  // Fase 6: quando há algo seu na janela, "Para mim" é o filtro padrão e a primeira aba (a URL sempre vence).
+  const hasMine = (data?.events ?? []).some((e) => e.relationship);
+  const filter: Filter = defaultFilter(rawFilter, data?.events ?? []);
 
   useEffect(() => {
     let alive = true;
@@ -143,6 +147,7 @@ function CalendarContent() {
     setError(null);
     setExtra([]);
     setAgendaTo(range.to);
+    setVisibleDays(AGENDA_PAGE_DAYS);
 
     fetchRange(range.from, range.to)
       .then((payload) => {
@@ -182,6 +187,14 @@ function CalendarContent() {
     }
   }, [agendaTo, data]);
 
+  // "Mais 7 dias": só amplia a janela; busca mais 60 dias na API quando a janela passa do que já foi carregado.
+  const moreDays = useCallback(async () => {
+    const next = visibleDays + AGENDA_PAGE_DAYS;
+
+    if (visibleUntil(today, next) > agendaTo) await loadMore();
+    setVisibleDays(next);
+  }, [visibleDays, today, agendaTo, loadMore]);
+
   const update = useCallback(
     (changes: Record<string, string | null>, mode: "push" | "replace" = "push") => {
       const next = new URLSearchParams(search.toString());
@@ -202,6 +215,9 @@ function CalendarContent() {
 
   const allEvents = useMemo(() => [...(data?.events ?? []), ...extra], [data, extra]);
   const events = useMemo(() => applyFilter(allEvents, filter), [allEvents, filter]);
+  const agendaEvents = useMemo(() => sliceAgenda(events, today, visibleDays), [events, today, visibleDays]);
+  const agendaUntil = visibleUntil(today, visibleDays);
+  const hasLater = events.some((e) => e.date > agendaUntil);
   const hero = view === "agenda" ? pickHero(events, today) : null;
   const week = useMemo(() => summarize(applyFilter(allEvents, filter).filter((e) => e.date >= today && e.date <= addDays(today, 6))), [allEvents, filter, today]);
   const dayEvents = openDay ? events.filter((e) => e.date === openDay) : [];
@@ -271,9 +287,9 @@ function CalendarContent() {
           </div>
         ) : null}
 
-        <div className="cal-filters" role="radiogroup" aria-label="Filtrar" onKeyDown={(event) => onRadioKey(event, FILTERS.map(([v]) => v), filter, (v) => update({ filter: v === "all" ? null : v }, "replace"))}>
-          {FILTERS.map(([value, label, hint]) => (
-            <button key={value} type="button" role="radio" aria-checked={filter === value} tabIndex={filter === value ? 0 : -1} title={hint} className="cal-chip" onClick={() => update({ filter: value === "all" ? null : value }, "replace")}>
+        <div className="cal-filters" role="radiogroup" aria-label="Filtrar" onKeyDown={(event) => onRadioKey(event, orderFilters(FILTERS, hasMine).map(([v]) => v), filter, (v) => update({ filter: v }, "replace"))}>
+          {orderFilters(FILTERS, hasMine).map(([value, label, hint]) => (
+            <button key={value} type="button" role="radio" aria-checked={filter === value} tabIndex={filter === value ? 0 : -1} title={hint} className="cal-chip" onClick={() => update({ filter: value }, "replace")}>
               {label}
             </button>
           ))}
@@ -305,13 +321,17 @@ function CalendarContent() {
 
               {events.length ? (
                 <>
-                  <AgendaView events={events} today={today} />
-                  <div className="cal-more-wrap">
-                    <Button type="button" onClick={loadMore} disabled={loadingMore}>
-                      {loadingMore ? "Carregando…" : "Carregar mais"}
-                    </Button>
+                  {agendaEvents.length ? <AgendaView events={agendaEvents} today={today} /> : <p className="cal-empty-inline">Nada nos próximos {visibleDays} dias.</p>}
+                  {hasLater || agendaUntil >= agendaTo ? (
+                    <div className="cal-more-wrap">
+                      <Button type="button" onClick={moreDays} disabled={loadingMore}>
+                        {loadingMore ? "Carregando…" : "Mais 7 dias"}
+                      </Button>
+                      <span className="cal-note">Até {longDate(agendaUntil, today).split(", ")[1]}</span>
+                    </div>
+                  ) : (
                     <span className="cal-note">Até {longDate(agendaTo, today).split(", ")[1]}</span>
-                  </div>
+                  )}
                 </>
               ) : (
                 <div className="cal-empty">

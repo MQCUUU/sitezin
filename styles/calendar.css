@@ -375,14 +375,23 @@
   }
 }
 
-.cal-card.is-personal .cal-card-poster {
-  box-shadow: 0 0 0 2px var(--accent);
-}
-
 .cal-card.is-watched {
   opacity: 0.72;
 }
 
+/* Fase 6: o que é seu leva a dobra no canto do pôster (o resto fica neutro). */
+.cal-card.is-personal .cal-card-poster::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  width: 0;
+  height: 0;
+  border-top: 14px solid var(--mc-color-accent);
+  border-right: 14px solid transparent;
+  pointer-events: none;
+}
 .cal-card-poster {
   position: relative;
   display: block;
