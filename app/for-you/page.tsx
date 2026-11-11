@@ -1068,25 +1068,13 @@ export default function ForYouPage() {
     return item ? { item, reason: `A primeira sugestão de “${shelf.title}”.` } : null;
   })();
 
+  const HeadTag = featured || loading ? "h2" : "h1";
+
   return (
     <ProjectionProvider>
 
       {/* Fase 5 (P2-10): <div> — o <main> é do layout raiz (antes havia um main dentro do outro). */}
       <div className="fy-page" data-rec-tool="for_you">
-
-        {/*
-         * Fase 4 — cabeçalho sem caixa, brilho nem rótulo: o título da página e
-         * uma frase. Logo abaixo, a melhor aposta do momento na faixa panorâmica.
-         */}
-        <header className="fy-head">
-          <h1 className="fy-head-title">Para você</h1>
-          <p className="fy-head-text">
-            {profileLevel === "cold"
-              ? "Ainda estamos conhecendo seu gosto. Avalie, curta ou marque o que já assistiu e as sugestões se ajustam a você."
-              : "Recomendações que aprendem com suas notas, curtidos e com o que você já assistiu."}
-            {basedOn.length > 0 ? ` Baseado em ${joinNames(basedOn.slice(0, 4))}.` : ""}
-          </p>
-        </header>
 
         {featured && (
           <FeaturedPick
@@ -1099,6 +1087,21 @@ export default function ForYouPage() {
           />
         )}
         {!featured && loading ? <FeaturedSkeleton /> : null}
+
+        {/*
+         * Projeção: como no Início, a página abre na faixa e o nome do destaque é o
+         * h1. "Para você" passa a abrir a seção das recomendações (h2), logo acima
+         * dos filtros e das prateleiras. Sem destaque (nada com imagem), volta a ser o h1.
+         */}
+        <header className="fy-head">
+          <HeadTag className="fy-head-title">Para você</HeadTag>
+          <p className="fy-head-text">
+            {profileLevel === "cold"
+              ? "Ainda estamos conhecendo seu gosto. Avalie, curta ou marque o que já assistiu e as sugestões se ajustam a você."
+              : "Recomendações que aprendem com suas notas, curtidos e com o que você já assistiu."}
+            {basedOn.length > 0 ? ` Baseado em ${joinNames(basedOn.slice(0, 4))}.` : ""}
+          </p>
+        </header>
 
         {profileGenres.length >
           0 && (

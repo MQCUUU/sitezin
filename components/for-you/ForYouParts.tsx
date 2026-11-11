@@ -285,9 +285,9 @@ export function FeaturedPick({
       <TitleBand path={item.backdrop_path} />
       <div className="fy-feature-body">
         <div className="fy-feature-copy">
-          <h2 id="fy-feature-title" className="fy-feature-title">
+          <h1 id="fy-feature-title" className="fy-feature-title">
             <Link href={href}>{title}</Link>
-          </h2>
+          </h1>
           <TitleMeta
             lead={[mediaTypeLabel(item.media_type), year || null]}
             rating={Number(item.vote_average || 0)}

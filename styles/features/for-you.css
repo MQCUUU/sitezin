@@ -7,7 +7,7 @@
 
 .fy-page {
     width: 100%;
-    padding: 4px 32px 48px;
+    padding: 0 32px 48px;
 }
 /*
  * Fase 4 — cabeçalho (sem caixa, brilho nem rótulo) e a melhor aposta na faixa
@@ -16,12 +16,16 @@
 .fy-head {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    margin: 24px 0 36px;
+    gap: 10px;
+    margin: 0 0 28px;
+}
+/* A página abre na faixa: o cabeçalho vem depois do destaque e abre as recomendações. */
+.fy-page > .fy-head:first-child {
+    margin-top: 24px;
 }
 .fy-head-title {
     margin: 0;
-    font-size: clamp(40px, 5vw, 64px);
+    font-size: clamp(30px, 3.2vw, 40px);
     font-weight: 800;
     line-height: 1;
     letter-spacing: -0.035em;
@@ -101,10 +105,10 @@
 }
 @media (max-width: 760px) {
     .fy-head {
-        margin: 12px 0 24px;
+        margin: 0 0 22px;
     }
     .fy-head-title {
-        font-size: clamp(32px, 10vw, 44px);
+        font-size: clamp(26px, 7vw, 32px);
     }
     .fy-head-text {
         font-size: 16px;
@@ -578,7 +582,7 @@
 }
 @media (max-width: 760px) {
     .fy-page {
-        padding: 4px 16px 90px;
+        padding: 0 16px 90px;
     }
 }
 @media (max-width: 760px) {
