@@ -159,3 +159,109 @@
     text-decoration-color: var(--mc-color-accent);
     text-underline-offset: 3px;
 }
+
+/* ---- Ritmo: 12 colunas neutras; o mês atual é o seu ---- */
+.ix-months {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.ix-months li {
+    display: grid;
+    grid-template-rows: 16px 120px auto;
+    align-items: end;
+    justify-items: stretch;
+    min-width: 0;
+}
+.ix-month-peak {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    white-space: nowrap;
+    align-self: start;
+}
+.ix-month-bar {
+    display: block;
+    border-radius: 2px 2px 0 0;
+    background: var(--ix-bar);
+}
+.ix-months li.is-current .ix-month-bar {
+    background: var(--mc-color-accent);
+}
+.ix-month-label {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+}
+.ix-months li.is-current .ix-month-label {
+    color: var(--text);
+}
+@media (max-width: 600px) {
+    .ix-months {
+        gap: 4px;
+    }
+    .ix-months li {
+        grid-template-rows: 16px 90px auto;
+    }
+}
+.ix-page .ins-heat-legend {
+    border: 0;
+    background: transparent;
+}
+
+/* ---- Gêneros: lista com barra neutra e a sua média ---- */
+.ix-genres {
+    display: grid;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.ix-genres li {
+    display: grid;
+    grid-template-columns: minmax(0, 10rem) 1fr auto 7rem;
+    align-items: center;
+    gap: 16px;
+}
+.ix-genre-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ix-genre-track {
+    height: 6px;
+    border-radius: 1px;
+    background: var(--ix-track);
+}
+.ix-genre-track > span {
+    display: block;
+    height: 100%;
+    border-radius: 1px;
+    background: var(--ix-bar);
+}
+.ix-genre-count {
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+    text-align: right;
+}
+.ix-genre-avg {
+    font-size: 14px;
+    text-align: right;
+}
+@media (max-width: 600px) {
+    .ix-genres li {
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 6px 12px;
+    }
+    .ix-genre-track {
+        grid-column: 1 / -1;
+        grid-row: 2;
+    }
+    .ix-genre-avg {
+        min-width: 4.5rem;
+    }
+}

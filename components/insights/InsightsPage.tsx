@@ -7,7 +7,7 @@ import { getLibraryVersion } from "@/lib/library-cache";
 import type { InsightsPayload } from "@/lib/insights/types";
 
 import { Button } from "@/components/ui/Button";
-import { EmptyOpening, Opening } from "./sections";
+import { EmptyOpening, Genres, Opening, Rhythm } from "./sections";
 
 /*
  * Página Insights — uma narrativa contínua (sem abas escondendo conteúdo).
@@ -233,9 +233,17 @@ function InsightsContent() {
               <EmptyOpening data={data} onPeriod={setPeriod} />
             </SectionBoundary>
           ) : (
-            <SectionBoundary name="Resumo">
-              <Opening data={data} />
-            </SectionBoundary>
+            <>
+              <SectionBoundary name="Resumo">
+                <Opening data={data} />
+              </SectionBoundary>
+              <SectionBoundary name="Ritmo">
+                <Rhythm data={data} />
+              </SectionBoundary>
+              <SectionBoundary name="Gêneros">
+                <Genres data={data} />
+              </SectionBoundary>
+            </>
           )}
           {data.meta.failed.length ? (
             <p className="ix-note" role="status">

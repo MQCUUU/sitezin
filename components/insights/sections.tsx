@@ -3,7 +3,8 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/Button";
-import { decimal, periodWhen, periodChange, summaryFicha, summaryHeadline } from "@/lib/insights/clean";
+import { Heatmap } from "@/components/insights/charts";
+import { decimal, genreRows, monthBars, periodWhen, periodChange, summaryFicha, summaryHeadline } from "@/lib/insights/clean";
 import type { InsightsPayload } from "@/lib/insights/types";
 
 /*
@@ -84,6 +85,80 @@ export function EmptyOpening({ data, onPeriod }: { data: Data; onPeriod: (period
           Ver todo o histórico
         </Button>
       </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------ Ritmo */
+
+export function Rhythm({ data }: { data: Data }) {
+  const a = data.activity;
+
+  if (!a) return null;
+
+  const bars = monthBars(a.monthly, data.meta.today);
+  const peak = bars.reduce((best, b) => (b.ratio > best.ratio ? b : best), bars[0]);
+  const years = Array.from(new Set(a.days.map((d) => Number(d[0].slice(0, 4))))).sort();
+
+  if (!bars.length && !a.days.length) return null;
+
+  return (
+    <section className="ix-block" aria-labelledby="ix-ritmo">
+      <h2 id="ix-ritmo" className="ix-h2">
+        Ritmo
+      </h2>
+      {bars.length ? (
+        <ol className="ix-months" aria-label="Horas assistidas por mês">
+          {bars.map((b) => (
+            <li key={b.key} className={b.current ? "is-current" : undefined}>
+              <span className="ix-month-peak" aria-hidden="true">
+                {peak && b.key === peak.key && b.hours > 0 ? `${b.hours} h` : ""}
+              </span>
+              <span className="ix-month-bar" style={{ height: `${Math.max(2, b.ratio * 100)}%` }} />
+              <span className="ix-month-label">{b.label}</span>
+              <span className="mc-visually-hidden">: {b.hours} h</span>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+      {a.days.length ? (
+        <>
+          <h3 className="ix-h3">Dia a dia</h3>
+          <Heatmap days={a.days} years={years} compact />
+        </>
+      ) : null}
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------ Gêneros */
+
+export function Genres({ data }: { data: Data }) {
+  const t = data.taste;
+
+  if (!t || t.consumed < 3) return null;
+
+  const rows = genreRows(t.genres);
+
+  if (!rows.length) return null;
+
+  return (
+    <section className="ix-block" aria-labelledby="ix-generos">
+      <h2 id="ix-generos" className="ix-h2">
+        Gêneros
+      </h2>
+      <ul className="ix-genres">
+        {rows.map((g) => (
+          <li key={g.name}>
+            <span className="ix-genre-name">{g.name}</span>
+            <span className="ix-genre-track" aria-hidden="true">
+              <span style={{ width: `${Math.max(2, g.ratio * 100)}%` }} />
+            </span>
+            <span className="ix-genre-count">{g.count}</span>
+            <span className="ix-genre-avg">{g.avg ? <span className="ix-mine">média {g.avg}</span> : null}</span>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

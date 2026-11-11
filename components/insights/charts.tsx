@@ -85,7 +85,8 @@ function describeDay(info: [string, number, number, number]) {
   return `${parts.join(" e ")}, ${durationLabel(info[3])}`;
 }
 
-export function Heatmap({ days, years }: { days: [string, number, number, number][]; years: number[] }) {
+/** `compact` (Insights clean): sem a dica de toque, sem a seta e sem os dias mais intensos. */
+export function Heatmap({ days, years, compact = false }: { days: [string, number, number, number][]; years: number[]; compact?: boolean }) {
   const options = years.length ? years : [new Date().getFullYear()];
   const [year, setYear] = useState(options[options.length - 1]);
   const [selected, setSelected] = useState<string | null>(null);
@@ -205,7 +206,7 @@ export function Heatmap({ days, years }: { days: [string, number, number, number
           ))}
           mais tempo
         </div>
-        <span className="ins-heat-tip">Toque num dia para ver o resumo.</span>
+        {compact ? null : <span className="ins-heat-tip">Toque num dia para ver o resumo.</span>}
       </div>
 
       {selected ? (
@@ -213,12 +214,12 @@ export function Heatmap({ days, years }: { days: [string, number, number, number
           <strong>{formatDay(selected)}</strong>
           <span>{info ? describeDay(info) : "Nenhum filme ou episódio marcado neste dia."}</span>
           <Link href={`/diary?date=${selected}`} className="ins-link">
-            Abrir no Diário <ArrowRight size={14} aria-hidden="true" />
+            Abrir no Diário{compact ? null : <ArrowRight size={14} aria-hidden="true" />}
           </Link>
         </div>
       ) : null}
 
-      {top.length > 0 ? (
+      {!compact && top.length > 0 ? (
         <div className="ins-heat-top">
           <span>Dias mais intensos:</span>
           {top.map((d) => (
