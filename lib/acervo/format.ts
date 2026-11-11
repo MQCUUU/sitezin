@@ -1,4 +1,14 @@
-import { formatRuntime } from "../home/home.ts";
+/** Cópia de formatRuntime (lib/home/home.ts): import de valor com extensão .ts quebra o typecheck. */
+function formatRuntime(minutes: number | null | undefined) {
+  const m = Number(minutes);
+
+  if (!Number.isFinite(m) || m <= 0) return null;
+
+  const h = Math.floor(m / 60);
+  const rest = Math.round(m % 60);
+
+  return h ? (rest ? `${h}h ${String(rest).padStart(2, "0")}min` : `${h}h`) : `${rest} min`;
+}
 
 const n = (value: number) => value.toLocaleString("pt-BR");
 
