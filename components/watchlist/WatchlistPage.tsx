@@ -16,6 +16,7 @@ import { formatRuntime } from "@/lib/home/home";
 import { setLibraryEntry, useLibraryEntry } from "@/lib/library/entry-store";
 import type { WatchlistItem } from "@/lib/watchlist";
 import { Button } from "@/components/ui/Button";
+import { edgeScrollStep } from "@/lib/watchlist-edge-scroll";
 
 /*
  * Watchlist automática — tudo que está como "Quero assistir", na ordem de
@@ -43,6 +44,37 @@ export function WatchlistPage() {
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const liveRef = useRef<HTMLParagraphElement>(null);
+
+  // Enquanto uma linha é arrastada, rola a página perto do topo ou do pé da tela:
+  // o arrastar nativo só rola encostando na borda da janela (e nunca sob as barras).
+  useEffect(() => {
+    if (!dragId) return;
+    let pointerY: number | null = null;
+    let lastSeen = 0;
+    let frame = 0;
+    const onDragOver = (event: DragEvent) => {
+      pointerY = event.clientY;
+      lastSeen = performance.now();
+    };
+    const tick = () => {
+      if (pointerY !== null && performance.now() - lastSeen < 300) {
+        const height = window.innerHeight;
+        const appbar = document.querySelector<HTMLElement>(".mc-appbar")?.getBoundingClientRect();
+        const mobileNav = document.querySelector<HTMLElement>(".mobile-nav")?.getBoundingClientRect();
+        const top = appbar && appbar.bottom > 0 && appbar.top <= 0 ? appbar.bottom : 0;
+        const bottom = mobileNav && mobileNav.height > 0 && mobileNav.top < height ? height - mobileNav.top : 0;
+        const step = edgeScrollStep(pointerY, { height, top, bottom });
+        if (step !== 0) window.scrollBy(0, step);
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    document.addEventListener("dragover", onDragOver, true);
+    frame = requestAnimationFrame(tick);
+    return () => {
+      document.removeEventListener("dragover", onDragOver, true);
+      cancelAnimationFrame(frame);
+    };
+  }, [dragId]);
 
   const load = useCallback(async (offset: number) => {
     const data = await apiFetch<{ items: WatchlistItem[]; total: number; total_minutes?: number }>(`/api/watchlist?limit=${PAGE}&offset=${offset}`, { cache: "no-store" });
