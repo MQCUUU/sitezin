@@ -1,6 +1,5 @@
 'use client';
 
-
 import "@/styles/features/settings.css";
 import { apiFetch, errorMessage } from '@/lib/api-client';
 import { Suspense, useCallback, useEffect, useState, type ReactNode } from 'react';
@@ -19,7 +18,6 @@ import {
 } from 'lucide-react';
 import { Button } from "@/components/ui/Button";
 
-import { Search } from '@/components/Search';
 import { DataBackup } from '@/components/DataBackup';
 import { AccountPrivacy } from '@/components/AccountPrivacy';
 import { SocialSettings } from '@/components/SocialSettings';
@@ -431,9 +429,6 @@ function SettingsContent() {
   return (
     <>
       {/* V3.5: .topbar reserva o espaço do símbolo fixo (esq.) e das ações (dir.) no celular. */}
-      <div className="topbar">
-        <Search />
-      </div>
 
       <div className="set-page">
         <h1 className="set-title">Configurações</h1>

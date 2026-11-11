@@ -1,6 +1,5 @@
 "use client";
 
-
 import { useConfirm } from "@/components/ConfirmProvider";
 import "@/styles/features/search-page.css";
 import "@/styles/features/screen-kit.css";
@@ -9,7 +8,6 @@ import { removalConfirmOptions } from "@/lib/library/remove";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-import { Search } from "@/components/Search";
 import { isSearchable, MIN_QUERY_LENGTH } from "@/lib/search/rank";
 import { chunkLibraryStatePairs } from "@/lib/library-state-batches";
 import { ApiError, apiFetch, errorFromResponse, isAbortError } from "@/lib/api-client";
@@ -146,9 +144,6 @@ export default function SearchPage() {
     <Suspense
       fallback={
         <>
-          <div className="topbar">
-            <Search />
-          </div>
           <section className="section">
             <SearchResultsSkeleton />
           </section>
@@ -241,7 +236,6 @@ function SearchPageContent() {
   } | null>(null);
 
   const confirm = useConfirm();
-
 
   /*
    * Fecha menu de status clicando
@@ -837,9 +831,6 @@ function SearchPageContent() {
 
   return (
     <>
-      <div className="topbar">
-        <Search syncedQuery={query} />
-      </div>
 
       <div className="sp-page">
         {query ? (

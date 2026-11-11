@@ -16,7 +16,6 @@ import { DEFAULT_FOR_YOU_QUERY, parseForYouQuery, serializeForYouQuery, type For
 import { Bot, ChevronDown, Film, Filter, Loader2, RotateCcw, Sparkles, Tv, X } from "lucide-react";
 import Link from "next/link";
 
-import { Search } from "@/components/Search";
 import { MediaPreviewDialog } from "@/components/media/preview/MediaPreviewDialog";
 import { WatchProviderList } from "@/components/media/preview/WatchProviderList";
 import { fromLooseMediaItem } from "@/components/media/preview/adapters";
@@ -1070,9 +1069,6 @@ export default function ForYouPage() {
 
   return (
     <>
-      <div className="topbar">
-        <Search />
-      </div>
 
       {/* Fase 5 (P2-10): <div> — o <main> é do layout raiz (antes havia um main dentro do outro). */}
       <div className="fy-page" data-rec-tool="for_you">

@@ -12,57 +12,25 @@
    Desktop sidebar nav
    ===================================================================== */
 
-.nav a {
-  position: relative;
-  transition: background var(--mc-duration-fast) var(--mc-ease-standard),
-    color var(--mc-duration-fast) var(--mc-ease-standard);
-}
+
 
 /* There was previously no hover feedback at all on sidebar links. */
-.nav a:hover:not(.active) {
-  background: var(--mc-color-surface-hover);
-  color: var(--mc-color-text);
-}
+
 
 /*
  * Fase 3: o fundo e a barrinha do item ativo são um elemento só (.nav-indicator,
  * Motion layoutId em Nav.tsx) que desliza até o novo destino ao navegar.
  * O link fica isolado para o indicador (z-index -1) ficar atrás do ícone e do texto.
  */
-.nav a {
-  isolation: isolate;
-}
 
-.nav a.active {
-  background: transparent;
-  color: var(--mc-color-text);
-}
 
-.nav-indicator {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  background: var(--mc-color-accent-soft);
-}
 
-.nav-indicator::before {
-  content: "";
-  position: absolute;
-  left: -14px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 18px;
-  border-radius: var(--mc-radius-pill);
-  background: var(--mc-color-accent);
-}
 
-.nav-secondary {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--line);
-}
+
+
+
+
+
 
 /* Barra inferior: traço curto acima do ícone do destino atual. */
 .mobile-nav > a,
@@ -81,9 +49,7 @@
   background: var(--mc-color-accent);
 }
 
-[data-motion="reduced"] .nav a {
-  transition: none;
-}
+
 
 /* =====================================================================
    Mobile bottom nav

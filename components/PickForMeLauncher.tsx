@@ -21,7 +21,8 @@ const loadPickForMe = () => import("@/components/PickForMe");
 
 const PickForMe = dynamic(() => loadPickForMe().then((module) => module.PickForMe), { ssr: false });
 
-export function PickForMeLauncher({ inherit, className }: { inherit?: PickInherit; className?: string } = {}) {
+/** `iconOnly` (Projeção, Fase 3): só o ícone, com nome acessível — usado na barra superior. */
+export function PickForMeLauncher({ inherit, className, iconOnly = false }: { inherit?: PickInherit; className?: string; iconOnly?: boolean } = {}) {
   const [openRequest, setOpenRequest] = useState(0);
   const [ready, setReady] = useState(false);
   const loading = openRequest > 0 && !ready;
@@ -30,14 +31,16 @@ export function PickForMeLauncher({ inherit, className }: { inherit?: PickInheri
     <>
       <Button
         type="button"
-        className={"pick-trigger" + (className ? ` ${className}` : "")}
+        className={"pick-trigger" + (iconOnly ? " pick-trigger--icon" : "") + (className ? ` ${className}` : "")}
+        aria-label={iconOnly ? "Escolha pra mim" : undefined}
+        title={iconOnly ? "Escolha pra mim" : undefined}
         aria-busy={loading || undefined}
         onPointerEnter={() => void loadPickForMe()}
         onFocus={() => void loadPickForMe()}
         onClick={() => setOpenRequest((count) => count + 1)}
       >
         {loading ? <Loader2 size={16} className="spin" aria-hidden="true" /> : <Shuffle size={16} aria-hidden="true" />}
-        Escolha pra mim
+        {iconOnly ? null : "Escolha pra mim"}
       </Button>
 
       {openRequest > 0 && (

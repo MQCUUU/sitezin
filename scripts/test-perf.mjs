@@ -38,7 +38,9 @@ test("pôsteres: grades passam a posição; Busca só na primeira seção", () =
 });
 
 test("PickForMe: só o lançador leve é importado estaticamente", () => {
-  for (const file of ["components/HomeClient.tsx", "components/discover/DiscoverToolbar.tsx"]) {
+  // Projeção (Fase 3): o lançador saiu da Home e foi para a barra superior (Nav).
+  assert.doesNotMatch(read("components/HomeClient.tsx"), /from "@\/components\/PickForMe"/);
+  for (const file of ["components/Nav.tsx", "components/discover/DiscoverToolbar.tsx"]) {
     const src = read(file);
     assert.doesNotMatch(src, /from "@\/components\/PickForMe"/, file);
     assert.match(src, /PickForMeLauncher/, file);

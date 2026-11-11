@@ -14,7 +14,6 @@ import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Layers3, Loader2, Plus } from "lucide-react";
-import { Search } from "@/components/Search";
 import { SmartBackButton } from "@/components/SmartBackButton";
 import { img } from "@/lib/tmdb";
 import { MediaPreviewDialog } from "@/components/media/preview/MediaPreviewDialog";
@@ -1119,9 +1118,6 @@ export default function CollectionView({
   ) {
     return (
       <>
-        <div className="topbar">
-          <Search />
-        </div>
 
         <div className="empty collection-loading">
           <Loader2
@@ -1141,9 +1137,6 @@ export default function CollectionView({
   ) {
     return (
       <>
-        <div className="topbar">
-          <Search />
-        </div>
 
         <div className="empty">
           {
@@ -1157,9 +1150,6 @@ export default function CollectionView({
 
   return (
     <>
-      <div className="topbar">
-        <Search />
-      </div>
 
       <div className="title-back-wrap">
         <SmartBackButton />

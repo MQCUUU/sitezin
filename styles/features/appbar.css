@@ -1,0 +1,291 @@
+/*
+ * Projeção (Fase 3) — barra superior (components/Nav.tsx), no lugar da lateral.
+ * Inspirada na referência "Pessoa de Interesse", mais limpa: destinos só em
+ * texto, item atual com fundo âmbar tinta e texto âmbar (chapado, sem degradê),
+ * busca à direita; notificações e conta continuam no canto (TopbarActions),
+ * dentro da altura da barra. Sem fundo próprio no topo da página; ao rolar,
+ * ganha o fundo da Sala e um fio embaixo.
+ */
+
+:root {
+  --mc-appbar-h: 64px;
+}
+
+.mc-appbar {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: var(--mc-z-topbar);
+  display: flex;
+  align-items: center;
+  gap: var(--mc-space-20);
+  height: var(--mc-appbar-h);
+  padding: 0 calc(var(--mc-topbar-reserved-width) + 32px) 0 32px;
+  background: var(--mc-color-bg);
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--mc-duration-normal) var(--mc-ease-out);
+}
+
+.mc-appbar[data-scrolled] {
+  border-bottom-color: var(--mc-color-border);
+}
+
+/* Marca: logotipo inteiro no desktop, só o símbolo no celular. */
+.mc-appbar-brand {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  height: 40px;
+  padding: 0 4px;
+  border-radius: var(--mc-radius-md);
+  color: var(--mc-color-text);
+  text-decoration: none;
+}
+
+.mc-appbar-symbol {
+  display: none;
+}
+
+/* Destinos */
+.mc-appbar-nav {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+}
+
+.mc-appbar-link {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 36px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: var(--mc-radius-md);
+  background: transparent;
+  color: var(--mc-color-text-secondary);
+  font: inherit;
+  font-size: var(--mc-fs-md);
+  font-weight: 540;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color var(--mc-duration-fast) var(--mc-ease-standard);
+}
+
+.mc-appbar-link:hover,
+.mc-appbar-link.open {
+  color: var(--mc-color-text);
+}
+
+.mc-appbar-link.active {
+  color: var(--mc-color-accent);
+}
+
+/* Fundo do item atual: desliza entre os destinos (Motion layoutId). */
+.mc-appbar-indicator {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--mc-color-brand-tint);
+}
+
+/* "Mais": menu do que não cabe na barra. */
+.mc-appbar-more {
+  position: relative;
+}
+
+.mc-appbar-more-list {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: var(--mc-z-popover);
+  display: grid;
+  min-width: 220px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border-radius: var(--mc-radius-md);
+  background: var(--mc-color-bg-elevated);
+  box-shadow: var(--mc-shadow-popover);
+  transform-origin: top left;
+}
+
+.mc-appbar-more-list a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: var(--mc-radius-sm);
+  color: var(--mc-color-text);
+  font-size: var(--mc-fs-md);
+  text-decoration: none;
+}
+
+.mc-appbar-more-list a:hover {
+  background: var(--mc-color-surface-hover);
+}
+
+.mc-appbar-more-list a.active {
+  background: var(--mc-color-brand-tint);
+  color: var(--mc-color-accent);
+}
+
+/* Busca: à direita, antes das ações do canto. */
+.mc-appbar-search {
+  flex: 0 1 300px;
+  min-width: 0;
+  margin-left: auto;
+}
+
+.mc-appbar .search {
+  max-width: none;
+}
+
+.mc-appbar .search input {
+  height: 40px;
+  padding-top: 0;
+  padding-bottom: 0;
+  border: 0;
+  border-radius: var(--mc-radius-md);
+  background: var(--mc-color-surface);
+  font-size: var(--mc-fs-md);
+}
+
+.mc-appbar .search svg {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* A lista de sugestões não fica presa à largura do campo. */
+.mc-appbar .search .results {
+  top: calc(100% + 8px);
+  left: auto;
+  right: 0;
+  width: min(520px, calc(100vw - 32px));
+}
+
+/* "Escolha pra mim": ícone ao lado da busca, do mesmo tamanho dos botões do canto. */
+.mc-appbar .pick-trigger--icon {
+  flex: 0 0 auto;
+  width: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  height: 40px;
+  padding: 0;
+}
+
+/* ---- Larguras: o que sai da barra aparece no "Mais" ---- */
+
+/* ≥ 1360: prioridades 1–3 na barra; "Mais" só com a 4. */
+.mc-appbar-more-list li[data-priority="2"],
+.mc-appbar-more-list li[data-priority="3"] {
+  display: none;
+}
+
+.mc-appbar-more > button[data-current="4"] {
+  color: var(--mc-color-accent);
+  background: var(--mc-color-brand-tint);
+}
+
+@media (max-width: 1359px) {
+  .mc-appbar-link[data-priority="3"] {
+    display: none;
+  }
+
+  .mc-appbar-more-list li[data-priority="3"] {
+    display: block;
+  }
+
+  .mc-appbar-more > button[data-current="3"] {
+    color: var(--mc-color-accent);
+    background: var(--mc-color-brand-tint);
+  }
+
+  .mc-appbar-search {
+    flex-basis: 240px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .mc-appbar-link[data-priority="2"] {
+    display: none;
+  }
+
+  .mc-appbar-more-list li[data-priority="2"] {
+    display: block;
+  }
+
+  .mc-appbar-more > button[data-current="2"] {
+    color: var(--mc-color-accent);
+    background: var(--mc-color-brand-tint);
+  }
+
+  .mc-appbar {
+    gap: var(--mc-space-12);
+    padding-left: 20px;
+  }
+
+  .mc-appbar-search {
+    flex: 1 1 160px;
+  }
+
+  /* Tablet: só o símbolo, para a busca caber ao lado dos destinos. */
+  .mc-appbar-logo {
+    display: none;
+  }
+
+  .mc-appbar-symbol {
+    display: block;
+  }
+
+  .mc-appbar-brand {
+    width: 40px;
+    justify-content: center;
+  }
+}
+
+/* Celular: só símbolo + busca + ações; a navegação é a barra inferior. */
+@media (max-width: 760px) {
+  :root {
+    --mc-appbar-h: 60px;
+  }
+
+  .mc-appbar {
+    gap: 8px;
+    padding: 0 calc(var(--mc-topbar-reserved-width) + 22px) 0 max(10px, env(safe-area-inset-left));
+  }
+
+  .mc-appbar-logo,
+  .mc-appbar-nav,
+  .mc-appbar .pick-trigger--icon {
+    display: none;
+  }
+
+  .mc-appbar-symbol {
+    display: block;
+  }
+
+  .mc-appbar-brand {
+    width: 40px;
+    justify-content: center;
+  }
+
+  .mc-appbar-search {
+    flex: 1 1 auto;
+  }
+
+  .mc-topbar-actions {
+    right: max(14px, env(safe-area-inset-right));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mc-appbar,
+  .mc-appbar-link {
+    transition: none;
+  }
+}

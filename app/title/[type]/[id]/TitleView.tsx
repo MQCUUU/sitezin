@@ -1,12 +1,10 @@
 "use client";
 
-
 import "@/styles/features/title-detail.css";
 import { removeFromLibrary as deleteLibraryItem } from "@/lib/library/actions";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { Search } from "@/components/Search";
 import { SmartBackButton } from "@/components/SmartBackButton";
 import type { TitleDetails, TitleType } from "@/lib/title-details";
 import { groupEditorialCrew } from "@/lib/title-credits";
@@ -988,9 +986,6 @@ export default function TitlePage({
 
   return (
     <>
-      <div className="topbar title-topbar">
-        <Search />
-      </div>
 
       <div className="title-back-wrap">
         <SmartBackButton />

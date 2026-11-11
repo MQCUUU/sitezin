@@ -1,6 +1,5 @@
 "use client";
 
-
 import "@/styles/features/insights.css";
 import "@/styles/insights.css";
 
@@ -9,7 +8,6 @@ import { Suspense, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Star } from "lucide-react";
 
-import { Search } from "@/components/Search";
 import { Poster } from "@/components/Poster";
 import { ConnectedPosterActions } from "@/components/media/ConnectedPosterActions";
 import { dec } from "@/components/insights/ui";
@@ -76,9 +74,6 @@ function RankingContent() {
 
   return (
     <>
-      <div className="topbar">
-        <Search />
-      </div>
 
       <header className="ins-header ins-header--sub">
         <div>

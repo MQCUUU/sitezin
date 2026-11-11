@@ -8,7 +8,6 @@ import { Poster } from "@/components/Poster";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Loader2, UserRound } from "lucide-react";
-import { Search } from "@/components/Search";
 import { SmartBackButton } from "@/components/SmartBackButton";
 import { img } from "@/lib/tmdb";
 import { safeJson, formatDate, getYear, type Person, type Credit } from "@/components/person/shared";
@@ -338,9 +337,6 @@ export default function PersonView({
   ) {
     return (
       <>
-        <div className="topbar">
-          <Search />
-        </div>
 
         <div className="empty">
           <Loader2
@@ -359,9 +355,6 @@ export default function PersonView({
   ) {
     return (
       <>
-        <div className="topbar">
-          <Search />
-        </div>
 
         <div className="empty">
           {error ||
@@ -389,9 +382,6 @@ export default function PersonView({
 
   return (
     <>
-      <div className="topbar">
-        <Search />
-      </div>
 
       <div className="title-back-wrap">
         <SmartBackButton />

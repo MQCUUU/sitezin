@@ -1,6 +1,5 @@
 "use client";
 
-
 import "@/styles/features/lists.css";
 import "@/styles/features/screen-kit.css";
 import { apiFetch, errorMessage, isApiError } from "@/lib/api-client";
@@ -9,7 +8,6 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bookmark, ChevronRight, Globe, Link2, Lock, Pencil, Plus, Trash2 } from "lucide-react";
 
-import { Search } from "@/components/Search";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { useToast } from "@/components/ToastProvider";
 import { plural } from "@/lib/lists/validate";
@@ -137,9 +135,6 @@ export function ListsPage() {
 
   return (
     <>
-      <div className="topbar">
-        <Search />
-      </div>
 
       <header className="sk-head">
         <div className="sk-head-text">

@@ -507,7 +507,7 @@
 }
 .title-sidebar {
     position: sticky;
-    top: 20px
+    top: calc(var(--mc-appbar-h) + 20px)
 }
 .title-review-section>.title-section-heading {
     margin-bottom: 18px
@@ -1740,7 +1740,7 @@
 }
 .mc-title-tabs {
     position: sticky;
-    top: var(--mc-space-8);
+    top: var(--mc-appbar-h);
     z-index: var(--mc-z-sticky);
     max-width: var(--mc-container-wide);
     margin: var(--mc-space-24) auto;

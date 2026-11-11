@@ -68,23 +68,11 @@ button {
     display: flex;
     min-height: 100vh
 }
-.sidebar {
-    width: 240px;
-    border-right: 1px solid var(--line);
-    background: var(--bg);
-    padding: 22px 14px;
-    position: fixed;
-    inset: 0 auto 0 0;
-    z-index: 20
-}
-.nav a:hover,.nav a.active {
-    background: var(--panel2);
-    color: #fff
-}
+
+/* Projeção (Fase 3): sem barra lateral; o conteúdo começa abaixo da barra superior (styles/features/appbar.css). */
 .main {
-    margin-left: 240px;
-    width: calc(100% - 240px);
-    padding: 28px 34px 60px
+    width: 100%;
+    padding: calc(var(--mc-appbar-h, 64px) + 20px) 34px 60px
 }
 .topbar {
     display: flex;
@@ -350,13 +338,10 @@ button {
     }
 }
 @media(max-width:760px) {
-    .sidebar {
-        display: none
-    }
     .main {
         margin: 0;
         width: 100%;
-        padding: 18px 15px 85px
+        padding: calc(var(--mc-appbar-h, 60px) + 14px) 15px 85px
     }
     .topbar {
         align-items: stretch
@@ -502,9 +487,6 @@ html[data-theme="light"] {
     --accent2: #9a4a00;
     --on-accent: #ffffff;
     --brand-tint: #f5e3cf
-}
-html[data-theme="light"] .sidebar {
-    background: #ffffff
 }
 html[data-theme="light"] .search input {
     color: var(--text);

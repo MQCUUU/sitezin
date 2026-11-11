@@ -1,6 +1,5 @@
 "use client";
 
-
 import { useConfirm } from "@/components/ConfirmProvider";
 import "@/styles/features/discover.css";
 import { removeFromLibrary } from "@/lib/library/actions";
@@ -9,7 +8,6 @@ import { Suspense, useEffect, useMemo, useRef, useState, useEffectEvent } from "
 import { Loader2 } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 
-import { Search } from "@/components/Search";
 import { apiFetch } from "@/lib/api-client";
 import { intentForMedia } from "@/lib/auth/pending-action";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
@@ -48,9 +46,6 @@ export default function DiscoverPage() {
     <Suspense
       fallback={
         <>
-          <div className="topbar">
-            <Search />
-          </div>
 
           <div className="empty discover-loading">
             <Loader2 className="spin" size={28} />
@@ -101,7 +96,6 @@ function DiscoverContent() {
   const [openLibraryMenu, setOpenLibraryMenu] = useState<string | null>(null);
 
   const confirm = useConfirm();
-
 
   useEffect(() => {
     if (openLibraryMenu === null) return;
@@ -671,9 +665,6 @@ function DiscoverContent() {
 
   return (
     <>
-      <div className="topbar">
-        <Search />
-      </div>
 
       <DiscoverHeader
         totalLabel={data ? data.total_label ?? data.total_results.toLocaleString("pt-BR") : null}

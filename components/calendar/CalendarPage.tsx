@@ -6,7 +6,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "motion/react";
 
-import { Search } from "@/components/Search";
 import { CALENDAR_TZ, addDays, addMonths, capitalize, firstOfMonth, isDay, longDate, monthGrid, monthKey, monthLabel, startOfWeek, todayIn } from "@/lib/calendar/dates";
 import { pickHero, summarize } from "@/lib/calendar/build";
 import type { CalendarEvent, CalendarResponse } from "@/lib/calendar/types";
@@ -233,9 +232,6 @@ function CalendarContent() {
 
   return (
     <>
-      <div className="topbar">
-        <Search />
-      </div>
 
       {/* Fase 4: sem rótulo em caixa alta — título e uma frase. */}
       <header className="cal-header">

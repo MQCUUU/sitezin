@@ -2,14 +2,17 @@
 
 
 import "@/styles/features/nav.css";
+import "@/styles/features/appbar.css";
 import Link from "next/link";
 import { BrandLogo, BrandMark } from "@/components/brand/BrandMark";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { Search } from "@/components/Search";
+import { PickForMeLauncher } from "@/components/PickForMeLauncher";
 import { useAuthState } from "@/hooks/useLibraryAuth";
 import { useModal } from "@/hooks/useModal";
-import { navIndicatorTransition, sheetExitTransition, sheetTransition } from "@/lib/motion";
+import { navIndicatorTransition, popoverTransition, sheetExitTransition, sheetTransition } from "@/lib/motion";
 
 import {
   Bookmark,
@@ -23,6 +26,7 @@ import {
   Bot,
   List,
   MoreHorizontal,
+  ChevronDown,
   X,
 } from "lucide-react";
 
@@ -60,6 +64,24 @@ const items = [
  * Fase 1 (P3-10): rotas privadas só são pré-carregadas com sessão confirmada.
  * Para visitante, cada prefetch virava um redirect para /login sem utilidade.
  */
+/*
+ * Projeção (Fase 3) — barra superior. Prioridade de cada destino na barra do
+ * desktop; o que não cabe na largura vai para "Mais" (só CSS, sem medir):
+ *   1 sempre na barra, 2 a partir de 1024 px, 3 a partir de 1360 px, 4 só no "Mais".
+ */
+const BAR_PRIORITY: Record<string, 1 | 2 | 3 | 4> = {
+  "/": 1,
+  "/discover": 1,
+  "/for-you": 2,
+  "/library": 1,
+  "/diary": 3,
+  "/calendar": 3,
+  "/insights": 3,
+  "/lists": 3,
+  "/watchlist": 4,
+  "/assistant": 4,
+};
+
 const PUBLIC_NAV_ROUTES = new Set<string>(["/", "/discover"]);
 const secondaryItems = [
   ["/assistant", "Assistente IA", Bot],
@@ -91,6 +113,40 @@ export function Nav() {
 
   // Fase 7: Escape, laço do Tab, foco inicial/devolução e trava de rolagem (useModal → lib/modal-a11y).
   const moreSheetRef = useModal(moreOpen, () => setMoreOpen(false));
+
+  // Barra superior: menu "Mais" do desktop (fecha com Esc, clique fora e troca de página).
+  const [barMoreOpen, setBarMoreOpen] = useState(false);
+  const barMoreRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!barMoreOpen) return;
+    const onDown = (event: PointerEvent) => {
+      if (!barMoreRef.current?.contains(event.target as Node)) setBarMoreOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setBarMoreOpen(false);
+      barMoreRef.current?.querySelector("button")?.focus();
+    };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [barMoreOpen]);
+
+  // Ao rolar, a barra ganha o fio de baixo (o estado só muda ao cruzar o limite).
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    // Estado inicial no próximo quadro (a página pode abrir já rolada, ex.: voltar).
+    const frame = requestAnimationFrame(onScroll);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
 
   /*
    * ==========================================
@@ -143,98 +199,98 @@ export function Nav() {
   // Página atual mora no "Mais" (Diário, Calendário…): o indicador da barra inferior fica nele.
   const moreActive = [items[4], items[5], items[6], items[7], items[8], ...secondaryItems].some(([href]) => isActive(href));
 
+  // Barra superior: prioridade 1–3 na barra; 2–4 também no "Mais" (o CSS mostra só o que saiu da barra).
+  const allItems = [...items, ...secondaryItems];
+  const barItems = allItems.filter(([href]) => BAR_PRIORITY[href] <= 3);
+  const moreItems = allItems.filter(([href]) => BAR_PRIORITY[href] >= 2);
+  const currentHref = allItems.find(([href]) => isActive(href))?.[0];
+  const currentPriority = currentHref ? BAR_PRIORITY[currentHref] : null;
+
   return (
     <>
       {/* ====================================== */}
-      {/* SIDEBAR DESKTOP */}
+      {/* BARRA SUPERIOR (Projeção, Fase 3) */}
       {/* ====================================== */}
 
-      <aside className="sidebar">
-
-        {/* LOGO */}
-
-        <Link
-          href="/"
-          className="brand mc-focusable"
-          aria-label="MyCatalog — página inicial"
-        >
-          <BrandLogo size={24} />
+      <header className="mc-appbar" data-scrolled={scrolled ? "" : undefined}>
+        <Link href="/" className="mc-appbar-brand mc-focusable" aria-label="MyCatalog — página inicial">
+          <BrandLogo size={22} className="mc-appbar-logo" />
+          <BrandMark size={22} className="mc-appbar-symbol" />
         </Link>
 
-        {/* NAVEGAÇÃO */}
-
-        <nav
-          className="nav"
-          aria-label="Navegação principal"
-        >
-          {items.map(
-            ([href, label, Icon]) => (
-              <Link
-                key={href}
-                href={href}
-                prefetch={prefetchFor(href)}
-                className={
-                  "mc-focusable " +
-                  (isActive(href)
-                    ? "active"
-                    : "")
-                }
-                aria-current={
-                  isActive(href)
-                    ? "page"
-                    : undefined
-                }
-              >
-                {isActive(href) && (
-                  <motion.span
-                    layoutId="mc-nav-indicator"
-                    className="nav-indicator"
-                    transition={navIndicatorTransition}
-                    aria-hidden="true"
-                  />
-                )}
-                <Icon
-                  size={18}
-                  strokeWidth={2}
-                />
-
-                <span>
-                  {label}
-                </span>
-              </Link>
-            )
-          )}
-        </nav>
-
-        <nav className="nav nav-secondary" aria-label="Outras páginas">
-          {secondaryItems.map(([href, label, Icon]) => (
+        <nav className="mc-appbar-nav" aria-label="Navegação principal">
+          {barItems.map(([href, label]) => (
             <Link
               key={href}
               href={href}
               prefetch={prefetchFor(href)}
-              className={"mc-focusable " + (isActive(href) ? "active" : "")}
+              data-priority={BAR_PRIORITY[href]}
+              className={"mc-appbar-link mc-focusable" + (isActive(href) ? " active" : "")}
               aria-current={isActive(href) ? "page" : undefined}
             >
               {isActive(href) && (
                 <motion.span
                   layoutId="mc-nav-indicator"
-                  className="nav-indicator"
+                  className="mc-appbar-indicator"
                   transition={navIndicatorTransition}
                   aria-hidden="true"
                 />
               )}
-              <Icon size={18} strokeWidth={2} />
               <span>{label}</span>
             </Link>
           ))}
+
+          <div className="mc-appbar-more" ref={barMoreRef}>
+            <button
+              type="button"
+              className={"mc-appbar-link mc-focusable" + (barMoreOpen ? " open" : "")}
+              data-current={currentPriority ?? undefined}
+              aria-expanded={barMoreOpen}
+              aria-controls="mc-appbar-more-list"
+              onClick={() => setBarMoreOpen((open) => !open)}
+            >
+              <span>Mais</span>
+              <ChevronDown size={15} strokeWidth={2.2} aria-hidden="true" />
+            </button>
+            <AnimatePresence>
+              {barMoreOpen && (
+                <motion.ul
+                  id="mc-appbar-more-list"
+                  className="mc-appbar-more-list"
+                  initial={{ opacity: 0, scale: 0.97, y: -4 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.97, y: -4, transition: { duration: 0.12 } }}
+                  transition={popoverTransition}
+                >
+                  {moreItems.map(([href, label, Icon]) => (
+                    <li key={href} data-priority={BAR_PRIORITY[href]}>
+                      <Link
+                        href={href}
+                        prefetch={prefetchFor(href)}
+                        className={"mc-focusable" + (isActive(href) ? " active" : "")}
+                        aria-current={isActive(href) ? "page" : undefined}
+                        onClick={() => setBarMoreOpen(false)}
+                      >
+                        <Icon size={17} strokeWidth={2} aria-hidden="true" />
+                        <span>{label}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </motion.ul>
+              )}
+            </AnimatePresence>
+          </div>
         </nav>
 
-      </aside>
+        <div className="mc-appbar-search">
+          <Suspense fallback={<Search />}>
+            <RouteSearch />
+          </Suspense>
+        </div>
 
-      {/* V3.5: no mobile a sidebar some — o símbolo (sem o nome, por espaço) leva ao início. */}
-      <Link href="/" className="mobile-brand mc-focusable" aria-label="MyCatalog — página inicial">
-        <BrandMark size={22} />
-      </Link>
+        {/* No Descobrir o "Escolha pra mim" da própria página herda os filtros escolhidos: um só botão por tela. */}
+        {pathname === "/discover" ? null : <PickForMeLauncher iconOnly className="mc-appbar-pick" />}
+      </header>
 
       {/* ====================================== */}
       {/* MENU MOBILE */}
@@ -332,4 +388,13 @@ export function Nav() {
       </AnimatePresence>
     </>
   );
+}
+
+/** Busca global da barra. Em /search o campo vem com o termo da URL (?q=), para poder ser refinado. */
+function RouteSearch() {
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const query = pathname === "/search" ? params.get("q") ?? "" : undefined;
+
+  return <Search syncedQuery={query} />;
 }

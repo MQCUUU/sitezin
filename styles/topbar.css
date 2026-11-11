@@ -26,9 +26,10 @@
 
 .mc-topbar-actions {
   position: fixed;
-  top: 17px;
-  right: 20px;
-  z-index: var(--mc-z-dropdown);
+  /* Projeção (Fase 3): centradas na altura da barra superior, acima dela. */
+  top: calc((var(--mc-appbar-h, 64px) - 40px) / 2);
+  right: 24px;
+  z-index: calc(var(--mc-z-topbar) + 1);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -36,7 +37,6 @@
 
 @media (max-width: 620px) {
   .mc-topbar-actions {
-    top: 10px;
     right: 14px;
     gap: 8px;
   }
@@ -54,7 +54,6 @@
  * paint before that JS runs.
  */
 .topbar {
-  padding-right: var(--mc-topbar-reserved-width);
   box-sizing: border-box;
 }
 

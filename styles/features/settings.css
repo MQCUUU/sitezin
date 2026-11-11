@@ -656,7 +656,7 @@ input {
 }
 .set-nav {
     position: sticky;
-    top: 16px;
+    top: calc(var(--mc-appbar-h) + 16px);
     display: grid;
     gap: 4px;
 }

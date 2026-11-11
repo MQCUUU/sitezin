@@ -1,6 +1,5 @@
 "use client";
 
-
 import "@/styles/features/assistant.css";
 import { apiFetch } from "@/lib/api-client";
 import { Poster } from "@/components/Poster";
@@ -12,11 +11,7 @@ import { Loader2, Send, Star } from "lucide-react";
 
 import Link from "next/link";
 
-import {
-  Search,
-} from "@/components/Search";
 import { Button } from "@/components/ui/Button";
-
 
 export default function AssistantPage() {
   const [
@@ -62,7 +57,6 @@ export default function AssistantPage() {
       "library" |
       ""
     >("");
-
 
   const [
     cacheHit,
@@ -131,7 +125,6 @@ export default function AssistantPage() {
 
       setApplied(data.applied || null);
 
-
       setCacheHit(
         Boolean(
           data.cache_hit
@@ -181,9 +174,6 @@ export default function AssistantPage() {
 
   return (
     <>
-      <div className="topbar">
-        <Search />
-      </div>
 
       {/* Fase 4: a pergunta é o título da página (e o nome do campo); sem caixa, ícone ou rótulo em caixa alta. */}
       <header className="ai-head">

@@ -8,7 +8,6 @@ import { motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Poster } from "@/components/Poster";
-import { Search } from "@/components/Search";
 import { ConnectedPosterActions } from "@/components/media/ConnectedPosterActions";
 import { useToast } from "@/components/ToastProvider";
 import { apiFetch, errorMessage } from "@/lib/api-client";
@@ -110,9 +109,6 @@ export function WatchlistPage() {
 
   return (
     <>
-    <div className="topbar">
-      <Search />
-    </div>
     <div className="wl-page">
       <header className="sk-head">
         <div className="sk-head-text">

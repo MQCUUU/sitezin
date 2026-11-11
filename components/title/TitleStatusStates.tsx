@@ -1,7 +1,6 @@
 import "@/styles/features/title-detail.css";
 import { AlertTriangle, SearchX } from "lucide-react";
 
-import { Search } from "@/components/Search";
 import { Button, Skeleton } from "@/components/ui";
 
 /**
@@ -12,9 +11,6 @@ import { Button, Skeleton } from "@/components/ui";
 export function TitleLoadingState() {
   return (
     <>
-      <div className="topbar">
-        <Search />
-      </div>
 
       <div className="mc-title-status-page">
         <div className="mc-title-skeleton-hero">
@@ -45,9 +41,6 @@ export type TitleErrorStateProps = {
 export function TitleErrorState({ message, onRetry }: TitleErrorStateProps) {
   return (
     <>
-      <div className="topbar">
-        <Search />
-      </div>
 
       <div className="mc-title-status-page">
         <div className="mc-title-error-card" role="alert">
@@ -73,9 +66,6 @@ export function TitleErrorState({ message, onRetry }: TitleErrorStateProps) {
 export function TitleMissingState() {
   return (
     <>
-      <div className="topbar">
-        <Search />
-      </div>
 
       <div className="mc-title-status-page">
         <div className="mc-title-error-card">

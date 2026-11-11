@@ -1,6 +1,5 @@
 "use client";
 
-
 import { Poster } from "@/components/Poster";
 import "@/styles/features/lists.css";
 import "@/styles/features/screen-kit.css";
@@ -11,7 +10,6 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Link2, ListOrdered, Pencil, Plus, Search as SearchIcon, Trash2, X } from "lucide-react";
 
-import { Search } from "@/components/Search";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { useToast } from "@/components/ToastProvider";
 import { useAuthState } from "@/hooks/useLibraryAuth";
@@ -463,9 +461,6 @@ function DetailContent() {
 export function ListDetailPage() {
   return (
     <>
-      <div className="topbar">
-        <Search />
-      </div>
       <Suspense fallback={<Skeleton />}>
         <DetailContent />
       </Suspense>

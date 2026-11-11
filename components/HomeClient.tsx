@@ -1,20 +1,15 @@
 "use client";
 
-
 import "@/styles/features/home-smart.css";
 import { getLibraryVersion } from "@/lib/library-cache";
 import { useEffect, useMemo, useState } from "react";
 
 import Link from "next/link";
 
-
-import { Search } from "@/components/Search";
 import { Poster } from "@/components/Poster";
 import { ConnectedPosterActions } from "@/components/media/ConnectedPosterActions";
 import { CarouselRail } from "@/components/CarouselRail";
 import { PosterGrid } from "@/components/PosterGrid";
-// Fase 4: botão leve; o PickForMe (grande) é baixado só ao abrir.
-import { PickForMeLauncher } from "@/components/PickForMeLauncher";
 import { ErrorState } from "@/components/AsyncState";
 import { authClient } from "@/lib/auth/client";
 import { HomeSkeleton } from "@/components/home/HomeParts";
@@ -448,9 +443,6 @@ export default function HomeClient() {
       // Fase 4 (P2-08): key por variante — a troca neutra → visitante/logada substitui o conteúdo em vez de
       // "mover" o mesmo <section> (o React reaproveitava o nó e o navegador contava um layout shift).
       <div key="home-neutral" className="home-smart" aria-busy="true">
-        <div className="topbar home-topbar">
-          <Search />
-        </div>
 
         <section className="section home-session-skeleton">
           <HomeSkeleton />
@@ -466,9 +458,6 @@ export default function HomeClient() {
   ) {
     return (
       <div key="home-guest" className="home-smart hm-screen">
-        <div className="topbar home-topbar">
-          <Search />
-        </div>
 
         {/*
          * Fase 4 — visitante: título grande, uma frase e UMA ação clara (Criar
@@ -582,14 +571,6 @@ export default function HomeClient() {
 
   return (
     <div key="home-auth" className="home-smart hm-screen">
-      <div className="topbar home-topbar">
-        <Search />
-
-        <div className="home-top-actions">
-          <PickForMeLauncher />
-        </div>
-      </div>
-
       {show.skeleton ? (
         <HomeSkeleton />
       ) : show.error ? (

@@ -238,7 +238,7 @@
 /* ---------------------------------------------------------- navegação */
 .ins-nav {
   position: sticky;
-  top: 0;
+  top: var(--mc-appbar-h);
   z-index: 15;
   display: flex;
   gap: 4px;

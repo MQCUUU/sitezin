@@ -6,7 +6,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "motion/react";
 
-import { Search } from "@/components/Search";
 import { CALENDAR_TZ, addMonths, capitalize, isDay, longDate, monthLabel, todayIn } from "@/lib/calendar/dates";
 import type { DiaryDay, DiaryFilter, DiaryResponse } from "@/lib/diary/types";
 
@@ -209,9 +208,6 @@ function DiaryContent() {
 
   return (
     <>
-      <div className="topbar">
-        <Search />
-      </div>
 
       {/* Fase 4: sem rótulo em caixa alta; título, uma frase e, embaixo, o mês e os filtros numa barra só. */}
       <header className="dy-header">

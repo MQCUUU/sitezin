@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Component, Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { Search } from "@/components/Search";
 import { getLibraryVersion } from "@/lib/library-cache";
 import type { InsightsPayload } from "@/lib/insights/types";
 
@@ -228,9 +227,6 @@ function InsightsContent() {
 
   return (
     <>
-      <div className="topbar">
-        <Search />
-      </div>
 
       {/* Fase 4: o nome da página é o título; a promessa vira a frase de apoio. */}
       <header className="ins-header">

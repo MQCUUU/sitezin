@@ -13,7 +13,6 @@ import { ConnectedPosterActions } from "@/components/media/ConnectedPosterAction
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Activity, Ban, Check, Film, List, Loader2, LockKeyhole, Pencil, PlusCircle, Repeat, Search as SearchIcon, Star, Trophy, UserCheck, UserMinus, UserPlus, X } from "lucide-react";
-import { Search } from "@/components/Search";
 import { useToast } from "@/components/ToastProvider";
 import { img } from "@/lib/tmdb";
 import { CarouselRail } from "@/components/CarouselRail";
@@ -520,14 +519,14 @@ export default function PublicProfilePage() {
     [connectionModal, connectionLists, socialData]
   );
   const filteredRows = useMemo(() => modalRows.filter((row) => `${row.profile.display_name || ""} ${row.profile.username || ""}`.toLowerCase().includes(connectionSearch.trim().toLowerCase())), [modalRows, connectionSearch]);
-  if (loading) return <><div className="topbar"><Search /></div><div className="empty"><Loader2 className="spin" /> Carregando perfil...</div></>;
-  if (!data && loadError) return <><div className="topbar"><Search /></div><div className="empty" role="alert">{loadError}</div></>;
-  if (!data) return <><div className="topbar"><Search /></div><div className="empty"><LockKeyhole /> Este perfil não existe ou é privado.</div></>;
+  if (loading) return <><div className="empty"><Loader2 className="spin" /> Carregando perfil...</div></>;
+  if (!data && loadError) return <><div className="empty" role="alert">{loadError}</div></>;
+  if (!data) return <><div className="empty"><LockKeyhole /> Este perfil não existe ou é privado.</div></>;
 
   const relationship = data.social?.relationship;
   const favoriteMovies = data.favorites.filter((item: any) => item.media_type === "movie").slice(0, 5);
   const favoriteSeries = data.favorites.filter((item: any) => item.media_type === "tv").slice(0, 5);
-  return <><div className="topbar"><Search /></div>{/* Fase 5 (P2-10): <div> — o <main> é do layout raiz. */}<div className="public-profile profile-v2">
+  return <>{/* Fase 5 (P2-10): <div> — o <main> é do layout raiz. */}<div className="public-profile profile-v2">
     {/* Banner do perfil (como em outras redes); sem banner, o cabeçalho fica como antes. */}
     <div className={`profile-v2-top${data.profile.banner_url ? " has-banner" : ""}`}>
     {data.profile.banner_url ? (

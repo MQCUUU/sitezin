@@ -1,27 +1,13 @@
 /*
- * Navegação lateral e menu mobile.
+ * Menu mobile (barra inferior e folha "Mais"). A barra superior: styles/features/appbar.css.
  *
  * Fase 7: reunido de app/globals.css (mesma ordem de cascata).
  * Carregado pelos componentes que usam estas classes, não pelo layout raiz.
  */
 
-.brand {
-    font-weight: 900;
-    letter-spacing: -.6px;
-    padding: 0 10px 24px
-}
-.nav {
-    display: grid;
-    gap: 5px
-}
-.nav a {
-    padding: 11px 12px;
-    border-radius: var(--mc-radius-md);
-    color: var(--muted);
-    display: flex;
-    gap: 11px;
-    align-items: center
-}
+
+
+
 .mobile-nav {
     display: none
 }
@@ -49,12 +35,8 @@
         gap: 3px
     }
 }
-html[data-theme="light"] .nav a:hover,html[data-theme="light"] .nav a.active {
-    color: #111318
-}
-html[data-density="compact"] .nav a {
-    padding: 9px 11px
-}
+
+
 /* Mobile shell: mantém todas as áreas acessíveis e evita estouros horizontais. */
 .mobile-more-backdrop,.mobile-more-sheet {
     display: none

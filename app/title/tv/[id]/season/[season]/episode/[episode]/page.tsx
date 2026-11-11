@@ -1,6 +1,5 @@
 "use client";
 
-
 import { Poster } from "@/components/Poster";
 import "@/styles/features/episode.css";
 import "@/styles/features/screen-kit.css";
@@ -9,7 +8,6 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Check, Clock, Eye, Loader2, Save, SkipBack, SkipForward, Star } from "lucide-react";
 
-import { Search } from "@/components/Search";
 import { useLibraryAuth } from "@/hooks/useLibraryAuth";
 import { apiFetch, errorMessage, isApiError } from "@/lib/api-client";
 import { getEpisodeReleaseStatus, type EpisodeSummary } from "@/lib/title-seasons";
@@ -189,10 +187,10 @@ export default function EpisodePage() {
     }
   }
 
-  if (!paramsValid) return <><div className="topbar"><Search /></div><div className="empty">Episódio não encontrado.</div></>;
-  if (loading) return <><div className="topbar"><Search /></div><div className="empty"><Loader2 className="spin" /> Carregando episódio...</div></>;
-  if (loadError) return <><div className="topbar"><Search /></div><div className="empty" role="alert">{loadError}</div></>;
-  if (!episode) return <><div className="topbar"><Search /></div><div className="empty">Episódio não encontrado.</div></>;
+  if (!paramsValid) return <><div className="empty">Episódio não encontrado.</div></>;
+  if (loading) return <><div className="empty"><Loader2 className="spin" /> Carregando episódio...</div></>;
+  if (loadError) return <><div className="empty" role="alert">{loadError}</div></>;
+  if (!episode) return <><div className="empty">Episódio não encontrado.</div></>;
 
   const releaseStatus = getEpisodeReleaseStatus(episode.air_date);
   const isFuture = releaseStatus === "future";
@@ -218,9 +216,6 @@ export default function EpisodePage() {
   /* Fase 4b: uma página só (antes, duas abas) — imagem panorâmica, o episódio
      e, logo abaixo, o registro (data, reassistida, comentário). */
   return <>
-    <div className="topbar">
-      <Search />
-    </div>
     <div className="ep-page">
       <Link className="sk-link ep-back" href={`/title/tv/${params.id}`}><ArrowLeft size={16} aria-hidden="true" /> {show?.name || "Voltar para a série"}</Link>
 
