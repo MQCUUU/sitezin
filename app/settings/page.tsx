@@ -4,18 +4,7 @@ import "@/styles/features/settings.css";
 import { apiFetch, errorMessage } from '@/lib/api-client';
 import { Suspense, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import {
-  Bell,
-  Database,
-  Palette,
-  RotateCcw,
-  ShieldCheck,
-  Star,
-  Tv,
-  Plus,
-  Trash2,
-  type LucideIcon,
-} from 'lucide-react';
+import { RotateCcw, Plus, Trash2 } from 'lucide-react';
 import { Button } from "@/components/ui/Button";
 
 import { DataBackup } from '@/components/DataBackup';
@@ -45,13 +34,13 @@ import {
 
 type TabId = 'appearance' | 'streaming' | 'notifications' | 'account' | 'ratings' | 'data';
 
-const TABS: { id: TabId; label: string; hint: string; icon: LucideIcon }[] = [
-  { id: 'appearance', label: 'Aparência', hint: 'Tema, densidade e cantos', icon: Palette },
-  { id: 'streaming', label: 'Streaming', hint: 'Modo Sem Censura e onde assiste', icon: Tv },
-  { id: 'notifications', label: 'Notificações', hint: 'Avisos do site', icon: Bell },
-  { id: 'account', label: 'Conta e privacidade', hint: 'Perfil, @, visibilidade', icon: ShieldCheck },
-  { id: 'ratings', label: 'Critérios de avaliação', hint: 'Categorias da sua nota', icon: Star },
-  { id: 'data', label: 'Dados e backup', hint: 'Exportar e importar', icon: Database },
+const TABS: { id: TabId; label: string }[] = [
+  { id: 'appearance', label: 'Aparência' },
+  { id: 'streaming', label: 'Streaming' },
+  { id: 'notifications', label: 'Notificações' },
+  { id: 'account', label: 'Conta e privacidade' },
+  { id: 'ratings', label: 'Critérios de avaliação' },
+  { id: 'data', label: 'Dados e backup' },
 ];
 
 function tabFromQuery(value: string | null): TabId {
@@ -436,8 +425,6 @@ function SettingsContent() {
         <div className="set-layout">
           <nav className="set-nav" aria-label="Seções das configurações">
             {TABS.map((tab) => {
-              const Icon = tab.icon;
-
               return (
                 <button
                   key={tab.id}
@@ -446,11 +433,7 @@ function SettingsContent() {
                   aria-current={active === tab.id ? 'page' : undefined}
                   onClick={() => select(tab.id)}
                 >
-                  <Icon size={18} aria-hidden="true" />
-                  <span className="set-nav-text">
-                    <strong>{tab.label}</strong>
-                    <small>{tab.hint}</small>
-                  </span>
+                  {tab.label}
                 </button>
               );
             })}
