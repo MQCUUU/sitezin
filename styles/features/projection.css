@@ -61,14 +61,7 @@ html[data-motion="reduced"] .pj-room { display: none; }
   .pj-room { display: none; }
 }
 
-/* Descobrir: faixa mais baixa que a do Início, para a grade aparecer logo. */
-.dc-band .tt-band-screen {
-  max-height: min(32vh, 340px);
-}
-
-@media (max-width: 760px) {
-  .dc-band .tt-band-screen { aspect-ratio: 16 / 7; }
-}
+/* Descobrir usa a faixa como a do Título (2.39:1, teto de 60vh): sem teto próprio, para não cortar a imagem. */
 
 /* Esqueleto da faixa: mesma caixa da faixa real (.tt-band-screen), sem a cortina. */
 .dc-band-skeleton {
