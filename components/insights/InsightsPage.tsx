@@ -7,7 +7,7 @@ import { getLibraryVersion } from "@/lib/library-cache";
 import type { InsightsPayload } from "@/lib/insights/types";
 
 import { Button } from "@/components/ui/Button";
-import { EmptyOpening, Genres, Opening, Rhythm } from "./sections";
+import { EmptyOpening, Genres, Opening, Ratings, Rhythm, TopRated, YearLink } from "./sections";
 
 /*
  * Página Insights — uma narrativa contínua (sem abas escondendo conteúdo).
@@ -242,6 +242,15 @@ function InsightsContent() {
               </SectionBoundary>
               <SectionBoundary name="Gêneros">
                 <Genres data={data} />
+              </SectionBoundary>
+              <SectionBoundary name="Notas">
+                <Ratings data={data} />
+              </SectionBoundary>
+              <SectionBoundary name="Maiores notas">
+                <TopRated data={data} />
+              </SectionBoundary>
+              <SectionBoundary name="Retrospectiva">
+                <YearLink data={data} />
               </SectionBoundary>
             </>
           )}

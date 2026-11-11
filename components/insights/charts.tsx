@@ -4,71 +4,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
 
-import { durationLabel, monthShort, nf } from "./ui";
+import { durationLabel, monthShort } from "./ui";
 
 /* Gráficos em CSS/SVG — todos com rótulo, tooltip nativo e fallback textual. */
-
-export function HBars({
-  rows,
-  formatValue,
-  tone = "accent",
-  max: fixedMax,
-}: {
-  rows: { label: string; value: number; display?: string; hint?: string }[];
-  formatValue?: (value: number) => string;
-  tone?: "accent" | "gold" | "blue" | "muted";
-  /** Escala fixa (ex.: 10 para notas) — senão, relativa ao maior valor. */
-  max?: number;
-}) {
-  const max = fixedMax ?? Math.max(1, ...rows.map((row) => row.value));
-
-  return (
-    <ul className={`ins-hbars ins-tone-${tone}`}>
-      {rows.map((row) => (
-        <li key={row.label} title={row.hint}>
-          <span className="ins-hbar-label">{row.label}</span>
-          <span className="ins-hbar-track" aria-hidden="true">
-            <span style={{ width: `${Math.max(2, (row.value / max) * 100)}%` }} />
-          </span>
-          <strong>{row.display ?? (formatValue ? formatValue(row.value) : nf.format(row.value))}</strong>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-export function Columns({
-  data,
-  highlight,
-  height = 150,
-  showValues = true,
-}: {
-  data: { label: string; value: number; title?: string }[];
-  highlight?: number | null;
-  height?: number;
-  showValues?: boolean;
-}) {
-  const max = Math.max(1, ...data.map((d) => d.value));
-
-  return (
-    <div
-      className="ins-columns"
-      style={{ gridTemplateColumns: `repeat(${data.length}, minmax(0, 1fr))`, height }}
-      role="img"
-      aria-label={data.map((d) => `${d.label}: ${d.title ?? d.value}`).join("; ")}
-    >
-      {data.map((d, index) => (
-        <div key={`${d.label}-${index}`} className={`ins-column${highlight === index ? " is-top" : ""}`} title={d.title ?? `${d.label}: ${nf.format(d.value)}`}>
-          <span className="ins-column-value">{showValues && d.value > 0 ? nf.format(Math.round(d.value)) : ""}</span>
-          <span className="ins-column-bar">
-            <span style={{ height: `${(d.value / max) * 100}%` }} />
-          </span>
-          <span className="ins-column-label">{d.label}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 function formatDay(day: string) {
   return new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "long", timeZone: "UTC" }).format(

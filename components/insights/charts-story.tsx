@@ -2,37 +2,9 @@
 
 import { useState } from "react";
 
-import { durationLabel, hoursText, monthShort, nf } from "./ui";
+import { durationLabel, monthShort, nf } from "./ui";
 
 /* Gráficos da página Insights (SVG/CSS, sem dependência). */
-
-/** Histograma 1–10 (notas 0–1,4 entram em "1"). Valor escrito acima de cada barra. */
-export function Histogram({ buckets, highlight }: { buckets: number[]; highlight?: number | null }) {
-  const max = Math.max(1, ...buckets);
-  const total = buckets.reduce((a, b) => a + b, 0);
-
-  return (
-    <div
-      className="ins-histo"
-      role="img"
-      aria-label={`Quantidade de títulos por nota: ${buckets.map((c, i) => `nota ${i + 1}: ${c}`).join(", ")}`}
-    >
-      {buckets.map((count, index) => (
-        <div
-          key={index}
-          className={`ins-histo-col${highlight === index + 1 ? " is-top" : ""}`}
-          title={`Nota ${index + 1}: ${count} título${count === 1 ? "" : "s"}${total ? ` (${Math.round((count / total) * 100)}%)` : ""}`}
-        >
-          <span className="ins-histo-count">{count > 0 ? count : ""}</span>
-          <span className="ins-histo-bar">
-            <span style={{ height: `${(count / max) * 100}%` }} />
-          </span>
-          <span className="ins-histo-label">{index + 1}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 export type MonthPoint = { month: string; movies: number; episodes: number; minutes: number };
 export type MonthMetric = "minutes" | "movies" | "episodes";
@@ -118,75 +90,6 @@ export function MonthlyChart({ data, metric }: { data: MonthPoint[]; metric: Mon
           <span key={p.month}>{i % step === 0 || i === data.length - 1 ? monthShort(p.month) : ""}</span>
         ))}
       </div>
-    </div>
-  );
-}
-
-/** Barras 100% empilhadas por ano (gênero principal de cada título). Tons de uma só cor. */
-export function StackedYears({ rows }: { rows: { year: number; total: number; parts: { name: string; share: number }[] }[] }) {
-  const names = Array.from(new Set(rows.flatMap((r) => r.parts.map((p) => p.name)))).sort((a, b) =>
-    a === "Outros" ? 1 : b === "Outros" ? -1 : 0
-  );
-  const tone = (name: string) => (name === "Outros" ? "ins-tone-rest" : `ins-tone-${Math.min(3, names.indexOf(name))}`);
-
-  return (
-    <div className="ins-stacked">
-      <ul className="ins-stacked-legend">
-        {names.map((n) => (
-          <li key={n}>
-            <span className={tone(n)} aria-hidden="true" />
-            {n}
-          </li>
-        ))}
-      </ul>
-      {rows.map((row) => (
-        <div key={row.year} className="ins-stacked-row">
-          <span className="ins-stacked-year">{row.year}</span>
-          <span
-            className="ins-stacked-bar"
-            role="img"
-            aria-label={`${row.year}: ${row.parts.map((p) => `${p.name} ${Math.round(p.share * 100)}%`).join(", ")}`}
-          >
-            {row.parts
-              .filter((p) => p.share > 0)
-              .map((p) => (
-                <span key={p.name} className={tone(p.name)} style={{ width: `${p.share * 100}%` }} title={`${p.name}: ${Math.round(p.share * 100)}% de ${row.total} títulos`}>
-                  {p.share >= 0.12 ? `${Math.round(p.share * 100)}%` : ""}
-                </span>
-              ))}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/**
- * Proporção Filmes × Séries do tempo assistido (rótulos sempre visíveis).
- * Recebe HORAS INTEIRAS já divididas pelo motor (filmes + séries = total).
- */
-export function SplitBar({ movies, series }: { movies: number; series: number }) {
-  const total = movies + series;
-
-  if (total <= 0) return null;
-
-  const m = movies / total;
-  const moviePct = Math.round(m * 100);
-
-  return (
-    <div className="ins-split">
-      <span className="ins-split-bar" role="img" aria-label={`Filmes ${moviePct}%, séries ${100 - moviePct}%`}>
-        <span className="is-movies" style={{ width: `${m * 100}%` }} />
-        <span className="is-series" style={{ width: `${(1 - m) * 100}%` }} />
-      </span>
-      <span className="ins-split-legend">
-        <span>
-          <i className="is-movies" aria-hidden="true" /> Filmes: <strong>{hoursText(movies)}</strong> ({moviePct}%)
-        </span>
-        <span>
-          <i className="is-series" aria-hidden="true" /> Séries: <strong>{hoursText(series)}</strong> ({100 - moviePct}%)
-        </span>
-      </span>
     </div>
   );
 }

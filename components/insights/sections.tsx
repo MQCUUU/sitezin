@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 
+import { Poster } from "@/components/Poster";
+import { ConnectedPosterActions } from "@/components/media/ConnectedPosterActions";
 import { Button } from "@/components/ui/Button";
 import { Heatmap } from "@/components/insights/charts";
-import { decimal, genreRows, monthBars, periodWhen, periodChange, summaryFicha, summaryHeadline } from "@/lib/insights/clean";
+import { communityLine, decimal, genreRows, monthBars, periodWhen, periodChange, summaryFicha, summaryHeadline } from "@/lib/insights/clean";
 import type { InsightsPayload } from "@/lib/insights/types";
 
 /*
@@ -160,5 +162,98 @@ export function Genres({ data }: { data: Data }) {
         ))}
       </ul>
     </section>
+  );
+}
+
+/* ------------------------------------------------------------ Notas */
+
+export function Ratings({ data }: { data: Data }) {
+  const r = data.ratings;
+
+  if (!r || r.n === 0) return null;
+
+  const max = Math.max(1, ...r.histogram);
+  const facts = [
+    r.median !== null ? `mediana ${decimal(r.median)}` : null,
+    r.mode !== null ? `nota mais usada ${r.mode}` : null,
+    `${r.n.toLocaleString("pt-BR")} ${r.n === 1 ? "avaliado" : "avaliados"}${r.coverage !== null ? ` (${Math.round(r.coverage * 100)}% do que assistiu)` : ""}`,
+  ].filter(Boolean);
+  const community = communityLine(r.community);
+
+  return (
+    <section className="ix-block" aria-labelledby="ix-notas">
+      <h2 id="ix-notas" className="ix-h2">
+        Notas
+      </h2>
+      <div className="ix-rating-head">
+        <strong className="ix-rating-big ix-mine">{r.mean !== null ? decimal(r.mean) : "—"}</strong>
+        <span className="ix-rating-facts">{facts.join(", ")}</span>
+      </div>
+      <ol className="ix-histo" aria-label="Quantas vezes você deu cada nota">
+        {r.histogram.map((count, index) => (
+          <li key={index} className={r.mode === index + 1 ? "is-mode" : undefined}>
+            <span className="ix-histo-bar" style={{ height: `${Math.max(count > 0 ? 4 : 0, (count / max) * 100)}%` }} />
+            <span className="ix-histo-label">{index + 1}</span>
+            <span className="mc-visually-hidden">: {count}</span>
+          </li>
+        ))}
+      </ol>
+      {community ? <p className="ix-note">{community}</p> : null}
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------ Maiores notas */
+
+export function TopRated({ data }: { data: Data }) {
+  const items = data.ranking.slice(0, 5);
+
+  if (!items.length) return null;
+
+  const typeParam = data.meta.type !== "all" ? `?type=${data.meta.type}` : "";
+
+  return (
+    <section className="ix-block" aria-labelledby="ix-top">
+      <div className="ix-block-head">
+        <h2 id="ix-top" className="ix-h2">
+          Suas maiores notas
+        </h2>
+        <Link href={`/ranking${typeParam}`} className="ix-link">
+          Ranking completo
+        </Link>
+      </div>
+      <ul className="ix-top">
+        {items.map((item) => (
+          <li key={`${item.type}-${item.tmdb_id}`}>
+            <span className="ix-top-poster mc-pa-host mc-frame">
+              <Link href={`/title/${item.type}/${item.tmdb_id}`} tabIndex={-1} aria-hidden="true">
+                <Poster path={item.poster_path} alt="" sizes="(max-width: 600px) 120px, 160px" />
+              </Link>
+              <ConnectedPosterActions media={{ tmdbId: Number(item.tmdb_id), mediaType: item.type === "tv" ? "tv" : "movie", title: item.title, posterPath: item.poster_path ?? null }} />
+            </span>
+            <Link href={`/title/${item.type}/${item.tmdb_id}`} className="ix-top-title mc-focusable">
+              {item.title}
+            </Link>
+            <span className="ix-mine">{decimal(item.rating)}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------ Rodapé */
+
+export function YearLink({ data }: { data: Data }) {
+  const y = data.year;
+
+  if (!y || y.core.movies + y.core.series === 0) return null;
+
+  return (
+    <p className="ix-foot">
+      <Link href={`/retrospective?year=${y.year}`} className="ix-link">
+        Retrospectiva de {y.year}
+      </Link>
+    </p>
   );
 }
