@@ -24,14 +24,11 @@ import type {
  *
  * Definições (iguais às da antiga página Estatísticas, para os números
  * baterem — ver docs/V2.1-A-DATA-INTEGRITY.md):
- *   filme assistido   status watched|rewatched (rewatching = em andamento)
- *   tempo de filme    duração × (1 + reassistidas) em "Todo período";
- *                     num período: 1× por filme com watched_at no período
- *                     + 1× por reassistida datada (watch_entries) no período
+ *   filme assistido   status watched
+ *   tempo de filme    duração UMA vez por filme (dia da 1ª visualização) —
+ *                     sem reassistir (migration 0008), cada título conta uma vez
  *   episódio          linha de episodes_progress com watched=true (única por
  *                     episódio — nunca conta duas vezes); sem duração = 45 min
- *   reassistidas      Todo período: max(rewatch_count, 1 se status rewatched)
- *                     período: watch_entries.is_rewatch datadas no período
  *   "Quero assistir"  nunca entra em consumo
  * Datas: dia civil em America/Sao_Paulo (calculado no SQL).
  */
@@ -55,8 +52,8 @@ export const MIN = {
   changeRated: 5,
 } as const;
 
-const WATCHED_MOVIE = new Set(["watched", "rewatched"]);
-const SERIES_STARTED = new Set(["watched", "rewatched", "rewatching", "watching", "paused", "dropped"]);
+const WATCHED_MOVIE = new Set(["watched"]);
+const SERIES_STARTED = new Set(["watched", "watching", "paused", "dropped"]);
 const DEFAULT_EPISODE_MINUTES = 45;
 const DEFAULT_MOVIE_MINUTES = 110;
 const ASIAN_LANGS = new Set(["ko", "ja", "zh", "cn", "th", "hi", "ta", "te", "id", "vi", "tl"]);
@@ -105,16 +102,15 @@ type Ctx = {
   eps: EpisodeDay[];
   /**
    * Filmes com registros em watch_entries: dia da 1ª visualização (registro
-   * não-rewatch mais antigo; null se só há reassistidas). O watch-history
-   * sincroniza library_items.watched_at com a visualização MAIS RECENTE — usar
-   * watched_at junto com as reassistidas contaria a mesma sessão duas vezes.
+   * mais antigo). O watch-history sincroniza library_items.watched_at com a
+   * visualização MAIS RECENTE — o filme conta uma vez, no dia da primeira.
    */
   firstDay: Map<number, string | null>;
   /** Séries com pelo menos um episódio registrado (em qualquer data). */
   seriesWithEpisodes: Set<number>;
 };
 
-const SERIES_DONE = new Set(["watched", "rewatched"]);
+const SERIES_DONE = new Set(["watched"]);
 
 /**
  * Série marcada como Assistida SEM nenhum episódio registrado: conta inteira no dia
@@ -156,7 +152,7 @@ function consume(ctx: Ctx, range: DayRange): Consumed[] {
     if (row.type === "movie") {
       if (!WATCHED_MOVIE.has(row.status) || !inRange(firstViewDay(ctx, row), range)) continue;
 
-      out.push({ row, minutes: movieMinutes(row) * (isBounded ? 1 : 1 + Math.max(0, row.rewatch_count)), episodes: 0 });
+      out.push({ row, minutes: movieMinutes(row), episodes: 0 });
       continue;
     }
 
@@ -179,10 +175,8 @@ function consume(ctx: Ctx, range: DayRange): Consumed[] {
 
 function core(ctx: Ctx, range: DayRange): Core {
   const consumed = consume(ctx, range);
-  const isBounded = bounded(range);
   let movieMin = 0;
   let seriesMin = 0;
-  let rewatches = 0;
   const active = new Set<string>();
 
   for (const c of consumed) {
@@ -199,20 +193,6 @@ function core(ctx: Ctx, range: DayRange): Core {
 
   for (const ep of ctx.eps) if (ep.day && inRange(ep.day, range)) active.add(ep.day);
 
-  if (isBounded) {
-    for (const entry of ctx.input.entries) {
-      const row = ctx.byId.get(entry.media_id);
-
-      if (!row || !entry.is_rewatch || !inRange(entry.day, range)) continue;
-
-      rewatches += 1;
-      if (row.type === "movie") movieMin += movieMinutes(row);
-      if (entry.day) active.add(entry.day);
-    }
-  } else {
-    for (const row of ctx.lib) rewatches += Math.max(row.rewatch_count, row.status === "rewatched" ? 1 : 0);
-  }
-
   const ratings = consumed.map((c) => c.row.rating).filter((r): r is number => r !== null);
 
   return {
@@ -223,7 +203,6 @@ function core(ctx: Ctx, range: DayRange): Core {
     movieMinutes: movieMin,
     seriesMinutes: seriesMin,
     ...splitHours(movieMin, seriesMin),
-    rewatches,
     activeDays: active.size,
     rated: ratings.length,
     avgRating: ratings.length ? round1(mean(ratings) as number) : null,
@@ -303,7 +282,7 @@ export function buildInsights(input: InsightsInput, raw: Partial<InsightsParams>
 
   for (const entry of input.entries) {
     if (!firstDay.has(entry.media_id)) firstDay.set(entry.media_id, null);
-    if (entry.is_rewatch || !entry.day) continue;
+    if (!entry.day) continue;
 
     const current = firstDay.get(entry.media_id);
 
@@ -373,16 +352,6 @@ export function buildInsights(input: InsightsInput, raw: Partial<InsightsParams>
       e.minutes += ep.n * episodeMinutes(byId.get(ep.media_id) as LibRow);
     }
 
-    for (const entry of input.entries) {
-      const row = byId.get(entry.media_id);
-
-      if (!row || row.type !== "movie" || !entry.is_rewatch || !entry.day) continue;
-
-      const e = touch(entry.day);
-
-      e.movies += 1;
-      e.minutes += movieMinutes(row);
-    }
   });
 
   const allDays = [...dayMap.keys()].sort();
@@ -663,7 +632,7 @@ export function buildInsights(input: InsightsInput, raw: Partial<InsightsParams>
     // Conclusões são história: contam também títulos que saíram da Biblioteca.
     const tvHistory = all.filter((r) => r.type === "tv");
     const progress: SeriesProgress[] = tv
-      .filter((r) => r.status === "watching" || r.status === "rewatching" || r.status === "paused")
+      .filter((r) => r.status === "watching" || r.status === "paused")
       .map((r) => {
         const e = epsByMedia.get(r.media_id);
         const total = r.episodes_count && r.episodes_count > 0 ? r.episodes_count : null;
@@ -682,24 +651,19 @@ export function buildInsights(input: InsightsInput, raw: Partial<InsightsParams>
       })
       .sort((a, b) => (b.lastDay ?? "").localeCompare(a.lastDay ?? ""));
 
-    const movieRewatches = bounded(range)
-      ? input.entries.filter((e) => e.is_rewatch && inRange(e.day, range) && byId.get(e.media_id)?.type === "movie").length
-      : all.filter((r) => r.type === "movie").reduce((s, r) => s + Math.max(r.rewatch_count, r.status === "rewatched" ? 1 : 0), 0);
-
     return {
       movies: {
         count: movies.length,
         minutes: cur.movieMinutes,
         avgRuntime: runtimes.length ? Math.round(mean(runtimes) as number) : null,
         avgRating: movieRatings.length ? round1(mean(movieRatings) as number) : null,
-        rewatches: movieRewatches,
         topGenre: genreTop && movies.length >= 3 ? genreTop.label : null,
         topDecade: decadeTop && movies.length >= 3 ? decadeTop.label : null,
         topDirector: directorTop ? directorTop.name : null,
         monthly: [...movieMonths.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-12).map(([month, count]) => ({ month, count })),
       },
       series: {
-        watching: tv.filter((r) => r.status === "watching" || r.status === "rewatching").length,
+        watching: tv.filter((r) => r.status === "watching").length,
         completed: tvHistory.filter((r) => (r.seasons_count ?? 0) > 0 && r.completed_seasons >= (r.seasons_count as number)).length,
         dropped: tv.filter((r) => r.status === "dropped").length,
         paused: tv.filter((r) => r.status === "paused").length,
@@ -714,45 +678,8 @@ export function buildInsights(input: InsightsInput, raw: Partial<InsightsParams>
     };
   });
 
-  /* ---------- Reassistidos ---------- */
-  const rewatch = guard("rewatch", () => {
-    const rewatched = all.filter((r) => r.rewatch_count > 0 || r.status === "rewatched");
-    const consumedRewatched = consumed.filter((c) => c.row.rewatch_count > 0 || c.row.status === "rewatched");
-    const genre = buckets(rewatched, (r) => r.genres, () => null)[0];
-    const datesByMedia = new Map<number, string[]>();
-    const ratingsByMedia = new Map<number, number[]>();
-
-    for (const e of input.entries) {
-      if (!byId.has(e.media_id)) continue;
-      if (e.day) datesByMedia.set(e.media_id, [...(datesByMedia.get(e.media_id) ?? []), e.day]);
-      if (e.rating !== null) ratingsByMedia.set(e.media_id, [...(ratingsByMedia.get(e.media_id) ?? []), Number(e.rating)]);
-    }
-
-    const gaps: number[] = [];
-
-    for (const dates of datesByMedia.values()) {
-      const sorted = [...dates].sort();
-
-      for (let i = 1; i < sorted.length; i += 1) gaps.push(daysBetween(sorted[i - 1], sorted[i]));
-    }
-
-    const changes = [...ratingsByMedia.values()].filter((v) => v.length >= 2).map((v) => v[v.length - 1] - v[0]);
-
-    return {
-      total: cur.rewatches,
-      share: consumed.length >= 10 ? consumedRewatched.length / consumed.length : null,
-      top: [...rewatched]
-        .sort((a, b) => b.rewatch_count - a.rewatch_count)
-        .slice(0, 5)
-        .map((r) => ({ ...ref(r), times: Math.max(1, r.rewatch_count) })),
-      topGenre: rewatched.length >= 4 && genre ? genre.label : null,
-      intervalDays: gaps.length >= 3 ? Math.round(median(gaps) as number) : null,
-      ratingChange: changes.length >= 3 ? { n: changes.length, mean: round1(mean(changes) as number) } : null,
-    };
-  });
-
   /* ---------- Abandonos ---------- */
-  const dropped = guard("rewatch", () => {
+  const dropped = guard("dropped", () => {
     const tracked = lib.filter((r) => r.status !== "want");
     const droppedRows = lib.filter((r) => r.status === "dropped");
     const genreMap = new Map<string, { dropped: number; tracked: number }>();
@@ -980,7 +907,6 @@ export function buildInsights(input: InsightsInput, raw: Partial<InsightsParams>
     taste,
     ratings,
     titles,
-    rewatch,
     dropped,
     watchlist,
     evolution,

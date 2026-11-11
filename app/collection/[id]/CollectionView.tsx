@@ -500,8 +500,6 @@ export default function CollectionView({
               item &&
               [
                 "watched",
-                "rewatching",
-                "rewatched",
               ].includes(
                 item.status ||
                   ""
@@ -572,8 +570,6 @@ export default function CollectionView({
                   item &&
                   [
                     "watched",
-                    "rewatching",
-                    "rewatched",
                   ].includes(
                     item.status ||
                       ""
@@ -601,8 +597,6 @@ export default function CollectionView({
                   !item ||
                   ![
                     "watched",
-                    "rewatching",
-                    "rewatched",
                   ].includes(
                     item.status ||
                       ""

@@ -48,7 +48,7 @@ export function planSeriesUpdate(input: {
   }
 
   const watched = [...seen.values()];
-  // Decisão pelos FATOS (sem o atalho "rewatching" do computeTvProgress).
+  // Decisão pelos FATOS (episódios marcados).
   const progress = computeTvProgress(structure, watched);
   const status = deriveSeriesStatus(input.row.status, input.action, progress);
   const seasons = deriveSeasonFields(structure, watched, progress);

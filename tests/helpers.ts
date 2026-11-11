@@ -95,8 +95,6 @@ export const STATUS_LABEL: Record<string, string> = {
   want: "Quero assistir",
   watching: "Assistindo",
   watched: "Assistido",
-  rewatching: "Reassistindo",
-  rewatched: "Reassistido",
   paused: "Pausado",
   dropped: "Abandonado",
 };

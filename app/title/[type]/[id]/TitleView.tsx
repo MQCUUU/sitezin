@@ -30,6 +30,7 @@ import {
   TitleReviewsSection,
   TitleRelatedSection,
   TitleStatsSection,
+  TitleSeriesProgress,
   TitleTrailer,
   TitleTvSections,
   TitleWatchProviders,
@@ -627,7 +628,7 @@ export default function TitlePage({
         })
       );
 
-      // Status muda o progresso exibido (ex.: Reassistindo): relê o canônico.
+      // Status muda o progresso exibido: relê o canônico.
       if (field === "status") void reloadLibraryItem();
 
       const labels:
@@ -1020,25 +1021,42 @@ export default function TitlePage({
           id="title-tabpanel-info"
           aria-labelledby="title-tab-info"
         >
-          <TitleOverviewSection
-            type={type}
-            details={details}
-            libraryItem={libraryItem}
-          />
+          {/* Projeção (Fase 4): duas colunas — leitura à esquerda; ficha e o que é seu à direita. */}
+          <div className="tt-info-grid">
+            <div className="tt-info-main">
+              <TitleOverviewSection type={type} details={details} />
 
-          {type === "tv" && (
-            <TitleTvSections
-              details={details}
-              libraryItem={libraryItem}
-              onLibraryChange={handleLibraryItemMerge}
-            />
-          )}
+              {type === "tv" && (
+                <TitleTvSections
+                  details={details}
+                  libraryItem={libraryItem}
+                  onLibraryChange={handleLibraryItemMerge}
+                />
+              )}
 
-          <TitleWatchProviders details={details} />
+              <TitleWatchProviders details={details} />
 
-          <TitleTrailer details={details} />
+              <TitleTrailer details={details} />
+            </div>
 
-          <TitleStatsSection details={details} />
+            <aside className="tt-info-side" aria-label="Ficha e progresso">
+              {type === "tv" && libraryItem ? (
+                <TitleSeriesProgress
+                  tvId={Number(details.id)}
+                  progress={libraryItem.library_progress}
+                  totals={libraryItem.progress}
+                />
+              ) : null}
+
+              <TitleStatsSection
+                type={type}
+                details={details}
+                directors={directors}
+                writers={writers}
+                creators={creators}
+              />
+            </aside>
+          </div>
         </div>
       )}
 

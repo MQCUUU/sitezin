@@ -19,9 +19,6 @@ export type WatchEntry = {
     string |
     null;
 
-  is_rewatch:
-    boolean;
-
   created_at:
     string;
 

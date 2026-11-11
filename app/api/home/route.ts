@@ -20,9 +20,8 @@ import { loadHome, type HomeSql } from "@/lib/home/load";
  *    CONTINUIDADE — o maior entre:
  *      · último episódio marcado (`episodes_progress.watched_at`);
  *      · última visualização registrada (`watch_entries.watched_at`);
- *      · última entrada em Assistindo/Reassistindo (`activity_events`:
- *        `status_changed` → watching/rewatching, `rewatch_started`,
- *        `library_added` já como watching/rewatching).
+ *      · última entrada em Assistindo (`activity_events`:
+ *        `status_changed` → watching, `library_added` já como watching).
  *    Sem nenhum desses fatos (legado/importado): `added_at`.
  *    NUNCA `library_items.updated_at`: ele é reescrito por nota, Curtir,
  *    review e sync automático de temporadas — nada disso é continuar.

@@ -8,9 +8,7 @@ export type Status =
   | "want"
   | "watching"
   | "watched"
-  | "dropped"
-  | "rewatching"
-  | "rewatched";
+  | "dropped";
 
 export type Media = {
   id: string;
@@ -43,7 +41,6 @@ export type LibraryItem = Media & {
   personal_rating: number | null;
   review: string | null;
   watched_at: string | null;
-  rewatch_count: number;
   added_at: string;
   updated_at: string;
   /** V2.1-E: só na prateleira "Continuar assistindo" da Home (séries). */
@@ -62,6 +59,4 @@ export const STATUS_LABELS: Record<
   watching: "Assistindo",
   watched: "Assistido",
   dropped: "Abandonado",
-  rewatching: "Reassistindo",
-  rewatched: "Reassistido",
 };

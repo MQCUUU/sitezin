@@ -790,3 +790,11 @@ html[data-motion="reduced"] .mc-preview-providers > * {
     transform: scale(0.96);
     pointer-events: none;
 }
+
+/* Projeção (Fase 4): o nome na prévia segue o título — Archivo condensada. */
+.mc-preview-title {
+    font-size: clamp(28px, 3vw, 36px);
+    font-weight: 770;
+    font-variation-settings: "wdth" 72;
+    line-height: 0.96;
+}

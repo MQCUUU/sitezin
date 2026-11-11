@@ -45,7 +45,7 @@ export async function attachSeriesProgress(
         { seasons_count: row.media.seasons_count, episodes_count: row.media.episodes_count }
       );
       const watched = byMedia.get(Number(row.media.id)) ?? [];
-      const progress = computeTvProgress(structure, watched, { rewatching: row.status === "rewatching" });
+      const progress = computeTvProgress(structure, watched);
 
       row.library_progress = libraryProgress({
         status: row.status,

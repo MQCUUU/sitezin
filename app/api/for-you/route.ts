@@ -53,7 +53,6 @@ const SIGNALS_SQL = `
   WITH lib AS (
     SELECT li.id::text AS library_id, li.media_id, m.media_type, m.tmdb_id, m.title, m.original_title, m.genres, li.status,
            li.favorite, li.personal_rating::float AS rating,
-           (li.status IN ('rewatched', 'rewatching') OR coalesce(li.rewatch_count, 0) > 0) AS rewatched,
            li.updated_at
     FROM public.library_items li
     JOIN public.media m ON m.id = li.media_id
@@ -61,10 +60,9 @@ const SIGNALS_SQL = `
   ),
   hist AS (
     SELECT media_id,
-           bool_or(event_type IN ('series_completed', 'watch_logged', 'rewatch_started', 'season_completed')
-                   OR (event_type = 'status_changed' AND metadata->>'to' IN ('watched', 'rewatched', 'rewatching'))
-                   OR (event_type = 'library_added' AND metadata->>'status' IN ('watched', 'rewatched', 'rewatching'))) AS watched,
-           bool_or(event_type = 'rewatch_started') AS rewatched,
+           bool_or(event_type IN ('series_completed', 'watch_logged', 'season_completed')
+                   OR (event_type = 'status_changed' AND metadata->>'to' IN ('watched'))
+                   OR (event_type = 'library_added' AND metadata->>'status' IN ('watched'))) AS watched,
            max(occurred_at) AS at
     FROM public.activity_events
     WHERE user_id = $1 AND media_id IS NOT NULL
@@ -78,13 +76,13 @@ const SIGNALS_SQL = `
   ),
   we AS (
     SELECT media_id, (array_agg(rating ORDER BY watched_at DESC) FILTER (WHERE rating IS NOT NULL))[1]::float AS rating,
-           bool_or(is_rewatch) AS rewatched, max(coalesce(watched_at, created_at)) AS at
+           max(coalesce(watched_at, created_at)) AS at
     FROM public.watch_entries
     WHERE user_id = $1 AND media_id IS NOT NULL
     GROUP BY media_id
   ),
   ep AS (
-    SELECT media_id, count(*) FILTER (WHERE watched)::int AS n, bool_or(is_rewatch) AS rewatched, max(watched_at) AS at
+    SELECT media_id, count(*) FILTER (WHERE watched)::int AS n, max(watched_at) AS at
     FROM public.episodes_progress
     WHERE user_id = $1 AND media_id IS NOT NULL
     GROUP BY media_id
@@ -94,7 +92,6 @@ const SIGNALS_SQL = `
     EXCEPT SELECT media_id FROM lib
   )
   SELECT lib.library_id, lib.media_type, lib.tmdb_id, lib.title, lib.genres, lib.status, lib.favorite, lib.rating,
-         (lib.rewatched OR coalesce(we.rewatched, false) OR coalesce(ep.rewatched, false)) AS rewatched,
          false AS watched_history, coalesce(ep.n, 0) AS episodes_watched, true AS in_library, lib.updated_at,
          lib.original_title
   FROM lib
@@ -104,7 +101,6 @@ const SIGNALS_SQL = `
   SELECT NULL, m.media_type, m.tmdb_id, m.title, m.genres,
          CASE WHEN ls.status = 'dropped' THEN 'dropped' END,
          false, we.rating,
-         (coalesce(hist.rewatched, false) OR coalesce(we.rewatched, false) OR coalesce(ep.rewatched, false)),
          (coalesce(hist.watched, false) OR we.media_id IS NOT NULL OR coalesce(ep.n, 0) > 0) AND coalesce(ls.status, '') <> 'dropped',
          coalesce(ep.n, 0), false,
          greatest(hist.at, we.at, ep.at),
@@ -452,7 +448,7 @@ async function getForYou(req: NextRequest) {
     const scored = scoreAll(results, false, (i) => 1.2 * Math.max(0, 1 - i / 40)).map((c) =>
       siblings.has(c.id) ? { ...c, franchise_override: "anchor" } : c
     );
-    const likedIt = anchor.favorite || (anchor.rating !== null && Number(anchor.rating) >= 7.5) || anchor.rewatched;
+    const likedIt = anchor.favorite || (anchor.rating !== null && Number(anchor.rating) >= 7.5);
     const title = likedIt ? `Porque você gostou de ${anchor.title}` : `Porque você assistiu ${anchor.title}`;
 
     build(
@@ -639,7 +635,6 @@ async function getForYou(req: NextRequest) {
 function anchorSubtitle(anchor: WeightedTitle) {
   if (anchor.favorite) return "Um dos seus curtidos inspirou esta seleção.";
   if (anchor.rating !== null && Number(anchor.rating) >= 8) return `Você deu nota ${Number(anchor.rating).toFixed(1)} para este título.`;
-  if (anchor.rewatched) return "Você reassistiu este título.";
 
   return "Baseado no que você já assistiu.";
 }

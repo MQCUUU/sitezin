@@ -398,7 +398,7 @@ export function SmartQueue({ genres }: { genres: string[] }) {
                           )}
 
                           <div className="smart-queue-card-actions">
-                            {result.source === "library" && result.library_id && status !== "watching" && status !== "rewatching" && (
+                            {result.source === "library" && result.library_id && status !== "watching" && (
                               <Button variant="primary" type="button" disabled={busy} onClick={() => startWatching(result)}>
                                 {busy ? <Loader2 size={14} className="spin" /> : <Play size={14} />}
                                 Começar a assistir

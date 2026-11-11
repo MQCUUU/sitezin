@@ -128,7 +128,7 @@ export async function PUT(request: Request) {
         JOIN public.media m ON m.id = li.media_id
         WHERE li.user_id = ${user.id}
           AND li.media_id = ANY(${favoriteMediaIds})
-          AND li.status IN ('watched', 'rewatching', 'rewatched')
+          AND li.status IN ('watched')
       `;
 
       const eligibleById = new Map(
@@ -141,7 +141,7 @@ export async function PUT(request: Request) {
 
       if (hasInvalidFavorite) {
         return NextResponse.json(
-          { error: "Escolha apenas filmes e séries assistidos, reassistindo ou reassistidos." },
+          { error: "Escolha apenas filmes e séries assistidos." },
           { status: 400 },
         );
       }

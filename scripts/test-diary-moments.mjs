@@ -14,7 +14,7 @@ const SHOW2 = { id: 4, tmdb_id: 1396, media_type: "tv", title: "Breaking Bad", p
 let seq = 0;
 const at = (day, hm, s = 0) => new Date(`${day}T${hm}:${String(s).padStart(2, "0")}-03:00`).toISOString();
 const ev = (type, day, hm, media, meta = {}, s = 0) => ({ id: `e${++seq}`, source: "event", type, at: at(day, hm, s), day, time: hm, media, meta });
-const watch = (day, hm, media, o = {}) => ({ id: `w${++seq}`, source: "watch", at: at(day, hm), day, time: o.time === undefined ? hm : o.time, media, rating: o.rating ?? null, comment: o.comment ?? null, is_rewatch: Boolean(o.is_rewatch), watch_number: o.watch_number ?? 1 });
+const watch = (day, hm, media, o = {}) => ({ id: `w${++seq}`, source: "watch", at: at(day, hm), day, time: o.time === undefined ? hm : o.time, media, rating: o.rating ?? null, comment: o.comment ?? null, watch_number: o.watch_number ?? 1 });
 const ep = (day, hm, media, season, episode, o = {}) => ({ id: `p${++seq}`, source: "episode", at: at(day, hm, o.s ?? 0), day, time: o.time === undefined ? hm : o.time, media, season, episode, season_done: Boolean(o.season_done), series_done: Boolean(o.series_done) });
 const D = "2026-10-14";
 const one = (items) => {
@@ -163,29 +163,17 @@ test("série: abandonou (neutro) e retomou", () => {
   assert.equal(headline(back), "Retomou a série");
 });
 
-/* ---------- REASSISTIR ---------- */
-test("reassistida: 1ª, 2ª, 3ª (filme)", () => {
-  assert.equal(headline(toMoment([watch(D, "20:10", MOVIE2, { is_rewatch: true, watch_number: 2 })])), "Reassistiu");
-  assert.equal(headline(toMoment([watch(D, "20:10", MOVIE2, { is_rewatch: true, watch_number: 3 })])), "Reassistiu pela 2ª vez");
-  assert.equal(headline(toMoment([watch(D, "20:10", MOVIE2, { is_rewatch: true, watch_number: 4 })])), "Reassistiu pela 3ª vez");
+/* ---------- SEM REASSISTIR (migration 0008) ---------- */
+test("sem reassistir: a 2ª visualização de um filme é 'Assistiu', nunca 'Reassistiu'", () => {
+  const m = toMoment([watch(D, "20:10", MOVIE2, { watch_number: 3 })]);
+  assert.equal(m.kind, "watched");
+  assert.equal(headline(m), "Assistiu");
 });
 
-test("reassistida: começou (rewatch_started + status no mesmo instante) = 1 momento", () => {
-  const d = one([ev("status_changed", D, "19:00", SHOW, { from: "watched", to: "rewatching" }), ev("rewatch_started", D, "19:00", SHOW, { rewatch_count: 2 })]);
-  assert.equal(d.moments.length, 1);
-  assert.equal(headline(d.moments[0]), "Começou a reassistir pela 2ª vez");
-});
-
-test("reassistida: Reassistindo → Reassistido usa o número da reassistida", () => {
-  const m = toMoment([ev("status_changed", D, "22:00", MOVIE2, { from: "rewatching", to: "rewatched", rewatch_number: 3 })]);
-  assert.equal(headline(m), "Reassistiu pela 3ª vez");
-});
-
-test("reassistida: terminou e começou a reassistir minutos depois = 2 momentos (sem duplicar)", () => {
-  const items = [ev("status_changed", D, "21:00", MOVIE, { from: "watching", to: "watched" }), ev("rewatch_started", D, "21:10", MOVIE, { rewatch_count: 1 }), ev("status_changed", D, "21:10", MOVIE, { from: "watched", to: "rewatching" })];
+test("sem reassistir: terminou e voltou a assistir = 'Assistiu' + 'Voltou a assistir'", () => {
+  const items = [ev("status_changed", D, "21:00", MOVIE, { from: "watching", to: "watched" }), ev("status_changed", D, "21:10", MOVIE, { from: "watched", to: "watching" })];
   const d = one(items);
-  assert.deepEqual(d.moments.map(headline).sort(), ["Assistiu", "Começou a reassistir"]);
-  assert.equal(d.moments.flatMap((m) => m.raw).length, 3);
+  assert.deepEqual(d.moments.map(headline).sort(), ["Assistiu", "Voltou a assistir"]);
 });
 
 /* ---------- AGRUPAMENTO ---------- */
@@ -206,7 +194,7 @@ test("dias diferentes nunca agrupam (mesmo a minutos de distância)", () => {
 });
 
 test("duas visualizações do mesmo filme no dia = 2 momentos", () => {
-  const d = one([watch(D, "14:00", MOVIE), watch(D, "14:10", MOVIE, { is_rewatch: true, watch_number: 2 })]);
+  const d = one([watch(D, "14:00", MOVIE), watch(D, "14:10", MOVIE, { watch_number: 2 })]);
   assert.equal(d.moments.length, 2);
 });
 
@@ -271,16 +259,15 @@ test(`organização: ${LIBRARY_GROUP_MIN}+ adições no dia recolhem; consumo co
 });
 
 /* ---------- FILTROS ---------- */
-test("filtros: Assistidos / Reassistidos / Avaliações", () => {
+test("filtros: Assistidos / Avaliações (sem filtro de reassistidos)", () => {
   const days = buildDays([
     watch(D, "21:00", MOVIE, { rating: 9 }),
-    watch(D, "18:00", MOVIE2, { is_rewatch: true, watch_number: 2 }),
+    watch(D, "18:00", MOVIE2, { watch_number: 2 }),
     ev("library_added", D, "10:00", SHOW, { status: "want", media_type: "tv" }),
     ...orphan(3),
   ]);
   const count = (f) => filterDays(days, f).flatMap((d) => d.moments).length;
   assert.equal(count("watched"), 2);
-  assert.equal(count("rewatch"), 1);
   assert.equal(count("rated"), 1);
   assert.equal(filterDays(days, "watched").flatMap((d) => d.groups).length, 0);
 });

@@ -31,6 +31,7 @@ type LetterboxdRow = {
   year?: number | null;
   rating?: number | null;
   watchedDate?: string | null;
+  /** Coluna "Rewatch" do Letterboxd: não existe reassistir no MyCatalog (0008) — só evita sessão repetida. */
   rewatch?: boolean;
   source?: "diary" | "ratings" | "watchlist";
 };
@@ -161,8 +162,7 @@ export async function POST(request: Request) {
 
       const rating =
         row.rating == null ? library.personalRating : Math.min(10, Math.max(0, Number(row.rating) * 2));
-      const protectedWatchedStatus = library.status === "rewatched" || library.status === "rewatching";
-      const nextStatus = row.source === "watchlist" || protectedWatchedStatus ? library.status : "watched";
+      const nextStatus = row.source === "watchlist" ? library.status : "watched";
 
       if (nextStatus !== library.status || rating !== library.personalRating) {
         const previousStatus = library.status;
@@ -191,16 +191,19 @@ export async function POST(request: Request) {
       if (row.watchedDate && /^\d{4}-\d{2}-\d{2}$/.test(row.watchedDate)) {
         // Data do diário = dia civil; meio-dia UTC mantém o mesmo dia em qualquer fuso do Brasil.
         const watchedAt = `${row.watchedDate}T12:00:00.000Z`;
-        const isRewatch = Boolean(row.rewatch);
+        // Entrada marcada como "Rewatch" só vira sessão se o título ainda não tem nenhuma:
+        // cada título conta uma vez (sem reassistir, migration 0008).
+        const onlyIfFirst = Boolean(row.rewatch);
         const inserted = await sql`
           INSERT INTO public.watch_entries (
-            user_id, library_item_id, media_id, watched_at, watched_at_precision, rating, is_rewatch
+            user_id, library_item_id, media_id, watched_at, watched_at_precision, rating
           )
           SELECT ${user.id}, ${library.id}, ${library.mediaId}, ${watchedAt}, 'date',
-                 ${row.rating == null ? null : Number(row.rating) * 2}, ${isRewatch}
+                 ${row.rating == null ? null : Number(row.rating) * 2}
           WHERE NOT EXISTS (
             SELECT 1 FROM public.watch_entries
-            WHERE user_id = ${user.id} AND media_id = ${library.mediaId} AND watched_at = ${watchedAt}
+            WHERE user_id = ${user.id} AND media_id = ${library.mediaId}
+              AND (watched_at = ${watchedAt} OR ${onlyIfFirst}::boolean)
           )
           ON CONFLICT DO NOTHING
           RETURNING 1

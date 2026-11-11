@@ -3,7 +3,7 @@
  *
  * POST /api/library CRIA o item quando ele não existe. Se ele já existe (outra
  * aba, leitura de estado que falhou, clique duplo, cliente defeituoso), o item
- * volta exatamente como está: status, curtida, nota, resenha, reassistidas e
+ * volta exatamente como está: status, curtida, nota, resenha e
  * temporadas só mudam por PATCH /api/library/[id], que altera apenas os campos
  * enviados.
  *
@@ -16,6 +16,8 @@
  * requisições simultâneas, só uma cria; a outra recebe o item criado
  * (idempotente, sem evento duplicado).
  */
+
+import { normalizeLegacyStatus } from "../media-status";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Sql = (strings: TemplateStringsArray, ...values: any[]) => Promise<any[]>;
@@ -38,7 +40,6 @@ export type NewLibraryItemValues = {
   favorite: boolean;
   personal_rating: number | null;
   review: string | null;
-  rewatch_count: number;
   current_season: number | null;
   completed_seasons: number;
   stopped_season: number | null;
@@ -47,28 +48,21 @@ export type NewLibraryItemValues = {
 /**
  * Valores iniciais de um item NOVO. O que o usuário escolheu antes de adicionar
  * (status, curtida) entra no item criado; o resto tem o padrão. Mesmas regras
- * que o POST já aplicava para itens novos (reassistidas e temporadas).
+ * que o POST já aplicava para itens novos (temporadas). Status antigo de
+ * reassistir (cliente desatualizado) entra como Assistido (migration 0008).
  */
 export function newLibraryItemValues(body: AddLibraryBody, media: AddLibraryMedia): NewLibraryItemValues {
-  const status = body.status || "want";
+  const status = normalizeLegacyStatus(body.status || "want");
   const isTv = media.media_type === "tv";
 
-  let currentSeason: number | null = isTv ? 1 : null;
-  let completedSeasons = 0;
-
-  if (isTv && status === "rewatched") {
-    const totalSeasons = Number(media.seasons_count || 0);
-    completedSeasons = totalSeasons;
-    currentSeason = totalSeasons || 1;
-  }
+  const currentSeason: number | null = isTv ? 1 : null;
+  const completedSeasons = 0;
 
   return {
     status,
     favorite: body.favorite === true,
     personal_rating: body.personal_rating ?? null,
     review: body.review ?? null,
-    // Entrar direto em Reassistindo/Reassistido conta uma reassistida.
-    rewatch_count: status === "rewatching" || status === "rewatched" ? 1 : 0,
     current_season: currentSeason,
     completed_seasons: completedSeasons,
     stopped_season: null,
@@ -95,7 +89,6 @@ export async function addLibraryItem(
       favorite,
       personal_rating,
       review,
-      rewatch_count,
       current_season,
       completed_seasons,
       stopped_season,
@@ -108,7 +101,6 @@ export async function addLibraryItem(
       ${values.favorite},
       ${values.personal_rating},
       ${values.review},
-      ${values.rewatch_count},
       ${values.current_season},
       ${values.completed_seasons},
       ${values.stopped_season},
@@ -116,7 +108,7 @@ export async function addLibraryItem(
     )
     ON CONFLICT (user_id, media_id) DO NOTHING
     RETURNING
-      id, status, favorite, personal_rating, review, watched_at, rewatch_count,
+      id, status, favorite, personal_rating, review, watched_at,
       current_season, completed_seasons, stopped_season, added_at, updated_at;
   `;
 
@@ -124,7 +116,7 @@ export async function addLibraryItem(
 
   const existing = await sql`
     SELECT
-      id, status, favorite, personal_rating, review, watched_at, rewatch_count,
+      id, status, favorite, personal_rating, review, watched_at,
       current_season, completed_seasons, stopped_season, added_at, updated_at
     FROM public.library_items
     WHERE user_id = ${userId} AND media_id = ${media.id}

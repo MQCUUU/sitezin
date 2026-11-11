@@ -26,7 +26,6 @@ export type ActivityType =
   | "status_changed"
   | "season_completed"
   | "series_completed"
-  | "rewatch_started"
   | "watch_logged"
   | "library_removed";
 
@@ -51,7 +50,6 @@ export type RawWatch = Base & {
   source: "watch";
   rating: number | null;
   comment: string | null;
-  is_rewatch: boolean;
   /** 1 = primeira visualização registrada do título. */
   watch_number: number;
 };
@@ -70,11 +68,9 @@ export type RawItem = RawEvent | RawWatch | RawEpisode;
 
 export type MomentKind =
   | "watched"
-  | "rewatched"
   | "episodes"
   | "season_completed"
   | "series_completed"
-  | "rewatch_started"
   | "started"
   | "resumed"
   | "dropped"
@@ -96,10 +92,6 @@ export type DiaryMoment = {
   media: MediaRef | null;
   rating: number | null;
   comment: string | null;
-  /** Reassistida: número da reassistida (1 = primeira), quando conhecido. */
-  rewatch_number: number | null;
-  /** Começou a reassistir neste mesmo momento (ex.: episódio da reassistida). */
-  rewatch_started: boolean;
   episodes: EpisodeRef[];
   /** Episódios marcados de uma vez (mesma operação, segundos de diferença). */
   batch: boolean;
@@ -126,7 +118,7 @@ export type DiaryDay = {
   groups: DiaryGroup[];
 };
 
-export type DiaryFilter = "all" | "watched" | "rewatch" | "rated";
+export type DiaryFilter = "all" | "watched" | "rated";
 
 export type DiaryResponse = {
   month: string;

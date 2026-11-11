@@ -1146,7 +1146,6 @@ export async function GET(
                 libraryItem &&
                 [
                   "watched",
-                  "rewatched",
                 ].includes(
                   libraryItem.status
                 )

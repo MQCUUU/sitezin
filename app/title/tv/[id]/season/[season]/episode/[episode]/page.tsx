@@ -20,7 +20,6 @@ type EpisodeProgressRow = {
   watched?: boolean;
   watched_at?: string;
   comment?: string;
-  is_rewatch?: boolean;
   episode_number: number;
   [key: string]: unknown;
 };
@@ -53,7 +52,6 @@ export default function EpisodePage() {
   const [watchedAt, setWatchedAt] = useState(() =>
     dateKeyInTimeZone(new Date(), BRAZIL_TIME_ZONE)
   );
-  const [rewatch, setRewatch] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -140,7 +138,6 @@ export default function EpisodePage() {
           : null;
         setProgress(saved || null);
         setComment(saved?.comment || "");
-        setRewatch(Boolean(saved?.is_rewatch));
         if (saved?.watched_at) setWatchedAt(String(saved.watched_at).slice(0, 10));
       }
 
@@ -173,7 +170,6 @@ export default function EpisodePage() {
         watched_at: `${watchedAt}T12:00:00`,
         watched_at_precision: "date",
         comment,
-        is_rewatch: rewatch,
         released_episode_count: releasedCount,
         total_seasons: Number(show?.number_of_seasons || 0),
       },
@@ -214,7 +210,7 @@ export default function EpisodePage() {
     : "Sem data de estreia";
 
   /* Fase 4b: uma página só (antes, duas abas) — imagem panorâmica, o episódio
-     e, logo abaixo, o registro (data, reassistida, comentário). */
+     e, logo abaixo, o registro (data, comentário). */
   return <>
     <div className="ep-page">
       <Link className="sk-link ep-back" href={`/title/tv/${params.id}`}><ArrowLeft size={16} aria-hidden="true" /> {show?.name || "Voltar para a série"}</Link>
@@ -290,7 +286,6 @@ export default function EpisodePage() {
           <>
             <div className="ep-journal-fields">
               <label className="sk-field">Data assistida<input type="date" value={watchedAt} onChange={(event) => setWatchedAt(event.target.value)} /></label>
-              <label className="ep-rewatch"><input type="checkbox" checked={rewatch} onChange={(event) => setRewatch(event.target.checked)} /> Foi uma reassistida</label>
             </div>
             <label className="sk-field ep-comment">Comentário<textarea maxLength={4000} value={comment} onChange={(event) => setComment(event.target.value)} placeholder="O que achou deste episódio?" /></label>
             {watchActionDisabled && !progress?.watched && (

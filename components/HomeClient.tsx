@@ -482,7 +482,7 @@ export default function HomeClient() {
         <section className="hm-guest-features" aria-label="O que o MyCatalog faz">
           <div>
             <h2>Acompanhe</h2>
-            <p>Filmes e séries com status, progresso por episódio e reassistidas, tudo num só lugar.</p>
+            <p>Filmes e séries com status e progresso por episódio, tudo num só lugar.</p>
           </div>
           <div>
             <h2>Descubra</h2>

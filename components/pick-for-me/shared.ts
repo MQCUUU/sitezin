@@ -4,8 +4,6 @@ export const STATUS_OPTIONS = [
   ["watched", "Assistido"],
   ["paused", "Pausado"],
   ["dropped", "Abandonado"],
-  ["rewatching", "Reassistindo"],
-  ["rewatched", "Reassistido"],
 ] as const;
 
 export const COUNTRIES = [

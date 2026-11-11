@@ -14,7 +14,7 @@ import {
   EvolutionChapter,
   FavoritesChapter,
   RatingsChapter,
-  RewatchChapter,
+  DroppedChapter,
   SummaryChapter,
   TasteChapter,
   TitlesChapter,
@@ -341,8 +341,8 @@ function InsightsContent() {
               <ChapterBoundary name="Filmes e séries">
                 <TitlesChapter key={data.meta.type} data={data} index={position("titulos")} />
               </ChapterBoundary>
-              <ChapterBoundary name="Revistos e abandonos">
-                <RewatchChapter data={data} index={position("revistos")} />
+              <ChapterBoundary name="Abandonos">
+                <DroppedChapter data={data} index={position("abandonos")} />
               </ChapterBoundary>
             </>
           )}

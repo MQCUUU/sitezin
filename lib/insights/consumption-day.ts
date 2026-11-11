@@ -18,16 +18,15 @@ import { dateKeyInTimeZone } from "@/lib/date-only";
  * Ordem:
  *   1. data explícita de visualização (`watched_at`), quando existe — vale para
  *      qualquer status, como antes;
- *   2. sem ela, e só se o título está Assistido/Reassistido: a transição MAIS
- *      RECENTE para "Assistido" (o estado atual começou ali; ida e volta de status
- *      fica com a última); se nunca passou por "Assistido" (foi direto para
- *      Reassistido), a transição mais recente para "Reassistido";
+ *   2. sem ela, e só se o título está Assistido: a transição MAIS RECENTE para
+ *      "Assistido" (o estado atual começou ali; ida e volta de status fica com a
+ *      última). As antigas transições para reassistir viraram "Assistido" (0008);
  *   3. nada disso: `null` (legado sem data — não se inventa data; o título só conta
  *      em "Todo o período", como já acontecia).
  * O dia é calculado no fuso do produto (INSIGHTS_TZ, Brasília).
  */
 
-const WATCHED_STATUSES = new Set(["watched", "rewatched"]);
+const WATCHED_STATUSES = new Set(["watched"]);
 
 export type ConsumptionDayInput = {
   status: string;
@@ -35,8 +34,6 @@ export type ConsumptionDayInput = {
   watchedAt: string | Date | null | undefined;
   /** Momento da transição mais recente para "watched" (evento de status/adição). */
   watchedEventAt: string | Date | null | undefined;
-  /** Momento da transição mais recente para "rewatched". */
-  rewatchedEventAt: string | Date | null | undefined;
 };
 
 function toDayKey(value: string | Date | null | undefined, timeZone: string): string | null {
@@ -52,5 +49,5 @@ export function consumptionDay(input: ConsumptionDayInput, timeZone: string): st
   if (explicit) return explicit;
   if (!WATCHED_STATUSES.has(input.status)) return null;
 
-  return toDayKey(input.watchedEventAt, timeZone) ?? toDayKey(input.rewatchedEventAt, timeZone);
+  return toDayKey(input.watchedEventAt, timeZone);
 }

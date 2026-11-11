@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/Button";
 
 /*
  * Capítulos da página Insights — uma narrativa, nesta ordem:
- * Resumo → Atividade → Gosto → Notas → Filmes e séries → Reassistidos e
+ * Resumo → Atividade → Gosto → Notas → Filmes e séries →
  * abandonos → Watchlist → Evolução → IA → Favoritos → Seu ano.
  * Cada capítulo mostra POUCO por padrão e o resto em "Ver todos".
  */
@@ -31,7 +31,7 @@ export const CHAPTERS: { id: string; label: string }[] = [
   { id: "gosto", label: "Meu gosto" },
   { id: "notas", label: "Notas" },
   { id: "titulos", label: "Filmes e séries" },
-  { id: "revistos", label: "Revistos e abandonos" },
+  { id: "abandonos", label: "Abandonos" },
   { id: "watchlist", label: "Watchlist" },
   { id: "evolucao", label: "Evolução" },
   { id: "ia", label: "IA" },
@@ -49,7 +49,7 @@ export function visibleChapters(d: Data): string[] {
   if (d.taste) ids.push("gosto");
   if (d.ratings) ids.push("notas");
   if (d.titles) ids.push("titulos");
-  if ((d.rewatch && (d.rewatch.total > 0 || d.rewatch.top.length)) || (d.dropped && (d.dropped.count > 0 || (d.dropped.rate ?? 0) > 0))) ids.push("revistos");
+  if (d.dropped && (d.dropped.count > 0 || (d.dropped.rate ?? 0) > 0)) ids.push("abandonos");
   if (d.watchlist) ids.push("watchlist");
   if (d.evolution && d.evolution.years.length >= 2) ids.push("evolucao");
   if (d.ai) ids.push("ia");
@@ -272,7 +272,7 @@ export function SummaryChapter({ data, onPeriod }: { data: Data; onPeriod: (p: s
               <CountUp value={hours} /> <span>{hours === 1 ? "hora" : "horas"}</span>
             </>
           )}
-          <HowTo>Estimativa: duração de cada filme e episódio marcado como assistido (45 min quando o episódio não informa duração). Reassistidas contam de novo; “Quero assistir” nunca conta.</HowTo>
+          <HowTo>Estimativa: duração de cada filme e episódio marcado como assistido (45 min quando o episódio não informa duração). Cada título conta uma vez; “Quero assistir” nunca conta.</HowTo>
         </p>
         <p className="ins-hero-sub">
           {hours >= 48 ? `≈ ${hoursText(hours)} de filmes e séries, ` : ""}
@@ -301,10 +301,6 @@ export function SummaryChapter({ data, onPeriod }: { data: Data; onPeriod: (p: s
           </small>
         </div>
         <div className="ins-hero-row">
-          <div>
-            <strong>{nf.format(cur.rewatches)}</strong>
-            <span>{cur.rewatches === 1 ? "reassistida" : "reassistidas"}</span>
-          </div>
           <div>
             <strong>{nf.format(cur.activeDays)}</strong>
             <span>dias com atividade</span>
@@ -807,7 +803,6 @@ export function TitlesChapter({ data, index }: { data: Data; index: number }) {
                 <Fact label="filmes assistidos" value={nf.format(m.count)} sub={`${durationLabel(m.minutes)} assistindo`} />
                 <Fact label="duração média" value={m.avgRuntime ? `${m.avgRuntime} min` : "—"} />
                 <Fact label="nota média" value={m.avgRating !== null ? dec(m.avgRating) : "—"} />
-                <Fact label="reassistidos" value={nf.format(m.rewatches)} />
               </div>
               <ul className="ins-chips-row">
                 {m.topGenre ? (
@@ -842,68 +837,29 @@ export function TitlesChapter({ data, index }: { data: Data; index: number }) {
   );
 }
 
-/* ------------------------------------------------------------ 06 Revistos e abandonos */
+/* ------------------------------------------------------------ 06 Abandonos */
 
-export function RewatchChapter({ data, index }: { data: Data; index: number }) {
-  const r = data.rewatch;
+export function DroppedChapter({ data, index }: { data: Data; index: number }) {
   const d = data.dropped;
 
-  if (!r && !d) return null;
-
-  const hasRewatch = Boolean(r && (r.total > 0 || r.top.length));
-  const hasDropped = Boolean(d && (d.count > 0 || (d.rate ?? 0) > 0));
-
-  if (!hasRewatch && !hasDropped) return null;
+  if (!d || !(d.count > 0 || (d.rate ?? 0) > 0)) return null;
 
   return (
-    <Chapter id="revistos" index={index} kicker="Revistos e abandonos" title="O que você revê e o que deixa de lado">
-      <div className="ins-duo">
-        <div className="ins-panel">
-          <div className="ins-panel-head">
-            <h3>Reassistidos</h3>
-          </div>
-          {r && hasRewatch ? (
-            <>
-              <p className="ins-big">
-                {nf.format(r.total)} <span>{r.total === 1 ? "reassistida" : "reassistidas"} {periodWords(data)}</span>
-              </p>
-              <p className="ins-muted ins-small">
-                {[
-                  r.share !== null ? `${pct(r.share)} dos títulos que você assistiu` : null,
-                  r.intervalDays !== null ? `costuma rever depois de ${r.intervalDays >= 60 ? `${Math.round(r.intervalDays / 30)} meses` : `${r.intervalDays} dias`}` : null,
-                  r.ratingChange ? `ao rever, a nota ${r.ratingChange.mean >= 0 ? "sobe" : "cai"} em média ${dec(Math.abs(r.ratingChange.mean))}` : null,
-                ]
-                  .filter(Boolean)
-                  .join(", ")}
-              </p>
-              {r.top.length ? <PosterStrip items={r.top.slice(0, 5)} caption={(item) => `${r.top.find((x) => x.tmdb_id === item.tmdb_id)?.times ?? 1}× revisto`} /> : null}
-            </>
-          ) : (
-            <p className="ins-muted">Quando você reassistir algo, seus títulos de conforto aparecem aqui.</p>
-          )}
+    <Chapter id="abandonos" index={index} kicker="Abandonos" title="O que você deixa de lado">
+      <div className="ins-panel">
+        <div className="ins-panel-head">
+          <h3>Abandonados</h3>
+          <HowTo>Taxa = títulos marcados como abandonados sobre tudo o que você começou (biblioteca inteira, fora “Quero assistir”).</HowTo>
         </div>
-
-        <div className="ins-panel">
-          <div className="ins-panel-head">
-            <h3>Abandonados</h3>
-            <HowTo>Taxa = títulos marcados como abandonados sobre tudo o que você começou (biblioteca inteira, fora “Quero assistir”).</HowTo>
-          </div>
-          {d && hasDropped ? (
-            <>
-              <p className="ins-big">
-                {nf.format(d.count)} <span>{periodWords(data)}</span>
-              </p>
-              {d.rate !== null ? <p className="ins-muted ins-small">{pct(d.rate)} de tudo o que você começa fica pelo caminho.</p> : null}
-              {d.genres.length ? (
-                <HBars tone="muted" rows={d.genres.map((g) => ({ label: g.name, value: g.rate, display: pct(g.rate), hint: `${g.dropped} de ${g.tracked} títulos` }))} />
-              ) : null}
-            </>
-          ) : (
-            <p className="ins-muted">Você não abandonou nenhum título {periodWords(data)}.</p>
-          )}
-        </div>
+        <p className="ins-big">
+          {nf.format(d.count)} <span>{periodWords(data)}</span>
+        </p>
+        {d.rate !== null ? <p className="ins-muted ins-small">{pct(d.rate)} de tudo o que você começa fica pelo caminho.</p> : null}
+        {d.genres.length ? (
+          <HBars tone="muted" rows={d.genres.map((g) => ({ label: g.name, value: g.rate, display: pct(g.rate), hint: `${g.dropped} de ${g.tracked} títulos` }))} />
+        ) : null}
       </div>
-      <Notes data={data} section="rewatch" max={3} />
+      <Notes data={data} section="dropped" max={3} />
     </Chapter>
   );
 }

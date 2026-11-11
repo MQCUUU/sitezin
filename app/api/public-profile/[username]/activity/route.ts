@@ -86,9 +86,9 @@ export async function GET(
     sql`SELECT count(*)::int as total FROM public.activity_events
       WHERE user_id = ${profile.id} AND event_type <> 'library_removed'
         AND (${watchedTitlesVisible} OR NOT (
-          event_type IN ('watch_logged', 'season_completed', 'series_completed', 'rewatch_started')
-          OR (event_type = 'status_changed' AND metadata->>'to' IN ('watched', 'rewatched', 'rewatching'))
-          OR (event_type = 'library_added' AND metadata->>'status' IN ('watched', 'rewatched', 'rewatching'))
+          event_type IN ('watch_logged', 'season_completed', 'series_completed')
+          OR (event_type = 'status_changed' AND metadata->>'to' IN ('watched'))
+          OR (event_type = 'library_added' AND metadata->>'status' IN ('watched'))
         ))`,
     sql`
       SELECT
@@ -104,9 +104,9 @@ export async function GET(
         -- Remoções da Biblioteca são organização privada, não atividade pública.
         AND ae.event_type <> 'library_removed'
         AND (${watchedTitlesVisible} OR NOT (
-          ae.event_type IN ('watch_logged', 'season_completed', 'series_completed', 'rewatch_started')
-          OR (ae.event_type = 'status_changed' AND ae.metadata->>'to' IN ('watched', 'rewatched', 'rewatching'))
-          OR (ae.event_type = 'library_added' AND ae.metadata->>'status' IN ('watched', 'rewatched', 'rewatching'))
+          ae.event_type IN ('watch_logged', 'season_completed', 'series_completed')
+          OR (ae.event_type = 'status_changed' AND ae.metadata->>'to' IN ('watched'))
+          OR (ae.event_type = 'library_added' AND ae.metadata->>'status' IN ('watched'))
         ))
       ORDER BY ae.occurred_at DESC
       LIMIT ${limit} OFFSET ${offset}

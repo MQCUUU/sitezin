@@ -96,13 +96,13 @@ export async function POST(req: NextRequest) {
       sql`
         INSERT INTO public.library_items (
           user_id, media_id, status, favorite, personal_rating, review, watched_at, watched_at_precision,
-          rewatch_count, current_season, completed_seasons, stopped_season, added_at, updated_at
+          current_season, completed_seasons, stopped_season, added_at, updated_at
         )
         SELECT ${userId}, m.id, x.status, x.favorite, x.personal_rating, x.review, x.watched_at, x.watched_at_precision,
-               x.rewatch_count, x.current_season, x.completed_seasons, x.stopped_season, x.added_at, x.updated_at
+               x.current_season, x.completed_seasons, x.stopped_season, x.added_at, x.updated_at
         FROM jsonb_to_recordset(${library}::jsonb) AS x(
           tmdb_id int, media_type text, status text, favorite boolean, personal_rating numeric, review text,
-          watched_at timestamptz, watched_at_precision text, rewatch_count int, current_season int,
+          watched_at timestamptz, watched_at_precision text, current_season int,
           completed_seasons int, stopped_season int, added_at timestamptz, updated_at timestamptz
         )
         JOIN public.media m ON m.tmdb_id = x.tmdb_id AND m.media_type = x.media_type
@@ -113,7 +113,6 @@ export async function POST(req: NextRequest) {
           review = EXCLUDED.review,
           watched_at = EXCLUDED.watched_at,
           watched_at_precision = EXCLUDED.watched_at_precision,
-          rewatch_count = EXCLUDED.rewatch_count,
           current_season = EXCLUDED.current_season,
           completed_seasons = EXCLUDED.completed_seasons,
           stopped_season = EXCLUDED.stopped_season,
@@ -125,35 +124,35 @@ export async function POST(req: NextRequest) {
       // 2. Visualizações (Diário): só as que a conta ainda não tem.
       sql`
         INSERT INTO public.watch_entries (
-          user_id, library_item_id, media_id, watched_at, watched_at_precision, rating, comment, is_rewatch, created_at, updated_at
+          user_id, library_item_id, media_id, watched_at, watched_at_precision, rating, comment, created_at, updated_at
         )
-        SELECT DISTINCT ON (m.id, x.watched_at, x.is_rewatch)
-               ${userId}, li.id, m.id, x.watched_at, x.watched_at_precision, x.rating, x.comment, x.is_rewatch, x.created_at, x.updated_at
+        SELECT DISTINCT ON (m.id, x.watched_at)
+               ${userId}, li.id, m.id, x.watched_at, x.watched_at_precision, x.rating, x.comment, x.created_at, x.updated_at
         FROM jsonb_to_recordset(${watches}::jsonb) AS x(
           tmdb_id int, media_type text, watched_at timestamptz, watched_at_precision text, rating numeric,
-          comment text, is_rewatch boolean, created_at timestamptz, updated_at timestamptz
+          comment text, created_at timestamptz, updated_at timestamptz
         )
         JOIN public.media m ON m.tmdb_id = x.tmdb_id AND m.media_type = x.media_type
         LEFT JOIN public.library_items li ON li.user_id = ${userId} AND li.media_id = m.id
         WHERE NOT EXISTS (
           SELECT 1 FROM public.watch_entries w
-          WHERE w.user_id = ${userId} AND w.media_id = m.id AND w.is_rewatch = x.is_rewatch
+          WHERE w.user_id = ${userId} AND w.media_id = m.id
             AND date_trunc('milliseconds', w.watched_at) = date_trunc('milliseconds', x.watched_at)
         )
-        ORDER BY m.id, x.watched_at, x.is_rewatch
+        ORDER BY m.id, x.watched_at
         ON CONFLICT DO NOTHING
         RETURNING 1
       `,
       // 3. Progresso de episódios: só os que a conta ainda não marcou.
       sql`
         INSERT INTO public.episodes_progress (
-          user_id, media_id, season_number, episode_number, watched, watched_at, watched_at_precision, comment, is_rewatch
+          user_id, media_id, season_number, episode_number, watched, watched_at, watched_at_precision, comment
         )
         SELECT DISTINCT ON (m.id, x.season_number, x.episode_number)
-               ${userId}, m.id, x.season_number, x.episode_number, x.watched, x.watched_at, x.watched_at_precision, x.comment, x.is_rewatch
+               ${userId}, m.id, x.season_number, x.episode_number, x.watched, x.watched_at, x.watched_at_precision, x.comment
         FROM jsonb_to_recordset(${episodes}::jsonb) AS x(
           tmdb_id int, media_type text, season_number int, episode_number int, watched boolean,
-          watched_at timestamptz, watched_at_precision text, comment text, is_rewatch boolean
+          watched_at timestamptz, watched_at_precision text, comment text
         )
         JOIN public.media m ON m.tmdb_id = x.tmdb_id AND m.media_type = x.media_type
         ORDER BY m.id, x.season_number, x.episode_number

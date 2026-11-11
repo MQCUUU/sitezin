@@ -33,7 +33,6 @@ const ITEM_COLUMNS = `
   li.personal_rating,
   li.review,
   li.watched_at,
-  li.rewatch_count,
   li.current_season,
   li.completed_seasons,
   li.stopped_season,
@@ -74,8 +73,7 @@ export const ACTIVITY_FACTS_SQL = `
     JOIN public.activity_events ae
       ON ae.user_id = $1
      AND (ae.media_id = a.media_id OR ae.library_item_id = a.id)
-    WHERE ae.event_type = 'rewatch_started'
-       OR (ae.event_type = 'status_changed' AND ae.metadata->>'to' = ANY($3::text[]))
+    WHERE (ae.event_type = 'status_changed' AND ae.metadata->>'to' = ANY($3::text[]))
        OR (ae.event_type = 'library_added' AND ae.metadata->>'status' = ANY($3::text[]))
     GROUP BY a.id
   )

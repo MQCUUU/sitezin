@@ -70,11 +70,30 @@ test("baseline exige o Neon Auth e não traz a tabela de exemplo da Neon", () =>
   assert.ok(!created.has("playing_with_neon"));
 });
 
+test("0008: reassistir vira Assistido e os CHECKs deixam de aceitar os status antigos", () => {
+  const m = migrations.find((x) => x.name === "0008_remove_rewatch.sql");
+  assert.ok(m, "migration 0008 existe");
+  assert.match(m.text, /SET status = 'watched'\s+WHERE status IN \('rewatching', 'rewatched'\)/);
+  assert.match(m.text, /SET rewatch_count = 0/);
+  assert.match(m.text, /UPDATE public\.episodes_progress SET is_rewatch = false/);
+  assert.match(m.text, /DELETE FROM public\.activity_events WHERE event_type = 'rewatch_started'/);
+  const status = m.text.match(/library_items_status_check\s+CHECK \(([^;]*)\);/);
+  assert.ok(status && !/rewatch/.test(status[1]), "status check sem reassistir");
+  const events = m.text.match(/activity_events_event_type_check\s+CHECK \(([^;]*)\);/);
+  assert.ok(events && !/rewatch/.test(events[1]), "tipo de evento sem rewatch_started");
+  // A sessão mantida (título só com reassistidas) é convertida ANTES do DELETE.
+  assert.ok(m.text.indexOf("SET is_rewatch = false, updated_at = now()") < m.text.indexOf("DELETE FROM public.watch_entries WHERE is_rewatch"));
+});
+
 test("migrations não apagam tabelas nem dados", () => {
   // Fase 6: a única exceção revisada é a 0006 (tabelas órfãs), e só com estas tabelas.
   const REVIEWED_DROPS = { "0006_drop_orphan_tables.sql": ["movie_tags", "tags", "category_ratings", "rating_categories", "friendships"] };
+  // 0008 (fim do reassistir): apaga só sessões e eventos de reassistida — revisado.
+  const REVIEWED_DELETES = { "0008_remove_rewatch.sql": ["activity_events", "watch_entries", "activity_events", "activity_events"] };
   for (const migration of migrations) {
-    assert.doesNotMatch(migration.text, /\bTRUNCATE\b|\bDELETE FROM public\./i, migration.name);
+    assert.doesNotMatch(migration.text, /\bTRUNCATE\b/i, migration.name);
+    const deletes = [...migration.text.matchAll(/\bDELETE FROM public\.(\w+)/gi)].map((m) => m[1]);
+    assert.deepEqual(deletes, REVIEWED_DELETES[migration.name] ?? [], `${migration.name}: só os DELETEs revisados`);
     const allowed = REVIEWED_DROPS[migration.name];
     if (!allowed) {
       assert.doesNotMatch(migration.text, /\bDROP TABLE\b/i, migration.name);

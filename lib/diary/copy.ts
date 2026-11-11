@@ -67,8 +67,6 @@ export const STATUS_TEXT: Record<string, string> = {
   watched: "Assistido",
   paused: "Pausado",
   dropped: "Abandonado",
-  rewatching: "Reassistindo",
-  rewatched: "Reassistido",
 };
 
 /** O que aconteceu, numa frase. */
@@ -78,8 +76,6 @@ export function headline(m: DiaryMoment): string {
   switch (m.kind) {
     case "watched":
       return tv ? "Série concluída" : "Assistiu";
-    case "rewatched":
-      return m.rewatch_number && m.rewatch_number >= 2 ? `Reassistiu pela ${ordinal(m.rewatch_number)} vez` : "Reassistiu";
     case "episodes": {
       const n = m.episodes.length;
 
@@ -91,8 +87,6 @@ export function headline(m: DiaryMoment): string {
       return seasonsLabel(m.seasons_completed);
     case "series_completed":
       return "Série concluída";
-    case "rewatch_started":
-      return m.rewatch_number && m.rewatch_number >= 2 ? `Começou a reassistir pela ${ordinal(m.rewatch_number)} vez` : "Começou a reassistir";
     case "started":
       return "Começou a assistir";
     case "resumed":
@@ -117,7 +111,6 @@ export function detail(m: DiaryMoment): string | null {
 
     if (m.episodes.length > 1) parts.push(episodeRange(m.episodes));
     if (m.seasons_completed.length && !m.series_completed) parts.push(seasonsLabel(m.seasons_completed));
-    if (m.rewatch_started) parts.push("Começou a reassistir");
 
     return parts.join(", ") || null;
   }
@@ -135,14 +128,11 @@ export function milestone(m: DiaryMoment): string | null {
 }
 
 /** Ícone por natureza (o texto sempre diz o mesmo; nunca depende só do ícone). */
-export function iconOf(m: DiaryMoment): "play" | "check" | "repeat" | "flag" | "pause" | "plus" | "dot" {
+export function iconOf(m: DiaryMoment): "play" | "check" | "flag" | "pause" | "plus" | "dot" {
   switch (m.kind) {
     case "watched":
     case "episodes":
       return m.series_completed ? "flag" : "play";
-    case "rewatched":
-    case "rewatch_started":
-      return "repeat";
     case "season_completed":
     case "completed_unknown":
       return "check";

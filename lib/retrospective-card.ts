@@ -19,7 +19,6 @@ export type RetrospectiveCardData = {
   movies: number;
   episodes: number;
   series: number;
-  rewatches: number;
   topGenre: string | null;
   topMonth: string | null;
   highlightTitle: string | null;
@@ -39,7 +38,6 @@ export function retrospectiveCardAlt(data: RetrospectiveCardData): string {
     `${data.movies} filmes`,
     `${data.episodes} episódios`,
     `${data.series} séries`,
-    `${data.rewatches} reassistidas`,
   ];
 
   if (data.topGenre) parts.push(`gênero principal: ${data.topGenre}`);
@@ -131,13 +129,12 @@ export function drawRetrospectiveCard(
   context.font = `800 250px ${FONT}`;
   context.fillText(String(data.year), 60, 520);
 
-  // Métricas (2 colunas × 3 linhas, só as reais da página).
+  // Métricas (2 colunas × 2 linhas, só as reais da página).
   const stats: [string, number][] = [
     ["Horas assistidas", data.hours],
     ["Filmes", data.movies],
     ["Episódios", data.episodes],
     ["Séries", data.series],
-    ["Reassistidas", data.rewatches],
   ];
 
   const startY = 610;

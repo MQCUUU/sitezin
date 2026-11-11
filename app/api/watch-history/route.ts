@@ -74,7 +74,6 @@ export async function GET(req: NextRequest) {
         watched_at,
         rating,
         comment,
-        is_rewatch,
         created_at,
         updated_at
       FROM public.watch_entries
@@ -115,7 +114,6 @@ export async function POST(req: NextRequest) {
         id,
         media_id,
         status,
-        rewatch_count,
         personal_rating,
         watched_at
       FROM public.library_items
@@ -140,7 +138,7 @@ export async function POST(req: NextRequest) {
         : null;
 
     // Histórico é do TÍTULO (media_id), não do item: visualizações anteriores a
-    // uma remoção/readição continuam contando para "reassistida".
+    // uma remoção/readição continuam na contagem (número da sessão no Diário).
     const countRes = await sql`
       SELECT count(*)::int as count
       FROM public.watch_entries
@@ -148,21 +146,13 @@ export async function POST(req: NextRequest) {
     `;
     const previousCount = Number(countRes[0]?.count || 0);
 
-    const isRewatch =
-      typeof body.is_rewatch === "boolean"
-        ? body.is_rewatch
-        : previousCount > 0;
-
-    const nextRewatchCount = Math.max(
-      Number(libraryItem.rewatch_count || 0),
-      isRewatch ? previousCount : 0,
-    );
-    const nextStatus = isRewatch ? "rewatched" : "watched";
+    // Sem reassistir (migration 0008): registrar uma sessão marca o título como Assistido.
+    const nextStatus = "watched";
     const nextRating = rating !== null ? rating : libraryItem.personal_rating;
 
     /*
      * V3.1 — UM comando (uma transação PostgreSQL): a visualização, o estado da
-     * Biblioteca que ela declara (Assistido/Reassistido, nota, contador) e o
+     * Biblioteca que ela declara (Assistido, nota) e o
      * espelho `watch_logged` do Diário. Tudo ou nada — antes eram três
      * escritas separadas e a do Diário engolia erro.
      *
@@ -173,12 +163,12 @@ export async function POST(req: NextRequest) {
     const written = (await sql`
       WITH entry AS (
         INSERT INTO public.watch_entries (
-          user_id, library_item_id, media_id, watched_at, watched_at_precision, rating, comment, is_rewatch
+          user_id, library_item_id, media_id, watched_at, watched_at_precision, rating, comment
         )
         VALUES (
-          ${user.id}, ${libraryItem.id}, ${libraryItem.media_id}, ${watchedAt}, ${precision}, ${rating}, ${comment}, ${isRewatch}
+          ${user.id}, ${libraryItem.id}, ${libraryItem.media_id}, ${watchedAt}, ${precision}, ${rating}, ${comment}
         )
-        RETURNING id, library_item_id, media_id, watched_at, rating, comment, is_rewatch, created_at, updated_at
+        RETURNING id, library_item_id, media_id, watched_at, rating, comment, created_at, updated_at
       ),
       library AS (
         UPDATE public.library_items
@@ -186,11 +176,10 @@ export async function POST(req: NextRequest) {
           watched_at = ${watchedAt},
           watched_at_precision = ${precision},
           status = ${nextStatus},
-          rewatch_count = ${nextRewatchCount},
           personal_rating = ${nextRating},
           updated_at = now()
         WHERE id = ${libraryId} AND user_id = ${user.id}
-        RETURNING id, status, favorite, personal_rating, review, watched_at, rewatch_count,
+        RETURNING id, status, favorite, personal_rating, review, watched_at,
                   current_season, completed_seasons, stopped_season, added_at, updated_at
       ),
       diary AS (
@@ -201,7 +190,6 @@ export async function POST(req: NextRequest) {
             'watch_entry_id', entry.id,
             'rating', entry.rating,
             'comment', entry.comment,
-            'is_rewatch', entry.is_rewatch,
             'watch_number', ${previousCount + 1}::int
           )
         FROM entry

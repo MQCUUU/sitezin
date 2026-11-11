@@ -40,12 +40,12 @@ const NEGATION = /\b(nao|nenhum|nenhuma|nenhuns|nenhumas|nada|sem|fora|exceto|me
 const STATUS_PATTERNS: { re: RegExp; statuses: string[] }[] = [
   {
     re: /\b(ja )?(assisti|assistid[ao]s?|vi|vist[ao]s?|terminei|concluid[ao]s?|finalizei)\b|\bque (eu )?ja (vi|assisti)\b/,
-    statuses: ["watched", "rewatched"],
+    statuses: ["watched"],
   },
-  { re: /\breassist\w*|\brevi\b|\brevist[ao]s?\b/, statuses: ["rewatched", "rewatching"] },
+  { re: /\breassist\w*|\brevi\b|\brevist[ao]s?\b/, statuses: ["watched"] }, // sem reassistir (0008): "revi" = já assisti
   {
     re: /\b(estou|to|ta|tou|esta|estao|ando)\s+(assistindo|vendo|acompanhando)\b|\bem andamento\b|\bassistindo\b/,
-    statuses: ["watching", "rewatching"],
+    statuses: ["watching"],
   },
   { re: /\b(minha fila|quero assistir|salv[ao]s?|na minha lista de desejos)\b/, statuses: ["want"] },
   { re: /\b(abandonei|abandonad[ao]s?|larguei|desisti)\b/, statuses: ["dropped"] },
@@ -116,11 +116,6 @@ export function parseAssistantIntent(message: string): AssistantIntent {
     }
   }
 
-  // "não me mande séries que eu já assisti": "assistida" cobre assistida E reassistida (+ o que está em andamento).
-  if (excludeStatuses.has("watched") || excludeStatuses.has("rewatched")) {
-    ["watched", "rewatched", "rewatching"].forEach((status) => excludeStatuses.add(status));
-  }
-
   const excludeTitles = extractTitles(text)
     // "o mentalista" → "mentalista"
     .map((title) => title.replace(/^(a|o|as|os)\s+/, ""));
@@ -146,7 +141,7 @@ export function parseAssistantIntent(message: string): AssistantIntent {
  * ou para reassistir, NUNCA recomendar o que ele já viu / está vendo /
  * abandonou — nem o que ocultou. "Quero assistir" pode (está na fila).
  */
-export const DEFAULT_EXCLUDED_STATUSES = ["watched", "rewatched", "rewatching", "watching", "dropped"] as const;
+export const DEFAULT_EXCLUDED_STATUSES = ["watched", "watching", "dropped"] as const;
 
 export function effectiveExcludedStatuses(intent: AssistantIntent): Set<string> {
   const set = new Set(intent.excludeStatuses);

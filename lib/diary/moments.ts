@@ -11,7 +11,7 @@ import type { DiaryDay, DiaryFilter, DiaryGroup, DiaryMoment, MomentKind, RawEpi
  *    episódios avulsos — uma sessão; um lote marcado de uma vez só junta a
  *    própria rajada), e sem "virada de ciclo" (ver `joins`).
  * 4. O momento é contado pela linha de maior valor narrativo (consumo >
- *    conclusão > reassistida > abandono/retomada > adição > status); as
+ *    conclusão > abandono/retomada > adição > status); as
  *    demais são absorvidas (ids preservados em `raw`).
  * 5. Linhas sem título identificável vão para um grupo recolhido do dia;
  *    4+ momentos de organização (adições/status) no dia também.
@@ -40,16 +40,14 @@ function isTerminal(item: RawItem) {
 
   const to = statusTo(item);
 
-  return to === "watched" || to === "rewatched";
+  return to === "watched";
 }
 
 function isCycleStart(item: RawItem) {
   if (item.source !== "event") return false;
-  if (item.type === "rewatch_started") return true;
-
   const to = statusTo(item);
 
-  return to === "rewatching" || to === "watching" || to === "dropped" || to === "want";
+  return to === "watching" || to === "dropped" || to === "want";
 }
 
 /**
@@ -96,7 +94,7 @@ function joins(cluster: RawItem[], item: RawItem, bursts: Map<string, number>) {
   if (gap > window) return false;
   // Sessão (até 3 h) só entre episódios avulsos; lote só com a própria rajada.
   if (episodes && gap > BATCH_MS && ((bursts.get(item.id) ?? 1) > 1 || (bursts.get(last.id) ?? 1) > 1)) return false;
-  // Nova fase depois de um consumo/marco = outro momento (ex.: terminou e começou a reassistir).
+  // Nova fase depois de um consumo/marco = outro momento (ex.: terminou e voltou a assistir).
   if (isCycleStart(item) && cluster.some(isTerminal)) return false;
   // Duas visualizações registradas = duas sessões.
   if (item.source === "watch" && cluster.some((c) => c.source === "watch")) return false;
@@ -139,8 +137,6 @@ function blank(primary: RawItem, items: RawItem[], kind: MomentKind): DiaryMomen
     media: items.find((i) => i.media)?.media ?? null,
     rating: null,
     comment: null,
-    rewatch_number: null,
-    rewatch_started: false,
     episodes: [],
     batch: false,
     seasons_completed: [],
@@ -167,16 +163,14 @@ export function toMoment(items: RawItem[]): DiaryMoment {
   const lastStatus = statuses[statuses.length - 1];
   const to = (target: string) => [...statuses].reverse().find((s) => statusTo(s) === target);
   const added = events.find((e) => e.type === "library_added");
-  const rewatchStart = events.find((e) => e.type === "rewatch_started") || to("rewatching");
   const seriesEvent = events.find((e) => e.type === "series_completed");
   const legacySeasons = events.filter((e) => e.type === "season_completed").map((e) => num(e.meta.season)).filter((n): n is number => n !== null);
   const mediaType = items.find((i) => i.media)?.media?.media_type ?? (added?.meta.media_type === "movie" || added?.meta.media_type === "tv" ? added.meta.media_type : null);
   const addedStatus = added ? String(added.meta.status ?? "") : null;
   const dropped = to("dropped");
-  const resumed = statuses.find((s) => statusFrom(s) === "dropped" && (statusTo(s) === "watching" || statusTo(s) === "rewatching"));
-  const back = statuses.find((s) => (statusFrom(s) === "watched" || statusFrom(s) === "rewatched") && statusTo(s) === "watching");
-  const finished = statuses.find((s) => statusTo(s) === "watched" && statusFrom(s) !== "rewatched");
-  const rewatched = to("rewatched");
+  const resumed = statuses.find((s) => statusFrom(s) === "dropped" && statusTo(s) === "watching");
+  const back = statuses.find((s) => statusFrom(s) === "watched" && statusTo(s) === "watching");
+  const finished = statuses.find((s) => statusTo(s) === "watched");
   const make = (primary: RawItem, kind: MomentKind) => blank(primary, items, kind);
   const removal = events.find((e) => e.type === "library_removed");
 
@@ -186,11 +180,10 @@ export function toMoment(items: RawItem[]): DiaryMoment {
   if (mediaType === "movie") {
     if (watches.length) {
       const w = watches[watches.length - 1];
-      const m = make(w, w.is_rewatch ? "rewatched" : "watched");
+      const m = make(w, "watched");
 
       m.rating = w.rating;
       m.comment = w.comment;
-      m.rewatch_number = w.is_rewatch ? Math.max(1, w.watch_number - 1) : null;
 
       return m;
     }
@@ -215,12 +208,11 @@ export function toMoment(items: RawItem[]): DiaryMoment {
       m.batch = episodes.length > 1 && ms(last.at) - ms(episodes[0].at) <= BATCH_MS;
       m.seasons_completed = [...seasons].sort((a, b) => a - b);
       m.series_completed = seriesDone;
-      m.rewatch_started = Boolean(rewatchStart);
 
       return m;
     }
 
-    if (!rewatched && seriesDone) {
+    if (seriesDone) {
       const m = make(finished || seriesEvent || added!, "series_completed");
 
       m.seasons_completed = [...seasons].sort((a, b) => a - b);
@@ -229,7 +221,7 @@ export function toMoment(items: RawItem[]): DiaryMoment {
       return m;
     }
 
-    if (!rewatched && seasons.size) {
+    if (seasons.size) {
       const m = make(events.find((e) => e.type === "season_completed")!, "season_completed");
 
       m.seasons_completed = [...seasons].sort((a, b) => a - b);
@@ -245,23 +237,6 @@ export function toMoment(items: RawItem[]): DiaryMoment {
     const m = make(events.find((e) => e.type === "season_completed")!, "season_completed");
 
     m.seasons_completed = [...new Set(legacySeasons)].sort((a, b) => a - b);
-
-    return m;
-  }
-
-  if (rewatched || addedStatus === "rewatched") {
-    const m = make(rewatched || added!, "rewatched");
-
-    m.rewatch_number = num(rewatched?.meta.rewatch_number);
-
-    return m;
-  }
-
-  if (rewatchStart) {
-    const m = make(rewatchStart, "rewatch_started");
-    const count = events.find((e) => e.type === "rewatch_started")?.meta.rewatch_count;
-
-    m.rewatch_number = num(count);
 
     return m;
   }
@@ -333,8 +308,7 @@ export function buildDays(items: RawItem[]): DiaryDay[] {
 }
 
 export function matchesFilter(m: DiaryMoment, filter: DiaryFilter) {
-  if (filter === "watched") return ["watched", "rewatched", "episodes", "season_completed", "series_completed"].includes(m.kind);
-  if (filter === "rewatch") return m.kind === "rewatched" || m.kind === "rewatch_started" || m.rewatch_started;
+  if (filter === "watched") return ["watched", "episodes", "season_completed", "series_completed"].includes(m.kind);
   if (filter === "rated") return m.rating !== null || Boolean(m.comment);
 
   return true;

@@ -1,12 +1,21 @@
 // Fase 0 — "Adicionar à biblioteca" nunca apaga dados (P0-01) e o login não aplica a
 // política de força de senha (P1-02): node scripts/test-library-add.mjs (ou npm test).
 // A semântica real do endpoint (banco + sessão) é coberta por tests/library-integrity.spec.ts.
-import test from "node:test";
-import assert from "node:assert/strict";
+import { register } from "node:module";
 
-import { addLibraryItem, newLibraryItemValues } from "../lib/library/add.ts";
-import { fetchLibraryState } from "../lib/library/lookup.ts";
-import { authFormPasswordError, passwordValidationError } from "../lib/auth-client.ts";
+register(
+  "data:text/javascript," +
+    encodeURIComponent(
+      `export async function resolve(s, c, n) { try { return await n(s, c); } catch (e) { if (s.startsWith(".") && !s.endsWith(".ts")) return n(s + ".ts", c); throw e; } }`
+    )
+);
+
+const test = (await import("node:test")).default;
+const assert = (await import("node:assert/strict")).default;
+
+const { addLibraryItem, newLibraryItemValues } = await import("../lib/library/add.ts");
+const { fetchLibraryState } = await import("../lib/library/lookup.ts");
+const { authFormPasswordError, passwordValidationError } = await import("../lib/auth-client.ts");
 
 /**
  * Banco falso de `library_items` com a semântica do Postgres para a chave única
@@ -76,17 +85,14 @@ test("A: item inexistente é criado com o status escolhido (padrão: Quero assis
   assert.equal(draft.item.favorite, true);
 });
 
-test("A: valores iniciais de série e reassistida (mesmas regras de antes para item novo)", () => {
+test("A: valores iniciais de série; status antigo de reassistir entra como Assistido (0008)", () => {
   assert.deepEqual(
     { s: newLibraryItemValues({}, SHOW).current_season, c: newLibraryItemValues({}, SHOW).completed_seasons },
     { s: 1, c: 0 }
   );
-  const rewatched = newLibraryItemValues({ status: "rewatched" }, SHOW);
-  assert.equal(rewatched.completed_seasons, 4);
-  assert.equal(rewatched.current_season, 4);
-  assert.equal(rewatched.rewatch_count, 1);
-  assert.equal(newLibraryItemValues({ status: "rewatching" }, MOVIE).rewatch_count, 1);
-  assert.equal(newLibraryItemValues({ status: "watched" }, MOVIE).rewatch_count, 0);
+  assert.equal(newLibraryItemValues({ status: "rewatched" }, SHOW).status, "watched");
+  assert.equal(newLibraryItemValues({ status: "rewatching" }, MOVIE).status, "watched");
+  assert.equal("rewatch_count" in newLibraryItemValues({ status: "watched" }, MOVIE), false, "sem contador de reassistidas");
   assert.equal(newLibraryItemValues({}, MOVIE).current_season, null);
   assert.equal(newLibraryItemValues({ favorite: "sim" }, MOVIE).favorite, false, "só true explícito curte");
 });

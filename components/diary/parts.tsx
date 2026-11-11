@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useId, useState } from "react";
-import { CheckCircle2, ChevronDown, Circle, Clapperboard, Flag, Pause, Play, Plus, Repeat, Star, Tv } from "lucide-react";
+import { CheckCircle2, ChevronDown, Circle, Clapperboard, Flag, Pause, Play, Plus, Star, Tv } from "lucide-react";
 
 import { img } from "@/lib/tmdb";
 import { capitalize, dayHeading } from "@/lib/calendar/dates";
@@ -14,7 +14,7 @@ import type { DiaryDay, DiaryGroup, DiaryMoment, MediaRef } from "@/lib/diary/ty
  * organização da biblioteca em linhas compactas; volumes grandes recolhidos.
  */
 
-const ICONS = { play: Play, check: CheckCircle2, repeat: Repeat, flag: Flag, pause: Pause, plus: Plus, dot: Circle };
+const ICONS = { play: Play, check: CheckCircle2, flag: Flag, pause: Pause, plus: Plus, dot: Circle };
 
 const hrefOf = (media: MediaRef | null) => (media ? `/title/${media.media_type}/${media.tmdb_id}` : null);
 

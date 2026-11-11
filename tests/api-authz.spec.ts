@@ -64,7 +64,7 @@ test.afterAll(async ({ request }) => {
 const noLeak = (body: unknown) => expect(JSON.stringify(body)).not.toContain(MARK);
 
 test("biblioteca: B não lê, não altera e não apaga o item de A", async ({ request }) => {
-  // O status depende do histórico do título (visualização repetida = "reassistido"); compara com o de antes.
+  // Compara com o status de antes (a visualização registrada pode ter mudado o status).
   const before = await json(await request.get(`/api/library?tmdb_id=${A_MOVIE}&type=movie`));
   const lookup = await json(await b.get(`/api/library?tmdb_id=${A_MOVIE}&type=movie`));
   expect(lookup?.id).not.toBe(created.item);

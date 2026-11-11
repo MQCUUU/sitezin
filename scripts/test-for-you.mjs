@@ -28,7 +28,6 @@ const sig = (o) => ({
   status: "watched",
   favorite: false,
   rating: null,
-  rewatched: false,
   watched_history: false,
   episodes_watched: 0,
   in_library: true,
@@ -145,10 +144,6 @@ test("série abandonada cedo pesa mais que abandonada depois de vários episódi
   const late = titleWeight(sig({ media_type: "tv", status: "dropped", episodes_watched: 12 }), null, NOW);
 
   assert.ok(early < late && late < 0);
-});
-
-test("reassistido aumenta a afinidade", () => {
-  assert.ok(titleWeight(sig({ status: "rewatched", rating: 8 }), null, NOW) > titleWeight(sig({ status: "watched", rating: 8 }), null, NOW) + 1.5);
 });
 
 test("histórico fora da Biblioteca continua valendo (V2.5)", () => {

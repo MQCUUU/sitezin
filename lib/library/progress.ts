@@ -58,10 +58,6 @@ export function libraryProgress(input: {
   const regularWatched = watched.filter((e) => e.season_number >= 1).length;
   const base = { next: progress.next, season: null as LibraryProgress["season"] };
 
-  if (progress.state === "rewatching") {
-    return { ...base, state: "rewatching", card: null, title: "Reassistindo", detail: "O progresso desta nova passada não é registrado por episódio." };
-  }
-
   if (regularWatched === 0) {
     if (completedSeasons > 0) {
       const label = completedSeasons === 1 ? "Temporada 1 concluída" : `Temporadas 1–${completedSeasons} concluídas`;
@@ -76,7 +72,7 @@ export function libraryProgress(input: {
       return { ...base, state: "not_started", card: status === "watching" ? "Ainda não começou" : null, title: "Ainda não começou", detail: start };
     }
 
-    // Assistido/Reassistido/Abandonei sem nenhum episódio registrado: não inventamos progresso.
+    // Assistido/Abandonei sem nenhum episódio registrado: não inventamos progresso.
     return null;
   }
 

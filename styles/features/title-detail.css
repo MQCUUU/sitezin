@@ -412,34 +412,7 @@
         flex-basis: 100%
     }
 }
-.title-topbar {
-    position: relative;
-    z-index: 40
-}
 /* Celular: o topo é o cabeçalho fixo do site (styles/brand.css) — aqui também. */
-@media (max-width:760px) {
-    .topbar.title-topbar {
-        position: sticky
-    }
-}
-.title-hero {
-    position: relative;
-    min-height: 470px;
-    margin: 0 -2px;
-    border: 1px solid var(--line);
-    border-radius: var(--mc-radius-xl);
-    overflow: hidden;
-    background: #0d1118
-}
-.title-info {
-    display: grid;
-    grid-template-columns: minmax(0,1fr) 300px;
-    gap: 35px;
-    align-items: start
-}
-.title-info-main {
-    min-width: 0
-}
 .title-overview {
     max-width: 850px;
     color: #c6cad3;
@@ -447,182 +420,18 @@
     line-height: 1.8;
     margin: 0
 }
-.title-genres {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 7px;
-    margin-top: 20px
-}
-.title-genres span {
-    padding: 7px 10px;
-    border-radius: var(--mc-radius-pill);
-    background: var(--panel);
-    border: 1px solid var(--line);
-    color: var(--mc-color-text-secondary);
-    font-size: var(--mc-fs-xs);
-    font-weight: 700
-}
-.title-facts {
-    display: grid;
-    grid-template-columns: repeat(3,minmax(0,1fr));
-    gap: 10px;
-    margin-top: 25px
-}
-.title-fact {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-    min-height: 65px;
-    padding: 12px;
-    border: 1px solid var(--line);
-    border-radius: var(--mc-radius-md);
-    background: var(--panel)
-}
-.title-fact>svg {
-    flex: 0 0 auto;
-    color: var(--accent)
-}
-.title-fact div {
-    min-width: 0;
-    display: grid;
-    gap: 3px
-}
-.title-fact span {
-    color: var(--muted);
-    font-size: var(--mc-fs-xs);
-    text-transform: none;
-    font-weight: 800;
-    letter-spacing: 0
-}
-.title-fact strong {
-    font-size: var(--mc-fs-xs);
-    line-height: 1.35
-}
-.title-fact-link {
-    transition: border-color .15s ease,background .15s ease
-}
-.title-fact-link:hover {
-    border-color: color-mix(in srgb,var(--accent) 38%,var(--line));
-    background: color-mix(in srgb,var(--accent) 4%,var(--panel))
-}
-.title-sidebar {
-    position: sticky;
-    top: calc(var(--mc-appbar-h) + 20px)
-}
 .title-review-section>.title-section-heading {
     margin-bottom: 18px
-}
-@media (max-width: 900px) {
-    .title-info {
-        grid-template-columns: 1fr
-    }
-}
-@media (max-width: 900px) {
-    .title-sidebar {
-        position: static
-    }
-}
-@media (max-width:700px) {
-    .title-hero {
-        min-height: auto;
-        border-radius: var(--mc-radius-lg)
-    }
 }
 @media (max-width:700px) {
     .title-main-btn,.favorite-btn {
         flex: 1
     }
 }
-
-@media (max-width:700px) {
-    .title-facts {
-        grid-template-columns: 1fr
-    }
-}
-@media (max-width:700px) {
-    .title-info {
-        gap: 25px
-    }
-}
 @media (max-width:700px) {
     .title-overview {
         font-size: var(--mc-fs-md)
     }
-}
-.title-watch-panel {
-    padding: 6px 20px
-}
-.title-watch-group {
-    padding: 18px 0
-}
-.title-watch-group + .title-watch-group {
-    border-top: 1px solid var(--border)
-}
-.title-watch-group-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    margin-bottom: 13px
-}
-.title-watch-group-head strong {
-    display: block;
-    font-size: var(--mc-fs-md)
-}
-.title-watch-group-head span {
-    display: block;
-    margin-top: 3px;
-    color: var(--muted);
-    font-size: var(--mc-fs-xs)
-}
-.title-watch-group-head b {
-    min-width: 28px;
-    height: 28px;
-    padding: 0 8px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid var(--border);
-    border-radius: var(--mc-radius-pill);
-    color: var(--muted);
-    font-size: var(--mc-fs-xs)
-}
-.title-watch-providers {
-    display: grid;
-    grid-template-columns: repeat(auto-fill,minmax(125px,1fr));
-    gap: 9px
-}
-.title-watch-provider {
-    min-width: 0;
-    min-height: 58px;
-    padding: 8px;
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    border: 1px solid var(--border);
-    border-radius: var(--mc-radius-md);
-    background: color-mix(in srgb,var(--panel) 96%,transparent);
-    transition: transform .15s ease,border-color .15s ease,background .15s ease
-}
-.title-watch-provider:hover {
-    border-color: color-mix(in srgb,var(--accent) 32%,var(--border));
-    background: color-mix(in srgb,var(--accent) 5%,var(--panel))
-}
-.title-watch-provider img {
-    width: 40px;
-    height: 40px;
-    flex: 0 0 40px;
-    border-radius: var(--mc-radius-sm);
-    object-fit: cover
-}
-.title-watch-provider span {
-    min-width: 0;
-    overflow: hidden;
-    color: var(--text);
-    font-size: var(--mc-fs-xs);
-    font-weight: 700;
-    line-height: 1.25;
-    text-overflow: ellipsis
 }
 .mc-title-provider-logo span[aria-hidden] {
     width: 100%;
@@ -634,54 +443,6 @@
     color: var(--accent);
     font-size: var(--mc-fs-lg);
     font-weight: 800
-}
-.title-watch-footer {
-    padding: 15px 0 14px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    border-top: 1px solid var(--border)
-}
-.title-watch-footer>span {
-    font-size: var(--mc-fs-xs);
-    line-height: 1.4
-}
-.title-watch-footer .btn {
-    flex-shrink: 0
-}
-@media (max-width:700px) {
-    .title-watch-panel {
-        padding: 5px 14px
-    }
-}
-@media (max-width:700px) {
-    .title-watch-providers {
-        grid-template-columns: repeat(2,minmax(0,1fr))
-    }
-}
-@media (max-width:700px) {
-    .title-watch-provider {
-        min-height: 54px
-    }
-}
-@media (max-width:700px) {
-    .title-watch-provider img {
-        width: 36px;
-        height: 36px;
-        flex-basis: 36px
-    }
-}
-@media (max-width:700px) {
-    .title-watch-footer {
-        align-items: stretch;
-        flex-direction: column
-    }
-}
-@media (max-width:390px) {
-    .title-watch-providers {
-        grid-template-columns: 1fr
-    }
 }
 .title-person-link {
     color: inherit;
@@ -876,18 +637,6 @@
     position: relative;
     padding: 13px 48px 13px 14px;
 }
-.watch-entry-index {
-    width: fit-content;
-    min-height: 22px;
-    padding: 0 7px;
-    display: inline-flex;
-    align-items: center;
-    border-radius: var(--mc-radius-pill);
-    color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 8%, transparent);
-    font-size: var(--mc-fs-xs);
-    font-weight: 900;
-}
 .watch-entry-main {
     margin-top: 8px;
     display: flex;
@@ -1004,19 +753,6 @@
 }
 .watch-entry-comment-field {
     margin-top: 9px;
-}
-.watch-entry-rewatch-check {
-    margin-top: 9px;
-    display: flex !important;
-    align-items: center;
-    flex-direction: row !important;
-    gap: 7px !important;
-    color: var(--muted);
-    font-size: var(--mc-fs-xs);
-}
-.watch-entry-rewatch-check input {
-    width: 15px;
-    height: 15px;
 }
 .watch-entry-edit-actions {
     margin-top: 10px;
@@ -1390,8 +1126,9 @@
 .title-recommendation-carousel .title-recommendation-card {
     min-width: 0
 }
+/* Projeção (Fase 4): episódios em linhas, sem caixa e sem cartão por episódio. */
 .episode-browser {
-    padding: 20px
+    padding: 0
 }
 .episode-browser-head {
     display: flex;
@@ -1411,19 +1148,18 @@
 }
 .episode-list {
     display: grid;
-    gap: 8px
+    gap: 0;
+    border-top: 1px solid var(--mc-color-border)
 }
 .episode-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 9px;
-    border: 1px solid var(--border);
-    border-radius: var(--mc-radius-md);
-    background: color-mix(in srgb,var(--panel) 95%,transparent)
-}
-.episode-row.watched {
-    border-color: color-mix(in srgb,var(--good) 35%,var(--border))
+    gap: 14px;
+    padding: 14px 0;
+    border: 0;
+    border-bottom: 1px solid var(--mc-color-border);
+    border-radius: 0;
+    background: transparent
 }
 .episode-row-main {
     min-width: 0;
@@ -1478,19 +1214,17 @@
     gap: 6px;
     padding: 0 12px;
     height: 38px;
-    border-radius: var(--radius-sm, 8px);
-    background: color-mix(in srgb, var(--accent) 15%, var(--panel2));
-    border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
-    color: var(--accent);
+    border-radius: var(--mc-radius-md);
+    background: transparent;
+    border: 1px solid var(--mc-color-border-strong);
+    color: var(--mc-color-text);
     font-size: var(--mc-fs-xs, 12px);
     font-weight: 750;
     text-decoration: none;
     transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .episode-watch-action:hover {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--on-accent);
+    background: var(--mc-color-surface-hover);
 }
 .episode-watch-action:active {
     transform: translateY(0.5px);
@@ -1518,10 +1252,11 @@
     background: transparent;
     color: var(--muted)
 }
+/* Visto é seu: âmbar da marca. */
 .episode-check.active {
-    background: var(--good);
-    border-color: var(--good);
-    color: #07130f
+    background: var(--mc-color-accent);
+    border-color: var(--mc-color-accent);
+    color: var(--mc-color-accent-contrast)
 }
 .episode-check:disabled {
     opacity: .4;
@@ -1645,11 +1380,7 @@
 }
 /* Text sitting on the scrim is always light-on-dark, regardless of theme —
    same reasoning as .mc-home-hero--photo in styles/home.css. */
-.mc-title-hero-layer,
-.mc-title-hero-layer .title-type,
-.mc-title-hero-layer .title-main h1,
-.mc-title-hero-layer .title-original-name,
-.mc-title-hero-layer .title-tagline {
+.mc-title-hero-layer {
     color: #f3f4f8;
 }
 .mc-title-poster-wrap {
@@ -1839,9 +1570,6 @@
     line-height: var(--mc-text-h2-line);
     font-weight: var(--mc-text-h2-weight);
     letter-spacing: var(--mc-text-h2-tracking);
-}
-.mc-title-overview-section .title-sidebar {
-    top: calc(var(--mc-space-8) + 56px);
 }
 .mc-title-cast-avatar {
     position: relative;
@@ -2183,22 +1911,6 @@ a.series-episode-row {
 }
 
 /* ---------- Informações (TitleStatsSection) ---------- */
-.title-stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 12px
-}
-.panel.title-stat {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 18px
-}
-.title-stat strong {
-    display: block;
-    margin-top: 4px;
-    font-size: 16px
-}
 
 /*
  * Celular: a página do título era uma pilha de cartões soltos — 3 fatos,
@@ -2206,44 +1918,6 @@ a.series-episode-row {
  * viram linhas com divisória; os blocos de verdade (hero, trailer, status)
  * continuam como cartões. Nada sai da tela, só a moldura.
  */
-@media (max-width:760px) {
-    .title-facts,
-    .title-stats-grid {
-        gap: 0
-    }
-    .title-fact,
-    .panel.title-stat {
-        min-height: 0;
-        padding: 12px 0;
-        border: 0;
-        border-radius: 0;
-        background: none
-    }
-    .title-fact + .title-fact,
-    .title-stat + .title-stat {
-        border-top: 1px solid var(--line)
-    }
-    .title-watch-panel.panel {
-        padding: 0;
-        border: 0;
-        background: none;
-        box-shadow: none
-    }
-    .title-watch-providers {
-        grid-template-columns: 1fr;
-        gap: 0
-    }
-    .title-watch-provider {
-        min-height: 52px;
-        padding: 6px 0;
-        border: 0;
-        border-radius: 0;
-        background: none
-    }
-    .title-watch-provider + .title-watch-provider {
-        border-top: 1px solid var(--line)
-    }
-}
 
 /* ---------- Onde assistir (botão do topo + painel) ---------- */
 .title-where-btn {
@@ -2426,6 +2100,179 @@ a.series-episode-row {
 }
 
 /* Projeção (Fase 2): ficha em Créditos, abaixo dos gêneros. */
-.title-credits {
-    margin-top: var(--mc-space-24);
+
+/* =====================================================================
+   Projeção (Fase 4) — Visão geral em duas colunas
+   Leitura à esquerda (sinopse, episódios, onde assistir, trailer); ficha
+   e o que é seu à direita, grudados abaixo das abas. Seções sem caixa.
+   ===================================================================== */
+.tt-info-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+    gap: 64px;
+    align-items: start;
+    max-width: var(--mc-container-wide);
+    margin: 0 auto;
+    padding: 0 var(--mc-gutter-desktop);
+}
+.tt-info-main {
+    min-width: 0;
+}
+.tt-info-grid .mc-title-overview-section,
+.tt-info-grid .mc-title-section {
+    max-width: none;
+    margin: 0 0 var(--mc-space-48);
+    padding: 0;
+}
+.tt-info-side {
+    position: sticky;
+    top: calc(var(--mc-appbar-h) + 64px);
+    display: grid;
+    gap: var(--mc-space-40);
+    min-width: 0;
+}
+.tt-side-heading {
+    margin: 0 0 var(--mc-space-16);
+    font-size: var(--mc-fs-xl);
+    font-weight: 680;
+}
+.tt-ficha .mc-credits {
+    font-size: var(--mc-fs-md);
+}
+@media (max-width: 1100px) {
+    .tt-info-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0;
+        padding: 0 var(--mc-gutter-tablet);
+    }
+    .tt-info-side {
+        position: static;
+        margin-bottom: var(--mc-space-48);
+    }
+}
+@media (max-width: 700px) {
+    .tt-info-grid {
+        padding: 0 var(--mc-gutter-mobile);
+    }
+}
+
+/* Onde assistir: uma linha por forma de acesso, separadas por fio. */
+.tt-watch-rows {
+    margin: 0;
+    border-top: 1px solid var(--mc-color-border);
+}
+.tt-watch-row {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr);
+    gap: var(--mc-space-16);
+    align-items: center;
+    padding: var(--mc-space-12) 0;
+    border-bottom: 1px solid var(--mc-color-border);
+}
+.tt-watch-row dt {
+    color: var(--mc-color-text-secondary);
+    font-size: var(--mc-fs-md);
+}
+.tt-watch-row dd {
+    margin: 0;
+    min-width: 0;
+}
+.tt-watch-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--mc-space-8) var(--mc-space-20);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.tt-watch-provider {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--mc-space-8);
+    font-size: var(--mc-fs-base);
+    font-weight: 560;
+}
+.tt-watch-provider .mc-title-provider-logo,
+.tt-watch-provider img {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+    border-radius: var(--mc-radius-xs);
+    object-fit: cover;
+}
+.tt-watch-source {
+    margin: var(--mc-space-12) 0 0;
+    color: var(--mc-color-text-secondary);
+    font-size: var(--mc-fs-sm);
+}
+.tt-watch-source a {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--mc-color-text);
+    text-decoration: underline;
+    text-decoration-color: var(--mc-color-accent);
+    text-underline-offset: 3px;
+}
+@media (max-width: 480px) {
+    .tt-watch-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--mc-space-6);
+    }
+}
+
+/* Trailer: capa com a imagem larga; o player só carrega no clique. */
+.tt-trailer-screen {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: var(--mc-radius-md);
+    background: #000;
+}
+.tt-trailer-screen .mc-trailer-frame,
+.tt-trailer-screen iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+.tt-trailer-cover {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: #000;
+    cursor: pointer;
+}
+.tt-trailer-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: .6;
+    transition: opacity var(--mc-duration-fast) var(--mc-ease-out);
+}
+.tt-trailer-play {
+    position: absolute;
+    left: var(--mc-space-24);
+    bottom: var(--mc-space-24);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--mc-space-8);
+    height: 44px;
+    padding: 0 var(--mc-space-16);
+    border-radius: var(--mc-radius-md);
+    background: var(--mc-color-primary);
+    color: var(--mc-color-primary-contrast);
+    font-size: var(--mc-fs-base);
+    font-weight: 640;
+}
+@media (hover: hover) and (pointer: fine) {
+    .tt-trailer-cover:hover img {
+        opacity: .75;
+    }
+}
+.tt-trailer-cover:focus-visible {
+    outline: 2px solid var(--mc-color-accent);
+    outline-offset: 3px;
 }

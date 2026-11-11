@@ -9,7 +9,7 @@ import type { Insight, InsightsPayload } from "./types";
  *   generateTasteInsights     "mais assisto" × "mais gosto", gêneros nas notas altas, diretores
  *   generateRatingInsights    perfil de notas, você × TMDB
  *   generateSeriesInsights    quase terminando, paradas
- *   generateRewatchInsights   reassistidos e abandonos
+ *   generateDroppedInsights   abandonos
  *   generateWatchlistInsights crescimento, tempo para zerar
  *   generateEvolutionInsights mudanças relevantes ano × ano
  *   generateAiInsights        recomendações e origem da descoberta
@@ -275,22 +275,11 @@ function generateSeriesInsights(p: InsightsPayload, out: Out) {
   }
 }
 
-function generateRewatchInsights(p: InsightsPayload, out: Out) {
-  if (p.rewatch?.topGenre && p.rewatch.top.length >= 4) {
-    out.push({
-      id: "rewatch-genre",
-      section: "rewatch",
-      priority: 3,
-      message: `${p.rewatch.topGenre} é o gênero que você mais reassiste.`,
-      evidence: `Entre ${p.rewatch.top.length}+ títulos reassistidos`,
-      sample: p.rewatch.top.length,
-    });
-  }
-
+function generateDroppedInsights(p: InsightsPayload, out: Out) {
   if (p.dropped?.medianEpisode !== null && p.dropped?.medianEpisode !== undefined && p.dropped.medianEpisode <= 3) {
     out.push({
       id: "drop-early",
-      section: "rewatch",
+      section: "dropped",
       priority: 3,
       message: `Você costuma decidir cedo quando uma série não funciona: as que você deixa de lado param, em média, no episódio ${p.dropped.medianEpisode}.`,
       evidence: "Mediana dos episódios assistidos em séries abandonadas",
@@ -303,7 +292,7 @@ function generateRewatchInsights(p: InsightsPayload, out: Out) {
   if (g && g.rate >= 0.3) {
     out.push({
       id: "drop-genre",
-      section: "rewatch",
+      section: "dropped",
       priority: 4,
       message: `${g.name} é o gênero que mais fica pelo caminho: ${pct(g.rate)} dos que você começa.`,
       evidence: `${g.dropped} de ${g.tracked} títulos`,
@@ -406,7 +395,7 @@ export function generateInsights(p: InsightsPayload): Insight[] {
   generateTasteInsights(p, out);
   generateRatingInsights(p, out);
   generateSeriesInsights(p, out);
-  generateRewatchInsights(p, out);
+  generateDroppedInsights(p, out);
   generateWatchlistInsights(p, out);
   generateEvolutionInsights(p, out);
   generateAiInsights(p, out);

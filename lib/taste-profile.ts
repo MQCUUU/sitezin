@@ -7,7 +7,7 @@
  * Agora todos partem do mesmo perfil, calculado só da biblioteca:
  *
  *  peso do título = status + nota + favorito
- *    watched 1 · rewatched/rewatching 1,4 · watching 0,7 · want 0,25 ·
+ *    watched 1 · watching 0,7 · want 0,25 ·
  *    paused 0 · dropped −1,2
  *    nota: (nota − 6,5) / 1,75, limitada a ±2     favorito: +1,2
  *
@@ -45,8 +45,6 @@ export type TasteProfile = {
 
 const STATUS_BASE: Record<string, number> = {
   watched: 1,
-  rewatched: 1.4,
-  rewatching: 1.4,
   watching: 0.7,
   want: 0.25,
   paused: 0,

@@ -8,7 +8,7 @@
  * Puro: testado em scripts/test-library-url.mjs.
  */
 
-export const LIBRARY_STATUSES = ["want", "watching", "watched", "dropped", "rewatching", "rewatched", "paused"] as const;
+export const LIBRARY_STATUSES = ["want", "watching", "watched", "dropped", "paused"] as const;
 export const LIBRARY_SORTS = ["added", "updated", "rating", "rating-low", "tmdb", "az", "za", "newest", "oldest"] as const;
 export const RATING_STEPS = ["5", "6", "7", "8", "9"] as const;
 

@@ -152,21 +152,10 @@ test("hero: filme Assistindo — sem campos de episódio, sem % inventado, com d
   assert.equal(formatRuntime(45), "45 min");
 });
 
-test("hero: Reassistindo — acionável, sem próximo e sem barra inventados", async () => {
-  const item = await one(tvRow({ title: "Rewatch", status: "rewatching", watched: eps([[1, 1, 10], [2, 1, 10]]) }));
-  const h = activeHero(item);
-  assert.equal(h.eyebrow, "CONTINUE REASSISTINDO");
-  assert.equal(h.bar, null);
-  assert.doesNotMatch(h.description, /T\d+:E/);
-  assert.equal(h.href, `/title/tv/${item.tmdb_id}`);
-  const movie = await one(movieRow({ title: "Filme de novo", status: "rewatching" }));
-  assert.equal(activeHero(movie).eyebrow, "CONTINUE REASSISTINDO");
-});
-
-test("elegibilidade: só Assistindo e Reassistindo (Pausado/Abandonado/fila/concluídos não)", () => {
-  assert.deepEqual([...ACTIVE_STATUSES], ["watching", "rewatching"]);
-  for (const s of ["watching", "rewatching"]) assert.equal(isActiveStatus(s), true);
-  for (const s of ["paused", "dropped", "want", "watched", "rewatched", "legacy", ""]) assert.equal(isActiveStatus(s), false);
+test("elegibilidade: só Assistindo (sem reassistir; Pausado/Abandonado/fila/concluídos não)", () => {
+  assert.deepEqual([...ACTIVE_STATUSES], ["watching"]);
+  assert.equal(isActiveStatus("watching"), true);
+  for (const s of ["paused", "dropped", "want", "watched", "rewatching", "rewatched", "legacy", ""]) assert.equal(isActiveStatus(s), false);
 });
 
 test("hero: série sem episodes_progress → 'Ainda não começou', começa em T1:E01, barra 0 de N", async () => {
@@ -312,7 +301,7 @@ const SHOW = { id: 3, tmdb_id: 95480, media_type: "tv", title: "Slow Horses", po
 const GONE = { id: 9, tmdb_id: 99, media_type: "movie", title: "Removido da Biblioteca", poster_path: null };
 const at = (day, hm) => new Date(`${day}T${hm}:00-03:00`).toISOString();
 const ev = (type, day, hm, media, meta = {}) => ({ id: `e${++seq}`, source: "event", type, at: at(day, hm), day, time: hm, media, meta });
-const watch = (day, hm, media, o = {}) => ({ id: `w${++seq}`, source: "watch", at: at(day, hm), day, time: o.time === undefined ? hm : o.time, media, rating: o.rating ?? null, comment: null, is_rewatch: Boolean(o.is_rewatch), watch_number: o.watch_number ?? 1 });
+const watch = (day, hm, media, o = {}) => ({ id: `w${++seq}`, source: "watch", at: at(day, hm), day, time: o.time === undefined ? hm : o.time, media, rating: o.rating ?? null, comment: null, watch_number: o.watch_number ?? 1 });
 const ep = (day, hm, media, season, episode) => ({ id: `p${++seq}`, source: "episode", at: at(day, hm), day, time: hm, media, season, episode, season_done: false, series_done: false });
 
 test("Diário: Home = os primeiros momentos do Diário, mesma ordem e mesma copy", () => {
@@ -322,7 +311,7 @@ test("Diário: Home = os primeiros momentos do Diário, mesma ordem e mesma copy
     ep("2026-10-13", "20:40", SHOW, 1, 2),
     ev("status_changed", "2026-10-12", "10:00", MOVIE, { from: "watching", to: "dropped" }),
     ev("library_removed", "2026-10-11", "09:00", GONE),
-    watch("2026-10-10", "09:00", MOVIE, { is_rewatch: true, watch_number: 2 }),
+    watch("2026-10-10", "09:00", MOVIE, { watch_number: 2 }),
   ];
   const days = buildDays(items);
   const flat = days.flatMap((d) => d.moments);
@@ -334,7 +323,7 @@ test("Diário: Home = os primeiros momentos do Diário, mesma ordem e mesma copy
   const removed = all.find((m) => m.kind === "removed");
   assert.equal(removed.media.title, "Removido da Biblioteca", "título removido continua com nome");
   assert.equal(headline(removed), "Removeu da biblioteca");
-  assert.equal(headline(all.find((m) => m.kind === "rewatched")), "Reassistiu");
+  assert.ok(!all.some((m) => /reassist/i.test(headline(m))), "sem reassistir no Diário");
 });
 
 test("Diário: sem horário conhecido → só a data (time = null)", () => {
@@ -394,7 +383,7 @@ function diarySql2(byMonth) {
 }
 // `day`/`hm` chegam do banco já no dia civil de Brasília (AT TIME ZONE); a fronteira real é provada no TEST.
 const evAt = (day, hm, title, type = "status_changed", meta = { from: "want", to: "watching" }) => ({ id: ++seq, event_type: type, metadata: meta, occurred_at: `${day}T${hm}:00-03:00`, day, hm, mid: seq, tmdb_id: seq, media_type: "movie", title, poster_path: null, recovered: false });
-const watchAt = (day, hm, title, precision) => ({ id: ++seq, watched_at: `${day}T${hm}:00-03:00`, watched_at_precision: precision, rating: null, comment: null, is_rewatch: false, day, hm, watch_number: 1, mid: seq, tmdb_id: seq, media_type: "movie", title, poster_path: null });
+const watchAt = (day, hm, title, precision) => ({ id: ++seq, watched_at: `${day}T${hm}:00-03:00`, watched_at_precision: precision, rating: null, comment: null, day, hm, watch_number: 1, mid: seq, tmdb_id: seq, media_type: "movie", title, poster_path: null });
 
 test("Diário recente: 1º de novembro sem nada em novembro → momentos de outubro (nunca seção vazia)", async () => {
   const { sql, calls } = diarySql2({ "2026-10": { events: [evAt("2026-10-31", "23:50", "Dia 31"), evAt("2026-10-30", "20:00", "Dia 30"), evAt("2026-10-28", "19:00", "Dia 28")] } });
@@ -489,7 +478,7 @@ test("Agenda: '3 próximos' = a MESMA lista da prévia (contagem não truncada p
 
 /* ================================================================ MÉTRICAS */
 
-const BY_STATUS_144 = { want: 39, watching: 9, watched: 70, rewatched: 12, rewatching: 0, paused: 2, dropped: 12 };
+const BY_STATUS_144 = { want: 39, watching: 9, watched: 82, paused: 2, dropped: 12 };
 
 test("métricas: 144-equivalente — status exclusivos somam a Biblioteca; curtidos/notas fora da soma", () => {
   const t = statusTotals(BY_STATUS_144);
@@ -504,18 +493,12 @@ test("métricas: 144-equivalente — status exclusivos somam a Biblioteca; curti
   assert.notEqual(t.watching + t.want + 13 + 96, t.library);
 });
 
-test("métricas: Reassistindo conta como em andamento E como já concluído uma vez", () => {
-  const t = statusTotals({ rewatching: 2, watched: 1 });
-  assert.equal(t.watching, 2);
-  assert.equal(t.watched, 3);
-});
-
-test("'concluídos': contagem factual (Assistido/Reassistindo/Reassistido), não % ambíguo", () => {
+test("'concluídos': contagem factual (Assistido), não % ambíguo", () => {
   const totals = { ...statusTotals(BY_STATUS_144), favorites: 13, rated: 96, average_rating: 7.63 };
   const m = homeMetrics(totals, { count: 3 });
   assert.deepEqual(m.map((x) => `${x.value} ${x.label}`), ["144 títulos", "82 concluídos", "★ 7.6 nota média", "3 próximos"]);
   assert.ok(!m.some((x) => x.value.includes("%")));
-  assert.match(m[1].hint, /Assistido, Reassistindo ou Reassistido/);
+  assert.equal(m[1].hint, "Títulos com status Assistido");
   // Abandonado, Pausado, Assistindo e Quero assistir NÃO são concluídos.
   assert.equal(statusTotals({ dropped: 3, paused: 2, watching: 4, want: 5 }).watched, 0);
 });
@@ -634,7 +617,7 @@ test("duplicação interna: a prévia da Agenda nunca repete um evento", () => {
 
 const { lastActivityOf, orderActive, CONTINUITY_STATUSES } = home;
 const { loadHome, HOME_SHELF_LIMIT } = await import("../lib/home/load.ts");
-const { statusTransition, rewatchEffect, applyStatusTransition } = await import("../lib/library/status-event.ts");
+const { statusTransition, applyStatusTransition } = await import("../lib/library/status-event.ts");
 
 const facts = (id, o = {}) => ({ id, added_at: o.added ?? "2026-01-01T00:00:00Z", last_episode_at: o.ep ?? null, last_watch_at: o.watch ?? null, last_continuity_at: o.ev ?? null });
 
@@ -642,7 +625,7 @@ test("lastActivity: maior entre episódio, visualização e evento de continuida
   assert.equal(lastActivityOf(facts("a", { ep: "2026-10-10T10:00:00Z", watch: "2026-10-12T10:00:00Z", ev: "2026-10-11T10:00:00Z" })), "2026-10-12T10:00:00.000Z");
   assert.equal(lastActivityOf(facts("a", { added: "2026-03-01T00:00:00Z" })), "2026-03-01T00:00:00.000Z");
   assert.equal(lastActivityOf(facts("a", { added: "2026-10-14T00:00:00Z", ep: "2026-09-01T00:00:00Z" })), "2026-09-01T00:00:00.000Z", "fato real vence a data de entrada");
-  assert.deepEqual([...CONTINUITY_STATUSES], ["watching", "rewatching"]);
+  assert.deepEqual([...CONTINUITY_STATUSES], ["watching"]);
 });
 
 test("nota / Curtir / review (só mudam updated_at, sem fato de continuidade) não reordenam", () => {
@@ -711,37 +694,25 @@ test("query count constante: 1, 12 ou 50 títulos ativos → mesmas 7 consultas"
 
 test("transição: só quando o status pedido é diferente do gravado (mesma regra no PATCH e no POST)", () => {
   assert.deepEqual(statusTransition("want", "watching"), { from: "want", to: "watching" });
-  assert.deepEqual(statusTransition("watching", "rewatching"), { from: "watching", to: "rewatching" });
+  assert.deepEqual(statusTransition("watching", "watched"), { from: "watching", to: "watched" });
   assert.equal(statusTransition("watching", "watching"), null, "mesmo status (retry/duplo clique)");
   assert.equal(statusTransition("watching", undefined), null, "salvar só nota/Curtir/review");
   assert.equal(statusTransition(null, "watching"), null, "item novo: a criação é library_added, não 'mudou de status'");
 });
 
-test("reassistidas: só entrar em Reassistindo ou ir direto a Reassistido conta +1; só a 1ª gera rewatch_started", () => {
-  assert.deepEqual(rewatchEffect({ from: "watched", to: "rewatching" }), { increment: true, startsRewatch: true });
-  assert.deepEqual(rewatchEffect({ from: "watching", to: "rewatching" }), { increment: true, startsRewatch: true });
-  assert.deepEqual(rewatchEffect({ from: "watched", to: "rewatched" }), { increment: true, startsRewatch: false });
-  assert.deepEqual(rewatchEffect({ from: "rewatching", to: "rewatched" }), { increment: false, startsRewatch: false }, "conclui a já contada");
-  for (const [from, to] of [["want", "watching"], ["watching", "watched"], ["rewatching", "watching"], ["rewatched", "watched"], ["watching", "dropped"], ["dropped", "watching"]]) {
-    assert.deepEqual(rewatchEffect({ from, to }), { increment: false, startsRewatch: false }, `${from} → ${to}`);
-  }
-});
-
-test("transição atômica: UM comando com CAS, incremento na linha e os dois eventos condicionados ao vencedor", async () => {
+test("transição atômica: UM comando com CAS e o evento condicionado ao vencedor (sem reassistir)", async () => {
   const calls = [];
-  const sql = async (strings, ...values) => { calls.push({ text: strings.join("$"), values }); return [{ rewatch_count: 4, status_events: 1, rewatch_events: 1 }]; };
-  const r = await applyStatusTransition(sql, { userId: "u", libraryItemId: "li", transition: { from: "watched", to: "rewatching" }, derived: { current_season: 1, completed_seasons: 0, stopped_season: null } });
+  const sql = async (strings, ...values) => { calls.push({ text: strings.join("$"), values }); return [{ status_events: 1 }]; };
+  const r = await applyStatusTransition(sql, { userId: "u", libraryItemId: "li", transition: { from: "watching", to: "watched" }, derived: { current_season: 1, completed_seasons: 0, stopped_season: null } });
   assert.equal(calls.length, 1, "uma ida ao banco = uma transação");
-  const { text, values } = calls[0];
+  const { text } = calls[0];
   assert.match(text, /WHERE id = \$ AND user_id = \$ AND status = \$/, "compare-and-set pelo status de origem");
-  assert.match(text, /rewatch_count = COALESCE\(rewatch_count, 0\) \+ \$::int/, "incremento na própria linha, nunca valor lido antes");
   assert.match(text, /'status_changed'[\s\S]*FROM won/);
-  assert.match(text, /'rewatch_started'[\s\S]*FROM won/);
-  assert.ok(values.includes(1) && values.includes(true));
-  assert.deepEqual(r, { won: true, rewatch_count: 4, status_events: 1, rewatch_events: 1 });
-  // Quem perde o CAS não recebe linha: nenhum evento, nenhum incremento.
+  assert.doesNotMatch(text, /rewatch/, "nada de contador nem evento de reassistida");
+  assert.deepEqual(r, { won: true, status_events: 1 });
+  // Quem perde o CAS não recebe linha: nenhum evento.
   const lost = await applyStatusTransition(async () => [], { userId: "u", libraryItemId: "li", transition: { from: "want", to: "watching" }, derived: { current_season: null, completed_seasons: 0, stopped_season: null } });
-  assert.deepEqual(lost, { won: false, rewatch_count: null, status_events: 0, rewatch_events: 0 });
+  assert.deepEqual(lost, { won: false, status_events: 0 });
 });
 
 test("retry: o mesmo payload aplicado duas vezes gera UMA transição", () => {
@@ -781,11 +752,8 @@ test("want → watching logo depois de adicionar (mesmo momento) → não vira '
   assert.deepEqual(days[0].moments.map(headline), ["Começou a assistir"]);
 });
 
-test("watching → rewatching: rewatch_started + status_changed (PATCH e POST gravam os dois) → um momento", () => {
-  const days = buildDays([
-    ev("rewatch_started", DAY, "21:00", SHOW, { rewatch_count: 1 }),
-    ev("status_changed", DAY, "21:00", SHOW, { from: "watched", to: "rewatching" }),
-  ]);
+test("evento antigo rewatch_started (antes da 0008) não vira momento de reassistir", () => {
+  const days = buildDays([ev("status_changed", DAY, "21:00", SHOW, { from: "watched", to: "watching" })]);
   assert.equal(days[0].moments.length, 1);
-  assert.equal(days[0].moments[0].kind, "rewatch_started");
+  assert.equal(days[0].moments[0].kind, "resumed");
 });

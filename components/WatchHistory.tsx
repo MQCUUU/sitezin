@@ -5,7 +5,7 @@ import { apiFetch } from "@/lib/api-client";
 import { useEffect, useMemo, useState, useEffectEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { useModal } from "@/hooks/useModal";
-import { CalendarDays, Check, Clock3, Edit3, History, Loader2, Plus, RefreshCcw, Save, Star, Trash2, X } from "lucide-react";
+import { CalendarDays, Check, Clock3, Edit3, History, Loader2, Plus, Save, Star, Trash2, X } from "lucide-react";
 import { toLocalInput, nowLocalInput, formatDate, sameDayKey, type WatchEntry } from "@/components/watch-history/shared";
 export function WatchHistory({
   libraryId,
@@ -122,12 +122,6 @@ export function WatchHistory({
     useState("");
 
   const [
-    editRewatch,
-    setEditRewatch,
-  ] =
-    useState(false);
-
-  const [
     deleteId,
     setDeleteId,
   ] =
@@ -214,14 +208,6 @@ export function WatchHistory({
         return {
           total:
             entries.length,
-
-          rewatches:
-            entries.filter(
-              (
-                entry
-              ) =>
-                entry.is_rewatch
-            ).length,
 
           average,
 
@@ -413,10 +399,6 @@ export function WatchHistory({
       entry.comment ||
       ""
     );
-
-    setEditRewatch(
-      entry.is_rewatch
-    );
   }
 
   async function saveEdit(
@@ -448,9 +430,6 @@ export function WatchHistory({
 
                 comment:
                   editComment,
-
-                is_rewatch:
-                  editRewatch,
               } });
 
       setEntries(
@@ -603,22 +582,6 @@ export function WatchHistory({
           </div>
 
           <div>
-            <RefreshCcw
-              size={18}
-            />
-
-            <strong>
-              {
-                stats.rewatches
-              }
-            </strong>
-
-            <span>
-              reassistidas
-            </span>
-          </div>
-
-          <div>
             <Star
               size={18}
             />
@@ -743,8 +706,7 @@ export function WatchHistory({
                 <div className="watch-history-day-list">
                   {dayEntries.map(
                     (
-                      entry,
-                      index
+                      entry
                     ) => (
                       <article
                         key={
@@ -855,27 +817,6 @@ export function WatchHistory({
                               />
                             </label>
 
-                            <label className="watch-entry-rewatch-check">
-                              <input
-                                type="checkbox"
-                                checked={
-                                  editRewatch
-                                }
-                                onChange={(
-                                  event
-                                ) =>
-                                  setEditRewatch(
-                                    event.target
-                                      .checked
-                                  )
-                                }
-                              />
-
-                              <span>
-                                Esta sessão foi uma reassistida
-                              </span>
-                            </label>
-
                             <div className="watch-entry-edit-actions">
                               <Button
                                 type="button"
@@ -913,26 +854,6 @@ export function WatchHistory({
                           </div>
                         ) : (
                           <>
-                            <div className="watch-entry-index">
-                              {entry.is_rewatch
-                                ? `Reassistida #${Math.max(
-                                    1,
-                                    entries
-                                      .slice(
-                                        index +
-                                          1
-                                      )
-                                      .filter(
-                                        (
-                                          item
-                                        ) =>
-                                          item.is_rewatch
-                                      ).length +
-                                      1
-                                  )}`
-                                : "Primeira visualização"}
-                            </div>
-
                             <div className="watch-entry-main">
                               <div className="watch-entry-time">
                                 <Clock3
@@ -1059,9 +980,6 @@ export function WatchHistory({
                 Registrar que assisti
               </h3>
 
-              <p className="muted">
-                A partir da segunda entrada, o MyCatalog marca automaticamente como reassistida.
-              </p>
             </div>
 
             <div className="watch-register-grid">
@@ -1244,8 +1162,7 @@ export function WatchHistory({
 
               <p className="muted">
                 Só este registro do Diário será apagado. O título continua na
-                biblioteca e sua nota, status e contagem de reassistidas não
-                mudam. Para alterar esses dados, use a biblioteca ou a página
+                biblioteca e sua nota e status não mudam. Para alterar esses dados, use a biblioteca ou a página
                 do título.
               </p>
             </div>

@@ -37,7 +37,7 @@ export type QueueCandidate = {
    * no tempo sem termos o número exato.
    */
   fits_by_filter: boolean;
-  status: "want" | "watching" | "rewatching" | "paused" | null;
+  status: "want" | "watching" | "paused" | null;
   favorite: boolean;
   personal_rating: number | null;
   tmdb_rating: number | null;
@@ -83,7 +83,6 @@ export type QueuePick = {
  */
 export const WEIGHTS = {
   STATUS_WATCHING: 40,
-  STATUS_REWATCHING: 30,
   STATUS_WANT: 25,
   STATUS_PAUSED: 10,
   STATUS_DISCOVER: 0,
@@ -101,8 +100,6 @@ function statusWeight(status: QueueCandidate["status"]): number {
   switch (status) {
     case "watching":
       return WEIGHTS.STATUS_WATCHING;
-    case "rewatching":
-      return WEIGHTS.STATUS_REWATCHING;
     case "want":
       return WEIGHTS.STATUS_WANT;
     case "paused":
@@ -157,9 +154,6 @@ export function ineligibleReason(
       candidate.media_type === "tv" &&
       candidate.source === "library" &&
       !hasNextEpisode(candidate) &&
-      // Reassistindo: não há próximo episódio conhecido, mas a duração
-      // estimada de UM episódio continua sendo a comparação honesta.
-      candidate.tv_progress?.state !== "rewatching" &&
       !candidate.fits_by_filter
     ) {
       return "sem próximo episódio conhecido";
@@ -209,7 +203,7 @@ export function scoreCandidate(
     candidate.media_type === "tv" &&
     candidate.tv_progress?.state === "in_progress" &&
     next !== null &&
-    (candidate.status === "watching" || candidate.status === "rewatching");
+    candidate.status === "watching";
 
   if (continuing && next) {
     score += WEIGHTS.CONTINUITY;
@@ -218,9 +212,6 @@ export function scoreCandidate(
         ? ` (~${formatMinutes(candidate.runtime_minutes)}, estimativa)`
         : "";
     fragments.push(`Você já começou essa série: o próximo episódio é S${next.season} E${next.episode}${runtime}`);
-  } else if (candidate.status === "rewatching") {
-    // Sem SxEy: o modelo atual não guarda progresso por ciclo de reassistida.
-    fragments.push("Você está reassistindo");
   } else if (candidate.status === "watching") {
     fragments.push("Você está assistindo");
   } else if (candidate.status === "want") {

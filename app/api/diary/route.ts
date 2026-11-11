@@ -9,14 +9,14 @@ import { buildDays, filterDays } from "@/lib/diary/moments";
 import type { DiaryFilter, DiaryResponse } from "@/lib/diary/types";
 
 /*
- * GET /api/diary?month=AAAA-MM&filter=all|watched|rewatch|rated
+ * GET /api/diary?month=AAAA-MM&filter=all|watched|rated
  *
  * Um mês por resposta (lib/diary/load.ts) → momentos (lib/diary/moments.ts).
  * Sem `month`, abre o mês mais recente com atividade. Filtro no servidor.
  * `prev` = mês anterior com atividade (cursor de "Carregar mais").
  */
 
-const FILTERS: DiaryFilter[] = ["all", "watched", "rewatch", "rated"];
+const FILTERS: DiaryFilter[] = ["all", "watched", "rated"];
 
 export async function GET(request: NextRequest) {
   try {

@@ -11,13 +11,13 @@ import { entradaInvalida, naoAutenticado, respostaDeErro } from "@/lib/api-error
  * Antes, o editor de vitrine (ProfileShowcaseEditor) buscava a
  * biblioteca inteira via `/api/library` só para montar o seletor de
  * "escolher filme/série" (H0, achado novo). A regra de elegibilidade
- * (status assistido/reassistindo/reassistido) é a mesma que
+ * (status assistido) é a mesma que
  * `PUT /api/profile/showcase` já valida no servidor — este GET só
  * expõe essa mesma regra para popular o seletor, já filtrado por tipo
  * e busca, sem nunca trazer a biblioteca inteira.
  */
 
-const ALLOWED_STATUSES = ["watched", "rewatching", "rewatched"];
+const ALLOWED_STATUSES = ["watched"];
 
 export async function GET(request: NextRequest) {
   try {

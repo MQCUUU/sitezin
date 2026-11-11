@@ -14,7 +14,7 @@ const raw = (seasons, last, status = "Returning Series", extra = {}) => ({
 const eps = (list) => list.flatMap(([s, from, to]) => Array.from({ length: to - from + 1 }, (_, i) => ({ season_number: s, episode_number: from + i })));
 const run = ({ r, watched = [], status = "watching", completed = 0, counts }) => {
   const structure = tvStructureFromRaw(r, counts);
-  const progress = computeTvProgress(structure, watched, { rewatching: status === "rewatching" });
+  const progress = computeTvProgress(structure, watched);
   return libraryProgress({ status, progress, structure, watched, completedSeasons: completed });
 };
 const ENDED = raw([[0, 4], [1, 10], [2, 10]], [2, 10], "Ended");
@@ -83,13 +83,6 @@ test("abandonada com episódios → 'Parou na T2 · 4/10' (sem tom de erro)", ()
   assert.doesNotMatch(p.card + p.title, /falh|erro|abandon/i);
 });
 
-test("reassistindo: nada inventado (sem episódio, sem percentual)", () => {
-  const p = run({ r: ENDED, watched: eps([[1, 1, 10], [2, 1, 10]]), status: "rewatching" });
-  assert.equal(p.card, null);
-  assert.equal(p.next, null);
-  assert.equal(p.title, "Reassistindo");
-});
-
 test("metadata incompleta (sem temporadas) com episódios → fato: 'N episódios assistidos'", () => {
   assert.equal(run({ r: { status: "Ended" }, watched: eps([[1, 1, 3]]) }).card, "3 episódios assistidos");
 });
@@ -104,7 +97,7 @@ test("legado: Assistido importado sem episódios → nada (nunca 'Ainda não com
   const watched = run({ r: ENDED, status: "watched", completed: 2 });
   assert.equal(watched.card, null, "card: o status 'Assistido' já diz");
   assert.equal(watched.title, "Temporadas 1–2 concluídas", "Quick View: só o que foi registrado");
-  assert.equal(run({ r: ENDED, status: "rewatched", completed: 0 }), null);
+  assert.equal(run({ r: ENDED, status: "watched", completed: 0 }), null);
 });
 
 test("legado: Abandonei sem episódios com temporadas registradas → 'Temporada 1 concluída'", () => {

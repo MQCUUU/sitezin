@@ -12,8 +12,6 @@ import type { TvProgress, TvStructure, WatchedEpisode } from "../tv-progress";
  * Regra (determinística; sem coluna de proveniência — não sabemos se um
  * "Assistido" foi manual ou derivado, então a regra só age quando o status
  * contradiz o fato):
- *  - Reassistindo / Reassistido: nunca mudam por episodes_progress (o produto
- *    não tem progresso por episódio de reassistida; V3.0).
  *  - série COMPLETA (encerrada + tudo exibido visto) e marcou episódio →
  *    Assistido (de Quero assistir, Assistindo, Pausado, Abandonado).
  *  - marcou episódio e a série NÃO está completa:
@@ -38,8 +36,6 @@ export type EpisodeAction = "watch" | "unwatch";
 const RESUMES = new Set(["want", "paused", "dropped"]);
 
 export function deriveSeriesStatus(previous: string, action: EpisodeAction, progress: TvProgress): string {
-  if (previous === "rewatching" || previous === "rewatched") return previous;
-
   const completed = progress.state === "completed";
   const hasNext = Boolean(progress.next) && (progress.state === "in_progress" || progress.state === "not_started");
 

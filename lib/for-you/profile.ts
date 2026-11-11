@@ -6,7 +6,7 @@
  * episodes_progress continuam valendo depois de remover da Biblioteca).
  *
  * Peso de cada título (positivo = gosta, negativo = rejeitou):
- *   assistido / concluído / reassistindo ......... +1,0 sem nota (com nota, a nota decide)
+ *   assistido / concluído ........................ +1,0 sem nota (com nota, a nota decide)
  *   assistindo ................................... +0,8
  *   quero assistir ............................... +0,4  (intenção, não gosto)
  *   abandonado ................................... −3,0  (−2,0 se viu mais de 3 episódios)
@@ -19,7 +19,6 @@
  *              um 6 de quem costuma dar 4–5 fica um pouco acima de neutro, não vira um 9)
  *        Monotônica: nota maior nunca pesa menos que nota menor no mesmo perfil.
  *   curtido ...................................... +3,0
- *   reassistido .................................. +2,0
  *   recência ..................................... × max(0,4; 0,5^(dias/540))
  * Sem nota = neutro (só a base do status). Nada disso é mostrado ao usuário.
  */
@@ -36,7 +35,6 @@ export type TitleSignal = {
   status: string | null;
   favorite: boolean;
   rating: number | null;
-  rewatched: boolean;
   watched_history: boolean;
   episodes_watched: number;
   in_library: boolean;
@@ -59,7 +57,7 @@ export type Profile = {
   dropped: WeightedTitle[];
 };
 
-const WATCHED = new Set(["watched", "rewatched", "rewatching"]);
+const WATCHED = new Set(["watched"]);
 const DAY = 86_400_000;
 
 export const titleKey = (mediaType: string, tmdbId: number | string) => `${mediaType}-${tmdbId}`;
@@ -95,7 +93,6 @@ export function titleWeight(signal: TitleSignal, mean: number | null, now: numbe
 
   if (rating !== null && Number.isFinite(rating)) weight += ratingWeight(rating, mean);
   if (signal.favorite) weight += 3;
-  if (signal.rewatched || signal.status === "rewatched" || signal.status === "rewatching") weight += 2;
 
   const at = signal.updated_at ? new Date(signal.updated_at).getTime() : now;
   const age = Math.max(0, (now - (Number.isFinite(at) ? at : now)) / DAY);

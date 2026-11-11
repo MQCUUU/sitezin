@@ -24,7 +24,6 @@ type EpisodeBody = {
   watched?: unknown;
   watched_at?: unknown;
   comment?: unknown;
-  is_rewatch?: unknown;
   episode_numbers?: unknown;
   /** Legado: ignorados desde a V3.1 (o servidor decide pelo progresso canônico). */
   released_episode_count?: unknown;
@@ -95,7 +94,7 @@ function seriesStateUpdate(sql: Sql, input: { libraryId: string; userId: string;
       current_season = ${input.plan.current_season},
       stopped_season = CASE WHEN ${input.plan.status} = 'dropped' THEN stopped_season ELSE NULL END
     WHERE id = ${input.libraryId} AND user_id = ${input.userId} AND status = ${input.previous}
-    RETURNING id, status, completed_seasons, current_season, stopped_season, rewatch_count
+    RETURNING id, status, completed_seasons, current_season, stopped_season
   `;
 }
 
@@ -140,10 +139,6 @@ export async function POST(request: Request) {
       return entradaInvalida("watched deve ser verdadeiro ou falso.");
     }
 
-    if (body.is_rewatch !== undefined && typeof body.is_rewatch !== "boolean") {
-      return entradaInvalida("is_rewatch deve ser verdadeiro ou falso.");
-    }
-
     const sql = getDb() as Sql;
 
     // 1. Item (do usuário da sessão) + estrutura da série + status atual
@@ -173,16 +168,11 @@ export async function POST(request: Request) {
         : "datetime"
       : null;
     /*
-     * `comment`/`is_rewatch` só sobrescrevem o que já existe quando o chamador
-     * os envia (página de episódio). O toggle rápido não manda nenhum dos dois
+     * `comment` só sobrescreve o que já existe quando o chamador o envia
+     * (página de episódio). O toggle rápido não o manda
      * (C5.2 §18): o CASE WHEN abaixo preserva o valor atual.
      */
-    const {
-      commentProvided,
-      comment,
-      isRewatchProvided,
-      isRewatch,
-    } = getEpisodeJournalWrite(body);
+    const { commentProvided, comment } = getEpisodeJournalWrite(body);
 
     // Episódios regulares já registrados (para a cascata e para o progresso resultante).
     const existing = isSeries && seasonNumber >= 1 ? await loadEpisodes(sql, Number(libraryItem.media_id), user.id) : [];
@@ -202,7 +192,7 @@ export async function POST(request: Request) {
         LIMIT 1
       `;
       const existingEpisodeWatched = existingEpisodeRows[0]?.watched === true;
-      const journalEdit = commentProvided || isRewatchProvided;
+      const journalEdit = commentProvided;
 
       if (requiresEpisodeReleaseValidation(body.watched, existingEpisodeWatched, journalEdit)) {
         if (!isSeries) {
@@ -292,19 +282,18 @@ export async function POST(request: Request) {
     const queries: any[] = [
       sql`
         INSERT INTO public.episodes_progress (
-          user_id, media_id, season_number, episode_number, watched, watched_at, watched_at_precision, comment, is_rewatch
+          user_id, media_id, season_number, episode_number, watched, watched_at, watched_at_precision, comment
         )
         VALUES (
           ${user.id}, ${libraryItem.media_id}, ${seasonNumber}, ${episodeNumber}, ${body.watched},
-          ${watchedAt}, ${watchedAtPrecision}, ${comment}, ${isRewatch}
+          ${watchedAt}, ${watchedAtPrecision}, ${comment}
         )
         ON CONFLICT (user_id, media_id, season_number, episode_number)
         DO UPDATE SET
           watched = EXCLUDED.watched,
           watched_at = EXCLUDED.watched_at,
           watched_at_precision = EXCLUDED.watched_at_precision,
-          comment = CASE WHEN ${commentProvided} THEN EXCLUDED.comment ELSE public.episodes_progress.comment END,
-          is_rewatch = CASE WHEN ${isRewatchProvided} THEN EXCLUDED.is_rewatch ELSE public.episodes_progress.is_rewatch END
+          comment = CASE WHEN ${commentProvided} THEN EXCLUDED.comment ELSE public.episodes_progress.comment END
         RETURNING *
       `,
     ];

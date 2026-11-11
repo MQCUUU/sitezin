@@ -38,7 +38,7 @@ import { tasteKey } from "@/lib/taste-profile";
  * V2.3 — de "fila ordenada + populares do TMDB" para um recomendador:
  *  - perfil de gosto (lib/taste-profile): gêneros que o usuário avalia
  *    bem, penalidade pelo que abandona, "parecido com X, que você curtiu";
- *  - fontes: a FILA (want/watching/rewatching/paused) e DESCOBERTAS
+ *  - fontes: a FILA (want/watching/paused) e DESCOBERTAS
  *    baseadas nos títulos mais curtidos (recomendações do TMDB), nunca
  *    algo que já está na biblioteca/ocultos;
  *  - duração REAL e onde assistir (BR) dos candidatos novos — 1 chamada
@@ -132,7 +132,7 @@ export async function GET(req: NextRequest) {
              FROM public.library_items li
              JOIN public.media m ON m.id = li.media_id
              WHERE li.user_id = $1
-               AND li.status IN ('want', 'watching', 'rewatching', 'paused')
+               AND li.status IN ('want', 'watching', 'paused')
                AND NOT EXISTS (
                  SELECT 1 FROM public.user_hidden_titles h
                  WHERE h.user_id = li.user_id
@@ -179,8 +179,7 @@ export async function GET(req: NextRequest) {
       const progress = isTv
         ? computeTvProgress(
             tvStructureFromRaw(raw, { seasons_count: row.seasons_count, episodes_count: row.episodes_count }),
-            watchedByMedia.get(Number(row.media_id)) ?? [],
-            { rewatching: row.status === "rewatching" }
+            watchedByMedia.get(Number(row.media_id)) ?? []
           )
         : null;
 

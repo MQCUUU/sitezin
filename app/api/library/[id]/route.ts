@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db/neon";
 import { removeLibraryItem } from "@/lib/library/remove";
 import { respostaDeErro } from "@/lib/api-error";
 import { applyStatusTransition, statusTransition } from "@/lib/library/status-event";
+import { normalizeLegacyStatus } from "@/lib/media-status";
 
 export async function PATCH(
   req: Request,
@@ -34,7 +35,6 @@ export async function PATCH(
         li.favorite,
         li.personal_rating,
         li.review,
-        li.rewatch_count,
         li.current_season,
         li.completed_seasons,
         li.stopped_season,
@@ -55,16 +55,14 @@ export async function PATCH(
     const currentItem = currentRows[0];
     const media = currentItem.media;
     const body = await req.json().catch(() => ({}));
+    // Fim do reassistir (0008): cliente antigo que ainda mande o status velho grava Assistido.
+    if (body.status !== undefined) body.status = normalizeLegacyStatus(body.status);
 
     /*
-     * 2. Status e reassistidas
+     * 2. Status
      */
     const oldStatus = currentItem.status;
     const newStatus = body.status !== undefined ? body.status : oldStatus;
-
-    // Contador de reassistidas: incrementado na própria linha pela transição (rewatchEffect).
-    const isStartingRewatch =
-      newStatus === "rewatching" && oldStatus !== "rewatching";
 
     /*
      * 3. Temporadas e progresso
@@ -104,19 +102,6 @@ export async function PATCH(
       stoppedSeason = null;
     }
 
-    if (isStartingRewatch && media?.media_type === "tv") {
-      newCompletedSeasons = 0;
-      newCurrentSeason = 1;
-      stoppedSeason = null;
-    }
-
-    if (newStatus === "rewatched" && media?.media_type === "tv") {
-      const totalSeasons = Number(media.seasons_count || 0);
-      newCompletedSeasons = totalSeasons;
-      newCurrentSeason = totalSeasons || 1;
-      stoppedSeason = null;
-    }
-
     const newFavorite =
       body.favorite !== undefined ? Boolean(body.favorite) : currentItem.favorite;
     const newPersonalRating =
@@ -128,8 +113,7 @@ export async function PATCH(
 
     /*
      * V3.0 — transição de status = UM comando atômico (lib/library/status-event.ts):
-     * compare-and-set do status + temporadas + contador de reassistidas
-     * (incremento na linha) + `status_changed`/`rewatch_started`. Tudo ou nada;
+     * compare-and-set do status + temporadas + `status_changed`. Tudo ou nada;
      * requisições concorrentes/retries não repetem nada. Mesma primitive do
      * POST /api/library.
      */
@@ -146,7 +130,7 @@ export async function PATCH(
 
     /*
      * 4. Executar UPDATE no Neon PostgreSQL — campos pessoais.
-     * Status e contador de reassistidas só mudam pela transição acima (nunca a
+     * Status só muda pela transição acima (nunca a
      * partir desta leitura, que pode estar desatualizada). Temporadas: só
      * quando o pedido as envia explicitamente e não há transição.
      */
@@ -174,7 +158,6 @@ export async function PATCH(
         personal_rating,
         review,
         watched_at,
-        rewatch_count,
         current_season,
         completed_seasons,
         stopped_season,
@@ -192,7 +175,7 @@ export async function PATCH(
     const updatedItem = updatedRows[0];
     updatedItem.media = media;
 
-    // Eventos de status/reassistida: gravados atomicamente pela transição (passo acima).
+    // Evento de status: gravado atomicamente pela transição (passo acima).
     return NextResponse.json(updatedItem);
   } catch (error) {
     console.error("Erro em PATCH /api/library/[id]:", error);

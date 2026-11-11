@@ -32,7 +32,7 @@ export function TitleSeriesProgress({
   if (!progress?.title) return null;
 
   const showBar =
-    totals && totals.total && totals.percent !== null && progress.state !== "rewatching" && progress.state !== "unknown" && progress.state !== "legacy";
+    totals && totals.total && totals.percent !== null && progress.state !== "unknown" && progress.state !== "legacy";
   const barLabel = showBar ? `${totals!.watched} de ${totals!.total} episódios exibidos` : null;
   const next = progress.next && (progress.state === "in_progress" || progress.state === "not_started") ? progress.next : null;
 

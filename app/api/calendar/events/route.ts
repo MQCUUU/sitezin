@@ -151,7 +151,7 @@ export async function GET(request: NextRequest) {
         watched: type === "tv" ? watchedByShow.get(tmdb) ?? new Set() : new Set(),
       });
 
-      if (type === "movie" && ["watched", "rewatched", "rewatching"].includes(String(r.status))) watchedMovies.add(tmdb);
+      if (type === "movie" && ["watched"].includes(String(r.status))) watchedMovies.add(tmdb);
     }
 
     /* ---------- séries da biblioteca ---------- */

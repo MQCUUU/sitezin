@@ -14,7 +14,7 @@ export type EpisodeUpsertRow = {
  * de um INSERT por episódio (marcar T15:E01 de uma série longa cascateava
  * ~300 consultas em série). Mesma semântica de antes: upsert por
  * (user, media, temporada, episódio), sobrescrevendo watched/data/proveniência;
- * comentário e "reassistido" do episódio não são tocados.
+ * o comentário do episódio não é tocado.
  */
 export async function upsertEpisodeRows(
   sql: Sql,
@@ -58,29 +58,23 @@ export function episodeRowsUpsertQuery(
 export type EpisodeJournalWrite = {
   commentProvided: boolean;
   comment: string | null;
-  isRewatchProvided: boolean;
-  isRewatch: boolean;
 };
 
 /**
  * Normalize journal fields for POST /api/episodes. The provided flags are
  * part of the persistence contract: SQL preserves stored values when a
- * quick watched toggle omits these fields, while an explicit empty comment
- * clears it and an explicit false resets the rewatch flag.
+ * quick watched toggle omits the comment, while an explicit empty comment
+ * clears it.
  */
 export function getEpisodeJournalWrite(input: {
   comment?: unknown;
-  is_rewatch?: unknown;
 }): EpisodeJournalWrite {
   const commentProvided = typeof input.comment === "string";
-  const isRewatchProvided = typeof input.is_rewatch === "boolean";
 
   return {
     commentProvided,
     comment: typeof input.comment === "string"
       ? input.comment.trim().slice(0, 4000) || null
       : null,
-    isRewatchProvided,
-    isRewatch: input.is_rewatch === true,
   };
 }

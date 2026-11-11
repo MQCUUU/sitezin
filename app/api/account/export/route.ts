@@ -41,7 +41,6 @@ export async function GET(req: NextRequest) {
         li.review,
         li.watched_at,
         li.watched_at_precision,
-        li.rewatch_count,
         li.current_season,
         li.completed_seasons,
         li.stopped_season,
@@ -65,7 +64,6 @@ export async function GET(req: NextRequest) {
         "personal_rating",
         "review",
         "watched_at",
-        "rewatch_count",
         "current_season",
         "completed_seasons",
         "stopped_season",
@@ -87,7 +85,6 @@ export async function GET(req: NextRequest) {
           item.personal_rating === null ? "" : Number(item.personal_rating),
           item.review ?? "",
           item.watched_at ?? "",
-          Number(item.rewatch_count ?? 0),
           item.current_season ?? "",
           Number(item.completed_seasons ?? 0),
           item.stopped_season ?? "",
@@ -110,7 +107,7 @@ export async function GET(req: NextRequest) {
     const [watchHistory, episodesProgress, hiddenTitles, activityEvents] = await Promise.all([
       sql`
         SELECT we.id, we.library_item_id, we.media_id, m.tmdb_id, m.media_type, we.watched_at, we.watched_at_precision,
-               we.rating, we.comment, we.is_rewatch, we.created_at, we.updated_at
+               we.rating, we.comment, we.created_at, we.updated_at
         FROM public.watch_entries we
         JOIN public.media m ON m.id = we.media_id
         WHERE we.user_id = ${user.id}
@@ -118,7 +115,7 @@ export async function GET(req: NextRequest) {
       `,
       sql`
         SELECT m.tmdb_id, m.media_type, ep.season_number, ep.episode_number, ep.watched, ep.watched_at,
-               ep.watched_at_precision, ep.comment, ep.is_rewatch
+               ep.watched_at_precision, ep.comment
         FROM public.episodes_progress ep
         JOIN public.media m ON m.id = ep.media_id
         WHERE ep.user_id = ${user.id}

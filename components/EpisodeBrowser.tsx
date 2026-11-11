@@ -469,10 +469,9 @@ export function EpisodeBrowser({
   }
 
   return (
-    <section className="episode-browser panel">
+    <section className="episode-browser">
       <div className="episode-browser-head">
         <div>
-          <span>Episódios</span>
           <h2>{headTitle}</h2>
         </div>
 

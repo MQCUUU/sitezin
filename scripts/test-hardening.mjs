@@ -60,8 +60,6 @@ test("terminologia: rótulos de status canônicos (particípio), sem 'Abandonei'
     watching: "Assistindo",
     watched: "Assistido",
     dropped: "Abandonado",
-    rewatching: "Reassistindo",
-    rewatched: "Reassistido",
   });
   const legacy = files.filter(([, src]) => /\[\s*"dropped",\s*"Abandonei"\s*\]|dropped:\s*"Abandonei"/.test(src)).map(([file]) => file);
   assert.deepEqual(legacy, []);

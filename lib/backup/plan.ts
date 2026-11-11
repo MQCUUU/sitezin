@@ -16,19 +16,25 @@
  *    (`updated_at`); empate = a da conta (o backup não sobrescreve);
  *  - nada da conta é apagado;
  *  - visualizações/episódios/ocultos/atividade já existentes não duplicam.
+ *
+ * Sem reassistir (migration 0008): backup antigo com Reassistindo/Reassistido
+ * entra como Assistido; sessões marcadas como reassistida não voltam (se o
+ * título só tinha essas, a mais antiga entra como a sessão normal); o evento
+ * `rewatch_started` é ignorado.
  */
+
+import { normalizeLegacyStatus } from "../media-status";
 
 export const BACKUP_VERSION = 2;
 export const SUPPORTED_VERSIONS = [1, 2];
 export const MAX_BACKUP_ITEMS = 20_000;
 
-const STATUSES = ["want", "watching", "watched", "paused", "dropped", "rewatching", "rewatched"];
+const STATUSES = ["want", "watching", "watched", "paused", "dropped"];
 const EVENT_TYPES = [
   "library_added",
   "status_changed",
   "season_completed",
   "series_completed",
-  "rewatch_started",
   "watch_logged",
 ];
 
@@ -87,7 +93,6 @@ export type RestorePlan = {
     review: string | null;
     watched_at: string | null;
     watched_at_precision: string | null;
-    rewatch_count: number;
     current_season: number | null;
     completed_seasons: number;
     stopped_season: number | null;
@@ -99,7 +104,6 @@ export type RestorePlan = {
     watched_at_precision: string | null;
     rating: number | null;
     comment: string | null;
-    is_rewatch: boolean;
     created_at: string;
     updated_at: string;
   })[];
@@ -110,7 +114,6 @@ export type RestorePlan = {
     watched_at: string | null;
     watched_at_precision: string | null;
     comment: string | null;
-    is_rewatch: boolean;
   })[];
   hidden: (MediaKey & { reason: string; created_at: string })[];
   activity: (MediaKey & { event_type: string; metadata: Json; occurred_at: string })[];
@@ -182,13 +185,12 @@ export function planRestore(input: unknown, now = new Date().toISOString()): Pla
       backdrop_path: text(media.backdrop_path, 200),
       release_date: dayOnly(media.release_date),
       first_air_date: dayOnly(media.first_air_date),
-      status: STATUSES.includes(String(item.status)) ? String(item.status) : "want",
+      status: STATUSES.includes(normalizeLegacyStatus(String(item.status))) ? normalizeLegacyStatus(String(item.status)) : "want",
       favorite: item.favorite === true,
       personal_rating: rating(item.personal_rating),
       review: text(item.review, 10_000),
       watched_at: watchedAt,
       watched_at_precision: watchedAt ? precision(item.watched_at_precision) : null,
-      rewatch_count: int(item.rewatch_count, 0, 1000) ?? 0,
       current_season: int(item.current_season, 1, 1000),
       completed_seasons: int(item.completed_seasons, 0, 1000) ?? 0,
       stopped_season: int(item.stopped_season, 1, 1000),
@@ -204,6 +206,8 @@ export function planRestore(input: unknown, now = new Date().toISOString()): Pla
     null;
 
   const watches: RestorePlan["watches"] = [];
+  const rewatchOnly = new Map<string, RestorePlan["watches"][number]>();
+  const withNormal = new Set<string>();
 
   for (const raw of list(data.watch_history)) {
     const row = obj(raw);
@@ -215,17 +219,29 @@ export function planRestore(input: unknown, now = new Date().toISOString()): Pla
       continue;
     }
 
-    watches.push({
+    const watch = {
       ...key,
       watched_at: watchedAt,
       watched_at_precision: precision(row.watched_at_precision),
       rating: rating(row.rating),
       comment: text(row.comment, 4000),
-      is_rewatch: row.is_rewatch === true,
       created_at: isoDate(row.created_at) || now,
       updated_at: isoDate(row.updated_at) || isoDate(row.created_at) || now,
-    });
+    };
+    const id = `${key.media_type}:${key.tmdb_id}`;
+
+    if (row.is_rewatch === true) {
+      const kept = rewatchOnly.get(id);
+
+      if (!kept || watch.watched_at < kept.watched_at) rewatchOnly.set(id, watch);
+      continue;
+    }
+
+    withNormal.add(id);
+    watches.push(watch);
   }
+
+  for (const [id, watch] of rewatchOnly) if (!withNormal.has(id)) watches.push(watch);
 
   const episodes: RestorePlan["episodes"] = [];
 
@@ -250,7 +266,6 @@ export function planRestore(input: unknown, now = new Date().toISOString()): Pla
       watched_at: watchedAt,
       watched_at_precision: watchedAt ? precision(row.watched_at_precision) : null,
       comment: text(row.comment, 4000),
-      is_rewatch: row.is_rewatch === true,
     });
   }
 
@@ -281,7 +296,22 @@ export function planRestore(input: unknown, now = new Date().toISOString()): Pla
       continue;
     }
 
-    activity.push({ ...key, event_type: String(row.event_type), metadata: obj(row.metadata), occurred_at: occurredAt });
+    const metadata: Json = { ...obj(row.metadata) };
+
+    for (const field of ["to", "from", "status"]) {
+      if (typeof metadata[field] === "string") metadata[field] = normalizeLegacyStatus(metadata[field] as string);
+    }
+    delete metadata.rewatch_count;
+    delete metadata.rewatch_number;
+    delete metadata.is_rewatch;
+
+    // Mudança de status que virou "assistido → assistido" não é mudança.
+    if (row.event_type === "status_changed" && metadata.to === metadata.from) {
+      skipped++;
+      continue;
+    }
+
+    activity.push({ ...key, event_type: String(row.event_type), metadata, occurred_at: occurredAt });
   }
 
   return { ok: true, plan: { library, watches, episodes, hidden, activity, skipped } };

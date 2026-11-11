@@ -4,6 +4,7 @@ export { TitleTvSections } from "./TitleTvSections";
 export { TitleWatchProviders } from "./TitleWatchProviders";
 export { TitleTrailer } from "./TitleTrailer";
 export { TitleStatsSection } from "./TitleStatsSection";
+export { TitleSeriesProgress } from "./TitleSeriesProgress";
 export { TitleContentTabs } from "./TitleContentTabs";
 export { TitleCastSection } from "./TitleCastSection";
 export { TitleReviewsSection } from "./TitleReviewsSection";

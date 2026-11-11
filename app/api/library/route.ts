@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db/neon";
 import { removeLibraryItem } from "@/lib/library/remove";
 import { attachSeriesProgress } from "@/lib/library/attach-progress";
 import { addLibraryItem, type AddLibraryMedia } from "@/lib/library/add";
+import { normalizeLegacyStatus } from "@/lib/media-status";
 import { respostaDeErro } from "@/lib/api-error";
 import { resolveCatalogMedia } from "@/lib/lists/media";
 
@@ -44,7 +45,6 @@ interface LibraryItem {
   personal_rating: number | null;
   review: string | null;
   watched_at: string | null;
-  rewatch_count: number;
   current_season: number | null;
   completed_seasons: number;
   stopped_season: number | null;
@@ -100,8 +100,6 @@ const VALID_STATUSES = [
   "watched",
   "paused",
   "dropped",
-  "rewatching",
-  "rewatched",
 ];
 
 /*
@@ -155,7 +153,6 @@ export async function GET(
           li.personal_rating,
           li.review,
           li.watched_at,
-          li.rewatch_count,
           li.current_season,
           li.completed_seasons,
           li.stopped_season,
@@ -293,7 +290,6 @@ export async function GET(
         li.personal_rating,
         li.review,
         li.watched_at,
-        li.rewatch_count,
         li.current_season,
         li.completed_seasons,
         li.stopped_season,
@@ -358,8 +354,6 @@ export async function GET(
           count(*) FILTER (WHERE status = 'watched')::int AS watched,
           count(*) FILTER (WHERE status = 'paused')::int AS paused,
           count(*) FILTER (WHERE status = 'dropped')::int AS dropped,
-          count(*) FILTER (WHERE status = 'rewatching')::int AS rewatching,
-          count(*) FILTER (WHERE status = 'rewatched')::int AS rewatched,
           count(*) FILTER (WHERE favorite)::int AS favorites
         FROM public.library_items
         WHERE user_id = ${userId}
@@ -410,7 +404,7 @@ export async function GET(
     await attachSeriesProgress(sql, userId, pageRows);
 
     const counts = (countsRows[0] as Record<string, number> | undefined) || {
-      all: 0, want: 0, watching: 0, watched: 0, paused: 0, dropped: 0, rewatching: 0, rewatched: 0, favorites: 0,
+      all: 0, want: 0, watching: 0, watched: 0, paused: 0, dropped: 0, favorites: 0,
     };
 
     const genreSet = new Set<string>(
@@ -472,6 +466,8 @@ export async function POST(
       );
     }
 
+    // Fim do reassistir (0008): status antigo de cliente desatualizado vira Assistido.
+    if (body.status) body.status = normalizeLegacyStatus(body.status);
     if (body.status && !VALID_STATUSES.includes(body.status)) {
       return NextResponse.json({ error: "Status inválido." }, { status: 400 });
     }

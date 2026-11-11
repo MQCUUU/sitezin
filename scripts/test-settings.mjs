@@ -259,6 +259,34 @@ test("backup v1: visualizações/atividade mapeadas pelos ids da própria biblio
   assert.equal(BACKUP_VERSION, 2);
 });
 
+test("backup antigo com reassistir: status vira Assistido, só uma sessão por título, sem rewatch_started (0008)", () => {
+  const result = planRestore(
+    backupOf({
+      library: [libItem({ status: "rewatched", rewatch_count: 3 })],
+      watch_history: [
+        { tmdb_id: 603, media_type: "movie", watched_at: "2024-01-01T10:00:00Z", is_rewatch: false },
+        { tmdb_id: 603, media_type: "movie", watched_at: "2025-01-01T10:00:00Z", is_rewatch: true },
+        { tmdb_id: 1396, media_type: "tv", watched_at: "2025-05-01T10:00:00Z", is_rewatch: true },
+        { tmdb_id: 1396, media_type: "tv", watched_at: "2025-03-01T10:00:00Z", is_rewatch: true },
+      ],
+      activity_events: [
+        { tmdb_id: 603, media_type: "movie", event_type: "rewatch_started", occurred_at: "2025-01-01T10:00:00Z" },
+        { tmdb_id: 603, media_type: "movie", event_type: "status_changed", occurred_at: "2025-01-02T10:00:00Z", metadata: { from: "watched", to: "rewatched" } },
+        { tmdb_id: 603, media_type: "movie", event_type: "status_changed", occurred_at: "2025-01-03T10:00:00Z", metadata: { from: "watching", to: "rewatching", rewatch_count: 2 } },
+      ],
+    })
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.plan.library[0].status, "watched");
+  assert.equal("rewatch_count" in result.plan.library[0], false);
+  const byTitle = (id) => result.plan.watches.filter((w) => w.tmdb_id === id).map((w) => w.watched_at);
+  assert.deepEqual(byTitle(603), ["2024-01-01T10:00:00.000Z"], "a sessão de reassistida não volta");
+  assert.deepEqual(byTitle(1396), ["2025-03-01T10:00:00.000Z"], "só reassistidas: fica a mais antiga");
+  assert.ok(result.plan.watches.every((w) => !("is_rewatch" in w)));
+  assert.deepEqual(result.plan.activity.map((a) => [a.event_type, a.metadata.to]), [["status_changed", "watched"]]);
+  assert.equal("rewatch_count" in result.plan.activity[0].metadata, false);
+});
+
 test("backup: data impossível é recusada na validação (não derruba a transação)", () => {
   const result = planRestore(backupOf({ library: [libItem()], watch_history: [{ tmdb_id: 603, media_type: "movie", watched_at: "0000-01-01T00:00:00Z" }, { tmdb_id: 603, media_type: "movie", watched_at: "+275760-09-13T00:00:00Z" }] }));
   assert.equal(result.plan.watches.length, 0);

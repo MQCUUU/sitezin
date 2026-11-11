@@ -5,7 +5,6 @@ import "@/styles/features/title-hero.css";
 import { Heart, ListPlus } from "lucide-react";
 import { useId, useState } from "react";
 
-import { Poster } from "@/components/Poster";
 import { AddToListDialog } from "@/components/lists/AddToListDialog";
 import { useAuthState } from "@/hooks/useLibraryAuth";
 import type { LibraryLookupState } from "@/lib/library/lookup";
@@ -108,14 +107,6 @@ export function TitleHero({
 
       <div className="tt-head">
         <div className="tt-identity">
-          <div className="tt-poster">
-            <Poster
-              path={details.poster_path}
-              alt={`Pôster de ${title}`}
-              sizes="(max-width: 760px) 96px, 168px"
-            />
-          </div>
-
           <div className="tt-copy">
             <h1 id="tt-title" className="tt-title">{title}</h1>
             {originalTitle && originalTitle !== title ? <p className="tt-original">{originalTitle}</p> : null}
@@ -125,19 +116,20 @@ export function TitleHero({
               rating={Number(details.vote_average || 0)}
               votes={Number(details.vote_count || 0)}
             />
-            {details.tagline ? <p className="tt-tagline">“{details.tagline}”</p> : null}
 
             <div className="tt-actions">
               <TitleStatusMenu {...statusMenuProps} variant="menu" />
+              {/* Projeção (Fase 4): Curtir e Listas viram ícones com nome acessível; o status é a única ação com rótulo grande. */}
               <Button
                 type="button"
-                className="tt-quiet tt-like"
+                className="tt-quiet tt-icon tt-like"
                 aria-pressed={favorite}
+                aria-label={likeLabel}
+                title={likeLabel}
                 onClick={toggleFavorite}
                 disabled={lookupPending}
               >
                 {heart}
-                {likeLabel}
               </Button>
               {/*
                * Enquanto a sessão é verificada o botão já ocupa o lugar (invisível):
@@ -147,15 +139,16 @@ export function TitleHero({
               {authState !== "guest" ? (
                 <Button
                   type="button"
-                  className="tt-quiet"
+                  className="tt-quiet tt-icon tt-list"
+                  aria-label="Adicionar a uma lista"
+                  title="Adicionar a uma lista"
                   onClick={() => setListOpen(true)}
                   disabled={authState !== "authenticated"}
                   data-reserved={authState !== "authenticated" ? "true" : undefined}
                   aria-hidden={authState !== "authenticated" ? true : undefined}
                   tabIndex={authState !== "authenticated" ? -1 : undefined}
                 >
-                  <ListPlus size={18} aria-hidden="true" />
-                  Adicionar a uma lista
+                  <ListPlus size={19} aria-hidden="true" />
                 </Button>
               ) : null}
               <WatchNowButton

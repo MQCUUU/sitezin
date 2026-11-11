@@ -983,7 +983,7 @@ export async function POST(
 
   const likedTop = tasteRows
     .map((row) => ({ row, w: (row.personal_rating ?? 0) + (row.favorite ? 2 : 0) }))
-    .filter(({ row, w }) => w >= 7 && ["watched", "rewatched", "rewatching", "watching"].includes(row.status))
+    .filter(({ row, w }) => w >= 7 && ["watched", "watching"].includes(row.status))
     .sort((a, b) => b.w - a.w)
     .slice(0, 25)
     .map(({ row }) => `${row.title} (${row.media_type === "tv" ? "série" : "filme"}${row.personal_rating ? `, nota ${row.personal_rating}` : ""}${row.favorite ? ", favorito" : ""})`);
@@ -1192,8 +1192,6 @@ Formato:
 function describeIntent(intent: AssistantIntent, statuses: Set<string>) {
   const labels: Record<string, string> = {
     watched: "assistidos",
-    rewatched: "reassistidos",
-    rewatching: "reassistindo",
     watching: "em andamento",
     dropped: "abandonados",
     paused: "pausados",

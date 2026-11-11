@@ -13,7 +13,8 @@ import { useEffect, useRef, useState } from "react";
  */
 const TAB_WINDOW_MS = 1000;
 
-export function TrailerFrame({ videoKey, title }: { videoKey: string; title: string }) {
+/** `autoplay`: o player abriu por um clique na capa (TitleTrailer) e já começa a tocar. */
+export function TrailerFrame({ videoKey, title, autoplay = false }: { videoKey: string; title: string; autoplay?: boolean }) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const lastTabAt = useRef(0);
   const [focusVisible, setFocusVisible] = useState(false);
@@ -52,10 +53,10 @@ export function TrailerFrame({ videoKey, title }: { videoKey: string; title: str
     <div className="mc-trailer-frame" data-focus-visible={focusVisible || undefined}>
       <iframe
         ref={frameRef}
-        src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoKey)}`}
+        src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoKey)}${autoplay ? "?autoplay=1" : ""}`}
         title={title}
         loading="lazy"
-        allow="clipboard-write; encrypted-media; picture-in-picture; web-share"
+        allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
         allowFullScreen
       />
     </div>

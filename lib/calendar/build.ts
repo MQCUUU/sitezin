@@ -47,7 +47,7 @@ export type DiscoveryInput = {
   popularity: number;
 };
 
-const FOLLOWING = new Set(["watching", "rewatching", "watched", "rewatched"]);
+const FOLLOWING = new Set(["watching", "watched"]);
 const REL_RANK: Record<Relationship, number> = { following: 0, watchlist: 1, library: 2 };
 const TYPE_RANK: Record<CalendarEventType, number> = {
   episode_release: 0,

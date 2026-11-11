@@ -23,7 +23,7 @@ export type CalendarEventType =
 
 /**
  * Relação pessoal (dados reais da biblioteca):
- *   following  série que você acompanha (assistindo, reassistindo, concluída
+ *   following  série que você acompanha (assistindo, concluída
  *              ou com episódios marcados)
  *   watchlist  "Quero assistir"
  *   library    está na biblioteca, sem acompanhar ativamente (ex.: pausada)

@@ -18,7 +18,6 @@ export function tvProgressLabel(progress: TvProgress | null | undefined): string
     return `S${progress.next.season} E${progress.next.episode}, começar`;
   }
 
-  if (progress.state === "rewatching") return "Reassistindo";
   if (progress.state === "caught_up") return "Em dia com os episódios";
   if (progress.state === "completed") return null;
 

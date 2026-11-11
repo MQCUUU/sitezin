@@ -12,7 +12,7 @@ import { useModal } from "@/hooks/useModal";
 import { ConnectedPosterActions } from "@/components/media/ConnectedPosterActions";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Activity, Ban, Check, Film, List, Loader2, LockKeyhole, Pencil, PlusCircle, Repeat, Search as SearchIcon, Star, Trophy, UserCheck, UserMinus, UserPlus, X } from "lucide-react";
+import { Activity, Ban, Check, Film, List, Loader2, LockKeyhole, Pencil, PlusCircle, Search as SearchIcon, Star, Trophy, UserCheck, UserMinus, UserPlus, X } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 import { img } from "@/lib/tmdb";
 import { CarouselRail } from "@/components/CarouselRail";
@@ -93,13 +93,10 @@ const ACTIVITY_LABELS: Record<string, { icon: typeof Activity; label: (metadata:
         watched: "assistiu",
         paused: "pausado", // Fase 7: faltava — o feed mostrava "Marcou como paused"
         dropped: "abandonou",
-        rewatching: "está reassistindo",
-        rewatched: "reassistiu",
       };
       return `Marcou como ${labels[metadata?.to] || metadata?.to || "atualizado"}`;
     },
   },
-  rewatch_started: { icon: Repeat, label: () => "Começou a reassistir" },
   season_completed: { icon: Trophy, label: () => "Completou uma temporada" },
   // Legado: `series_completed` era gravado em toda mudança para "Assistido", inclusive
   // em filmes — para filme significa "assistiu" (docs/V2.5-DIARY.md §1.4).

@@ -27,7 +27,7 @@ const { MEDIA_STATUS_OPTIONS } = await import("../lib/media-status.ts");
 const { attachSeriesProgress } = await import("../lib/library/attach-progress.ts");
 const { activeHero } = await import("../lib/home/home.ts");
 const { upsertEpisodeRows } = await import("../lib/episode-progress.ts");
-const { statusTransition, rewatchEffect } = await import("../lib/library/status-event.ts");
+const { statusTransition } = await import("../lib/library/status-event.ts");
 const { buildDays } = await import("../lib/diary/moments.ts");
 const { headline } = await import("../lib/diary/copy.ts");
 const { getEpisodeReleaseStatus } = await import("../lib/title-seasons.ts");
@@ -167,11 +167,11 @@ test("onde assistir: só aceita link https do TMDB/JustWatch", () => {
 /* ================================================================ STATUS */
 
 test("status: a página usa a lista canônica (mesma da Biblioteca e do banco)", () => {
-  assert.deepEqual(MEDIA_STATUS_OPTIONS.map((o) => o.value).sort(), ["dropped", "paused", "rewatched", "rewatching", "want", "watched", "watching"]);
+  assert.deepEqual(MEDIA_STATUS_OPTIONS.map((o) => o.value).sort(), ["dropped", "paused", "want", "watched", "watching"]);
   assert.equal(MEDIA_STATUS_OPTIONS.find((o) => o.value === "dropped").label, "Abandonado");
   assert.equal(statusTransition("watching", "watching"), null, "salvar o mesmo status: 0 transição");
   assert.equal(statusTransition("watching", undefined), null, "nota/Curtir/review: sem transição");
-  assert.deepEqual(rewatchEffect({ from: "watched", to: "rewatching" }), { increment: true, startsRewatch: true });
+  assert.equal(MEDIA_STATUS_OPTIONS.some((o) => /reassist/i.test(o.label)), false, "sem reassistir (0008)");
 });
 
 /* ================================================================ PROGRESSO: TÍTULO = BIBLIOTECA = HOME = QUICK VIEW */
@@ -386,12 +386,9 @@ test("Assistido manual: em dia (no ar) continua Assistido; com próximo disponí
   assert.equal(planSeriesUpdate({ row: airing, watchedBefore: W(range(1, 1, 10)), changes: mark(range(2, 1, 2)), action: "watch" }).status, "watching");
 });
 
-test("Reassistindo / Reassistido nunca são sobrescritos por episódios", () => {
-  for (const status of ["rewatching", "rewatched"]) {
-    const row = series(status, [[1, 10]], [1, 10], "Ended");
-    assert.equal(planSeriesUpdate({ row, watchedBefore: [], changes: mark(range(1, 1, 10)), action: "watch" }).status, status);
-    assert.equal(planSeriesUpdate({ row, watchedBefore: W(range(1, 1, 10)), changes: mark([[1, 10]], false), action: "unwatch" }).status, status);
-  }
+test("status antigo de reassistir não existe mais: episódios decidem como em Assistido", () => {
+  const row = series("watched", [[1, 10]], [1, 10], "Ended");
+  assert.equal(planSeriesUpdate({ row, watchedBefore: [], changes: mark(range(1, 1, 10)), action: "watch" }).status, "watched");
 });
 
 test("Pausado / Abandonado / Quero assistir: marcar = retomar (Assistindo); desmarcar não muda", () => {

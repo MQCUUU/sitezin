@@ -32,13 +32,12 @@ const code = (next: { season: number; episode: number }) => `T${next.season}:E${
 /**
  * Há algo a fazer AGORA com este título ativo?
  *  - filme Assistindo: sim (o produto não rastreia minutos — continuar é o filme);
- *  - Reassistindo: sim (o progresso da nova passada não é por episódio);
  *  - série com próximo episódio exibido, ainda não começada, sem estrutura
  *    conhecida ou legado: sim;
  *  - série em dia (nada exibido para ver) ou concluída: não.
  */
 export function isActionable(item: HomeItem) {
-  if (item.media_type === "movie" || item.status === "rewatching") return true;
+  if (item.media_type === "movie") return true;
 
   const state = item.library_progress?.state;
 
@@ -81,15 +80,14 @@ export type ActiveHero = {
 /** Destaque de um título ativo. Copy de série = a da Biblioteca (library_progress). */
 export function activeHero(item: HomeItem): ActiveHero {
   const titleHref = `/title/${item.media_type}/${item.tmdb_id}`;
-  const rewatching = item.status === "rewatching";
-  const eyebrow = rewatching ? "CONTINUE REASSISTINDO" : isActionable(item) ? "CONTINUE DE ONDE PAROU" : "EM ANDAMENTO";
+  const eyebrow = isActionable(item) ? "CONTINUE DE ONDE PAROU" : "EM ANDAMENTO";
 
   if (item.media_type === "movie") {
     const runtime = formatRuntime(item.runtime);
 
     return {
       eyebrow,
-      description: rewatching ? "Você está reassistindo este filme." : "Você marcou este filme como Assistindo.",
+      description: "Você marcou este filme como Assistindo.",
       href: titleHref,
       action: "Continuar",
       meta: runtime ? `Filme, ${runtime}` : "Filme",
@@ -134,8 +132,6 @@ export function activeHero(item: HomeItem): ActiveHero {
         action: "Começar",
         ...globalBar(),
       };
-    case "rewatching":
-      return { eyebrow, description: lp.detail ?? "Reassistindo.", href: titleHref, action: "Continuar", meta: null, bar: null };
     case "caught_up":
     case "completed":
       return { eyebrow, description: `${lp.title}. ${lp.detail ?? ""}`.trim(), href: titleHref, action: "Ver série", meta: null, bar: null };
@@ -205,7 +201,7 @@ export type HomeTotals = {
   library: number;
   watching: number;
   want: number;
-  /** Assistido + Reassistindo + Reassistido (já terminou ao menos uma vez). */
+  /** Assistido (já terminou ao menos uma vez). */
   watched: number;
   favorites: number;
   rated: number;
@@ -232,7 +228,7 @@ export function homeMetrics(totals: HomeTotals, agenda: { count: number } | null
       key: "watched",
       value: String(totals.watched),
       label: totals.watched === 1 ? "concluído" : "concluídos",
-      hint: "Títulos com status Assistido, Reassistindo ou Reassistido",
+      hint: "Títulos com status Assistido",
     });
   }
 
@@ -271,7 +267,7 @@ export function watchingSummaryLine(active: HomeItem[], hero: HomeItem | null): 
 /* ------------------------------------------------- Elegibilidade/totais */
 
 /** Status que entram em "Continue de onde parou" e em Retomar. Pausado, Abandonado etc. não. */
-export const ACTIVE_STATUSES = ["watching", "rewatching"] as const;
+export const ACTIVE_STATUSES = ["watching"] as const;
 
 export function isActiveStatus(status: string) {
   return (ACTIVE_STATUSES as readonly string[]).includes(status);
@@ -292,19 +288,18 @@ export type ActivityFacts = {
   last_episode_at: string | Date | null;
   /** Última visualização registrada (watch_entries.watched_at). */
   last_watch_at: string | Date | null;
-  /** Última entrada em Assistindo/Reassistindo (activity_events — ver CONTINUITY_EVENTS). */
+  /** Última entrada em Assistindo (activity_events — ver CONTINUITY_EVENTS). */
   last_continuity_at: string | Date | null;
 };
 
 /**
  * Eventos de `activity_events` que contam como continuidade:
- *  - status_changed com `to` = watching | rewatching (transição real; só é
+ *  - status_changed com `to` = watching (transição real; só é
  *    gravado quando o status muda — PATCH e POST /api/library);
- *  - rewatch_started (início de reassistida);
- *  - library_added com `status` = watching | rewatching (entrou já ativo).
+ *  - library_added com `status` = watching (entrou já ativo).
  * Nota, Curtir, review e tags não geram evento algum.
  */
-export const CONTINUITY_STATUSES = ["watching", "rewatching"] as const;
+export const CONTINUITY_STATUSES = ["watching"] as const;
 
 const time = (value: string | Date | null | undefined) => {
   if (value === null || value === undefined) return null;
@@ -331,13 +326,13 @@ export function orderActive(facts: ActivityFacts[], limit: number) {
     .slice(0, limit);
 }
 
-/** Já terminou ao menos uma vez: Assistido, Reassistindo (reassistir pressupõe ter visto) e Reassistido. */
-export const COMPLETED_STATUSES = ["watched", "rewatching", "rewatched"] as const;
+/** Já terminou ao menos uma vez: Assistido. */
+export const COMPLETED_STATUSES = ["watched"] as const;
 
 /**
  * Totais por status (exclusivos: somam a Biblioteca). Curtidos e Avaliados
  * são dimensões ortogonais e NÃO entram aqui.
- *  - watching:        Assistindo + Reassistindo
+ *  - watching:        Assistindo
  *  - watched:         concluídos (COMPLETED_STATUSES)
  *  - completion_base: tudo que não é Quero assistir (o que você já começou)
  */

@@ -5,7 +5,7 @@
  *   library_items + media     → BIBLIOTECA (o que foi catalogado) e status/nota/curtido
  *   episodes_progress         → HISTÓRICO de séries (episódio marcado, com data)
  *   library_items.watched_at  → HISTÓRICO de filmes
- *   watch_entries             → reassistidas datadas e notas por visualização
+ *   watch_entries             → visualizações datadas e notas por visualização
  *   user_hidden_titles        → "Não tenho interesse"
  *   user_events               → recomendação exibida/aberta/rejeitada e origem das adições
  * "Quero assistir" NUNCA entra em consumo.
@@ -39,7 +39,6 @@ export type LibRow = {
   watched_day: string | null;
   added_day: string;
   updated_day: string;
-  rewatch_count: number;
   release_year: number | null;
   runtime: number | null;
   seasons_count: number | null;
@@ -58,15 +57,15 @@ export type LibRow = {
   /**
    * V2.5 — linha só de HISTÓRICO: o título saiu da Biblioteca (ou voltou sem o
    * status de assistido), mas o consumo aconteceu. Conta em consumo/horas/
-   * reassistidas/ano; nunca no estado atual (watchlist, assistindo, favoritos…).
+   * ano; nunca no estado atual (watchlist, assistindo, favoritos…).
    */
   removed?: boolean;
 };
 
 /** Episódios marcados agrupados por (dia, série). `regular` exclui especiais (temporada 0). */
-export type EpisodeDay = { media_id: number; day: string | null; n: number; regular: number; rewatch: number };
+export type EpisodeDay = { media_id: number; day: string | null; n: number; regular: number };
 
-export type EntryRow = { media_id: number; day: string | null; rating: number | null; is_rewatch: boolean };
+export type EntryRow = { media_id: number; day: string | null; rating: number | null };
 
 /** Registros por (dia, hora local, tipo). `timed` = tinha horário real (não 00:00). */
 export type HourRow = { day: string; hour: number; type: MediaKind; n: number; timed: number };
@@ -107,7 +106,6 @@ export type Core = {
   hours: number;
   movieHours: number;
   seriesHours: number;
-  rewatches: number;
   activeDays: number;
   rated: number;
   avgRating: number | null;
@@ -125,7 +123,7 @@ export type SectionKey =
   | "taste"
   | "ratings"
   | "titles"
-  | "rewatch"
+  | "dropped"
   | "watchlist"
   | "evolution"
   | "ai";
@@ -245,7 +243,6 @@ export type InsightsPayload = {
       minutes: number;
       avgRuntime: number | null;
       avgRating: number | null;
-      rewatches: number;
       topGenre: string | null;
       topDecade: string | null;
       topDirector: string | null;
@@ -264,14 +261,6 @@ export type InsightsPayload = {
       remainingEpisodes: number;
       remainingMinutes: number;
     };
-  } | null;
-  rewatch: {
-    total: number;
-    share: number | null;
-    top: (TitleRef & { times: number })[];
-    topGenre: string | null;
-    intervalDays: number | null;
-    ratingChange: { n: number; mean: number } | null;
   } | null;
   dropped: {
     count: number;

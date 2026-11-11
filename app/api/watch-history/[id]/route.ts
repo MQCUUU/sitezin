@@ -44,8 +44,7 @@ export async function PATCH(
         watched_at,
         watched_at_precision,
         rating,
-        comment,
-        is_rewatch
+        comment
       FROM public.watch_entries
       WHERE id = ${id} AND user_id = ${user.id}
       LIMIT 1
@@ -87,11 +86,6 @@ export async function PATCH(
           : null;
     }
 
-    let nextIsRewatch = current.is_rewatch;
-    if (body.is_rewatch !== undefined) {
-      nextIsRewatch = Boolean(body.is_rewatch);
-    }
-
     /*
      * V3.1 — UMA transação: a visualização editada, a data/nota da Biblioteca
      * (só se esta for a mais recente; a nota nunca é apagada) e o espelho do
@@ -106,10 +100,9 @@ export async function PATCH(
           watched_at_precision = ${nextPrecision},
           rating = ${nextRating},
           comment = ${nextComment},
-          is_rewatch = ${nextIsRewatch},
           updated_at = now()
         WHERE id = ${id} AND user_id = ${user.id}
-        RETURNING id, library_item_id, media_id, watched_at, rating, comment, is_rewatch, created_at, updated_at
+        RETURNING id, library_item_id, media_id, watched_at, rating, comment, created_at, updated_at
       `,
       sql`
         UPDATE public.library_items li
@@ -134,8 +127,7 @@ export async function PATCH(
           metadata = jsonb_build_object(
             'watch_entry_id', ${id}::text,
             'rating', ${nextRating}::numeric,
-            'comment', ${nextComment}::text,
-            'is_rewatch', ${nextIsRewatch}::boolean
+            'comment', ${nextComment}::text
           )
         WHERE user_id = ${user.id}
           AND event_type = 'watch_logged'
@@ -200,7 +192,7 @@ export async function DELETE(
      * só a data da última visualização restante.
      *
      * V2.1 (fechamento) — DELETE = "excluir este registro do Diário". É
-     * NÃO-destrutiva para o resto: `personal_rating`, `rewatch_count` e
+     * NÃO-destrutiva para o resto: `personal_rating` e
      * `status` da Library ficam intactos (não há proveniência para saber
      * qual fluxo originou cada valor). Sem registros restantes, a data é
      * preservada. Ver docs/V2.1-A-DATA-INTEGRITY.md.

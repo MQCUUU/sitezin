@@ -27,29 +27,28 @@ const TZ = INSIGHTS_TZ;
 /* ------------------------------------------------ regra da data (consumptionDay) */
 
 test("status Assistido sem data explícita: usa o evento da transição (o bug: antes ficava sem dia)", () => {
-  assert.equal(consumptionDay({ status: "watched", watchedAt: null, watchedEventAt: "2026-03-05T18:00:00Z", rewatchedEventAt: null }, TZ), "2026-03-05");
+  assert.equal(consumptionDay({ status: "watched", watchedAt: null, watchedEventAt: "2026-03-05T18:00:00Z" }, TZ), "2026-03-05");
 });
 
 test("data explícita de visualização tem prioridade sobre o evento de status", () => {
-  assert.equal(consumptionDay({ status: "watched", watchedAt: "2025-11-10T21:00:00Z", watchedEventAt: "2026-03-05T18:00:00Z", rewatchedEventAt: null }, TZ), "2025-11-10");
+  assert.equal(consumptionDay({ status: "watched", watchedAt: "2025-11-10T21:00:00Z", watchedEventAt: "2026-03-05T18:00:00Z" }, TZ), "2025-11-10");
 });
 
 test("fuso: 31/12 23:30 em Brasília (01/01 02:30 UTC) pertence a 31/12", () => {
-  assert.equal(consumptionDay({ status: "watched", watchedAt: null, watchedEventAt: "2026-01-01T02:30:00Z", rewatchedEventAt: null }, TZ), "2025-12-31");
-  assert.equal(consumptionDay({ status: "watched", watchedAt: new Date("2026-01-01T03:00:00Z"), watchedEventAt: null, rewatchedEventAt: null }, TZ), "2026-01-01");
+  assert.equal(consumptionDay({ status: "watched", watchedAt: null, watchedEventAt: "2026-01-01T02:30:00Z" }, TZ), "2025-12-31");
+  assert.equal(consumptionDay({ status: "watched", watchedAt: new Date("2026-01-01T03:00:00Z"), watchedEventAt: null }, TZ), "2026-01-01");
 });
 
 test("título que saiu de Assistido não ganha dia pelo evento antigo", () => {
-  assert.equal(consumptionDay({ status: "want", watchedAt: null, watchedEventAt: "2026-03-05T18:00:00Z", rewatchedEventAt: null }, TZ), null);
+  assert.equal(consumptionDay({ status: "want", watchedAt: null, watchedEventAt: "2026-03-05T18:00:00Z" }, TZ), null);
 });
 
-test("reassistida depois não muda o dia da 1ª conclusão; direto para Reassistido usa esse evento", () => {
-  assert.equal(consumptionDay({ status: "rewatched", watchedAt: null, watchedEventAt: "2025-04-01T12:00:00Z", rewatchedEventAt: "2026-02-01T12:00:00Z" }, TZ), "2025-04-01");
-  assert.equal(consumptionDay({ status: "rewatched", watchedAt: null, watchedEventAt: null, rewatchedEventAt: "2026-02-01T12:00:00Z" }, TZ), "2026-02-01");
+test("evento antigo de reassistir convertido pela 0008 vira a transição para Assistido", () => {
+  assert.equal(consumptionDay({ status: "watched", watchedAt: null, watchedEventAt: "2025-04-01T12:00:00Z" }, TZ), "2025-04-01");
 });
 
 test("legado sem data nem evento: nenhuma data inventada", () => {
-  assert.equal(consumptionDay({ status: "watched", watchedAt: null, watchedEventAt: null, rewatchedEventAt: null }, TZ), null);
+  assert.equal(consumptionDay({ status: "watched", watchedAt: null, watchedEventAt: null }, TZ), null);
 });
 
 /* ------------------------------------------------ períodos no Insights (relógio fixo) */
@@ -60,7 +59,7 @@ function movie(over) {
   return {
     media_id: id, tmdb_id: 1000 + id, type: "movie", title: `Filme ${id}`, poster_path: null,
     status: "watched", favorite: false, rating: null, watched_day: null, added_day: "2026-01-01", updated_day: "2026-01-01",
-    rewatch_count: 0, release_year: 2000, runtime: 100, seasons_count: null, episodes_count: null, completed_seasons: 0,
+    release_year: 2000, runtime: 100, seasons_count: null, episodes_count: null, completed_seasons: 0,
     genres: ["Drama"], tmdb_rating: null, vote_count: null, language: "en", countries: [], cast: [], creators: [], directors: [],
     enriched: true, ...over,
   };
@@ -68,6 +67,22 @@ function movie(over) {
 function insights(library, period, today) {
   return buildInsights({ library, episodes: [], entries: [], hours: [], hidden: [], events: null, today }, { period });
 }
+
+test("sem reassistir: filme visto várias vezes conta UMA vez (tempo e quantidade)", () => {
+  const f = movie({ watched_day: "2026-03-05" });
+  const entries = [
+    { media_id: f.media_id, day: "2025-06-01", rating: null },
+    { media_id: f.media_id, day: "2026-03-05", rating: null },
+  ];
+  const all = buildInsights({ library: [f], episodes: [], entries, hours: [], hidden: [], events: null, today: "2026-03-20" }, { period: "all" });
+  assert.equal(all.summary.cur.movies, 1);
+  assert.equal(all.summary.cur.movieMinutes, 100, "duração uma vez, não duas");
+  assert.equal("rewatches" in all.summary.cur, false);
+  assert.equal("rewatch" in all, false, "sem capítulo de reassistidos");
+  const year = buildInsights({ library: [f], episodes: [], entries, hours: [], hidden: [], events: null, today: "2026-03-20" }, { period: "year" });
+  assert.equal(year.summary.cur.movies, 0, "conta no dia da 1ª visualização (2025), não de novo em 2026");
+  assert.equal(year.summary.cur.movieMinutes, 0);
+});
 
 test("adicionado em 2025, assistido em março de 2026: conta em 2026 e não em 2025", () => {
   const lib = [movie({ added_day: "2025-05-01", updated_day: "2026-03-05", watched_day: "2026-03-05" })];
@@ -132,7 +147,7 @@ test("série Assistida sem episódios marcados conta no ano em que foi marcada (
 
 test("série com episódios marcados continua contando por episódio (sem somar a série inteira de novo)", () => {
   const s = series({ watched_day: "2026-03-05" });
-  const eps = [{ media_id: s.media_id, day: "2026-02-10", n: 3, regular: 3, rewatch: 0 }];
+  const eps = [{ media_id: s.media_id, day: "2026-02-10", n: 3, regular: 3 }];
   const cur = insightsWith([s], eps, "year", "2026-03-20").summary.cur;
   assert.equal(cur.series, 1);
   assert.equal(cur.episodes, 3);

@@ -1,5 +1,5 @@
 import "@/styles/features/media.css";
-import { Bookmark, Check, CheckCheck, Pause, Play, Repeat, X as XIcon } from "lucide-react";
+import { Bookmark, Check, Pause, Play, X as XIcon } from "lucide-react";
 
 import { mediaStatusGroup, mediaStatusLabel } from "@/lib/media-status";
 import { PosterStatusSlot } from "@/components/media/PosterStatusSlot";
@@ -16,10 +16,8 @@ export function MediaStatusIcon({ status, size = 14 }: { status?: string | null;
   switch (status) {
     case "want": return <Bookmark {...props} />;
     case "watching": return <Play {...props} fill="currentColor" />;
-    case "rewatching": return <Repeat {...props} />;
     case "paused": return <Pause {...props} fill="currentColor" />;
     case "watched": return <Check {...props} />;
-    case "rewatched": return <CheckCheck {...props} />;
     case "dropped": return <XIcon {...props} />;
     default: return <Check {...props} />;
   }

@@ -66,8 +66,6 @@ const STATUS_TABS: [LibraryStatusFilter, string][] = [
   ["watching", "Assistindo"],
   ["watched", "Assistido"],
   ["dropped", "Abandonado"],
-  ["rewatching", "Reassistindo"],
-  ["rewatched", "Reassistido"],
 ];
 
 const SORT_LABELS: Record<LibrarySort, string> = {

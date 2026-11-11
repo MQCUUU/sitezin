@@ -16,21 +16,19 @@ import { Button } from "@/components/ui/Button";
  * Diário V2.5 — "a minha história assistindo filmes e séries".
  * Um mês por vez (← mês →, seletor de mês, Hoje), "Carregar <mês anterior>"
  * para continuar a leitura, 4 filtros. Momentos montados no servidor
- * (lib/diary). URL: ?month=AAAA-MM &date=AAAA-MM-DD &filter=watched|rewatch|rated
+ * (lib/diary). URL: ?month=AAAA-MM &date=AAAA-MM-DD &filter=watched|rated
  * `date` (Calendário/Insights) abre o mês daquele dia e leva o foco até ele.
  */
 
 const FILTERS: [DiaryFilter, string][] = [
   ["all", "Tudo"],
   ["watched", "Assistidos"],
-  ["rewatch", "Reassistidos"],
   ["rated", "Avaliações"],
 ];
 
 const FILTER_EMPTY: Record<DiaryFilter, string> = {
   all: "Nenhuma atividade registrada",
   watched: "Nada assistido registrado",
-  rewatch: "Nenhuma reassistida",
   rated: "Nenhuma avaliação ou comentário",
 };
 
@@ -212,7 +210,7 @@ function DiaryContent() {
       {/* Fase 4: sem rótulo em caixa alta; título, uma frase e, embaixo, o mês e os filtros numa barra só. */}
       <header className="dy-header">
         <h1>Diário</h1>
-        <p>Tudo que você assistiu, reassistiu e marcou pelo caminho.</p>
+        <p>Tudo que você assistiu e marcou pelo caminho.</p>
       </header>
 
       <div className="dy-bar">

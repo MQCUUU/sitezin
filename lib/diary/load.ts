@@ -3,9 +3,9 @@ import type { ActivityType, MediaRef, RawItem } from "./types";
 /*
  * Diário — leitura de UM mês (dia civil de Brasília) nas fontes canônicas,
  * sem alterar nada:
- *   watch_entries      visualizações (data, precisão, nota, comentário, reassistida)
+ *   watch_entries      visualizações (data, precisão, nota, comentário)
  *   episodes_progress  episódios assistidos (+ conclusão de temporada/série derivada)
- *   activity_events    ações na biblioteca (adicionar, status, reassistir, legado)
+ *   activity_events    ações na biblioteca (adicionar, status, legado)
  * `watch_logged` só entra quando a visualização dele não existe mais em
  * watch_entries (ela é o espelho; a fonte é watch_entries). 4 consultas por
  * mês, sem N+1 (pôster/título vêm no JOIN; temporadas de `media.raw`).
@@ -75,17 +75,7 @@ export async function loadDiaryMonth(sql: Sql, userId: string, askedMonth: strin
         COALESCE(m.media_type, rec.media_type) AS media_type,
         COALESCE(m.title, rec.title) AS title,
         COALESCE(m.poster_path, rec.poster_path) AS poster_path,
-        (m.id IS NULL AND rec.id IS NOT NULL) AS recovered,
-        CASE WHEN ae.event_type = 'status_changed' AND ae.metadata->>'to' = 'rewatched' THEN (
-          SELECT r.metadata->>'rewatch_count'
-          FROM public.activity_events r
-          WHERE r.user_id = ae.user_id
-            AND r.event_type = 'rewatch_started'
-            AND r.media_id = m.id
-            AND r.occurred_at <= ae.occurred_at
-          ORDER BY r.occurred_at DESC
-          LIMIT 1
-        ) END AS rewatch_number
+        (m.id IS NULL AND rec.id IS NOT NULL) AS recovered
       FROM (
         -- Duplicatas legadas idênticas (docs/V2.1-A-DATA-INTEGRITY.md §5): uma por identidade lógica.
         SELECT DISTINCT ON (
@@ -132,7 +122,7 @@ export async function loadDiaryMonth(sql: Sql, userId: string, askedMonth: strin
     `,
     sql`
       SELECT
-        we.id, we.watched_at, we.watched_at_precision, we.rating, we.comment, we.is_rewatch,
+        we.id, we.watched_at, we.watched_at_precision, we.rating, we.comment,
         to_char(we.watched_at AT TIME ZONE ${TZ}, 'YYYY-MM-DD') AS day,
         to_char(we.watched_at AT TIME ZONE ${TZ}, 'HH24:MI') AS hm,
         (
@@ -245,7 +235,6 @@ export async function loadDiaryMonth(sql: Sql, userId: string, askedMonth: strin
         time: null,
         rating: meta.rating === null || meta.rating === undefined ? null : Number(meta.rating),
         comment: typeof meta.comment === "string" ? meta.comment : null,
-        is_rewatch: Boolean(meta.is_rewatch),
         watch_number: Number(meta.watch_number) || 1,
       });
       continue;
@@ -257,7 +246,7 @@ export async function loadDiaryMonth(sql: Sql, userId: string, askedMonth: strin
       // Ações na biblioteca: relógio do servidor no momento da ação (proveniência 'datetime').
       time: String(r.hm),
       type: r.event_type as ActivityType,
-      meta: r.rewatch_number ? { ...meta, rewatch_number: Number(r.rewatch_number) } : meta,
+      meta,
     });
   }
 
@@ -271,7 +260,6 @@ export async function loadDiaryMonth(sql: Sql, userId: string, askedMonth: strin
       media: mediaOf(r),
       rating: r.rating === null || r.rating === undefined ? null : Number(r.rating),
       comment: r.comment || null,
-      is_rewatch: Boolean(r.is_rewatch),
       watch_number: Number(r.watch_number) || 1,
     });
   }

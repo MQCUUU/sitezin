@@ -166,7 +166,7 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
     sql`
       SELECT
         count(*)::int AS total,
-        count(*) FILTER (WHERE li.status IN ('watched', 'rewatching', 'rewatched'))::int AS watched,
+        count(*) FILTER (WHERE li.status IN ('watched'))::int AS watched,
         count(*) FILTER (WHERE m.media_type = 'movie')::int AS movies,
         count(*) FILTER (WHERE m.media_type = 'tv')::int AS series
       FROM public.library_items li
@@ -309,7 +309,6 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
             we.watched_at,
             we.rating,
             we.comment,
-            we.is_rewatch,
             json_build_object(
               'media', json_build_object(
                 'tmdb_id', m.tmdb_id,

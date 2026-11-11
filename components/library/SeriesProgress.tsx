@@ -1,5 +1,5 @@
 import "@/styles/features/library-page.css";
-import { Check, CircleDashed, CirclePlay, ListChecks, Repeat } from "lucide-react";
+import { Check, CircleDashed, CirclePlay, ListChecks } from "lucide-react";
 
 import type { LibraryProgress } from "@/lib/library/progress";
 
@@ -14,7 +14,6 @@ const ICON: Record<LibraryProgress["state"], typeof Check> = {
   not_started: CircleDashed,
   caught_up: Check,
   completed: Check,
-  rewatching: Repeat,
   unknown: ListChecks,
   legacy: ListChecks,
 };

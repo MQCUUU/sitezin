@@ -23,7 +23,7 @@ import type { DayRange, EventRow, LibRow, SourceStat, ToolStat } from "./types";
 export const TOOLS = ["assistant", "pick", "smart_queue", "for_you"] as const;
 export const LIKED_THRESHOLD = 7.5;
 
-const WATCHED = new Set(["watched", "rewatched", "rewatching"]);
+const WATCHED = new Set(["watched"]);
 const keyOf = (type: string, id: number) => `${type}-${id}`;
 const round1 = (v: number) => Math.round(v * 10) / 10;
 

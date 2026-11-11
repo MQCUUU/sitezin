@@ -16,26 +16,17 @@
   grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
   gap: 48px;
   align-items: start;
-  max-width: 1280px;
+  /* Projeção (Fase 4): mesma largura e recuo das abas e das colunas abaixo. */
+  max-width: var(--mc-container-wide);
   margin: 40px auto 0;
-  /* Mesmo recuo das abas e seções abaixo (40px): uma coluna só. */
-  padding-inline: 40px;
+  padding-inline: var(--mc-gutter-desktop);
 }
 
+/* Projeção (Fase 4): o pôster saiu do topo (a Tela já mostra o título). */
 .tt-identity {
   display: flex;
-  gap: 32px;
   align-items: flex-start;
   min-width: 0;
-}
-
-.tt-poster {
-  position: relative;
-  flex: 0 0 168px;
-  aspect-ratio: 2 / 3;
-  overflow: hidden;
-  border-radius: var(--mc-radius-xs);
-  background: var(--panel);
 }
 
 .tt-copy {
@@ -45,12 +36,14 @@
   min-width: 0;
 }
 
+/* Nome em tamanho de tela, Archivo condensada (largura 70), como um cartaz. */
 .tt-title {
   margin: 0;
-  font-size: clamp(40px, 5.4vw, 72px);
-  font-weight: 800;
-  line-height: 0.98;
-  letter-spacing: -0.035em;
+  font-size: clamp(44px, 5.6vw, 80px);
+  font-weight: 770;
+  font-variation-settings: "wdth" 70;
+  line-height: 0.92;
+  letter-spacing: -0.005em;
   text-wrap: balance;
   overflow-wrap: anywhere;
 }
@@ -60,16 +53,6 @@
   color: var(--muted);
   font-size: var(--mc-fs-sm, 13px);
   font-weight: 600;
-}
-
-
-.tt-tagline {
-  margin: 0;
-  max-width: 38em;
-  color: color-mix(in srgb, var(--text) 82%, var(--muted));
-  font-size: 17px;
-  font-style: italic;
-  line-height: 1.45;
 }
 
 /* ------------------------------------------------------------ ações */
@@ -84,11 +67,17 @@
 
 .tt-actions .btn,
 .tt-mobile-bar .btn {
-  min-height: 52px;
+  min-height: 48px;
   padding: 0 18px;
-  border: 0;
   border-radius: var(--mc-radius-md);
-  font-size: 16px;
+  font-size: 15px;
+}
+
+/* Ícone sozinho (Curtir, Listas): quadrado do tamanho da ação principal. */
+.tt-actions .tt-icon {
+  width: 48px;
+  min-width: 48px;
+  padding: 0;
 }
 
 /*
@@ -117,10 +106,11 @@
   transform: rotate(180deg);
 }
 
-/* Ações discretas: superfície neutra, sem borda nem cor de destaque. */
+/* Ações discretas = botão secundário: fio de 1 px, sem fundo. */
 .tt-quiet,
 .tt-actions .title-where-btn {
-  background: var(--panel);
+  border: 1px solid var(--mc-color-border-strong);
+  background: transparent;
   color: var(--text);
 }
 
@@ -132,6 +122,7 @@
 }
 
 .tt-like[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--mc-color-favorite) 60%, transparent);
   color: var(--mc-color-favorite);
 }
 
@@ -236,9 +227,11 @@
   gap: 12px;
 }
 
+/* Sua nota é sua: título e escala na cor da marca. */
 .tt-rating-heading {
   margin: 0;
-  font-size: 18px;
+  color: var(--mc-color-accent);
+  font-size: 15px;
   font-weight: 700;
 }
 
@@ -250,8 +243,10 @@
 
 .tt-rating-value {
   margin: 0;
+  color: var(--mc-color-accent);
   font-size: 64px;
-  font-weight: 800;
+  font-weight: 770;
+  font-variation-settings: "wdth" 72;
   line-height: 1;
   letter-spacing: -0.03em;
 }
@@ -278,8 +273,8 @@
 }
 
 .tt-rating-step[data-filled="true"] {
-  background: var(--mc-color-primary);
-  color: var(--mc-color-primary-contrast);
+  background: var(--mc-color-accent);
+  color: var(--mc-color-accent-contrast);
 }
 
 .tt-rating-step:active {
@@ -358,6 +353,7 @@
   .tt-head {
     grid-template-columns: minmax(0, 1fr);
     gap: 36px;
+    padding-inline: var(--mc-gutter-tablet);
   }
 
   .tt-rating-aside {
@@ -377,7 +373,7 @@
   .tt-head {
     margin-top: 20px;
     gap: 28px;
-    padding-inline: 0;
+    padding-inline: var(--mc-gutter-mobile);
   }
 
   .tt-actions .btn {
@@ -385,21 +381,8 @@
     flex: 0 0 auto;
   }
 
-  .tt-identity {
-    gap: 16px;
-  }
-
-  .tt-poster {
-    flex-basis: 96px;
-  }
-
   .tt-title {
-    font-size: clamp(30px, 9vw, 40px);
-  }
-
-
-  .tt-tagline {
-    font-size: 15px;
+    font-size: clamp(36px, 11vw, 48px);
   }
 
   /* Status, Curtir e Listas vão para a barra fixa; ficam aqui só "Onde assistir"/"Assistir agora". */

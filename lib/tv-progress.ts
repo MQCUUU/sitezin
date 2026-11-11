@@ -14,10 +14,6 @@
  *  - "Próximo" = PRIMEIRO episódio regular, já exibido, ainda NÃO assistido,
  *    em ordem cronológica. Um buraco (E1 ✓, E2 ✗, E3 ✓) nunca é pulado
  *    em silêncio: próximo = E2.
- *  - `rewatching`: `episodes_progress` é o histórico (uma linha por
- *    episódio, sem ciclo de reassistida). Não sabemos onde está a
- *    reassistida → estado "rewatching", SEM próximo e SEM percentual
- *    (dívida V3, ver docs). Nunca inventamos SxEy.
  *  - Estrutura possivelmente desatualizada (`media.raw` só é reescrito ao
  *    adicionar o título; `seasons_count`/`episodes_count` são atualizados
  *    depois por sync-seasons): se as contagens mais novas excedem a
@@ -45,7 +41,6 @@ export type TvProgressState =
   | "in_progress"
   | "caught_up"
   | "completed"
-  | "rewatching"
   | "unknown";
 
 export type TvProgress = {
@@ -134,24 +129,9 @@ export function estimateEpisodeRuntime(raw: RawLike): number | null {
 
 export function computeTvProgress(
   structure: TvStructure,
-  watchedEpisodes: WatchedEpisode[],
-  options: { rewatching?: boolean } = {}
+  watchedEpisodes: WatchedEpisode[]
 ): TvProgress {
   const { seasons, aired_through: airedThrough, ended, stale } = structure;
-
-  if (options.rewatching) {
-    return {
-      state: "rewatching",
-      watched: new Set(
-        watchedEpisodes
-          .filter((episode) => episode.season_number >= 1)
-          .map((episode) => `${episode.season_number}:${episode.episode_number}`)
-      ).size,
-      total: null,
-      percent: null,
-      next: null,
-    };
-  }
 
   const watchedSet = new Set(
     watchedEpisodes

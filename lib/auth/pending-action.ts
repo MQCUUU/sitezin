@@ -15,7 +15,7 @@ import { safeNextPath } from "../safe-next";
 export const PENDING_ACTION_KEY = "mycatalog:pending-action:v1";
 export const PENDING_ACTION_TTL_MS = 15 * 60 * 1000;
 
-const STATUSES = ["want", "watching", "watched", "paused", "dropped", "rewatching", "rewatched"] as const;
+const STATUSES = ["want", "watching", "watched", "paused", "dropped"] as const;
 
 export type LibraryIntent =
   | { kind: "add"; media_type: "movie" | "tv"; tmdb_id: number; title?: string }

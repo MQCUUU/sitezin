@@ -132,9 +132,9 @@ export async function GET(req: NextRequest) {
               (li.id IS NULL AND (
                 EXISTS (SELECT 1 FROM public.watch_entries we WHERE we.user_id = $1 AND we.media_id = m.id)
                 OR EXISTS (SELECT 1 FROM public.activity_events ae WHERE ae.user_id = $1 AND ae.media_id = m.id
-                           AND (ae.event_type IN ('series_completed', 'watch_logged', 'rewatch_started')
-                                OR (ae.event_type = 'status_changed' AND ae.metadata->>'to' IN ('watched', 'rewatched', 'rewatching'))
-                                OR (ae.event_type = 'library_added' AND ae.metadata->>'status' IN ('watched', 'rewatched', 'rewatching'))))
+                           AND (ae.event_type IN ('series_completed', 'watch_logged')
+                                OR (ae.event_type = 'status_changed' AND ae.metadata->>'to' IN ('watched'))
+                                OR (ae.event_type = 'library_added' AND ae.metadata->>'status' IN ('watched'))))
               )) AS watched_outside
        FROM v
        JOIN public.media m ON m.media_type = v.media_type AND m.tmdb_id = v.tmdb_id
@@ -249,7 +249,7 @@ export async function GET(req: NextRequest) {
           const s = st.state.get(key);
 
           return Boolean(
-            (q.hideWatched && (["watched", "rewatched", "rewatching"].includes(s?.status || "") || st.watchedOutside.has(key))) ||
+            (q.hideWatched && (["watched"].includes(s?.status || "") || st.watchedOutside.has(key))) ||
               (q.onlyNew && s)
           );
         };

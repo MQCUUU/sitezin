@@ -86,7 +86,7 @@ function RetrospectiveContent() {
   const empty = data && c && c.movies + c.series === 0;
   const isCurrent = year === thisYear;
   // Só frases sobre o ANO (fora: "quase terminando", watchlist, IA — são do agora).
-  const yearInsights = (data?.insights ?? []).filter((i) => ["summary", "taste", "ratings", "rewatch", "evolution"].includes(i.section)).slice(0, 4);
+  const yearInsights = (data?.insights ?? []).filter((i) => ["summary", "taste", "ratings", "dropped", "evolution"].includes(i.section)).slice(0, 4);
   const changes = [
     p && p.minutes >= 60 && c ? { label: "tempo assistido", from: p.minutes, to: c.minutes, fmt: durationLabel } : null,
     p && p.movies >= 3 && c ? { label: "filmes", from: p.movies, to: c.movies, fmt: (v: number) => nf.format(v) } : null,
@@ -228,12 +228,6 @@ function RetrospectiveContent() {
                     <dd>{data.activity.longestStreak} dias seguidos</dd>
                   </div>
                 ) : null}
-                {c.rewatches ? (
-                  <div>
-                    <dt>Reassistidas</dt>
-                    <dd>{nf.format(c.rewatches)}</dd>
-                  </div>
-                ) : null}
               </dl>
             </section>
           ) : null}
@@ -317,7 +311,6 @@ function RetrospectiveContent() {
               movies: c.movies,
               episodes: c.episodes,
               series: c.series,
-              rewatches: c.rewatches,
               topGenre: y.topGenre,
               topMonth: y.busiestMonth ? monthName(y.busiestMonth).split(" de ")[0] : null,
               highlightTitle: y.top[0]?.title ?? null,

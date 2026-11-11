@@ -31,7 +31,7 @@ export async function POST() {
       JOIN public.media m ON m.id = li.media_id
       WHERE li.user_id = ${user.id}
         AND m.media_type = 'tv'
-        AND (li.favorite = true OR li.status IN ('watched', 'rewatched'))
+        AND (li.favorite = true OR li.status IN ('watched'))
       ORDER BY li.favorite DESC, li.updated_at DESC, li.id
       LIMIT 40
     `,
@@ -47,7 +47,7 @@ export async function POST() {
 
   const candidates = (data || []).filter((item: any) => {
     const media = Array.isArray(item.media) ? item.media[0] : item.media;
-    return media?.media_type === "tv" && media.tmdb_id && (item.favorite || ["watched", "rewatched"].includes(item.status));
+    return media?.media_type === "tv" && media.tmdb_id && (item.favorite || ["watched"].includes(item.status));
   }).slice(0, 40);
 
   const reopened: string[] = [];
@@ -64,7 +64,7 @@ export async function POST() {
           const knownSeasons = Number(media.seasons_count || 0);
           const completed = Number(item.completed_seasons || knownSeasons || 0);
 
-          if (["watched", "rewatched"].includes(item.status) && seasons > completed) {
+          if (["watched"].includes(item.status) && seasons > completed) {
             /*
              * `stopped_episode` não existe em nenhum DDL versionado
              * (db/legacy/supabase/schema.sql nem os demais .sql do repo) — só

@@ -73,8 +73,6 @@ export const DISCOVER_STATUS_OPTIONS = [
   ["watched", "Assistido"],
   ["paused", "Pausado"],
   ["dropped", "Abandonado"],
-  ["rewatching", "Reassistindo"],
-  ["rewatched", "Reassistido"],
 ] as const;
 
 export function getStatusLabel(status?: string | null) {
