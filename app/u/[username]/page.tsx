@@ -20,6 +20,7 @@ import { useConfirm } from "@/components/ConfirmProvider";
 import { ProfileShowcaseEditor } from "@/components/ProfileShowcaseEditor";
 import { AvatarSettings } from "@/components/AvatarSettings";
 import { BannerSettings } from "@/components/BannerSettings";
+import "@/styles/features/screen-band.css";
 import { tasteAffinityLabel } from "@/lib/social/ratings";
 import { Button } from "@/components/ui/Button";
 
@@ -43,7 +44,7 @@ const normalizePerson = (row: any): PersonRow | null => {
 
 function PosterRow({ items, empty }: { items: any[]; empty: string }) {
   if (!items.length) return <div className="profile-tab-empty">{empty}</div>;
-  return <CarouselRail className="profile-media-row profile-media-carousel">{items.map((row, index) => { const media = mediaOf(row); return media && <div className="profile-poster-cell mc-pa-host" key={row.id || `${media.media_type}-${media.tmdb_id}-${index}`}><Link href={`/title/${media.media_type}/${media.tmdb_id}`}><div>{media.poster_path ? <img src={img(media.poster_path, "w342")} alt={media.title} /> : <Film />}</div><strong>{media.title}</strong>{row.personal_rating != null && <small><Star size={12} fill="currentColor" /> {Number(row.personal_rating).toFixed(1)}</small>}</Link><ConnectedPosterActions media={{ tmdbId: Number(media.tmdb_id), mediaType: media.media_type === "tv" ? "tv" : "movie", title: media.title, posterPath: media.poster_path ?? null }} /></div>; })}</CarouselRail>;
+  return <CarouselRail className="profile-media-row profile-media-carousel">{items.map((row, index) => { const media = mediaOf(row); return media && <div className="profile-poster-cell mc-pa-host mc-frame" key={row.id || `${media.media_type}-${media.tmdb_id}-${index}`}><Link href={`/title/${media.media_type}/${media.tmdb_id}`}><div>{media.poster_path ? <img src={img(media.poster_path, "w342")} alt={media.title} /> : <Film />}</div><strong>{media.title}</strong>{row.personal_rating != null && <small><Star size={12} fill="currentColor" /> {Number(row.personal_rating).toFixed(1)}</small>}</Link><ConnectedPosterActions media={{ tmdbId: Number(media.tmdb_id), mediaType: media.media_type === "tv" ? "tv" : "movie", title: media.title, posterPath: media.poster_path ?? null }} /></div>; })}</CarouselRail>;
 }
 
 function ReviewList({ items }: { items: any[] }) {
@@ -527,14 +528,14 @@ export default function PublicProfilePage() {
     {/* Banner do perfil (como em outras redes); sem banner, o cabeçalho fica como antes. */}
     <div className={`profile-v2-top${data.profile.banner_url ? " has-banner" : ""}`}>
     {data.profile.banner_url ? (
-      <div className="profile-v2-banner">
+      <div className="tt-band profile-v2-banner"><div className="tt-band-screen">
         {/* eslint-disable-next-line @next/next/no-img-element -- imagem do Blob, como o avatar */}
         <img src={data.profile.banner_url} alt="" />
-      </div>
+      </div></div>
     ) : null}
     <header className="profile-v2-hero">
       {data.profile.avatar_url ? <img src={data.profile.avatar_url} alt={data.profile.display_name} /> : <div className="public-profile-avatar">{data.profile.display_name?.slice(0, 2).toUpperCase()}</div>}
-      <div className="profile-v2-copy"><span>@{data.profile.username}</span><h1>{data.profile.display_name}</h1>{data.profile.bio && <p>{data.profile.bio}</p>}<div className="profile-v2-counts"><button disabled={relationship !== "self" && data.social.followers == null} onClick={() => openConnectionModal("followers")}><strong>{data.social.followers_count}</strong> seguidores</button><button disabled={relationship !== "self" && data.social.following == null} onClick={() => openConnectionModal("following")}><strong>{data.social.following_count}</strong> seguindo</button>{relationship === "self" && <button onClick={() => openConnectionModal("friends")}><strong>{data.social.friends_count || 0}</strong> amigos</button>}</div></div>
+      <div className="profile-v2-copy"><span>@{data.profile.username}</span><h1>{data.profile.display_name}</h1>{data.profile.bio && <p>{data.profile.bio}</p>}<div className="profile-v2-counts"><button disabled={relationship !== "self" && data.social.followers == null} onClick={() => openConnectionModal("followers")}><strong>{data.social.followers_count}</strong> seguidores</button><span aria-hidden="true">, </span><button disabled={relationship !== "self" && data.social.following == null} onClick={() => openConnectionModal("following")}><strong>{data.social.following_count}</strong> seguindo</button>{relationship === "self" && <><span aria-hidden="true">, </span><button onClick={() => openConnectionModal("friends")}><strong>{data.social.friends_count || 0}</strong> amigos</button></>}</div></div>
       {relationship === "self" ? <Button variant={editingProfile ? "secondary" : "primary"} className="profile-v2-action" onClick={() => setEditingProfile((value) => !value)}>{editingProfile ? <X size={16}/> : <Pencil size={16} />}{editingProfile ? "Fechar edição" : "Editar perfil"}</Button> : data.social.can_follow && <Button variant={relationship === "none" ? "primary" : "secondary"} className="profile-v2-action" disabled={busy} onClick={toggleFollow}>{busy ? <Loader2 className="spin" size={16} /> : relationship === "accepted" ? <UserCheck size={16} /> : <UserPlus size={16} />}{relationship === "accepted" ? data.social.viewer_follows_you ? "Seguindo de volta" : "Seguindo" : relationship === "pending" ? "Solicitação enviada" : data.social.viewer_follows_you ? "Seguir de volta" : "Seguir"}</Button>}
     </header>
     </div>

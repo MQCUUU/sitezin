@@ -121,4 +121,15 @@ test.describe("Fase 6 — Coleção e Pessoa", () => {
     await page.goto("/person/287?tab=acting&ver=filmes");
     await expect(page.locator(".pp-decade").first()).toHaveText(/^Anos \d{4}$|^Sem data$/, { timeout: 60_000 });
   });
+
+  test("Perfil público: contagens em ficha e topo na Tela quando há banner", async ({ page, request }) => {
+    const me = await (await request.get("/api/profile/username")).json();
+    expect(me.username).toBeTruthy();
+
+    await page.goto(`/u/${me.username}`);
+    await expect(page.locator(".profile-v2-counts")).toHaveText(/\d+ seguidores, \d+ seguindo/, { timeout: 60_000 });
+    if (await page.locator(".profile-v2-banner").count()) {
+      await expect(page.locator(".profile-v2-top .tt-band-screen img")).toBeVisible();
+    }
+  });
 });

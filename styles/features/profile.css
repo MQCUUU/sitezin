@@ -1464,3 +1464,55 @@
         font-size: 34px;
     }
 }
+
+/* Fase 6 — o banner vira a Tela (mesma faixa do Título); avatar e @ na borda; números em ficha; resenhas em linhas. */
+/* A coluna do perfil é estreita (980 px): a Tela fica na largura dela, sem sangrar. */
+.profile-v2-top .profile-v2-banner.tt-band {
+    --tt-bleed: 0px;
+}
+.profile-v2-top .profile-v2-banner {
+    height: auto;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: #000;
+}
+.profile-v2-top.has-banner .profile-v2-hero > img,
+.profile-v2-top.has-banner .profile-v2-hero > .public-profile-avatar {
+    box-shadow: 0 0 0 4px var(--bg);
+    background: var(--bg);
+}
+.profile-v2-counts {
+    gap: 0;
+    flex-wrap: wrap;
+}
+.profile-v2-counts > span {
+    margin-right: 0.35em;
+    color: var(--muted);
+}
+.profile-v2-counts button {
+    padding: 0;
+}
+.profile-review-list {
+    gap: 0;
+    border-top: 1px solid var(--line);
+}
+.profile-review-card {
+    padding: 16px 0;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    background: none;
+}
+.profile-review-card:hover {
+    border-color: var(--line);
+    background: none;
+}
+.profile-review-card header > span {
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    color: var(--mc-color-accent);
+    font-size: var(--mc-fs-md);
+    font-weight: 700;
+}
