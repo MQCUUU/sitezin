@@ -4,6 +4,8 @@ import "@/styles/features/assistant.css";
 import { apiFetch } from "@/lib/api-client";
 import { Poster } from "@/components/Poster";
 import { ConnectedPosterActions } from "@/components/media/ConnectedPosterActions";
+import { ProjectionProvider } from "@/components/screen/ProjectionProvider";
+import { TitleBand } from "@/components/title/hero/TitleBand";
 import { useRef, useState } from "react";
 import { motion } from "motion/react";
 
@@ -172,8 +174,10 @@ export default function AssistantPage() {
   const answerLabel =
     mode === "library" ? "Da sua biblioteca" : mode === "gemini" ? "Recomendação da IA" : mode === "cache" ? "Resposta reaproveitada" : "Recomendação MyCatalog";
 
+  const bandPath = results.find((item) => item.backdrop_path)?.backdrop_path ?? null;
+
   return (
-    <>
+    <ProjectionProvider>
 
       {/* Fase 4: a pergunta é o título da página (e o nome do campo); sem caixa, ícone ou rótulo em caixa alta. */}
       <header className="ai-head">
@@ -238,7 +242,6 @@ export default function AssistantPage() {
         >
           <h2 className="ai-answer-title">
             {answerLabel}
-            {cacheHit ? <span className="ai-cache-badge">cache {cacheScope === "personalized" ? "pessoal" : "global"}</span> : null}
           </h2>
 
           <p className="ai-answer-text">{answer}</p>
@@ -257,12 +260,6 @@ export default function AssistantPage() {
               .
             </small>
           ) : null}
-
-          {cacheHit ? (
-            <small className="ai-note">
-              Essa resposta já economizou <strong>{cacheHitCount}</strong> {cacheHitCount === 1 ? "chamada" : "chamadas"} ao Gemini.
-            </small>
-          ) : null}
         </motion.section>
       ) : null}
 
@@ -279,6 +276,12 @@ export default function AssistantPage() {
             Para assistir agora
           </h2>
 
+          {bandPath ? (
+            <div className="ai-band">
+              <TitleBand path={bandPath} />
+            </div>
+          ) : null}
+
           <div className="ai-result-grid" data-rec-tool="assistant">
             {results.map((item) => {
               const type = item.media_type === "tv" ? "tv" : "movie";
@@ -287,7 +290,7 @@ export default function AssistantPage() {
               const vote = Number(item.vote_average || 0);
 
               return (
-                <div key={`${type}-${item.id}`} className="card ai-result-card">
+                <div key={`${type}-${item.id}`} className="card ai-result-card" data-projection={item.backdrop_path || undefined}>
                   {/* Pôster + botões do pôster (fora do link); tags de tipo/status ao vivo. */}
                   <div className="poster mc-pa-host">
                     <Link href={`/title/${type}/${item.id}`} tabIndex={-1} aria-hidden="true" className="poster-link">
@@ -323,6 +326,6 @@ export default function AssistantPage() {
           </div>
         </motion.section>
       ) : null}
-    </>
+    </ProjectionProvider>
   );
 }

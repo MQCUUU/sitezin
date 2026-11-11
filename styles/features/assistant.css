@@ -215,3 +215,68 @@
         transform: none;
     }
 }
+
+/*
+ * Fase 7b — Assistente clean. A pergunta é a frase grande; o pedido é uma linha
+ * (sem superfície); exemplos em texto; sugestões com a Tela e a Projeção.
+ */
+.ai-head h1 {
+    font-weight: 770;
+    font-variation-settings: "wdth" 70;
+    line-height: 0.92;
+    letter-spacing: -0.01em;
+}
+.ai-composer {
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    border-bottom: 1px solid var(--line);
+    transition: border-color 150ms ease;
+}
+.ai-composer:focus-within {
+    box-shadow: none;
+    border-bottom-color: var(--mc-color-accent);
+}
+.ai-composer textarea {
+    padding: 14px 0 8px;
+}
+.ai-composer-actions {
+    padding: 0 0 10px;
+}
+.ai-examples {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+.ai-example {
+    min-height: 0;
+    padding: 6px 0;
+    border: 0;
+    border-radius: 0;
+    color: var(--muted);
+}
+@media (hover: hover) and (pointer: fine) {
+    .ai-example:hover {
+        color: var(--text);
+        text-decoration: underline;
+        text-decoration-color: var(--mc-color-accent);
+        text-underline-offset: 3px;
+    }
+}
+.ai-answer-title,
+.ai-results-title {
+    font-weight: 720;
+    font-variation-settings: "wdth" 80;
+}
+.ai-band {
+    --tt-bleed: 0px;
+    margin-bottom: 20px;
+}
+@media (max-width: 760px) {
+    .ai-example {
+        border-radius: 0;
+    }
+    .ai-composer-actions {
+        padding: 0 0 10px;
+    }
+}
