@@ -1524,3 +1524,23 @@
     font-size: var(--mc-fs-md);
     font-weight: 650;
 }
+
+/* A Tela tem posição própria (position: relative) e era pintada por cima da foto,
+   que sobe sobre a borda de baixo dela: a foto fica numa camada acima. */
+.profile-v2-top.has-banner .profile-v2-hero > img,
+.profile-v2-top.has-banner .profile-v2-hero > .public-profile-avatar {
+    position: relative;
+    z-index: 1;
+}
+
+/* No celular a foto fica numa linha e o texto embaixo, na largura toda:
+   ao lado da foto sobravam ~140 px e os números caíam um por linha. */
+@media (max-width: 560px) {
+    .profile-v2-hero > .profile-v2-copy {
+        flex: 1 1 100%;
+    }
+}
+/* Os botões têm 44 px de altura (alvo de toque): a vírgula acompanha a linha do texto. */
+.profile-v2-counts {
+    align-items: center;
+}
