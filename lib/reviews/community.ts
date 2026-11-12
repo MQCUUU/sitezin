@@ -134,7 +134,7 @@ export async function listCommunityReviews(
       li.id, li.personal_rating, li.review,
       COALESCE(li.updated_at, li.added_at) AS updated_at,
       (SELECT count(*)::int FROM public.review_likes l WHERE l.library_item_id = li.id) AS like_count,
-      (SELECT count(*)::int FROM public.review_comments c WHERE c.library_item_id = li.id) AS comment_count,
+      (SELECT count(*)::int FROM public.review_comments c WHERE c.library_item_id = li.id AND c.deleted_at IS NULL) AS comment_count,
       EXISTS (
         SELECT 1 FROM public.review_likes l WHERE l.library_item_id = li.id AND l.user_id = ${viewer}::uuid
       ) AS liked_by_viewer

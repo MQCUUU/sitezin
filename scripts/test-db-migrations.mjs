@@ -146,3 +146,19 @@ test("0010 cria recommendations com cascata, UNIQUE e CHECK", () => {
 test("notification_preferences ganha recommendation_site", () => {
   assert.match(all, /ALTER TABLE public\.notification_preferences ADD COLUMN IF NOT EXISTS recommendation_site boolean DEFAULT true NOT NULL/);
 });
+
+test("0011 respostas e curtidas em comentários", () => {
+  assert.match(all, /ALTER TABLE public\.review_comments\s+ADD COLUMN IF NOT EXISTS parent_id uuid REFERENCES public\.review_comments\(id\) ON DELETE CASCADE/);
+  assert.match(all, /ADD COLUMN IF NOT EXISTS reply_to_user_id uuid REFERENCES neon_auth\."user"\(id\) ON DELETE SET NULL/);
+  assert.match(all, /ADD COLUMN IF NOT EXISTS deleted_at timestamp with time zone/);
+  const block = tableBlock("review_comment_likes");
+  assert.ok(block, "review_comment_likes existe");
+  assert.match(block, /comment_id uuid NOT NULL REFERENCES public\.review_comments\(id\) ON DELETE CASCADE/);
+  assert.match(block, /user_id uuid NOT NULL REFERENCES neon_auth\."user"\(id\) ON DELETE CASCADE/);
+  assert.match(block, /PRIMARY KEY \(comment_id, user_id\)/);
+  const checks = [...all.matchAll(/notifications_type_check\s+CHECK \(type IN \(([^;]*)\)\);/g)];
+  const last = checks.at(-1)?.[1] ?? "";
+  for (const type of ["review_comment_reply", "review_comment_like", "recommendation_result", "new_season"]) {
+    assert.match(last, new RegExp(`'${type}'`), type);
+  }
+});

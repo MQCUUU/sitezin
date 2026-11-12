@@ -423,3 +423,8 @@
         font-size: var(--mc-fs-lg);
     }
 }
+
+/* Indicações enviadas: o retorno vai na mesma linha de "para Fulano". */
+.rc-row-state--inline {
+    font-size: inherit;
+}

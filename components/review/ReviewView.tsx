@@ -10,6 +10,7 @@ import { SmartBackButton } from "@/components/SmartBackButton";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { useToast } from "@/components/ToastProvider";
 import { Poster } from "@/components/Poster";
+import { Avatar, CommentThread, nameOf, when, type Comment, type Person } from "@/components/review/CommentThread";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { apiFetch, ApiError } from "@/lib/api-client";
@@ -17,11 +18,10 @@ import { apiFetch, ApiError } from "@/lib/api-client";
 /*
  * Página da avaliação: pôster do título ao lado de quem avaliou, título e ano, nota,
  * quando assistiu, o texto inteiro,
- * curtir e os comentários (mais antigos primeiro). Comentar só com sessão; apagar
- * só o autor do comentário ou o dono da avaliação.
+ * curtir e os comentários (mais antigos primeiro), cada um com as respostas dele.
+ * Comentar, responder e curtir comentário só com sessão; apagar só o autor do
+ * comentário ou o dono da avaliação.
  */
-
-type Person = { username: string; display_name: string | null; avatar_url: string | null };
 
 export type ReviewData = {
   id: string;
@@ -41,33 +41,9 @@ export type ReviewData = {
   is_owner: boolean;
 };
 
-type Comment = { id: string; body: string; created_at: string; author: Person; can_delete: boolean };
 type CommentsPage = { items: Comment[]; next_cursor: string | null };
 
 const MAX = 500;
-
-function nameOf(person: Person) {
-  return person.display_name?.trim() || `@${person.username}`;
-}
-
-function when(iso: string) {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString("pt-BR", { day: "numeric", month: "short", year: "numeric" });
-}
-
-function Avatar({ person }: { person: Person }) {
-  return (
-    <span className="rv-avatar" aria-hidden="true">
-      {person.avatar_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={person.avatar_url} alt="" loading="lazy" />
-      ) : (
-        nameOf(person).replace("@", "").slice(0, 2).toUpperCase()
-      )}
-    </span>
-  );
-}
 
 export default function ReviewView({ initial }: { initial: ReviewData }) {
   const toast = useToast();
@@ -87,6 +63,7 @@ export default function ReviewView({ initial }: { initial: ReviewData }) {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
 
   const titleHref = `/title/${initial.media.media_type}/${initial.media.tmdb_id}`;
   const ownerName = nameOf(initial.owner);
@@ -188,16 +165,44 @@ export default function ReviewView({ initial }: { initial: ReviewData }) {
     if (!ok) return;
     try {
       await apiFetch(`/api/reviews/${initial.id}/comments/${comment.id}`, { method: "DELETE" });
-      // O cursor é o id do último comentário carregado: se ele sai, o anterior vira o cursor.
-      if (cursor === comment.id) {
-        const index = comments.findIndex((item) => item.id === comment.id);
-        setCursor(index > 0 ? comments[index - 1].id : null);
-      }
-      setComments((current) => current.filter((item) => item.id !== comment.id));
       setTotal((value) => Math.max(0, value - 1));
+      // O cursor é o id do último comentário de cima carregado: se ele sai, o anterior vira o cursor.
+      const dropTop = (id: string) => {
+        if (cursor === id) {
+          const index = comments.findIndex((item) => item.id === id);
+          setCursor(index > 0 ? comments[index - 1].id : null);
+        }
+        setComments((current) => current.filter((item) => item.id !== id));
+      };
+
+      if (comment.parent_id) {
+        // Resposta sai; um comentário de cima já apagado sai junto quando fica sem respostas.
+        const parent = comments.find((item) => item.id === comment.parent_id);
+        const left = (parent?.replies ?? []).filter((reply) => reply.id !== comment.id);
+        if (parent?.deleted && left.length === 0) dropTop(parent.id);
+        else setComments((current) => current.map((item) => (item.id === comment.parent_id ? { ...item, replies: left } : item)));
+      } else if ((comment.replies ?? []).length > 0) {
+        // Com respostas, vira "Comentário apagado" e as respostas ficam.
+        setComments((current) =>
+          current.map((item) =>
+            item.id === comment.id
+              ? { ...item, deleted: true, body: "", can_delete: false, can_like: false, like_count: 0, liked_by_viewer: false }
+              : item
+          )
+        );
+      } else {
+        dropTop(comment.id);
+      }
     } catch {
       toast.show({ title: "Não foi possível apagar o comentário.", kind: "error" });
     }
+  }
+
+  function addReply(reply: Comment) {
+    setComments((current) =>
+      current.map((item) => (item.id === reply.parent_id ? { ...item, replies: [...(item.replies ?? []), reply] } : item))
+    );
+    setTotal((value) => value + 1);
   }
 
   const rating = initial.rating !== null ? initial.rating.toFixed(1).replace(".", ",") : null;
@@ -294,21 +299,16 @@ export default function ReviewView({ initial }: { initial: ReviewData }) {
         ) : comments.length ? (
           <ul className="rv-comments">
             {comments.map((comment) => (
-              <li key={comment.id} className="rv-comment">
-                <Avatar person={comment.author} />
-                <div className="rv-comment-body">
-                  <p className="rv-comment-meta">
-                    <Link href={`/u/${comment.author.username}`}>{nameOf(comment.author)}</Link>
-                    <time dateTime={comment.created_at}>{when(comment.created_at)}</time>
-                  </p>
-                  <p className="rv-comment-text">{comment.body}</p>
-                  {comment.can_delete ? (
-                    <button type="button" className="rv-text-action" onClick={() => remove(comment)}>
-                      Apagar
-                    </button>
-                  ) : null}
-                </div>
-              </li>
+              <CommentThread
+                key={comment.id}
+                reviewId={initial.id}
+                comment={comment}
+                canComment={initial.can_comment}
+                replyingTo={replyingTo}
+                onReply={setReplyingTo}
+                onReplyCreated={addReply}
+                onRemove={remove}
+              />
             ))}
           </ul>
         ) : null}

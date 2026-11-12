@@ -3,12 +3,13 @@
 import { useRef, type KeyboardEvent } from "react";
 
 const SCALE = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
+const TENTHS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 
 /**
  * Fase 4 — "Sua nota" ao lado do título: o número grande e uma escala de 1 a
  * 10 (radiogroup: Tab entra no valor atual, setas mudam). Tocar no número
- * escolhido de novo tira a nota. Notas antigas com decimal (8,5) aparecem
- * como estão; a escala preenche até a parte inteira.
+ * escolhido de novo tira a nota. Com um inteiro escolhido (1 a 9), a linha de
+ * décimos logo abaixo completa a nota: 8 e depois ,5 dá 8,5.
  */
 export function TitleRating({
   value,
@@ -23,6 +24,8 @@ export function TitleRating({
   const filled = value === null ? 0 : Math.floor(value);
   // Item que recebe o Tab: o escolhido, ou o primeiro.
   const tabStop = filled >= 1 ? filled : 1;
+  const tenth = value === null ? 0 : Math.round((value - filled) * 10);
+  const fmt = (n: number) => n.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
   function focusItem(n: number) {
     groupRef.current?.querySelector<HTMLElement>(`[data-value="${n}"]`)?.focus();
@@ -73,8 +76,29 @@ export function TitleRating({
           </button>
         ))}
       </div>
+      {filled >= 1 && filled <= 9 ? (
+        <div role="radiogroup" aria-label="Décimos da nota" className="tt-rating-tenths">
+          {TENTHS.map((d) => {
+            const next = Math.round((filled + d / 10) * 10) / 10;
+            return (
+              <button
+                key={d}
+                type="button"
+                role="radio"
+                aria-checked={tenth === d}
+                aria-label={`Nota ${fmt(next)}`}
+                className="tt-rating-tenth"
+                data-active={tenth === d ? "true" : undefined}
+                onClick={() => onChange(next)}
+              >
+                ,{d}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
       <p className="tt-rating-hint">
-        {value === null ? "Escolha de 1 a 10." : "Toque no mesmo número para tirar a nota."}
+        {value === null ? "Escolha de 1 a 10." : "Ajuste o décimo logo acima. Toque no mesmo número para tirar a nota."}
       </p>
     </div>
   );

@@ -63,3 +63,29 @@ export function likeNoticeCopy(actorName: string, total: number, titleName: stri
   if (others === 0) return `${actorName} curtiu sua avaliação de ${titleName}`;
   return `${actorName} e mais ${others} ${others === 1 ? "pessoa" : "pessoas"} curtiram sua avaliação de ${titleName}`;
 }
+
+/*
+ * Respostas (migration 0011): um nível só. Responder a uma resposta fica no
+ * mesmo nível (parent = o comentário de cima) e marca quem foi respondido.
+ */
+export function replyTarget(target: { id: string; parent_id: string | null; user_id: string }): {
+  parentId: string;
+  replyToUserId: string;
+} {
+  return { parentId: target.parent_id ?? target.id, replyToUserId: target.user_id };
+}
+
+/** Comentário de cima com respostas vivas vira "Comentário apagado"; o resto sai de vez. */
+export function commentDeleteMode(comment: { parent_id: string | null }, liveReplies: number): "soft" | "hard" {
+  return comment.parent_id === null && liveReplies > 0 ? "soft" : "hard";
+}
+
+export function replyNoticeCopy(actorName: string, titleName: string): string {
+  return `${actorName} respondeu seu comentário na avaliação de ${titleName}`;
+}
+
+export function commentLikeNoticeCopy(actorName: string, total: number, titleName: string): string {
+  const others = Math.max(0, Math.floor(total) - 1);
+  if (others === 0) return `${actorName} curtiu seu comentário na avaliação de ${titleName}`;
+  return `${actorName} e mais ${others} ${others === 1 ? "pessoa" : "pessoas"} curtiram seu comentário na avaliação de ${titleName}`;
+}

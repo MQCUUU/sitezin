@@ -101,3 +101,26 @@ test("'sem resenha' só quando o autor não escreveu; resenha oculta não vira '
   assert.equal(hidden.review, null);
   assert.equal(hidden.wroteNoReview, false);
 });
+
+const { replyTarget, commentDeleteMode, commentLikeNoticeCopy, replyNoticeCopy } = await import("../lib/reviews/access.ts");
+
+test("responder a um comentário de cima: vira resposta dele, marcando o autor", () => {
+  assert.deepEqual(replyTarget({ id: "c1", parent_id: null, user_id: "u1" }), { parentId: "c1", replyToUserId: "u1" });
+});
+
+test("responder a uma resposta: fica no mesmo nível, marcando quem respondeu", () => {
+  assert.deepEqual(replyTarget({ id: "r1", parent_id: "c1", user_id: "u2" }), { parentId: "c1", replyToUserId: "u2" });
+});
+
+test("apagar: comentário de cima com respostas vira 'apagado'; o resto sai de vez", () => {
+  assert.equal(commentDeleteMode({ parent_id: null }, 2), "soft");
+  assert.equal(commentDeleteMode({ parent_id: null }, 0), "hard");
+  assert.equal(commentDeleteMode({ parent_id: "c1" }, 0), "hard");
+});
+
+test("textos dos avisos de resposta e de curtida em comentário", () => {
+  assert.equal(replyNoticeCopy("Caio", "Duna"), "Caio respondeu seu comentário na avaliação de Duna");
+  assert.equal(commentLikeNoticeCopy("Caio", 1, "Duna"), "Caio curtiu seu comentário na avaliação de Duna");
+  assert.equal(commentLikeNoticeCopy("Caio", 2, "Duna"), "Caio e mais 1 pessoa curtiram seu comentário na avaliação de Duna");
+  assert.equal(commentLikeNoticeCopy("Caio", 4, "Duna"), "Caio e mais 3 pessoas curtiram seu comentário na avaliação de Duna");
+});

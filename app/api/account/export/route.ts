@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const [watchHistory, episodesProgress, hiddenTitles, activityEvents, reviewComments, reviewLikes, recommendations] = await Promise.all([
+    const [watchHistory, episodesProgress, hiddenTitles, activityEvents, reviewComments, reviewLikes, recommendations, commentLikes] = await Promise.all([
       sql`
         SELECT we.id, we.library_item_id, we.media_id, m.tmdb_id, m.media_type, we.watched_at, we.watched_at_precision,
                we.rating, we.comment, we.created_at, we.updated_at
@@ -137,7 +137,7 @@ export async function GET(req: NextRequest) {
       `,
       // Migration 0009: comentários que você escreveu e avaliações que você curtiu.
       sql`
-        SELECT c.id, c.body, c.created_at, c.library_item_id, p.username AS review_owner, m.tmdb_id, m.media_type
+        SELECT c.id, c.body, c.created_at, c.library_item_id, c.parent_id, c.deleted_at, p.username AS review_owner, m.tmdb_id, m.media_type
         FROM public.review_comments c
         JOIN public.library_items li ON li.id = c.library_item_id
         LEFT JOIN public.profiles p ON p.id = li.user_id
@@ -156,6 +156,14 @@ export async function GET(req: NextRequest) {
       `,
       // Migration 0010: indicações enviadas e recebidas.
       recommendationRows(sql, user.id),
+      // Migration 0011: comentários que você curtiu.
+      sql`
+        SELECT l.created_at, l.comment_id, c.library_item_id
+        FROM public.review_comment_likes l
+        JOIN public.review_comments c ON c.id = l.comment_id
+        WHERE l.user_id = ${user.id}
+        ORDER BY l.created_at
+      `,
     ]);
 
     const backup = {
@@ -171,6 +179,7 @@ export async function GET(req: NextRequest) {
         activity_events: activityEvents,
         review_comments: reviewComments,
         review_likes: reviewLikes,
+        review_comment_likes: commentLikes,
         recommendations_sent: recommendations.sent,
         recommendations_received: recommendations.received,
       },

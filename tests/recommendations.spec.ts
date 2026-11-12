@@ -111,12 +111,15 @@ test("B vê em Dos amigos com o bilhete e unseen 1", async () => {
   expect(summary.pending).toBeGreaterThanOrEqual(1);
 });
 
-test("B põe na Watchlist; A vê 'pôs na Watchlist'", async ({ request }) => {
+test("B põe na Watchlist; A vê 'colocou na Watchlist hoje' numa linha só", async ({ request, page }) => {
   const added = await b.post("/api/library", { data: { media: { id: FIRST, media_type: "movie" }, status: "want" } });
   expect(added.ok()).toBe(true);
   const item = (await sentItems(request)).find((i) => i.media.tmdb_id === FIRST);
-  expect(item?.label).toBe("pôs na Watchlist");
+  expect(item?.label).toBe("colocou na Watchlist");
+  expect((item as { state?: string } | undefined)?.state).toBe("saved");
   expect(item?.can_cancel).toBe(false);
+  await page.goto("/for-you?view=enviadas");
+  await expect(page.locator(".rc-row-meta").filter({ hasText: "colocou na Watchlist hoje" }).first()).toBeVisible({ timeout: 60_000 });
 });
 
 test("B marca como visto com nota 8; A recebe um aviso; trocar a nota depois não reabre o aviso", async ({ request }) => {

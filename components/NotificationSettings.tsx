@@ -143,15 +143,15 @@ export function NotificationSettings() {
             <label className="notification-product">
               <input type="checkbox" checked={prefs.review_like_site} onChange={() => toggle("review_like_site")} />
               <span>
-                <strong>Curtidas nas suas avaliações</strong>
-                <small>Quando alguém curtir uma nota ou resenha sua. Várias curtidas viram um aviso só.</small>
+                <strong>Curtidas nas suas avaliações e comentários</strong>
+                <small>Quando alguém curtir uma nota, resenha ou comentário seu. Várias curtidas viram um aviso só.</small>
               </span>
             </label>
             <label className="notification-product">
               <input type="checkbox" checked={prefs.review_comment_site} onChange={() => toggle("review_comment_site")} />
               <span>
-                <strong>Comentários nas suas avaliações</strong>
-                <small>Quando alguém comentar uma nota ou resenha sua.</small>
+                <strong>Comentários e respostas</strong>
+                <small>Quando alguém comentar uma nota ou resenha sua, ou responder um comentário seu.</small>
               </span>
             </label>
             <label className="notification-product">

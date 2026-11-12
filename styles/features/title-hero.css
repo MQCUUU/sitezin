@@ -461,3 +461,40 @@
   gap: 10px;
   min-width: 0;
 }
+
+/* Décimos da nota: linha discreta abaixo da escala; o escolhido em âmbar. */
+.tt-rating-tenths {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.tt-rating-tenth {
+  min-height: 36px;
+  border: 0;
+  border-radius: var(--mc-radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.tt-rating-tenth[data-active="true"] {
+  color: var(--mc-color-accent);
+  box-shadow: inset 0 -2px 0 var(--mc-color-accent);
+}
+
+.tt-rating-tenth:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tt-rating-tenth:not([data-active="true"]):hover {
+    color: var(--text);
+    background: var(--mc-color-surface-hover);
+  }
+}

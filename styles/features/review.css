@@ -380,3 +380,116 @@
     height: clamp(28px, 3.4vw, 40px);
     border-radius: var(--mc-radius-sm);
 }
+
+/*
+ * Respostas (migration 0011). O item da lista vira um bloco: o comentário de cima
+ * e, embaixo, as respostas recuadas, presas a ele por uma linha fina que desce do
+ * centro do avatar — dá para ver na hora que é uma resposta ao comentário.
+ */
+.rv-comment {
+    display: block;
+}
+.rv-comment.rv-comment-skeleton {
+    display: grid;
+}
+.rv-c {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 12px;
+}
+.rv-replies {
+    display: grid;
+    gap: 16px;
+    margin: 12px 0 0 17px;
+    padding: 4px 0 0 18px;
+    border-left: 2px solid var(--mc-color-border-subtle);
+    list-style: none;
+}
+.rv-replies .rv-c {
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 10px;
+}
+.rv-replies .rv-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 10px;
+}
+.rv-avatar--ghost {
+    background: none;
+    box-shadow: inset 0 0 0 1px var(--mc-color-border-subtle);
+}
+.rv-replying {
+    margin: 0;
+    color: var(--muted);
+    font-size: var(--mc-fs-xs);
+}
+.rv-replying a {
+    color: var(--text);
+    font-weight: 650;
+    text-decoration: none;
+}
+.rv-replying a:hover,
+.rv-comment-meta a:hover {
+    text-decoration: underline;
+}
+.rv-replying a:focus-visible,
+.rv-c-like:focus-visible {
+    outline: 2px solid var(--mc-color-accent);
+    outline-offset: 3px;
+    border-radius: 4px;
+}
+.rv-c-actions {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+.rv-c-like {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--muted);
+    font: inherit;
+    font-size: var(--mc-fs-sm);
+    font-weight: 650;
+    cursor: pointer;
+}
+.rv-c-like--static {
+    cursor: default;
+}
+.rv-c-like[data-liked="true"] {
+    color: var(--mc-color-accent);
+}
+.rv-c-like svg {
+    transition: transform 160ms var(--mc-ease-out);
+}
+.rv-c-like:active svg {
+    transform: scale(0.9);
+}
+@media (hover: hover) and (pointer: fine) {
+    .rv-c-like:not([data-liked="true"]):not(.rv-c-like--static):hover,
+    .rv-text-action:hover {
+        color: var(--text);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .rv-c-like svg {
+        transition: none;
+    }
+    .rv-c-like:active svg {
+        transform: none;
+    }
+}
+.rv-reply-form {
+    display: grid;
+    gap: 8px;
+    margin-top: 8px;
+}
+.rv-reply-form-actions {
+    display: inline-flex;
+    gap: 8px;
+}

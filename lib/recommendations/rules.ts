@@ -22,9 +22,11 @@ export function formatRating(value: number): string {
   return value.toFixed(1).replace(".", ",");
 }
 
-export function senderStatusLabel(state: RecipientState, visibleRating: number | null): string {
-  if (state === "saved") return "pôs na Watchlist";
-  if (state === "watched") return visibleRating === null ? "assistiu" : `assistiu e deu ${formatRating(visibleRating)}`;
+/** "when" (timeAgo de quando mudou) entra no meio: "assistiu ontem e deu 8,0". */
+export function senderStatusLabel(state: RecipientState, visibleRating: number | null, when = ""): string {
+  const at = when ? ` ${when}` : "";
+  if (state === "saved") return `colocou na Watchlist${at}`;
+  if (state === "watched") return visibleRating === null ? `assistiu${at}` : `assistiu${at} e deu ${formatRating(visibleRating)}`;
   return "ainda não viu";
 }
 

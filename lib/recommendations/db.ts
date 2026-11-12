@@ -153,6 +153,7 @@ export async function sent(sql: Sql, userId: string) {
        p.visibility, p.is_public, p.activity_visibility, p.ratings_visibility,
        m.tmdb_id, m.media_type, m.title, m.poster_path, m.backdrop_path,
        li.status AS item_status, li.personal_rating,
+       CASE WHEN li.status = 'watched' THEN COALESCE(li.watched_at, li.updated_at, li.added_at) ELSE li.added_at END AS state_at,
        EXISTS (SELECT 1 FROM public.follows fw WHERE fw.follower_id = r.sender_id AND fw.following_id = r.recipient_id AND fw.status = 'accepted') AS sender_follows
      FROM public.recommendations r
      JOIN public.profiles p ON p.id = r.recipient_id
@@ -172,6 +173,10 @@ export async function sent(sql: Sql, userId: string) {
       id: String(r.id),
       media: media(r),
       recipient: person(r),
+      // O texto final (com "hoje", "ontem") sai no cliente: senderStatusLabel(state, rating, timeAgo(state_at)).
+      state: state === "dismissed" ? "pending" : state,
+      rating,
+      state_at: r.state_at ? iso(r.state_at) : null,
       label: senderStatusLabel(state, rating),
       can_cancel: state === "pending" || state === "dismissed",
       created_at: iso(r.created_at),

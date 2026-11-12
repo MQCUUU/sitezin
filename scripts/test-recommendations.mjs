@@ -30,10 +30,17 @@ test("recipientState: biblioteca vence dispensa", () => {
 test("senderStatusLabel esconde a dispensa", () => {
   assert.equal(R.senderStatusLabel("pending", null), "ainda não viu");
   assert.equal(R.senderStatusLabel("dismissed", null), "ainda não viu");
-  assert.equal(R.senderStatusLabel("saved", null), "pôs na Watchlist");
+  assert.equal(R.senderStatusLabel("saved", null), "colocou na Watchlist");
   assert.equal(R.senderStatusLabel("watched", 9.5), "assistiu e deu 9,5");
   assert.equal(R.senderStatusLabel("watched", 8), "assistiu e deu 8,0");
   assert.equal(R.senderStatusLabel("watched", null), "assistiu");
+});
+
+test("senderStatusLabel com a data do retorno numa linha só", () => {
+  assert.equal(R.senderStatusLabel("saved", null, "hoje"), "colocou na Watchlist hoje");
+  assert.equal(R.senderStatusLabel("watched", 8, "ontem"), "assistiu ontem e deu 8,0");
+  assert.equal(R.senderStatusLabel("watched", null, "há 2 dias"), "assistiu há 2 dias");
+  assert.equal(R.senderStatusLabel("pending", null, "hoje"), "ainda não viu");
 });
 
 test("resultCopy com e sem nota visível", () => {

@@ -41,7 +41,7 @@ export async function loadReview(sql: Sql, id: string, viewerId: string | null):
         WHERE f.follower_id = ${viewerId}::uuid AND f.following_id = li.user_id AND f.status = 'accepted'
       ) AS follows_owner,
       (SELECT count(*)::int FROM public.review_likes l WHERE l.library_item_id = li.id) AS like_count,
-      (SELECT count(*)::int FROM public.review_comments c WHERE c.library_item_id = li.id) AS comment_count,
+      (SELECT count(*)::int FROM public.review_comments c WHERE c.library_item_id = li.id AND c.deleted_at IS NULL) AS comment_count,
       EXISTS (
         SELECT 1 FROM public.review_likes l WHERE l.library_item_id = li.id AND l.user_id = ${viewerId}::uuid
       ) AS liked_by_viewer
@@ -84,24 +84,45 @@ export async function loadReview(sql: Sql, id: string, viewerId: string | null):
   };
 }
 
+type Person = { username: string; display_name: string | null; avatar_url: string | null };
+
 export type ReviewComment = {
   id: string;
+  /** Vazio quando apagado (deleted = true). */
   body: string;
   created_at: string;
-  author: { username: string; display_name: string | null; avatar_url: string | null };
+  author: Person;
   can_delete: boolean;
+  /** Migration 0011: resposta (parent_id = comentário de cima) e a quem respondeu. */
+  parent_id: string | null;
+  reply_to: { username: string; display_name: string | null } | null;
+  deleted: boolean;
+  like_count: number;
+  liked_by_viewer: boolean;
+  can_like: boolean;
+  replies?: ReviewComment[];
 };
+
 
 export const COMMENTS_PAGE = 20;
 
 export function toComment(r: any, ownerId: string, viewerId: string | null): ReviewComment {
   const userId = String(r.user_id);
+  const deleted = Boolean(r.deleted_at);
   return {
     id: String(r.id),
-    body: String(r.body),
+    body: deleted ? "" : String(r.body),
     created_at: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at),
-    author: { username: String(r.username ?? ""), display_name: r.display_name ?? null, avatar_url: r.avatar_url ?? null },
-    can_delete: viewerId !== null && (userId === viewerId || ownerId === viewerId),
+    author: deleted
+      ? { username: "", display_name: null, avatar_url: null }
+      : { username: String(r.username ?? ""), display_name: r.display_name ?? null, avatar_url: r.avatar_url ?? null },
+    can_delete: !deleted && viewerId !== null && (userId === viewerId || ownerId === viewerId),
+    parent_id: r.parent_id ? String(r.parent_id) : null,
+    reply_to: r.reply_username ? { username: String(r.reply_username), display_name: r.reply_display_name ?? null } : null,
+    deleted,
+    like_count: deleted ? 0 : Number(r.like_count) || 0,
+    liked_by_viewer: !deleted && Boolean(r.liked_by_viewer),
+    can_like: !deleted && viewerId !== null && userId !== viewerId,
   };
 }
 

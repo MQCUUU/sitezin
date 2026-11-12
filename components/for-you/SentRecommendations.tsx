@@ -10,7 +10,7 @@ import { Poster } from "@/components/Poster";
 import { useToast } from "@/components/ToastProvider";
 import { Button } from "@/components/ui/Button";
 import { apiFetch } from "@/lib/api-client";
-import { timeAgo } from "@/lib/recommendations/rules";
+import { senderStatusLabel, timeAgo, type RecipientState } from "@/lib/recommendations/rules";
 
 import { RowsSkeleton } from "./FriendsInbox";
 
@@ -25,6 +25,9 @@ type Item = {
   media: { tmdb_id: number; media_type: "movie" | "tv"; title: string; poster_path: string | null };
   recipient: { username: string; display_name: string | null };
   label: string;
+  state: RecipientState;
+  rating: number | null;
+  state_at: string | null;
   can_cancel: boolean;
   created_at: string;
 };
@@ -112,10 +115,15 @@ export function SentRecommendations() {
                 <Link href={href} className="rc-row-title">
                   {item.media.title}
                 </Link>
+                {/* Uma linha: "para Bisnaga, colocou na Watchlist hoje" / "para Bisnaga hoje, ainda não viu". */}
                 <p className="rc-row-meta">
-                  para <Link href={`/u/${item.recipient.username}`}>{friend}</Link>, {timeAgo(item.created_at)}
+                  para <Link href={`/u/${item.recipient.username}`}>{friend}</Link>
+                  {item.state === "saved" || item.state === "watched" ? (
+                    <>, <span className="rc-row-state rc-row-state--inline">{senderStatusLabel(item.state, item.rating, item.state_at ? timeAgo(item.state_at) : "")}</span></>
+                  ) : (
+                    <> {timeAgo(item.created_at)}, <span className="rc-row-state rc-row-state--inline">{item.label}</span></>
+                  )}
                 </p>
-                <p className="rc-row-state">{item.label}</p>
                 {item.can_cancel ? (
                   <div className="rc-row-actions">
                     <button type="button" className="rc-text-action rc-text-action--quiet" onClick={() => cancel(item)}>
