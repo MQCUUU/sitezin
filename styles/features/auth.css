@@ -860,6 +860,18 @@
     background: transparent;
     padding: 32px 0 32px 48px;
 }
+/*
+ * O logo fica fora do fluxo (top 24px): o topo da página reserva o espaço dele,
+ * e a imagem acompanha a altura da janela — em telas baixas ela encolhe em vez
+ * de subir por cima do logo.
+ */
+.auth-page {
+    padding-top: 80px;
+    padding-bottom: 32px;
+}
+.auth-visual {
+    min-height: clamp(380px, calc(100dvh - 124px), 560px);
+}
 @media (max-width: 860px) {
     .auth-shell {
         grid-template-columns: minmax(0, 1fr);
