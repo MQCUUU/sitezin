@@ -54,17 +54,17 @@ function ReviewList({ items }: { items: any[] }) {
     const media = mediaOf(row);
     if (!media) return null;
     const date = row.watched_at || row.updated_at || row.added_at;
-    return <Link
+    // Duas áreas: o pôster leva ao título; o resto da linha, à página da avaliação.
+    return <div
       className="profile-review-card"
-      href={`/title/${media.media_type}/${media.tmdb_id}`}
       key={row.id || `${media.media_type}-${media.tmdb_id}-${index}`}
     >
-      <div className="profile-review-poster">
+      <Link className="profile-review-poster" href={`/title/${media.media_type}/${media.tmdb_id}`} aria-label={`Abrir ${media.title}`}>
         {media.poster_path
-          ? <Poster path={media.poster_path} alt={media.title} sizes="72px" tmdbSize="w185" />
+          ? <Poster path={media.poster_path} alt="" sizes="72px" tmdbSize="w185" />
           : <Film size={24} />}
-      </div>
-      <article>
+      </Link>
+      <Link className="profile-review-body" href={`/review/${row.id}`}>
         <header>
           <div>
             <strong>{media.title}</strong>
@@ -72,9 +72,9 @@ function ReviewList({ items }: { items: any[] }) {
           </div>
           {row.personal_rating != null && <span><Star size={14} fill="currentColor" /> {Number(row.personal_rating).toFixed(1)}</span>}
         </header>
-        <p>{String(row.review || "").trim() || "Avaliação registrada sem texto."}</p>
-      </article>
-    </Link>;
+        <p>{String(row.review || "").trim()}</p>
+      </Link>
+    </div>;
   })}</div>;
 }
 

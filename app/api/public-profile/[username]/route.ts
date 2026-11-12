@@ -174,12 +174,13 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
       LEFT JOIN public.media m ON m.id = li.media_id
       WHERE li.user_id = ${profile.id}
     `,
-    (ratingsVisible || reviewsVisible)
+    // Aba Reviews: só avaliação com texto (a só nota fica na atividade e no diário).
+    reviewsVisible
       ? sql`
           SELECT
             li.id,
             CASE WHEN ${ratingsVisible} THEN li.personal_rating ELSE NULL END AS personal_rating,
-            CASE WHEN ${reviewsVisible} THEN li.review ELSE NULL END AS review,
+            li.review,
             li.watched_at, li.added_at, li.updated_at,
             json_build_object(
               'tmdb_id', m.tmdb_id,
@@ -190,8 +191,7 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
           FROM public.library_items li
           LEFT JOIN public.media m ON m.id = li.media_id
           WHERE li.user_id = ${profile.id}
-            AND ((${ratingsVisible} AND li.personal_rating IS NOT NULL)
-              OR (${reviewsVisible} AND li.review IS NOT NULL AND trim(li.review) <> ''))
+            AND li.review IS NOT NULL AND trim(li.review) <> ''
           ORDER BY coalesce(li.updated_at, li.watched_at, li.added_at) DESC
           LIMIT 200
         `

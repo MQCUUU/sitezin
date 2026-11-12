@@ -5,6 +5,7 @@ import { getRouteSession } from "@/lib/auth/route-session";
 import { getDb } from "@/lib/db/neon";
 import { reviewAccess } from "@/lib/reviews/access";
 import { displayName, loadReview } from "@/lib/reviews/load";
+import { canViewSection } from "@/lib/social/visibility";
 
 import ReviewView, { type ReviewData } from "@/components/review/ReviewView";
 
@@ -27,6 +28,13 @@ async function load(id: string): Promise<ReviewData | null> {
     id: loaded.id,
     owner: loaded.owner,
     media: loaded.media,
+    // "Assistido em" segue a visibilidade do diário da pessoa.
+    watched_at: canViewSection(loaded.row, loaded.diary_visibility ?? loaded.row.activity_visibility, {
+      isOwner: access.isOwner,
+      isAcceptedFollower: Boolean(viewerId) && loaded.followsOwner,
+    })
+      ? loaded.watched_at
+      : null,
     rating: access.rating,
     review: access.review,
     wrote_no_review: access.wroteNoReview,

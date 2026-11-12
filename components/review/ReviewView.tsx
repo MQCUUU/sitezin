@@ -3,19 +3,20 @@
 import "@/styles/features/review.css";
 
 import Link from "next/link";
-import { Heart } from "lucide-react";
+import { Film, Heart, Star } from "lucide-react";
 import { useCallback, useEffect, useId, useState } from "react";
 
 import { SmartBackButton } from "@/components/SmartBackButton";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { useToast } from "@/components/ToastProvider";
-import { TitleBand } from "@/components/title/hero/TitleBand";
+import { Poster } from "@/components/Poster";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { apiFetch, ApiError } from "@/lib/api-client";
 
 /*
- * Página da avaliação: a Tela do título, quem avaliou, a nota e o texto inteiros,
+ * Página da avaliação: pôster do título ao lado de quem avaliou, título e ano, nota,
+ * quando assistiu, o texto inteiro,
  * curtir e os comentários (mais antigos primeiro). Comentar só com sessão; apagar
  * só o autor do comentário ou o dono da avaliação.
  */
@@ -25,7 +26,9 @@ type Person = { username: string; display_name: string | null; avatar_url: strin
 export type ReviewData = {
   id: string;
   owner: Person;
-  media: { media_type: "movie" | "tv"; tmdb_id: number; title: string; backdrop_path: string | null };
+  media: { media_type: "movie" | "tv"; tmdb_id: number; title: string; backdrop_path: string | null; poster_path: string | null; year: number | null };
+  /** Já filtrado pela visibilidade do diário. */
+  watched_at: string | null;
   rating: number | null;
   review: string | null;
   /** O autor deu só nota; resenha oculta para quem vê não conta como "sem resenha". */
@@ -206,49 +209,63 @@ export default function ReviewView({ initial }: { initial: ReviewData }) {
         <SmartBackButton />
       </div>
 
-      <div className="rv-band">
-        <TitleBand path={initial.media.backdrop_path} />
-      </div>
-
-      <header className="rv-head">
-        <h1 className="rv-title">
-          Avaliação de <Link href={`/u/${initial.owner.username}`}>{ownerName}</Link> para{" "}
-          <Link href={titleHref}>{initial.media.title}</Link>
-        </h1>
-      </header>
-
-      <section className="rv-review" aria-label="Avaliação">
-        {rating ? (
-          <p className="rv-rating" aria-label={`Nota ${rating} de 10`}>
-            {rating}
-          </p>
-        ) : null}
-        {initial.review ? (
-          <p className="rv-text">{initial.review}</p>
-        ) : initial.wrote_no_review ? (
-          <p className="rv-text rv-muted">Deu nota sem escrever resenha.</p>
-        ) : null}
-
-        <div className="rv-actions">
-          {initial.can_like ? (
-            <button
-              type="button"
-              className="rv-like"
-              data-liked={liked ? "true" : undefined}
-              aria-pressed={liked}
-              onClick={toggleLike}
-            >
-              <Heart size={18} fill={liked ? "currentColor" : "none"} aria-hidden="true" />
-              {liked ? "Curtiu" : "Curtir"}
-              <span className="rv-count">{likes}</span>
-            </button>
+      <div className="rv-card">
+        <Link className="rv-poster" href={titleHref} aria-label={`Abrir ${initial.media.title}`}>
+          {initial.media.poster_path ? (
+            <Poster path={initial.media.poster_path} alt="" sizes="(max-width: 640px) 96px, 168px" tmdbSize="w342" />
           ) : (
-            <p className="rv-like-count">
-              <Heart size={18} aria-hidden="true" /> {likes} {likes === 1 ? "curtida" : "curtidas"}
-            </p>
+            <Film size={28} aria-hidden="true" />
           )}
-        </div>
-      </section>
+        </Link>
+
+        <header className="rv-head">
+          <p className="rv-byline">
+            <Avatar person={initial.owner} />
+            <span>
+              Avaliação de <Link href={`/u/${initial.owner.username}`}>{ownerName}</Link>
+            </span>
+          </p>
+          <h1 className="rv-title">
+            <Link href={titleHref}>{initial.media.title}</Link>
+            {initial.media.year ? <span className="rv-year">{initial.media.year}</span> : null}
+          </h1>
+          {rating ? (
+            <p className="rv-rating" aria-label={`Nota ${rating} de 10`}>
+              <Star size={18} fill="currentColor" aria-hidden="true" />
+              {rating}
+            </p>
+          ) : null}
+          {initial.watched_at ? <p className="rv-watched">Assistido em {when(initial.watched_at)}</p> : null}
+        </header>
+
+        <section className="rv-review" aria-label="Avaliação">
+          {initial.review ? (
+            <p className="rv-text">{initial.review}</p>
+          ) : initial.wrote_no_review ? (
+            <p className="rv-text rv-muted">Deu nota sem escrever resenha.</p>
+          ) : null}
+
+          <div className="rv-actions">
+            {initial.can_like ? (
+              <button
+                type="button"
+                className="rv-like"
+                data-liked={liked ? "true" : undefined}
+                aria-pressed={liked}
+                onClick={toggleLike}
+              >
+                <Heart size={18} fill={liked ? "currentColor" : "none"} aria-hidden="true" />
+                {liked ? "Curtiu" : "Curtir"}
+                <span className="rv-count">{likes}</span>
+              </button>
+            ) : (
+              <p className="rv-like-count">
+                <Heart size={18} aria-hidden="true" /> {likes} {likes === 1 ? "curtida" : "curtidas"}
+              </p>
+            )}
+          </div>
+        </section>
+      </div>
 
       <section className="rv-comments-section" aria-labelledby="rv-comments-title">
         <h2 id="rv-comments-title" className="rv-comments-title">

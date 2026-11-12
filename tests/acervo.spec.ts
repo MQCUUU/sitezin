@@ -127,7 +127,7 @@ test.describe("Fase 6 — Coleção e Pessoa", () => {
     expect(me.username).toBeTruthy();
 
     await page.goto(`/u/${me.username}`);
-    await expect(page.locator(".profile-v2-counts")).toHaveText(/\d+ seguidores, \d+ seguindo/, { timeout: 60_000 });
+    await expect(page.locator(".profile-v2-counts")).toHaveText(/\d+ seguidor(es)?, \d+ seguindo/, { timeout: 60_000 });
     if (await page.locator(".profile-v2-banner").count()) {
       await expect(page.locator(".profile-v2-top .tt-band-screen img")).toBeVisible();
     }

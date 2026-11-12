@@ -18,7 +18,10 @@ export type LoadedReview = {
   row: ReviewRow;
   followsOwner: boolean;
   owner: { username: string; display_name: string | null; avatar_url: string | null };
-  media: { media_type: "movie" | "tv"; tmdb_id: number; title: string; backdrop_path: string | null };
+  media: { media_type: "movie" | "tv"; tmdb_id: number; title: string; backdrop_path: string | null; poster_path: string | null; year: number | null };
+  /** Data em que assistiu e a visibilidade do diário (a página decide se mostra). */
+  watched_at: string | null;
+  diary_visibility: unknown;
   like_count: number;
   comment_count: number;
   liked_by_viewer: boolean;
@@ -28,10 +31,11 @@ export async function loadReview(sql: Sql, id: string, viewerId: string | null):
   if (!isUuid(id)) return null;
   const rows = await sql`
     SELECT
-      li.id, li.user_id AS owner_id, li.personal_rating, li.review,
+      li.id, li.user_id AS owner_id, li.personal_rating, li.review, li.watched_at,
       p.username, p.display_name, p.avatar_url,
-      p.visibility, p.is_public, p.activity_visibility, p.ratings_visibility, p.reviews_visibility,
-      m.media_type, m.tmdb_id, m.title, m.backdrop_path,
+      p.visibility, p.is_public, p.activity_visibility, p.ratings_visibility, p.reviews_visibility, p.diary_visibility,
+      m.media_type, m.tmdb_id, m.title, m.backdrop_path, m.poster_path,
+      EXTRACT(YEAR FROM COALESCE(m.release_date, m.first_air_date))::int AS year,
       EXISTS (
         SELECT 1 FROM public.follows f
         WHERE f.follower_id = ${viewerId}::uuid AND f.following_id = li.user_id AND f.status = 'accepted'
@@ -69,7 +73,11 @@ export async function loadReview(sql: Sql, id: string, viewerId: string | null):
       tmdb_id: Number(r.tmdb_id),
       title: String(r.title),
       backdrop_path: r.backdrop_path ?? null,
+      poster_path: r.poster_path ?? null,
+      year: r.year === null || r.year === undefined ? null : Number(r.year),
     },
+    watched_at: r.watched_at ? new Date(r.watched_at).toISOString() : null,
+    diary_visibility: r.diary_visibility ?? null,
     like_count: Number(r.like_count) || 0,
     comment_count: Number(r.comment_count) || 0,
     liked_by_viewer: Boolean(r.liked_by_viewer),

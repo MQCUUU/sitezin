@@ -125,8 +125,11 @@ test("id inexistente e malformado dão 404", async () => {
 test("página da avaliação mostra comentários e deixa comentar", async ({ browser }) => {
   const page = await B.newPage();
   await page.goto(`/review/${reviewId}`);
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Avaliação de");
-  await expect(page.locator(".rv-band .tt-band-screen")).toBeVisible();
+  // Cabeçalho da avaliação: pôster → título, "Avaliação de" quem escreveu, título no h1.
+  await expect(page.locator(".rv-byline")).toContainText("Avaliação de");
+  await expect(page.locator(".rv-poster")).toHaveAttribute("href", `/title/movie/${MOVIE}`);
+  await expect(page.getByRole("heading", { level: 1 }).locator("a")).toHaveAttribute("href", `/title/movie/${MOVIE}`);
+  await expect(page.locator(".rv-band")).toHaveCount(0);
 
   const body = `${MARK} pela página`;
   await page.getByLabel("Escreva um comentário").fill(body);
