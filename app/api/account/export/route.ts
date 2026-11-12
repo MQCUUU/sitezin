@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { respostaDeErro } from "@/lib/api-error";
 import { getDb } from "@/lib/db/neon";
 import { BACKUP_VERSION, csvCell } from "@/lib/backup/plan";
+import { exportRows as recommendationRows } from "@/lib/recommendations/db";
 
 /*
  * GET /api/account/export?format=json|csv — cópia dos dados do usuário da
@@ -104,7 +105,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const [watchHistory, episodesProgress, hiddenTitles, activityEvents] = await Promise.all([
+    const [watchHistory, episodesProgress, hiddenTitles, activityEvents, reviewComments, reviewLikes, recommendations] = await Promise.all([
       sql`
         SELECT we.id, we.library_item_id, we.media_id, m.tmdb_id, m.media_type, we.watched_at, we.watched_at_precision,
                we.rating, we.comment, we.created_at, we.updated_at
@@ -134,6 +135,27 @@ export async function GET(req: NextRequest) {
         WHERE ae.user_id = ${user.id}
         ORDER BY ae.occurred_at
       `,
+      // Migration 0009: comentários que você escreveu e avaliações que você curtiu.
+      sql`
+        SELECT c.id, c.body, c.created_at, c.library_item_id, p.username AS review_owner, m.tmdb_id, m.media_type
+        FROM public.review_comments c
+        JOIN public.library_items li ON li.id = c.library_item_id
+        LEFT JOIN public.profiles p ON p.id = li.user_id
+        LEFT JOIN public.media m ON m.id = li.media_id
+        WHERE c.user_id = ${user.id}
+        ORDER BY c.created_at
+      `,
+      sql`
+        SELECT l.created_at, l.library_item_id, p.username AS review_owner, m.tmdb_id, m.media_type
+        FROM public.review_likes l
+        JOIN public.library_items li ON li.id = l.library_item_id
+        LEFT JOIN public.profiles p ON p.id = li.user_id
+        LEFT JOIN public.media m ON m.id = li.media_id
+        WHERE l.user_id = ${user.id}
+        ORDER BY l.created_at
+      `,
+      // Migration 0010: indicações enviadas e recebidas.
+      recommendationRows(sql, user.id),
     ]);
 
     const backup = {
@@ -147,6 +169,10 @@ export async function GET(req: NextRequest) {
         episodes_progress: episodesProgress,
         hidden_titles: hiddenTitles,
         activity_events: activityEvents,
+        review_comments: reviewComments,
+        review_likes: reviewLikes,
+        recommendations_sent: recommendations.sent,
+        recommendations_received: recommendations.received,
       },
     };
 

@@ -80,7 +80,15 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const sql = getDb();
 
-    if (body.all) {
+    // Indicações (0010): abrir "Dos amigos" marca como lidos só os avisos daquele tipo.
+    const MARKABLE_TYPES = ["recommendation_received"];
+    if (typeof body.type === "string" && MARKABLE_TYPES.includes(body.type)) {
+      await sql`
+        UPDATE public.notifications
+        SET read_at = NOW()
+        WHERE user_id = ${userId} AND type = ${body.type} AND read_at IS NULL;
+      `;
+    } else if (body.all) {
       await sql`
         UPDATE public.notifications
         SET read_at = NOW()

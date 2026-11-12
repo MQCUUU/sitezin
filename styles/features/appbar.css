@@ -289,3 +289,32 @@
     transition: none;
   }
 }
+
+/* Indicações (0010): número de indicações não vistas ao lado de "Para você" (âmbar = é seu). */
+.mc-appbar-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 2px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--mc-color-accent);
+  color: #111;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.mc-appbar-more-list .mc-appbar-count {
+  margin-left: auto;
+}
+.mobile-nav a:has(.mobile-nav-count) {
+  position: relative;
+}
+.mobile-nav-count {
+  position: absolute;
+  top: 2px;
+  left: calc(50% + 6px);
+  margin: 0;
+}

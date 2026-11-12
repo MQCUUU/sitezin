@@ -103,3 +103,46 @@ test("migrations não apagam tabelas nem dados", () => {
     assert.deepEqual(drops, allowed, `${migration.name}: só as tabelas revisadas`);
   }
 });
+
+function tableBlock(name) {
+  const m = all.match(new RegExp(String.raw`CREATE TABLE (?:IF NOT EXISTS )?public\.${name} \(([\s\S]*?)\n\);`));
+  return m ? m[1] : "";
+}
+
+test("0009 cria review_likes e review_comments com cascata", () => {
+  for (const t of ["review_likes", "review_comments"]) {
+    const block = tableBlock(t);
+    assert.ok(block, `${t} existe`);
+    assert.match(block, /library_item_id uuid NOT NULL REFERENCES public\.library_items\(id\) ON DELETE CASCADE/, `${t}: cascata do item`);
+    assert.match(block, /user_id uuid NOT NULL REFERENCES neon_auth\."user"\(id\) ON DELETE CASCADE/, `${t}: cascata da conta`);
+  }
+  assert.match(tableBlock("review_likes"), /PRIMARY KEY \(library_item_id, user_id\)/);
+  assert.match(tableBlock("review_comments"), /CHECK \(char_length\(btrim\(body\)\) BETWEEN 1 AND 500\)/);
+});
+
+test("notifications aceita os tipos sociais novos sem perder os antigos", () => {
+  const checks = [...all.matchAll(/notifications_type_check\s+CHECK \(type IN \(([^;]*)\)\);/g)];
+  const last = checks.at(-1)?.[1] ?? "";
+  for (const type of ["new_season", "new_episode", "follow_request", "new_follower", "follow_accepted", "new_friend",
+    "review_like", "review_comment", "recommendation_received", "recommendation_result"]) {
+    assert.match(last, new RegExp(`'${type}'`), type);
+  }
+});
+
+test("notification_preferences ganha review_comment_site", () => {
+  assert.match(all, /ALTER TABLE public\.notification_preferences ADD COLUMN IF NOT EXISTS review_comment_site boolean DEFAULT true NOT NULL/);
+});
+
+test("0010 cria recommendations com cascata, UNIQUE e CHECK", () => {
+  const block = tableBlock("recommendations");
+  assert.ok(block, "recommendations existe");
+  assert.match(block, /sender_id uuid NOT NULL REFERENCES neon_auth\."user"\(id\) ON DELETE CASCADE/);
+  assert.match(block, /recipient_id uuid NOT NULL REFERENCES neon_auth\."user"\(id\) ON DELETE CASCADE/);
+  assert.match(block, /UNIQUE \(sender_id, recipient_id, media_id\)/);
+  assert.match(block, /CHECK \(sender_id <> recipient_id\)/);
+  assert.match(block, /note text CHECK \(note IS NULL OR char_length\(note\) <= 140\)/);
+});
+
+test("notification_preferences ganha recommendation_site", () => {
+  assert.match(all, /ALTER TABLE public\.notification_preferences ADD COLUMN IF NOT EXISTS recommendation_site boolean DEFAULT true NOT NULL/);
+});

@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { Star, UserCheck, Users } from "lucide-react";
+import { Heart, MessageCircle, Star, UserCheck, Users } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { apiFetch } from "@/lib/api-client";
 import type { CommunityReview } from "@/lib/reviews/community";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ToastProvider";
+import { useAuthState } from "@/hooks/useLibraryAuth";
 
 /*
  * "Da comunidade" — notas e resenhas de outras pessoas para este título
@@ -99,21 +101,21 @@ export function TitleCommunityReviews({ type, tmdbId }: { type: "movie" | "tv"; 
           {friends.length ? (
             <>
               <h3 className="title-community-group">Amigos</h3>
-              <ul className="title-community-list">{friends.map((r) => <ReviewCard key={r.username} review={r} />)}</ul>
+              <ul className="title-community-list">{friends.map((r) => <ReviewCard key={r.id || r.username} review={r} />)}</ul>
             </>
           ) : null}
 
           {following.length ? (
             <>
               <h3 className="title-community-group">Pessoas que você segue</h3>
-              <ul className="title-community-list">{following.map((r) => <ReviewCard key={r.username} review={r} />)}</ul>
+              <ul className="title-community-list">{following.map((r) => <ReviewCard key={r.id || r.username} review={r} />)}</ul>
             </>
           ) : null}
 
           {others.length ? (
             <>
               <h3 className="title-community-group">Outras pessoas</h3>
-              <ul className="title-community-list">{others.map((r) => <ReviewCard key={r.username} review={r} />)}</ul>
+              <ul className="title-community-list">{others.map((r) => <ReviewCard key={r.id || r.username} review={r} />)}</ul>
             </>
           ) : null}
 
@@ -130,10 +132,73 @@ export function TitleCommunityReviews({ type, tmdbId }: { type: "movie" | "tv"; 
   );
 }
 
+/*
+ * Curtir e contar comentários (migration 0009). A lista mostra só os números; os
+ * comentários vivem na página da avaliação (/review/[id]). Curtir é otimista e volta
+ * atrás se a API recusar.
+ */
+function ReviewActions({ review, name }: { review: CommunityReview; name: string }) {
+  const authState = useAuthState();
+  const toast = useToast();
+  const [liked, setLiked] = useState(review.liked_by_viewer);
+  const [count, setCount] = useState(review.like_count);
+  const [busy, setBusy] = useState(false);
+  const href = `/review/${review.id}`;
+
+  async function toggle() {
+    if (authState === "guest") {
+      window.location.href = `/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+      return;
+    }
+    if (busy) return;
+    const next = !liked;
+    setBusy(true);
+    setLiked(next);
+    setCount((value) => Math.max(0, value + (next ? 1 : -1)));
+    try {
+      const result = await apiFetch<{ liked: boolean; like_count: number }>(`/api/reviews/${review.id}/like`, {
+        method: next ? "POST" : "DELETE",
+      });
+      setLiked(result.liked);
+      setCount(result.like_count);
+    } catch {
+      setLiked(!next);
+      setCount((value) => Math.max(0, value + (next ? -1 : 1)));
+      toast.show({ title: "Não foi possível curtir agora.", kind: "error" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="title-community-actions">
+      <button
+        type="button"
+        className="title-community-like"
+        data-liked={liked ? "true" : undefined}
+        aria-pressed={liked}
+        aria-label={`Curtir avaliação de ${name}, ${count} ${count === 1 ? "curtida" : "curtidas"}`}
+        onClick={toggle}
+      >
+        <Heart size={16} fill={liked ? "currentColor" : "none"} aria-hidden="true" />
+        <span aria-hidden="true">{count}</span>
+      </button>
+      <Link
+        href={href}
+        className="title-community-comments"
+        aria-label={`${review.comment_count} ${review.comment_count === 1 ? "comentário" : "comentários"}, abrir avaliação`}
+      >
+        <MessageCircle size={16} aria-hidden="true" />
+        <span aria-hidden="true">{review.comment_count}</span>
+      </Link>
+    </div>
+  );
+}
+
 function ReviewCard({ review }: { review: CommunityReview }) {
   const name = review.display_name || `@${review.username}`;
-  const [open, setOpen] = useState(false);
   const long = (review.review?.length ?? 0) > 420;
+  const href = `/review/${review.id}`;
 
   return (
     <li className="title-community-card">
@@ -169,17 +234,20 @@ function ReviewCard({ review }: { review: CommunityReview }) {
       </header>
       {review.review ? (
         <>
-          <p className={`title-community-text${long && !open ? " is-clamped" : ""}`}>{review.review}</p>
+          <Link href={href} className="title-community-text-link">
+            <p className={`title-community-text${long ? " is-clamped" : ""}`}>{review.review}</p>
+          </Link>
           {long ? (
-            <button type="button" className="title-community-toggle" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
-              {open ? "Mostrar menos" : "Ler resenha completa"}
-            </button>
+            <Link href={href} className="title-community-toggle">
+              Ler avaliação completa
+            </Link>
           ) : null}
         </>
       ) : (
         <p className="title-community-text muted">Deu nota sem escrever resenha.</p>
       )}
       <small className="title-community-date">{when(review.updated_at)}</small>
+      {review.id ? <ReviewActions review={review} name={name} /> : null}
     </li>
   );
 }

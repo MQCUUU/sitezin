@@ -23,7 +23,19 @@ import { normalizeWatchProviders } from "@/components/media/providers";
 import { FOR_YOU_CACHE_PREFIX, isValidForYouPayload, safeJson, type Shelf, type FilterData, type LibraryItem } from "@/components/for-you/shared";
 import { ShelfRow, FeedSkeleton, FeaturedSkeleton, joinNames, FeaturedPick } from "@/components/for-you/ForYouParts";
 import { ProjectionProvider } from "@/components/screen/ProjectionProvider";
+import { ForYouSocialView } from "@/components/for-you/ForYouSocialView";
+import { ForYouViewTabs } from "@/components/for-you/ForYouViewTabs";
+/*
+ * Indicações (0010): ?view=amigos|enviadas abre as visões de indicações; sem
+ * view, a página de recomendações continua igual (com o seletor acima dos filtros).
+ */
 export default function ForYouPage() {
+  const view = useSearchParams().get("view");
+  if (view === "amigos" || view === "enviadas") return <ForYouSocialView view={view} />;
+  return <ForYouFeed />;
+}
+
+function ForYouFeed() {
   // Fase 6: erros das ações de biblioteca (401 = "Sua sessão expirou", resto = aviso amigável).
   const libraryAuth = useLibraryAuth();
   const [
@@ -1102,6 +1114,8 @@ export default function ForYouPage() {
             {basedOn.length > 0 ? ` Baseado em ${joinNames(basedOn.slice(0, 4))}.` : ""}
           </p>
         </header>
+
+        <ForYouViewTabs current="para-voce" />
 
         {profileGenres.length >
           0 && (

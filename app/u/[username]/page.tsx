@@ -22,6 +22,7 @@ import { AvatarSettings } from "@/components/AvatarSettings";
 import { BannerSettings } from "@/components/BannerSettings";
 import "@/styles/features/screen-band.css";
 import { tasteAffinityLabel } from "@/lib/social/ratings";
+import { faroLabel } from "@/lib/recommendations/rules";
 import { Button } from "@/components/ui/Button";
 
 type Tab = "activity" | "reviews" | "likes" | "lists" | "connections";
@@ -535,7 +536,7 @@ export default function PublicProfilePage() {
     ) : null}
     <header className="profile-v2-hero">
       {data.profile.avatar_url ? <img src={data.profile.avatar_url} alt={data.profile.display_name} /> : <div className="public-profile-avatar">{data.profile.display_name?.slice(0, 2).toUpperCase()}</div>}
-      <div className="profile-v2-copy"><span>@{data.profile.username}</span><h1>{data.profile.display_name}</h1>{data.profile.bio && <p>{data.profile.bio}</p>}<div className="profile-v2-counts"><button disabled={relationship !== "self" && data.social.followers == null} onClick={() => openConnectionModal("followers")}><strong>{data.social.followers_count}</strong> seguidores</button><span aria-hidden="true">, </span><button disabled={relationship !== "self" && data.social.following == null} onClick={() => openConnectionModal("following")}><strong>{data.social.following_count}</strong> seguindo</button>{relationship === "self" && <><span aria-hidden="true">, </span><button onClick={() => openConnectionModal("friends")}><strong>{data.social.friends_count || 0}</strong> amigos</button></>}</div></div>
+      <div className="profile-v2-copy"><span>@{data.profile.username}</span><h1>{data.profile.display_name}</h1>{data.profile.bio && <p>{data.profile.bio}</p>}<div className="profile-v2-counts"><button disabled={relationship !== "self" && data.social.followers == null} onClick={() => openConnectionModal("followers")}><strong>{data.social.followers_count}</strong> seguidores</button><span aria-hidden="true">, </span><button disabled={relationship !== "self" && data.social.following == null} onClick={() => openConnectionModal("following")}><strong>{data.social.following_count}</strong> seguindo</button>{relationship === "self" && <><span aria-hidden="true">, </span><button onClick={() => openConnectionModal("friends")}><strong>{data.social.friends_count || 0}</strong> amigos</button></>}</div>{data.faro && faroLabel(data.faro, 3) ? <p className="profile-v2-faro">Faro: {faroLabel(data.faro, 3)}</p> : null}</div>
       {relationship === "self" ? <Button variant={editingProfile ? "secondary" : "primary"} className="profile-v2-action" onClick={() => setEditingProfile((value) => !value)}>{editingProfile ? <X size={16}/> : <Pencil size={16} />}{editingProfile ? "Fechar edição" : "Editar perfil"}</Button> : data.social.can_follow && <Button variant={relationship === "none" ? "primary" : "secondary"} className="profile-v2-action" disabled={busy} onClick={toggleFollow}>{busy ? <Loader2 className="spin" size={16} /> : relationship === "accepted" ? <UserCheck size={16} /> : <UserPlus size={16} />}{relationship === "accepted" ? data.social.viewer_follows_you ? "Seguindo de volta" : "Seguindo" : relationship === "pending" ? "Solicitação enviada" : data.social.viewer_follows_you ? "Seguir de volta" : "Seguir"}</Button>}
     </header>
     </div>

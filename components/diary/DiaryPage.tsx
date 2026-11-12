@@ -208,10 +208,7 @@ function DiaryContent() {
     <>
 
       {/* Fase 4: sem rótulo em caixa alta; título, uma frase e, embaixo, o mês e os filtros numa barra só. */}
-      <header className="dy-header">
-        <h1>Diário</h1>
-        <p>Tudo que você assistiu e marcou pelo caminho.</p>
-      </header>
+      <DiaryHeader />
 
       <div className="dy-bar">
         <div className="dy-nav" role="group" aria-label="Período">
@@ -322,9 +319,32 @@ function DiaryContent() {
   );
 }
 
+function DiaryHeader() {
+  return (
+    <header className="dy-header">
+      <h1>Diário</h1>
+      <p>Tudo que você assistiu e marcou pelo caminho.</p>
+    </header>
+  );
+}
+
+/* Antes de ler a URL: o mesmo cabeçalho, a barra do mês e a lista — nada pula quando chega. */
+function DiaryFallback() {
+  return (
+    <>
+      <DiaryHeader />
+      <div className="dy-bar dy-bar--skeleton" aria-hidden="true">
+        <span className="mc-skeleton dy-sk-month" />
+        <span className="mc-skeleton dy-sk-filters" />
+      </div>
+      <Skeleton />
+    </>
+  );
+}
+
 export function DiaryPage() {
   return (
-    <Suspense fallback={<Skeleton />}>
+    <Suspense fallback={<DiaryFallback />}>
       <DiaryContent />
     </Suspense>
   );

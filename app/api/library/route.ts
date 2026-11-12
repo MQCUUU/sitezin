@@ -1,3 +1,4 @@
+import { notifyRecommendationResults } from "@/lib/notifications/recommendations";
 import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db/neon";
@@ -560,6 +561,15 @@ export async function POST(
       `;
     } catch (linkErr) {
       console.warn("[library] re-vínculo do histórico adiado:", linkErr instanceof Error ? linkErr.message : String(linkErr));
+    }
+
+    if (created && item.status === "watched") {
+    // Indicações (0010): avisa quem indicou este título. Nunca derruba a gravação.
+    try {
+      await notifyRecommendationResults(sql, { recipientId: String(userId), mediaId: Number(existingMedia.id) });
+    } catch (recErr) {
+      console.warn("[recommendations] retorno adiado:", recErr instanceof Error ? recErr.message : String(recErr));
+    }
     }
 
     if (!created) {

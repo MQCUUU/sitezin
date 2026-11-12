@@ -16,6 +16,7 @@ import { HomeSkeleton } from "@/components/home/HomeParts";
 import { HomeFeature } from "@/components/home/HomeFeature";
 import { ProjectionProvider } from "@/components/screen/ProjectionProvider";
 import { HomeRows, HomeSection, type HomeRow } from "@/components/home/HomeSections";
+import { FriendsRail } from "@/components/home/FriendsRail";
 import { detailLabel, personalLine, typeLabel } from "@/components/calendar/copy";
 import { dayHeading, relativeWhen } from "@/lib/calendar/dates";
 import { detail as momentDetail, formatRating, headline, momentAria } from "@/lib/diary/copy";
@@ -603,6 +604,9 @@ export default function HomeClient() {
           <PosterGrid items={watching} carousel />
         </HomeSection>
       )}
+
+      {/* Indicações (0010): só com indicações pendentes de amigos. */}
+      <FriendsRail />
 
       {show.queue && (
         <HomeSection id="hm-queue" title="Na sua fila" href="/watchlist" linkLabel="Ver a fila inteira">

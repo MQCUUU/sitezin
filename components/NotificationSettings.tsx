@@ -18,10 +18,12 @@ type Prefs = {
   follow_request_email: boolean;
   review_like_site: boolean;
   review_like_email: boolean;
+  review_comment_site: boolean;
+  recommendation_site: boolean;
   product_updates_email: boolean;
 };
 
-const keyOf = (prefs: Prefs | null) => (prefs ? `${prefs.new_season_site}|${prefs.new_episode_site}|${prefs.new_follower_site}|${prefs.follow_request_site}` : "");
+const keyOf = (prefs: Prefs | null) => (prefs ? `${prefs.new_season_site}|${prefs.new_episode_site}|${prefs.new_follower_site}|${prefs.follow_request_site}|${prefs.review_like_site}|${prefs.review_comment_site}|${prefs.recommendation_site}` : "");
 
 export function NotificationSettings() {
   const toast = useToast();
@@ -44,6 +46,8 @@ export function NotificationSettings() {
         follow_request_email: data.follow_request_email === true,
         review_like_site: data.review_like_site !== false,
         review_like_email: data.review_like_email === true,
+        review_comment_site: data.review_comment_site !== false,
+        recommendation_site: data.recommendation_site !== false,
         product_updates_email: data.product_updates_email === true,
       };
 
@@ -134,6 +138,27 @@ export function NotificationSettings() {
               <span>
                 <strong>Novos seguidores e amizades</strong>
                 <small>Quando alguém começar a seguir você, aceitar sua solicitação ou vocês se tornarem amigos.</small>
+              </span>
+            </label>
+            <label className="notification-product">
+              <input type="checkbox" checked={prefs.review_like_site} onChange={() => toggle("review_like_site")} />
+              <span>
+                <strong>Curtidas nas suas avaliações</strong>
+                <small>Quando alguém curtir uma nota ou resenha sua. Várias curtidas viram um aviso só.</small>
+              </span>
+            </label>
+            <label className="notification-product">
+              <input type="checkbox" checked={prefs.review_comment_site} onChange={() => toggle("review_comment_site")} />
+              <span>
+                <strong>Comentários nas suas avaliações</strong>
+                <small>Quando alguém comentar uma nota ou resenha sua.</small>
+              </span>
+            </label>
+            <label className="notification-product">
+              <input type="checkbox" checked={prefs.recommendation_site} onChange={() => toggle("recommendation_site")} />
+              <span>
+                <strong>Indicações de amigos e o que acharam</strong>
+                <small>Quando um amigo te indicar um título e quando quem recebeu sua indicação assistir.</small>
               </span>
             </label>
             <label className="notification-product">

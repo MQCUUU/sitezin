@@ -1516,3 +1516,11 @@
     font-size: var(--mc-fs-md);
     font-weight: 700;
 }
+
+/* Indicações (0010): faro agregado na ficha do perfil ("Faro: 7 de 9 indicações acertaram"). */
+.profile-v2-faro {
+    margin: 8px 0 0;
+    color: var(--mc-color-text-secondary);
+    font-size: var(--mc-fs-md);
+    font-weight: 650;
+}

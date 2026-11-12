@@ -393,3 +393,10 @@
         width: 72px;
     }
 }
+
+/* Início — Indicados pelos amigos (0010): nome do título em texto, quem indicou embaixo. */
+.home-friends-title {
+    color: var(--text);
+    font-size: var(--mc-fs-sm);
+    font-weight: 650;
+}

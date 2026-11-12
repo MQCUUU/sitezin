@@ -1,0 +1,425 @@
+/*
+ * Indicações (prefixo rc-): o painel de indicar no título, a linha
+ * "Indicado por" e as visões de /for-you. Sem cartões: linhas separadas por
+ * fios; âmbar só no que é seu (marcados) e no número de não vistas.
+ */
+
+/* ---------- Painel de indicar ---------- */
+
+.mc-dialog.rc-dialog {
+    width: min(480px, 100%);
+    padding: 20px;
+}
+.rc-form {
+    display: grid;
+    gap: 16px;
+}
+.rc-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+.rc-head h2 {
+    margin: 0;
+    font-size: var(--mc-fs-2xl);
+    font-weight: 770;
+    font-variation-settings: "wdth" 80;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+}
+.rc-close {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    margin: -8px -8px 0 0;
+    border: 0;
+    border-radius: var(--mc-radius-md);
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+}
+.rc-close:focus-visible,
+.rc-friend:has(input:focus-visible) {
+    outline: 2px solid var(--mc-color-accent);
+    outline-offset: 2px;
+}
+
+.rc-friends {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+.rc-friends ul {
+    display: grid;
+    max-height: min(46vh, 360px);
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+.rc-friends li + li {
+    border-top: 1px solid var(--mc-color-border-subtle);
+}
+.rc-friend {
+    display: grid;
+    grid-template-columns: auto 32px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    min-height: 52px;
+    padding: 8px 4px;
+    border-radius: var(--mc-radius-sm);
+    cursor: pointer;
+}
+.rc-friend input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--mc-color-accent);
+}
+.rc-friend[data-disabled="true"] {
+    cursor: default;
+}
+.rc-friend[data-disabled="true"] .rc-avatar,
+.rc-friend[data-disabled="true"] .rc-name {
+    opacity: 0.45;
+}
+.rc-avatar {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--text) 10%, var(--panel));
+    font-size: var(--mc-fs-xs);
+    font-weight: 800;
+}
+.rc-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.rc-name {
+    display: grid;
+    min-width: 0;
+}
+.rc-name strong,
+.rc-name small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.rc-name strong {
+    font-size: var(--mc-fs-md);
+}
+.rc-name small,
+.rc-reason,
+.rc-count,
+.rc-selected,
+.rc-empty {
+    color: var(--muted);
+    font-size: var(--mc-fs-sm);
+}
+.rc-empty {
+    margin: 0;
+    padding: 12px 0;
+}
+
+.rc-note {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px;
+}
+.rc-note label {
+    grid-column: 1 / -1;
+    font-size: var(--mc-fs-md);
+    font-weight: 700;
+}
+.rc-note .mc-textarea {
+    grid-column: 1 / -1;
+}
+.rc-count {
+    grid-column: 2;
+    font-variant-numeric: tabular-nums;
+}
+.rc-error {
+    margin: 0;
+    color: var(--mc-color-danger);
+    font-size: var(--mc-fs-sm);
+}
+.rc-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .rc-close:hover {
+        color: var(--text);
+    }
+    .rc-friend:not([data-disabled="true"]):hover {
+        background: color-mix(in srgb, var(--text) 5%, transparent);
+    }
+}
+
+/* Celular: o painel vira folha presa ao pé da tela, como as outras folhas. */
+@media (max-width: 700px) {
+    .mc-dialog.rc-dialog {
+        width: 100vw;
+        max-height: 92vh;
+        border-radius: 18px 18px 0 0;
+        align-self: flex-end;
+        padding: 18px max(16px, env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    }
+    .mc-dialog-backdrop:has(.rc-dialog) {
+        padding: 0;
+    }
+    .rc-foot .btn {
+        flex: 1;
+    }
+}
+
+/* ---------- Linha "Indicado por" no título ---------- */
+
+.rc-by {
+    margin: 0;
+    color: var(--mc-color-text-secondary);
+    font-size: var(--mc-fs-md);
+    font-weight: 650;
+}
+
+/* ---------- Seletor de visão em /for-you ---------- */
+
+.rc-views {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 24px;
+    margin: 0 0 28px;
+}
+.rc-view {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    color: var(--muted);
+    font-size: var(--mc-fs-lg);
+    font-weight: 700;
+    text-decoration: none;
+}
+.rc-view[aria-current="page"] {
+    color: var(--text);
+    box-shadow: inset 0 -2px 0 var(--mc-color-accent);
+}
+.rc-view:focus-visible {
+    outline: 2px solid var(--mc-color-accent);
+    outline-offset: 3px;
+    border-radius: 4px;
+}
+.rc-view-count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--mc-color-accent);
+    color: #111;
+    font-size: var(--mc-fs-xs);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Linhas (Dos amigos, Que você indicou) ---------- */
+
+.rc-page .fy-head {
+    margin-top: 24px;
+}
+.rc-rows {
+    display: grid;
+    max-width: 760px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.rc-row {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 18px;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--mc-color-border-subtle);
+}
+.rc-row:first-child {
+    padding-top: 0;
+}
+.rc-poster {
+    position: relative;
+    display: block;
+    width: 72px;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border-radius: var(--mc-radius-sm);
+    background: color-mix(in srgb, var(--text) 6%, var(--panel));
+}
+.rc-row-body {
+    display: grid;
+    align-content: start;
+    gap: 6px;
+    min-width: 0;
+}
+.rc-row-title {
+    color: var(--text);
+    font-size: var(--mc-fs-xl);
+    font-weight: 750;
+    line-height: 1.2;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+.rc-row-title:focus-visible,
+.rc-row-meta a:focus-visible {
+    outline: 2px solid var(--mc-color-accent);
+    outline-offset: 3px;
+    border-radius: 4px;
+}
+.rc-row-meta {
+    margin: 0;
+    color: var(--muted);
+    font-size: var(--mc-fs-md);
+}
+.rc-row-meta a {
+    color: var(--text);
+    font-weight: 650;
+    text-decoration: none;
+}
+.rc-note-quote {
+    margin: 2px 0 0;
+    color: var(--mc-color-text-secondary);
+    font-size: var(--mc-fs-base);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+.rc-note-quote cite {
+    color: var(--muted);
+    font-size: var(--mc-fs-sm);
+    font-style: normal;
+}
+.rc-row-state {
+    margin: 0;
+    color: var(--text);
+    font-size: var(--mc-fs-md);
+    font-weight: 650;
+}
+.rc-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 20px;
+    margin-top: 6px;
+}
+.rc-text-action {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: var(--mc-fs-md);
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: inset 0 -2px 0 var(--mc-color-accent);
+    cursor: pointer;
+}
+.rc-text-action--quiet {
+    color: var(--muted);
+    box-shadow: none;
+}
+.rc-text-action:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+.rc-text-action:focus-visible {
+    outline: 2px solid var(--mc-color-accent);
+    outline-offset: 3px;
+    border-radius: 4px;
+}
+
+.rc-faro {
+    margin: 0 0 24px;
+    color: var(--muted);
+    font-size: var(--mc-fs-lg);
+}
+.rc-faro strong {
+    display: block;
+    color: var(--text);
+    font-size: clamp(32px, 4vw, 48px);
+    font-weight: 770;
+    font-variation-settings: "wdth" 70;
+    line-height: 1;
+}
+
+.rc-state {
+    display: grid;
+    justify-items: start;
+    gap: 12px;
+    max-width: 560px;
+}
+.rc-state p {
+    margin: 0;
+    color: var(--muted);
+    font-size: var(--mc-fs-lg);
+    line-height: 1.5;
+}
+
+/* Esqueleto: mesmo pôster 2:3 e linhas do tamanho do título, da meta e das ações. */
+.rc-skeleton-line {
+    display: block;
+    height: 14px;
+}
+.rc-skeleton-line--title {
+    width: 46%;
+    height: 22px;
+}
+.rc-skeleton-line--meta {
+    width: 64%;
+}
+.rc-skeleton-line--actions {
+    width: 38%;
+    height: 18px;
+    margin-top: 10px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .rc-view:hover,
+    .rc-text-action--quiet:hover:not(:disabled) {
+        color: var(--text);
+    }
+    .rc-row-title:hover {
+        box-shadow: inset 0 -2px 0 var(--mc-color-accent);
+    }
+}
+
+@media (max-width: 700px) {
+    .rc-views {
+        gap: 4px 18px;
+        margin-bottom: 22px;
+    }
+    .rc-view {
+        font-size: var(--mc-fs-md);
+    }
+    .rc-row {
+        grid-template-columns: 60px minmax(0, 1fr);
+        gap: 14px;
+    }
+    .rc-poster {
+        width: 60px;
+    }
+    .rc-row-title {
+        font-size: var(--mc-fs-lg);
+    }
+}

@@ -10,6 +10,8 @@ const defaults = {
   follow_request_email: false,
   review_like_site: true,
   review_like_email: false,
+  review_comment_site: true,
+  recommendation_site: true,
   product_updates_email: false,
   new_season_site: true,
   new_episode_site: true,
@@ -36,6 +38,8 @@ export async function GET() {
         follow_request_email,
         review_like_site,
         review_like_email,
+        review_comment_site,
+        recommendation_site,
         product_updates_email,
         new_season_site,
         new_episode_site
@@ -71,6 +75,8 @@ export async function PUT(request: NextRequest) {
     const follow_request_email = body.follow_request_email !== undefined ? Boolean(body.follow_request_email) : defaults.follow_request_email;
     const review_like_site = body.review_like_site !== undefined ? Boolean(body.review_like_site) : defaults.review_like_site;
     const review_like_email = body.review_like_email !== undefined ? Boolean(body.review_like_email) : defaults.review_like_email;
+    const review_comment_site = body.review_comment_site !== undefined ? Boolean(body.review_comment_site) : defaults.review_comment_site;
+    const recommendation_site = body.recommendation_site !== undefined ? Boolean(body.recommendation_site) : defaults.recommendation_site;
     const product_updates_email = body.product_updates_email !== undefined ? Boolean(body.product_updates_email) : defaults.product_updates_email;
     const new_season_site = body.new_season_site !== undefined ? Boolean(body.new_season_site) : defaults.new_season_site;
     const new_episode_site = body.new_episode_site !== undefined ? Boolean(body.new_episode_site) : defaults.new_episode_site;
@@ -84,6 +90,8 @@ export async function PUT(request: NextRequest) {
         follow_request_email,
         review_like_site,
         review_like_email,
+        review_comment_site,
+        recommendation_site,
         product_updates_email,
         new_season_site,
         new_episode_site,
@@ -97,6 +105,8 @@ export async function PUT(request: NextRequest) {
         ${follow_request_email},
         ${review_like_site},
         ${review_like_email},
+        ${review_comment_site},
+        ${recommendation_site},
         ${product_updates_email},
         ${new_season_site},
         ${new_episode_site},
@@ -110,6 +120,8 @@ export async function PUT(request: NextRequest) {
         follow_request_email = EXCLUDED.follow_request_email,
         review_like_site = EXCLUDED.review_like_site,
         review_like_email = EXCLUDED.review_like_email,
+        review_comment_site = EXCLUDED.review_comment_site,
+        recommendation_site = EXCLUDED.recommendation_site,
         product_updates_email = EXCLUDED.product_updates_email,
         new_season_site = EXCLUDED.new_season_site,
         new_episode_site = EXCLUDED.new_episode_site,

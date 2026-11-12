@@ -1,6 +1,7 @@
 "use client";
 
 import { Poster } from "@/components/Poster";
+import { DetailSkeleton } from "@/components/AsyncState";
 import "@/styles/features/episode.css";
 import "@/styles/features/screen-kit.css";
 import Link from "next/link";
@@ -184,7 +185,7 @@ export default function EpisodePage() {
   }
 
   if (!paramsValid) return <><div className="empty">Episódio não encontrado.</div></>;
-  if (loading) return <><div className="empty"><Loader2 className="spin" /> Carregando episódio...</div></>;
+  if (loading) return <DetailSkeleton />;
   if (loadError) return <><div className="empty" role="alert">{loadError}</div></>;
   if (!episode) return <><div className="empty">Episódio não encontrado.</div></>;
 

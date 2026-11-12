@@ -157,9 +157,20 @@ export function WatchlistPage() {
       <p className="wl-sr" role="status" aria-live="polite" ref={liveRef} />
 
       {state === "loading" ? (
-        <div className="wl-state" role="status">
-          Carregando sua fila…
-        </div>
+        <ol className="wl-list" aria-busy="true" aria-label="Carregando sua fila">
+          {Array.from({ length: 5 }, (_, index) => (
+            <li key={index} className="wl-item" aria-hidden="true">
+              <div className="wl-row">
+                <span className="mc-skeleton wl-sk-rank" />
+                <span className="mc-skeleton wl-poster" />
+                <span className="wl-info">
+                  <span className="mc-skeleton wl-sk-line wl-sk-line--title" />
+                  <span className="mc-skeleton wl-sk-line" />
+                </span>
+              </div>
+            </li>
+          ))}
+        </ol>
       ) : state === "error" ? (
         <div className="sk-empty" role="alert">
           <h2>Não foi possível carregar sua watchlist</h2>

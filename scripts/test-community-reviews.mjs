@@ -17,7 +17,7 @@ register(
 
 const test = (await import("node:test")).default;
 const assert = (await import("node:assert/strict")).default;
-const { visibleCommunityReviews } = await import("../lib/reviews/community.ts");
+const { visibleCommunityReviews, toCommunityCandidate } = await import("../lib/reviews/community.ts");
 
 let n = 0;
 const row = (over) => ({
@@ -95,4 +95,31 @@ test("privacidade independente: nota e resenha são filtradas separadamente", ()
   assert.equal(reviewPrivate.length, 1);
   assert.equal(reviewPrivate[0].rating, 8);
   assert.equal(reviewPrivate[0].review, null);
+});
+
+test("itens visíveis levam id da avaliação, curtidas e comentários", () => {
+  const out = visibleCommunityReviews([row({ id: "item-1", like_count: 3, comment_count: 2, liked_by_viewer: true })], "leitor");
+  assert.equal(out[0].id, "item-1");
+  assert.equal(out[0].like_count, 3);
+  assert.equal(out[0].comment_count, 2);
+  assert.equal(out[0].liked_by_viewer, true);
+});
+
+test("sem contagens vindas do banco, os números são zero", () => {
+  const out = visibleCommunityReviews([row({ id: "item-2" })], null);
+  assert.deepEqual([out[0].like_count, out[0].comment_count, out[0].liked_by_viewer], [0, 0, false]);
+});
+
+test("linha do banco leva ratings_visibility e reviews_visibility: nota privada não vaza na lista", () => {
+  const dbRow = {
+    id: "item-9", user_id: "u-db", username: "notaprivada", display_name: null, avatar_url: null,
+    visibility: "public", is_public: true, activity_visibility: "profile",
+    ratings_visibility: "private", reviews_visibility: "private",
+    followed: false, friend: false, personal_rating: 8, review: null,
+    updated_at: new Date("2026-10-01T12:00:00Z"), like_count: 0, comment_count: 0, liked_by_viewer: false,
+  };
+  const candidate = toCommunityCandidate(dbRow);
+  assert.equal(candidate.ratings_visibility, "private");
+  assert.equal(candidate.reviews_visibility, "private");
+  assert.equal(visibleCommunityReviews([candidate], null).length, 0);
 });

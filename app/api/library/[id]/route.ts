@@ -1,3 +1,4 @@
+import { notifyRecommendationResults } from "@/lib/notifications/recommendations";
 import { getRouteSession, sessionUnavailableResponse } from "@/lib/auth/route-session";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db/neon";
@@ -174,6 +175,17 @@ export async function PATCH(
 
     const updatedItem = updatedRows[0];
     updatedItem.media = media;
+
+    // Avisa ao virar "assistido" ou na primeira nota; trocar a nota depois não reabre o aviso.
+    const firstRating = currentItem.personal_rating === null && updatedItem.personal_rating !== null && updatedItem.personal_rating !== undefined;
+    if (updatedItem.status === "watched" && (transition || firstRating)) {
+    // Indicações (0010): avisa quem indicou este título. Nunca derruba a gravação.
+    try {
+      await notifyRecommendationResults(sql, { recipientId: String(userId), mediaId: Number(currentItem.media_id) });
+    } catch (recErr) {
+      console.warn("[recommendations] retorno adiado:", recErr instanceof Error ? recErr.message : String(recErr));
+    }
+    }
 
     // Evento de status: gravado atomicamente pela transição (passo acima).
     return NextResponse.json(updatedItem);

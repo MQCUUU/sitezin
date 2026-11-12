@@ -72,28 +72,49 @@
     font-weight: 950;
     letter-spacing: -.05em;
 }
-/* PAGE */
+/* PAGE (Projeção): sem busca nem rótulo acima do título; o esqueleto
+   desenha o que a página vai mostrar, no mesmo tamanho. */
 .mc-page-skeleton,
 .mc-detail-skeleton {
     width: 100%;
     padding: 0 0 40px;
 }
 .mc-page-skeleton > section {
-    padding: 22px 0 0;
+    padding: 28px 0 0;
 }
-.mc-skeleton-search {
-    width: min(560px, 65%);
-    height: 38px;
+.mc-sk-head {
+    display: grid;
+    gap: 14px;
+    padding-top: 6px;
 }
-.mc-skeleton-hero {
-    height: 205px;
-    margin-top: 24px;
-    border-radius: var(--mc-radius-lg);
+.mc-band-page-skeleton .mc-sk-head {
+    padding-top: 28px;
+}
+.mc-sk-page-title {
+    width: min(320px, 62%);
+    height: clamp(30px, 3.2vw, 44px);
+}
+.mc-sk-copy {
+    width: min(520px, 88%);
+    height: 14px;
+}
+.mc-sk-tabs {
+    display: flex;
+    gap: 24px;
+    margin-top: 14px;
+}
+.mc-sk-tabs .mc-skeleton {
+    width: 72px;
+    height: 16px;
 }
 .mc-skeleton-section-title {
     width: 190px;
     height: 21px;
     margin-bottom: 13px;
+}
+/* A Tela sem imagem: o preto da faixa real, sem a cortina de abertura. */
+.tt-band-screen.mc-sk-band {
+    animation: none;
 }
 /* POSTERS */
 .mc-skeleton-poster-grid {
@@ -118,29 +139,30 @@
     height: 8px;
     margin-top: 6px;
 }
-/* DETAIL */
-.mc-detail-skeleton-hero {
-    margin-top: 24px;
-    display: grid;
-    grid-template-columns: 225px minmax(0, 1fr);
-    gap: 25px;
+/* DETAIL: botão Voltar, a Tela e o nome grande (mesmas classes do Título). */
+.mc-sk-back-wrap {
+    margin-bottom: 12px;
 }
-.mc-detail-skeleton-poster {
-    aspect-ratio: 2 / 3;
-    border-radius: var(--mc-radius-lg);
+.mc-sk-back {
+    width: 96px;
+    height: 38px;
+    border-radius: var(--mc-radius-md);
 }
-.mc-detail-skeleton-copy {
-    padding-top: 20px;
+.mc-sk-title {
+    width: min(560px, 70%);
+    height: clamp(44px, 5.6vw, 76px);
 }
-.mc-detail-skeleton-actions {
-    margin-top: 20px;
-    display: flex;
-    gap: 8px;
+.mc-sk-meta {
+    width: min(360px, 60%);
+    height: 14px;
 }
-.mc-detail-skeleton-actions
-.mc-skeleton {
-    width: 110px;
-    height: 37px;
+.mc-sk-meta--short {
+    width: min(240px, 42%);
+}
+.mc-sk-btn {
+    width: 150px;
+    height: 48px;
+    border-radius: var(--mc-radius-md);
 }
 @media (max-width: 1024px) {
     .mc-skeleton-poster-grid {
@@ -158,21 +180,22 @@
         padding: 22px 17px;
     }
 }
-@media (max-width: 700px) {
-    .mc-skeleton-search {
-        width: 100%;
+@media (max-width: 760px) {
+    .mc-sk-title {
+        width: 82%;
+        height: clamp(36px, 11vw, 48px);
+    }
+    .mc-sk-btn {
+        width: 132px;
+    }
+    .mc-sk-tabs {
+        gap: 18px;
     }
 }
 @media (max-width: 700px) {
     .mc-skeleton-poster-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 11px;
-    }
-}
-@media (max-width: 700px) {
-    .mc-detail-skeleton-hero {
-        grid-template-columns: 120px minmax(0, 1fr);
-        gap: 15px;
     }
 }
 /* MOBILE */

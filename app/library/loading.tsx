@@ -1,19 +1,7 @@
 import "@/styles/features/library-page.css";
-import { PosterSkeleton } from "@/components/AsyncState";
+import { BandPageSkeleton } from "@/components/AsyncState";
 
-/*
- * V2.2-A — antes: só o texto "Carregando biblioteca...". Agora a mesma grade
- * (com o mesmo tamanho aproximado dos cards) que a tela vai ocupar, então o
- * conteúdo não "pula" quando chega.
- */
+/* Biblioteca: a Tela, o cabeçalho com as abas e a grade, no tamanho da página carregada. */
 export default function LibraryLoading() {
-  return (
-    <div className="section" role="status" aria-live="polite" aria-label="Carregando biblioteca">
-      <div className="mc-skeleton mc-skeleton-heading" />
-      <div className="mc-skeleton mc-skeleton-copy" />
-      <div style={{ marginTop: 20 }}>
-        <PosterSkeleton count={12} />
-      </div>
-    </div>
-  );
+  return <BandPageSkeleton />;
 }

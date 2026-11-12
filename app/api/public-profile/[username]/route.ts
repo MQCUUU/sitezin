@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
 import { getDb } from "@/lib/db/neon";
 import { canViewProfile, canViewSection } from "@/lib/social/visibility";
+import { faroOf } from "@/lib/recommendations/db";
 
 /*
  * V3.3 — privacidade aplicada AQUI (servidor), pela regra única de
@@ -354,9 +355,13 @@ export async function GET(_request: Request, context: { params: Promise<{ userna
     series: 0,
   };
 
+  // Indicações (0010): faro agregado, a partir de 3 indicações com nota visível. Nunca expõe uma nota.
+  const faro = await faroOf(sql, String(profile.id)).catch(() => ({ hits: 0, rated: 0 }));
+
   return NextResponse.json(
     {
       profile: publicProfile(profile, profile.bio ?? null),
+      faro: faro.rated >= 3 ? faro : null,
       favorites: favorites || [],
       stats: {
         total: Number(statsRow.total || 0),

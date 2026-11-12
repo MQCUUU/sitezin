@@ -1,6 +1,8 @@
 "use client";
 
 
+import "@/styles/features/screen-band.css";
+import "@/styles/features/title-hero.css";
 import "@/styles/features/states.css";
 import React from "react";
 import {
@@ -225,52 +227,79 @@ export function PosterSkeleton({
   );
 }
 
+/** A Tela (faixa panorâmica) ainda sem imagem: mesmo tamanho da faixa real. */
+export function BandSkeleton() {
+  return (
+    <div className="tt-band" aria-hidden="true">
+      <div className="tt-band-screen mc-sk-band" />
+    </div>
+  );
+}
+
+/** Cabeçalho de página: título grande e uma linha de texto. */
+function HeadSkeleton({ tabs = false }: { tabs?: boolean }) {
+  return (
+    <div className="mc-sk-head" aria-hidden="true">
+      <div className="mc-skeleton mc-sk-page-title" />
+      <div className="mc-skeleton mc-sk-copy" />
+      {tabs ? (
+        <div className="mc-sk-tabs">
+          <div className="mc-skeleton" />
+          <div className="mc-skeleton" />
+          <div className="mc-skeleton" />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Padrão de rota sem esqueleto próprio: título, texto e uma grade de pôsteres. */
 export function PageSkeleton() {
   return (
-    <div className="mc-page-skeleton">
-      <div className="mc-skeleton mc-skeleton-search" />
-
-      <section>
-        <div className="mc-skeleton mc-skeleton-eyebrow" />
-        <div className="mc-skeleton mc-skeleton-heading" />
-        <div className="mc-skeleton mc-skeleton-copy" />
-      </section>
-
-      <div className="mc-skeleton mc-skeleton-hero" />
-
-      <section>
+    <div className="mc-page-skeleton" role="status" aria-label="Carregando">
+      <HeadSkeleton />
+      <section aria-hidden="true">
         <div className="mc-skeleton mc-skeleton-section-title" />
-
-        <PosterSkeleton
-          count={
-            6
-          }
-        />
+        <PosterSkeleton count={6} />
       </section>
     </div>
   );
 }
 
+/** Páginas que abrem com a Tela (Biblioteca, Para você, Descobrir): faixa, cabeçalho, abas e grade. */
+export function BandPageSkeleton({ posters = 12 }: { posters?: number }) {
+  return (
+    <div className="mc-page-skeleton mc-band-page-skeleton" role="status" aria-label="Carregando">
+      <BandSkeleton />
+      <HeadSkeleton tabs />
+      <section aria-hidden="true">
+        <PosterSkeleton count={posters} />
+      </section>
+    </div>
+  );
+}
+
+/** Título, série, episódio, coleção e pessoa: a Tela e o nome grande, sem pôster ao lado. */
 export function DetailSkeleton() {
   return (
-    <div className="mc-detail-skeleton">
-      <div className="mc-skeleton mc-skeleton-search" />
-
-      <div className="mc-detail-skeleton-hero">
-        <div className="mc-skeleton mc-detail-skeleton-poster" />
-
-        <div className="mc-detail-skeleton-copy">
-          <div className="mc-skeleton mc-skeleton-eyebrow" />
-          <div className="mc-skeleton mc-skeleton-heading large" />
-          <div className="mc-skeleton mc-skeleton-copy" />
-          <div className="mc-skeleton mc-skeleton-copy short" />
-          <div className="mc-detail-skeleton-actions">
-            <div className="mc-skeleton" />
-            <div className="mc-skeleton" />
-            <div className="mc-skeleton" />
+    <div className="mc-detail-skeleton" role="status" aria-label="Carregando">
+      <div className="mc-sk-back-wrap" aria-hidden="true">
+        <div className="mc-skeleton mc-sk-back" />
+      </div>
+      <section className="tt-hero" aria-hidden="true">
+        <BandSkeleton />
+        <div className="tt-head">
+          <div className="tt-copy">
+            <div className="mc-skeleton mc-sk-title" />
+            <div className="mc-skeleton mc-sk-meta" />
+            <div className="mc-skeleton mc-sk-meta mc-sk-meta--short" />
+            <div className="tt-actions">
+              <div className="mc-skeleton mc-sk-btn" />
+              <div className="mc-skeleton mc-sk-btn" />
+            </div>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

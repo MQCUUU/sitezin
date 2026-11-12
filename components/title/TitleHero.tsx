@@ -6,6 +6,7 @@ import { Heart, ListPlus } from "lucide-react";
 import { useId, useState } from "react";
 
 import { AddToListDialog } from "@/components/lists/AddToListDialog";
+import { RecommendButton, RecommendedBy } from "@/components/recommend/RecommendDialog";
 import { useAuthState } from "@/hooks/useLibraryAuth";
 import type { LibraryLookupState } from "@/lib/library/lookup";
 import { genreName, languageName, runtimeLabel, workStatusLabel } from "@/lib/title-locale";
@@ -116,6 +117,7 @@ export function TitleHero({
               rating={Number(details.vote_average || 0)}
               votes={Number(details.vote_count || 0)}
             />
+            <RecommendedBy tmdbId={Number(details.id)} type={type} />
 
             <div className="tt-actions">
               <TitleStatusMenu {...statusMenuProps} variant="menu" />
@@ -151,6 +153,7 @@ export function TitleHero({
                   <ListPlus size={19} aria-hidden="true" />
                 </Button>
               ) : null}
+              <RecommendButton tmdbId={Number(details.id)} type={type} title={title} />
               <WatchNowButton
                 type={type}
                 id={details.id}

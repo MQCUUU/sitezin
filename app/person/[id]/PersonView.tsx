@@ -12,6 +12,7 @@ import { SmartBackButton } from "@/components/SmartBackButton";
 import { TitleBand } from "@/components/title/hero/TitleBand";
 import { safeJson, formatDate, getYear, type Person, type Credit } from "@/components/person/shared";
 import { PersonCreditsSection, PersonCreditCard } from "@/components/person/PersonCredits";
+import { splitCredits } from "@/lib/person/split-credits";
 /*
  * Fase 6 — o Server Component (page.tsx) busca pessoa e filmografia e entrega
  * aqui em `initialData`: o HTML inicial já traz o hero e o LCP não espera o JS.
@@ -45,7 +46,21 @@ export default function PersonView({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const contentTab: "bio" | "acting" | "other" = tabParam === "acting" || tabParam === "other" ? tabParam : "bio";
+  type ContentTab = "bio" | "acting" | "directing" | "other";
+  const split = useMemo(() => splitCredits(credits), [credits]);
+  const hasDirecting = split.directing.length > 0;
+  // Quem é conhecido pela direção abre em Direção; um ?tab explícito sempre vence.
+  const directsByDefault = person?.known_for_department === "Directing" && hasDirecting;
+  const contentTab: ContentTab =
+    tabParam === "directing"
+      ? hasDirecting
+        ? "directing"
+        : "bio"
+      : tabParam === "acting" || tabParam === "other" || tabParam === "bio"
+        ? tabParam
+        : directsByDefault
+          ? "directing"
+          : "bio";
   const expanded = new Set((searchParams.get("ver") || "").split(",").filter(Boolean));
   const showAllMovies = expanded.has("filmes");
   const showAllSeries = expanded.has("series");
@@ -56,12 +71,12 @@ export default function PersonView({
     const query = params.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   };
-  const setContentTab = (value: "bio" | "acting" | "other") =>
+  const setContentTab = (value: ContentTab) =>
     updateQuery((params) => {
-      if (value === "bio") params.delete("tab");
+      if (value === "bio" && !directsByDefault) params.delete("tab");
       else params.set("tab", value);
     });
-  const toggleExpanded = (key: "filmes" | "series") =>
+  const toggleExpanded = (key: "filmes" | "series" | "direcao-filmes" | "direcao-series") =>
     updateQuery((params) => {
       const next = new Set(expanded);
       if (next.has(key)) next.delete(key);
@@ -160,8 +175,9 @@ export default function PersonView({
     initialData,
   ]);
 
-  const actingCredits = useMemo(() => credits.filter((item) => item.credit_kind === "cast" || Boolean(item.character)), [credits]);
-  const otherCredits = useMemo(() => credits.filter((item) => item.credit_kind === "crew" && !item.character), [credits]);
+  const actingCredits = split.acting;
+  const otherCredits = split.other;
+  const directingCredits = split.directing;
 
   const movies =
     useMemo(
@@ -380,6 +396,11 @@ export default function PersonView({
           12
         );
 
+  const directedMovies = directingCredits.filter((item) => item.media_type === "movie");
+  const directedSeries = directingCredits.filter((item) => item.media_type === "tv");
+  const visibleDirectedMovies = expanded.has("direcao-filmes") ? directedMovies : directedMovies.slice(0, 12);
+  const visibleDirectedSeries = expanded.has("direcao-series") ? directedSeries : directedSeries.slice(0, 12);
+
   return (
     <>
 
@@ -411,6 +432,9 @@ export default function PersonView({
               {[
                 departmentLabel(person.known_for_department),
                 `${credits.length} ${credits.length === 1 ? "trabalho" : "trabalhos"}`,
+                directedMovies.length
+                  ? `${directedMovies.length} ${directedMovies.length === 1 ? "filme dirigido" : "filmes dirigidos"}`
+                  : null,
                 movies.length ? `${movies.length} ${movies.length === 1 ? "filme" : "filmes"}` : null,
                 series.length ? `${series.length} ${series.length === 1 ? "série" : "séries"}` : null,
                 averageRating !== null ? `média ${averageRating.toFixed(1).replace(".", ",")}` : null,
@@ -427,8 +451,9 @@ export default function PersonView({
           [
             ["bio", "Biografia"],
             ["acting", "Atuação"],
+            ...(hasDirecting ? ([["directing", "Direção"]] as const) : []),
             ["other", "Outros trabalhos"],
-          ] as const
+          ] as ReadonlyArray<readonly [ContentTab, string]>
         ).map(([value, label]) => (
           <button
             key={value}
@@ -533,6 +558,28 @@ export default function PersonView({
           expanded={showAllSeries}
           byDecade
           onToggle={() => toggleExpanded("series")}
+        />
+      )}
+
+      {contentTab === "directing" && directedMovies.length > 0 && (
+        <PersonCreditsSection
+          title="Filmes"
+          total={directedMovies.length}
+          items={visibleDirectedMovies}
+          expanded={expanded.has("direcao-filmes")}
+          byDecade
+          onToggle={() => toggleExpanded("direcao-filmes")}
+        />
+      )}
+
+      {contentTab === "directing" && directedSeries.length > 0 && (
+        <PersonCreditsSection
+          title="Séries"
+          total={directedSeries.length}
+          items={visibleDirectedSeries}
+          expanded={expanded.has("direcao-series")}
+          byDecade
+          onToggle={() => toggleExpanded("direcao-series")}
         />
       )}
 

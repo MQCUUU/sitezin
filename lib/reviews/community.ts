@@ -22,6 +22,11 @@ export const COMMUNITY_SCAN_MAX = 500;
 export const COMMUNITY_PAGE_MAX = 30;
 
 export type CommunityCandidate = {
+  /** library_items.id — o id da avaliação (página /review/[id]). */
+  id?: string;
+  like_count?: number;
+  comment_count?: number;
+  liked_by_viewer?: boolean;
   user_id: string;
   username: string;
   display_name: string | null;
@@ -41,6 +46,10 @@ export type CommunityCandidate = {
 };
 
 export type CommunityReview = {
+  id: string;
+  like_count: number;
+  comment_count: number;
+  liked_by_viewer: boolean;
   username: string;
   display_name: string | null;
   avatar_url: string | null;
@@ -71,6 +80,10 @@ export function visibleCommunityReviews(rows: CommunityCandidate[], viewerId: st
         b.updated_at.localeCompare(a.updated_at)
     )
     .map((row) => ({
+      id: String(row.id ?? ""),
+      like_count: Number(row.like_count) || 0,
+      comment_count: Number(row.comment_count) || 0,
+      liked_by_viewer: Boolean(viewerId) && Boolean(row.liked_by_viewer),
       username: row.username,
       display_name: row.display_name,
       avatar_url: row.avatar_url,
@@ -80,6 +93,31 @@ export function visibleCommunityReviews(rows: CommunityCandidate[], viewerId: st
       review: hasText(row) && canViewSection(row, row.reviews_visibility ?? row.activity_visibility, { isOwner: false, isAcceptedFollower: Boolean(viewerId) && row.followed }) ? String(row.review).trim() : null,
       updated_at: row.updated_at,
     }));
+}
+
+/** Linha do SQL da comunidade → candidato (com as visibilidades por seção). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function toCommunityCandidate(r: Record<string, any>): CommunityCandidate {
+  return {
+    id: String(r.id),
+    like_count: Number(r.like_count) || 0,
+    comment_count: Number(r.comment_count) || 0,
+    liked_by_viewer: Boolean(r.liked_by_viewer),
+    user_id: String(r.user_id),
+    username: String(r.username),
+    display_name: r.display_name ?? null,
+    avatar_url: r.avatar_url ?? null,
+    visibility: r.visibility ?? null,
+    is_public: r.is_public ?? null,
+    activity_visibility: r.activity_visibility ?? null,
+    ratings_visibility: r.ratings_visibility ?? null,
+    reviews_visibility: r.reviews_visibility ?? null,
+    followed: Boolean(r.followed),
+    friend: Boolean(r.friend),
+    rating: r.personal_rating === null || r.personal_rating === undefined ? null : Number(r.personal_rating),
+    review: r.review ?? null,
+    updated_at: r.updated_at instanceof Date ? r.updated_at.toISOString() : String(r.updated_at),
+  };
 }
 
 export async function listCommunityReviews(
@@ -93,8 +131,13 @@ export async function listCommunityReviews(
       p.visibility, p.is_public, p.activity_visibility, p.ratings_visibility, p.reviews_visibility,
       (f.follower_id IS NOT NULL) AS followed,
       (f.follower_id IS NOT NULL AND f_back.follower_id IS NOT NULL) AS friend,
-      li.personal_rating, li.review,
-      COALESCE(li.updated_at, li.added_at) AS updated_at
+      li.id, li.personal_rating, li.review,
+      COALESCE(li.updated_at, li.added_at) AS updated_at,
+      (SELECT count(*)::int FROM public.review_likes l WHERE l.library_item_id = li.id) AS like_count,
+      (SELECT count(*)::int FROM public.review_comments c WHERE c.library_item_id = li.id) AS comment_count,
+      EXISTS (
+        SELECT 1 FROM public.review_likes l WHERE l.library_item_id = li.id AND l.user_id = ${viewer}::uuid
+      ) AS liked_by_viewer
     FROM public.media m
     JOIN public.library_items li ON li.media_id = m.id
     JOIN public.profiles p ON p.id = li.user_id AND p.username IS NOT NULL
@@ -108,20 +151,7 @@ export async function listCommunityReviews(
     LIMIT ${COMMUNITY_SCAN_MAX}
   `;
 
-  const candidates: CommunityCandidate[] = rows.map((r) => ({
-    user_id: String(r.user_id),
-    username: String(r.username),
-    display_name: r.display_name ?? null,
-    avatar_url: r.avatar_url ?? null,
-    visibility: r.visibility ?? null,
-    is_public: r.is_public ?? null,
-    activity_visibility: r.activity_visibility ?? null,
-    followed: Boolean(r.followed),
-    friend: Boolean(r.friend),
-    rating: r.personal_rating === null || r.personal_rating === undefined ? null : Number(r.personal_rating),
-    review: r.review ?? null,
-    updated_at: r.updated_at instanceof Date ? r.updated_at.toISOString() : String(r.updated_at),
-  }));
+  const candidates: CommunityCandidate[] = rows.map(toCommunityCandidate);
 
   const visible = visibleCommunityReviews(candidates, viewer);
   const limit = Math.min(Math.max(1, Math.floor(input.limit) || 10), COMMUNITY_PAGE_MAX);

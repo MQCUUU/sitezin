@@ -1,11 +1,11 @@
 "use client";
 
 import { useConfirm } from "@/components/ConfirmProvider";
+import { BandPageSkeleton } from "@/components/AsyncState";
 import "@/styles/features/discover.css";
 import { removeFromLibrary } from "@/lib/library/actions";
 import { removalConfirmOptions } from "@/lib/library/remove";
 import { Suspense, useEffect, useMemo, useRef, useState, useEffectEvent } from "react";
-import { Loader2 } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 
 import { apiFetch } from "@/lib/api-client";
@@ -47,13 +47,7 @@ export default function DiscoverPage() {
   return (
     <Suspense
       fallback={
-        <>
-
-          <div className="empty discover-loading">
-            <Loader2 className="spin" size={28} />
-            <span>Carregando Descobrir...</span>
-          </div>
-        </>
+        <BandPageSkeleton />
       }
     >
       <DiscoverContent />

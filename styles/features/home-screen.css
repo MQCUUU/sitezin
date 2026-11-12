@@ -204,23 +204,9 @@
 
 /* ------------------------------------------------------------ skeleton */
 
-.hm-skel-band {
-  margin: 0 -34px;
-  padding: 32px 0;
-  background: #000;
-}
-
-.hm-skel-screen {
-  width: 100%;
-  max-width: min(1440px, calc(48vh * 2.39));
-  margin: 0 auto;
-  aspect-ratio: 2.39 / 1;
-  border-radius: 0;
-}
-
 .hm-skel-title {
   width: min(520px, 70%);
-  height: 56px;
+  height: clamp(40px, 5vw, 64px);
   margin: 36px 0 14px;
 }
 
@@ -283,14 +269,6 @@
     font-size: 14px;
   }
 
-  .hm-skel-band {
-    margin: 0 calc(max(14px, env(safe-area-inset-left)) * -1);
-    padding: 0;
-  }
-
-  .hm-skel-screen {
-    aspect-ratio: 16 / 10;
-  }
 }
 
 /* ------------------------------------------------------------ visitante */

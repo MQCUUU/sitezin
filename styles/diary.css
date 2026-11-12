@@ -838,3 +838,27 @@ a.dy-compact-title:hover {
     transform: none;
   }
 }
+
+/* Barra do mês enquanto a página lê a URL: mesma altura da barra real. */
+.dy-bar--skeleton {
+  align-items: center;
+  min-height: 52px;
+  padding-bottom: 10px;
+}
+.dy-sk-month {
+  width: 200px;
+  height: 22px;
+}
+.dy-sk-filters {
+  width: 220px;
+  height: 18px;
+}
+@media (max-width: 700px) {
+  .dy-bar--skeleton {
+    min-height: 92px;
+  }
+  .dy-sk-month,
+  .dy-sk-filters {
+    width: 60%;
+  }
+}

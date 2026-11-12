@@ -12,6 +12,8 @@ import { Search } from "@/components/Search";
 import { PickForMeLauncher } from "@/components/PickForMeLauncher";
 import { useAuthState } from "@/hooks/useLibraryAuth";
 import { useModal } from "@/hooks/useModal";
+import { apiFetch } from "@/lib/api-client";
+import { RECOMMENDATIONS_SEEN_EVENT } from "@/components/for-you/ForYouViewTabs";
 import { navIndicatorTransition, popoverTransition, sheetExitTransition, sheetTransition } from "@/lib/motion";
 
 import {
@@ -103,9 +105,42 @@ const authRoutes = [
   "/reset-password",
 ];
 
+/*
+ * Indicações (0010): quantas indicações recebidas ainda não foram vistas. Busca ao
+ * montar e a cada troca de rota; zera quando "Dos amigos" avisa que abriu.
+ */
+function useUnseenRecommendations(authState: string, pathname: string) {
+  const [unseen, setUnseen] = useState(0);
+  useEffect(() => {
+    if (authState !== "authenticated") {
+      setUnseen(0);
+      return;
+    }
+    let alive = true;
+    apiFetch<{ unseen: number }>("/api/recommendations/summary", { cache: "no-store" })
+      .then((data) => alive && setUnseen(Number(data.unseen) || 0))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [authState, pathname]);
+  useEffect(() => {
+    const clear = () => setUnseen(0);
+    window.addEventListener(RECOMMENDATIONS_SEEN_EVENT, clear);
+    return () => window.removeEventListener(RECOMMENDATIONS_SEEN_EVENT, clear);
+  }, []);
+  return unseen;
+}
+
+function countLabel(label: string, count: number) {
+  return count ? `${label}, ${count} ${count === 1 ? "indicação nova" : "indicações novas"}` : undefined;
+}
+
 export function Nav() {
   const pathname = usePathname();
   const authState = useAuthState();
+  const unseen = useUnseenRecommendations(authState, pathname);
+  const countFor = (href: string) => (href === "/for-you" ? unseen : 0);
   const prefetchFor = (href: string) =>
     PUBLIC_NAV_ROUTES.has(href) || authState === "authenticated" ? undefined : false;
   const [moreOpen, setMoreOpen] = useState(false);
@@ -227,6 +262,7 @@ export function Nav() {
               data-priority={BAR_PRIORITY[href]}
               className={"mc-appbar-link mc-focusable" + (isActive(href) ? " active" : "")}
               aria-current={isActive(href) ? "page" : undefined}
+              aria-label={countLabel(label, countFor(href))}
             >
               {isActive(href) && (
                 <motion.span
@@ -237,6 +273,7 @@ export function Nav() {
                 />
               )}
               <span>{label}</span>
+              {countFor(href) ? <span className="mc-appbar-count" aria-hidden="true">{countFor(href)}</span> : null}
             </Link>
           ))}
 
@@ -270,9 +307,11 @@ export function Nav() {
                         className={"mc-focusable" + (isActive(href) ? " active" : "")}
                         aria-current={isActive(href) ? "page" : undefined}
                         onClick={() => setBarMoreOpen(false)}
+                        aria-label={countLabel(label, countFor(href))}
                       >
                         <Icon size={17} strokeWidth={2} aria-hidden="true" />
                         <span>{label}</span>
+                        {countFor(href) ? <span className="mc-appbar-count" aria-hidden="true">{countFor(href)}</span> : null}
                       </Link>
                     </li>
                   ))}
@@ -322,6 +361,7 @@ export function Nav() {
                   ? "page"
                   : undefined
               }
+              aria-label={countLabel(label, countFor(href))}
             >
               {isActive(href) && (
                 <motion.span
@@ -339,6 +379,7 @@ export function Nav() {
               <span>
                 {label}
               </span>
+              {countFor(href) ? <span className="mc-appbar-count mobile-nav-count" aria-hidden="true">{countFor(href)}</span> : null}
             </Link>
           )
         )}
